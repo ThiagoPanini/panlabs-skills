@@ -42,6 +42,7 @@ node motor/gerar.cjs modelo/pedidos-serverless.json --explicar   # trilha do cat
 | `motor/vendor/` | `elkjs` 0.12.0 embarcado — 1,6 MB (470 KB gzip). É o preço da premissa 7. |
 | `modelo/*.json` | Dois modelos de exemplo, mesmo vocabulário, caminhos de layout diferentes. |
 | `saida/*.drawio` · `*.png` | O que o motor produziu, e o render como prova. |
+| `saida/antes-rotulo-fora-do-elk.png` | O mesmo modelo **sem** entregar o rótulo da aresta ao ELK — as três colisões `A3.2`, para comparar com `pedidos-serverless.png`. |
 | `tools/check-*.cjs` | Fronteira · validação · determinismo · round-trip. |
 
 ## O pipeline
@@ -104,7 +105,9 @@ mesmo diagrama produz um diff inteiro. Agora a ordem cai de exposição + rótul
 aproxima os nós até o vão ficar menor que o rótulo, e ele cai em cima do ícone
 vizinho — `A3.2` da rubrica (#8), a falha que ela prevê para gerador
 automático. Entregue o rótulo, o vão passa a ser calculado para caber nele. O
-primeiro render tinha três colisões; o segundo, zero.
+primeiro render tinha três colisões; o segundo, zero. O antes está guardado em
+`saida/antes-rotulo-fora-do-elk.png` — não é reconstituição, é o mesmo motor
+com a entrega do rótulo desligada.
 
 **4 · A caixa do layout é a caixa do ÍCONE.** O reflexo é inflar a altura para
 caber o rótulo — e é errado: o ELK roteia até o **centro** da caixa, e caixa

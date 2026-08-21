@@ -12,20 +12,38 @@
 
 const { AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD, calhaDaFaixa } = require('./dispor.cjs');
 
-const OFF_X = 40;
-const OFF_Y = 96;
-const RODAPE = 40;
+const OFF_X = 32;
+const OFF_Y = 88;
+const RODAPE = 32;
 
 const S_TITULO = 'text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;';
 const S_SUB = 'text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;';
 const S_NOTA = 'rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0B34D;fontColor=#6B4E00;' +
   'fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;';
 
+/**
+ * Como a aresta indica o caminho. Três variantes, e a diferença entre elas é
+ * do RENDERIZADOR, não de gosto:
+ *
+ *   solido     traço contínuo. Vale em tudo.
+ *   tracejado  traço interrompido — sugere percurso e sobrevive ao PNG.
+ *   animado    `flowAnimation=1`, o tracejado que anda. O #4 mediu: **sobrevive
+ *              a SVG e HTML, nunca a PNG** (o PNG é um quadro só). Exportar
+ *              animado para PNG entrega uma linha sólida sem aviso.
+ */
+const FLUXO = {
+  solido: '',
+  tracejado: 'dashed=1;dashPattern=8 5;',
+  animado: 'dashed=1;dashPattern=8 5;flowAnimation=1;',
+};
+
 /** Estilo de aresta. A camada de estilo é do #13; aqui fica só o que o roteamento exige. */
-function estiloAresta(a, anc) {
-  let s = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;' +
+function estiloAresta(a, anc, fluxo = 'solido') {
+  // `rounded=1` arredonda o canto do roteamento ortogonal; `arcSize` é o raio.
+  let s = 'edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;' +
     'strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;' +
     'fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;';
+  s += FLUXO[fluxo] || '';
   if (a.dados === 'ambos') s += 'startArrow=blockThin;startFill=1;startSize=6;';
   // O #2 §5.4 é explícito: exitX e exitY só valem EM PAR, e sem
   // `exitPerimeter=0` o motor reprojeta o ponto no perímetro do shape — que em
@@ -109,7 +127,7 @@ function rodape(plano, modelo, larguraUtil, res, y) {
 
 // ------------------------------------------------------------ caminho A (ELK)
 
-function planoDeElk(modelo, d, res, layout) {
+function planoDeElk(modelo, d, res, layout, opts = {}) {
   const { saida, caixas } = layout;
   const plano = { id: modelo.id, nome: modelo.titulo, celulas: [], fundo: '#FFFFFF' };
   cabecalho(plano, modelo, res);
@@ -167,7 +185,7 @@ function planoDeElk(modelo, d, res, layout) {
     };
     plano.celulas.push({
       tipo: 'aresta', id: e.id, pai: '1', de: a.de, para: a.para,
-      rotulo: rotuloDaAresta(a), style: estiloAresta(a, anc),
+      rotulo: rotuloDaAresta(a), style: estiloAresta(a, anc, opts.fluxo),
       pontos: (sec.bendPoints || []).map(desl),
     });
   }
@@ -193,7 +211,7 @@ function planoDeElk(modelo, d, res, layout) {
 
 // ---------------------------------------------------------- caminho B (grade)
 
-function planoDeGrade(modelo, d, res, g) {
+function planoDeGrade(modelo, d, res, g, opts = {}) {
   const plano = { id: modelo.id, nome: modelo.titulo, celulas: [], fundo: '#FFFFFF' };
   cabecalho(plano, modelo, res);
 
@@ -271,4 +289,4 @@ function planoDeGrade(modelo, d, res, g) {
   return plano;
 }
 
-module.exports = { planoDeElk, planoDeGrade, OFF_X, OFF_Y };
+module.exports = { planoDeElk, planoDeGrade, FLUXO, OFF_X, OFF_Y };

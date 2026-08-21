@@ -53,7 +53,11 @@ for (const arq of arquivos) {
   const caminho = path.join(RAIZ, 'saida', arq);
   const xml = fs.readFileSync(caminho, 'utf8');
   const nome = arq.replace(/\.drawio$/, '');
-  const fonte = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', nome + '.json'), 'utf8'));
+  // variantes de estilo (fluxo tracejado/animado) saem do mesmo modelo com outro
+  // nome de arquivo; sem modelo correspondente não há o que comparar
+  const caminhoModelo = path.join(RAIZ, 'modelo', nome + '.json');
+  if (!fs.existsSync(caminhoModelo)) { console.log(`  ${arq}\n    (variante sem modelo próprio — pulada)`); continue; }
+  const fonte = JSON.parse(fs.readFileSync(caminhoModelo, 'utf8'));
 
   // 1. estática: o que foi escrito no arquivo é o modelo de origem
   const lido = extrair(xml);

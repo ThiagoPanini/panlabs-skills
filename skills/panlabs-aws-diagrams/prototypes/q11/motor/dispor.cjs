@@ -18,6 +18,7 @@
  */
 
 const ELK = require('./vendor/elk.bundled.js');
+const { alinhar } = require('./alinhar.cjs');
 
 // ---- as quatro calhas do #19 -------------------------------------------------
 const AZ_LANE = 36;    // linha de rótulo das colunas de AZ
@@ -43,7 +44,7 @@ function calhaDaFaixa(style) {
   return Math.max(BAND_LANE, recuo + 18 + 6);
 }
 
-const PAD = 16;
+const PAD = 12;
 const COL_GAP = 30;
 const ROW_GAP = 14;
 
@@ -52,21 +53,45 @@ const ROW_GAP = 14;
  * oficiais correm esquerda→direita. `RIGHT` também desvia do bug do #7 em que
  * `nodeSize.minimum` troca os eixos em nó compound sob `DOWN`/`UP`.
  */
+/**
+ * ⚠️ OPÇÃO DE ESPAÇAMENTO NÃO DESCE PARA CONTAINER.
+ *
+ * Descoberto medindo, e é a armadilha mais cara deste módulo: com
+ * `hierarchyHandling: INCLUDE_CHILDREN` a documentação dá a entender que o
+ * grafo inteiro é layoutado numa passada — mas as opções de espaçamento são
+ * lidas **por container**, não herdadas da raiz. Setá-las só na raiz não é erro
+ * silencioso de digitação: é configuração INERTE. O que vale lá dentro é o
+ * default do ELK (`nodeNode` = 20).
+ *
+ * Prova: com as opções só na raiz, `spacing.nodeNode` de 38, 50 ou 90 produz
+ * exatamente a mesma geometria — vão de 20 px, o default. Repetidas por
+ * container, o vão passa a obedecer o valor pedido. Mesma coisa para
+ * `nodePlacement.strategy`, que era inerte na raiz e muda o desenho quando
+ * repetida.
+ *
+ * Por isso `espalhar()` existe e por isso todo container recebe o bloco
+ * inteiro. Quem acrescentar uma opção de espaçamento aqui precisa acrescentar
+ * em ESPACAMENTO, nunca só em OPCOES_RAIZ.
+ */
+const ESPACAMENTO = {
+  'elk.spacing.nodeNode': '30',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '46',
+  'elk.spacing.edgeNode': '22',
+  'elk.spacing.edgeEdge': '14',
+  'elk.layered.spacing.edgeLabelSpacing': '8',
+  'elk.edgeLabels.placement': 'CENTER',
+};
+
 const OPCOES_RAIZ = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',   // sem isto cada container é layoutado sozinho
   'elk.edgeRouting': 'ORTHOGONAL',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '60',
-  'elk.spacing.nodeNode': '38',
-  'elk.spacing.edgeNode': '26',
-  'elk.spacing.edgeEdge': '18',
   'elk.layered.crossingMinimization.semiInteractive': 'true',
   'elk.randomSeed': '1',                          // 0 == semente do relógio
   'elk.json.shapeCoords': 'PARENT',               // == semântica do mxGeometry
   'elk.json.edgeCoords': 'ROOT',                  // default na raiz é CONTAINER, não ROOT
-  'elk.edgeLabels.placement': 'CENTER',
-  'elk.layered.spacing.edgeLabelSpacing': '10',
+  ...ESPACAMENTO,
 };
 
 /** O texto que a aresta vai de fato mostrar — é dele que sai a largura reservada. */
@@ -106,6 +131,7 @@ function limpar(o) {
  */
 function montarElk(modelo, d, res, medir) {
   const caixas = new Map();
+  const paddings = new Map();     // o passe de alinhamento precisa saber o limite de cada caixa
 
   // pré-resolve as folhas para saber de quanto rótulo o layout precisa fugir
   let rotuloMax = 0, transbordo = 0;
@@ -118,6 +144,17 @@ function montarElk(modelo, d, res, medir) {
     transbordo = Math.max(transbordo, Math.max(0, ((f.rotuloW || 0) - f.formaW) / 2));
   }
 
+  // O espaçamento efetivo depende do rótulo, e precisa ser IDÊNTICO na raiz e
+  // em cada container — ver o aviso em ESPACAMENTO.
+  const espacamento = {
+    ...ESPACAMENTO,
+    // vizinho de cima/baixo tem de caber o rótulo do de cima, que é desenhado
+    // fora da caixa
+    'elk.spacing.nodeNode': String(14 + rotuloMax),
+    // e o vizinho de lado tem de caber o transbordo do texto pelos dois lados
+    'elk.layered.spacing.nodeNodeBetweenLayers': String(12 + Math.ceil(2 * transbordo)),
+  };
+
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
     if (kids.length) {
@@ -127,11 +164,16 @@ function montarElk(modelo, d, res, medir) {
       // se o container não reservar isso, o texto vaza pela borda
       const temFolha = kids.some(k => !d.t.filhos.get(k.id).length);
       const folga = temFolha ? Math.ceil(transbordo) : 0;
+      const pad = {
+        top: c.tituloH + PAD, left: PAD + folga,
+        bottom: PAD + (temFolha ? rotuloMax : 0), right: PAD + folga + (medir.get(no.id) || 0),
+      };
+      paddings.set(no.id, pad);
       return {
         id: no.id,
         layoutOptions: {
-          'elk.padding': `[top=${c.tituloH + PAD},left=${PAD + folga},` +
-            `bottom=${PAD + (temFolha ? rotuloMax : 0)},right=${PAD + folga + (medir.get(no.id) || 0)}]`,
+          'elk.padding': `[top=${pad.top},left=${pad.left},bottom=${pad.bottom},right=${pad.right}]`,
+          ...espacamento,          // sem isto, o container usa os defaults do ELK — ver o aviso acima
         },
         children: kids.map(paraElk),
       };
@@ -143,11 +185,7 @@ function montarElk(modelo, d, res, medir) {
 
   const grafo = {
     id: 'root',
-    layoutOptions: {
-      ...OPCOES_RAIZ,
-      'elk.spacing.nodeNode': String(30 + rotuloMax),
-      'elk.layered.spacing.nodeNodeBetweenLayers': String(60 + Math.ceil(2 * transbordo)),
-    },
+    layoutOptions: { ...OPCOES_RAIZ, ...espacamento },
     children: d.t.raizes.map(paraElk),
     // O rótulo da aresta vai JUNTO. Sem ele o ELK aproxima os nós até o vão
     // ficar menor que o texto, e o texto cai em cima do ícone vizinho — que é
@@ -161,7 +199,7 @@ function montarElk(modelo, d, res, medir) {
       };
     }),
   };
-  return { grafo, caixas, rotuloMax, transbordo };
+  return { grafo, caixas, paddings, rotuloMax, transbordo };
 }
 
 /**
@@ -184,9 +222,9 @@ async function porElk(modelo, d, res) {
   let saida = null;
 
   for (let passada = 0; passada < 2; passada++) {
-    const { grafo, caixas, rotuloMax } = montarElk(modelo, d, res, medir);
+    const { grafo, caixas, paddings, rotuloMax } = montarElk(modelo, d, res, medir);
     saida = limpar(await elk.layout(structuredClone(grafo)));
-    if (passada === 1) return { saida, caixas, rotuloMax, passadas: 2 };
+    if (passada === 1) return { saida, caixas, rotuloMax, passadas: 2, encaixe: alinhar(saida, paddings) };
 
     const proximo = new Map();
     (function medirTitulos(n) {
@@ -197,7 +235,7 @@ async function porElk(modelo, d, res) {
         medirTitulos(c);
       }
     })(saida);
-    if (!proximo.size) return { saida, caixas, rotuloMax, passadas: 1 };
+    if (!proximo.size) return { saida, caixas, rotuloMax, passadas: 1, encaixe: alinhar(saida, paddings) };
     medir = proximo;
   }
 }

@@ -59,12 +59,18 @@ async function gerar(modelo, opts = {}) {
       throw e;
     }
     const g = await dispor.porGrade(modelo, d, res);
-    plano = planejar.planoDeGrade(modelo, d, res, g);
+    plano = planejar.planoDeGrade(modelo, d, res, g, opts);
   } else {
     caminho = 'elk';
     const layout = await dispor.porElk(modelo, d, res);
-    plano = planejar.planoDeElk(modelo, d, res, layout);
+    plano = planejar.planoDeElk(modelo, d, res, layout, opts);
     marco('dispor', { passadas: layout.passadas });
+    if (layout.encaixe) {
+      for (const a of layout.encaixe.aplicados)
+        relatorio.avisos.push(`encaixe: "${a.aresta}" alinhada movendo ${a.moveu.join('+')} em ${a.delta}px`);
+      for (const x of layout.encaixe.desfeitos)
+        relatorio.avisos.push(`encaixe DESFEITO em "${x.aresta}" (${x.delta}px): ${x.porque}`);
+    }
   }
   marco('planejar', { caminho, celulas: plano.celulas.length, pagina: `${plano.larg}×${plano.alt}` });
 
@@ -92,19 +98,25 @@ async function main() {
   const args = process.argv.slice(2);
   const entrada = args.find(a => !a.startsWith('--'));
   if (!entrada) {
-    console.error('uso: node gerar.cjs <modelo.json> [--saida arquivo.drawio] [--explicar]');
+    console.error('uso: node gerar.cjs <modelo.json> [--saida arquivo.drawio] [--fluxo solido|tracejado|animado] [--explicar]');
     process.exit(2);
   }
   const iSaida = args.indexOf('--saida');
   const saida = iSaida >= 0 ? args[iSaida + 1] : entrada.replace(/\.json$/, '.drawio');
   const explicar = args.includes('--explicar');
+  const iFluxo = args.indexOf('--fluxo');
+  const fluxo = iFluxo >= 0 ? args[iFluxo + 1] : 'solido';
+  if (!['solido', 'tracejado', 'animado'].includes(fluxo)) {
+    console.error(`--fluxo aceita solido | tracejado | animado (veio "${fluxo}")`);
+    process.exit(2);
+  }
 
   let modelo;
   try { modelo = JSON.parse(fs.readFileSync(entrada, 'utf8')); }
   catch (e) { console.error(`não consegui ler ${entrada}: ${e.message}`); process.exit(1); }
 
   let r;
-  try { r = await gerar(modelo); }
+  try { r = await gerar(modelo, { fluxo }); }
   catch (e) {
     console.error(`\n✗ ${e.message}`);
     for (const linha of e.erros || []) console.error(`    · ${linha}`);
@@ -115,6 +127,9 @@ async function main() {
     console.log(`  ${p.nome.padEnd(10)} ${Object.entries(p).filter(([k]) => k !== 'nome')
       .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('/') : v}`).join('  ')}`);
   for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
+  if (fluxo === 'animado')
+    console.log('  ⚠ fluxo "animado" só se vê em SVG ou HTML. O #4 mediu e este motor confirmou: ' +
+      'exportado para PNG vira um tracejado ESTÁTICO, sem erro nenhum. Exporte com -f svg.');
 
   if (explicar) {
     console.log('\n  resolução de nomes pelo catálogo:');

@@ -36,6 +36,7 @@ node motor/gerar.cjs modelo/pedidos-serverless.json --explicar   # trilha do cat
 | `motor/resolver.cjs` | Nó do modelo → style do catálogo (#17). Único lugar que decide tamanho. |
 | `motor/derivar.cjs` | O que o motor descobre sozinho: árvore, gatilho de AZ (#19), faixas derivadas, pai da aresta. |
 | `motor/dispor.cjs` | Layout. Dois caminhos: `elkjs` puro, ou grade de AZ com o `elkjs` dentro da célula. |
+| `motor/alinhar.cjs` | O passe que tira o "quase" — encaixa faixas quase alinhadas, e desfaz se sobrepuser. |
 | `motor/planejar.cjs` | Layout bruto → **plano** de células. A costura do motor. |
 | `motor/emitir.cjs` | Plano → mxGraph XML, receita do #2 §8. Mais o parser que confere boa-formação. |
 | `motor/gerar.cjs` | O pipeline e a CLI. |
@@ -43,6 +44,7 @@ node motor/gerar.cjs modelo/pedidos-serverless.json --explicar   # trilha do cat
 | `modelo/*.json` | Dois modelos de exemplo, mesmo vocabulário, caminhos de layout diferentes. |
 | `saida/*.drawio` · `*.png` | O que o motor produziu, e o render como prova. |
 | `saida/antes-rotulo-fora-do-elk.png` | O mesmo modelo **sem** entregar o rótulo da aresta ao ELK — as três colisões `A3.2`, para comparar com `pedidos-serverless.png`. |
+| `saida/pedidos-tracejado.png` · `pedidos-animado.svg` | As variantes de fluxo. A animada é SVG por necessidade, não por escolha. |
 | `tools/check-*.cjs` | Fronteira · validação · determinismo · round-trip. |
 
 ## O pipeline
@@ -83,6 +85,58 @@ que o diagrama multi-conta carro-chefe da AWS tem **zero conectores**, e o eixo
 de faixa vs. eixo de fluxo é exatamente o que o
 [#21](https://github.com/ThiagoPanini/panlabs-skills/issues/21) está decidindo.
 O motor expressa os dois; a política é de lá.
+
+## A armadilha mais cara: opção de layout não desce para container
+
+Vale destacar antes de tudo, porque invalida a intuição que a documentação passa.
+
+Com `hierarchyHandling: INCLUDE_CHILDREN` parece que o grafo inteiro é layoutado
+numa passada e que as opções da raiz valem para tudo. **Não valem.** Opção de
+espaçamento é lida **por container**; setar só na raiz não dá erro nem aviso —
+dá configuração **inerte**, e o que vale lá dentro é o default do ELK.
+
+Medido: com as opções só na raiz, `spacing.nodeNode` em 38, 50 ou 90 produz
+**exatamente a mesma geometria** — vão de 20 px, o default. Repetido por
+container, o vão obedece. Idem `nodePlacement.strategy`, inerte na raiz e
+decisiva quando repetida.
+
+O sintoma foi um rótulo encostando no ícone vizinho. A causa era que o motor
+inteiro estava pedindo espaçamento que nunca foi aplicado. Quem acrescentar uma
+opção de espaçamento tem de acrescentar em `ESPACAMENTO`, nunca só em
+`OPCOES_RAIZ`.
+
+## Alinhamento: por que existe um passe do motor
+
+Um desalinhamento de 13 px entre dois nós ligados por uma aresta não lê como
+escolha — lê como erro. Ou os dois estão na mesma faixa, ou estão claramente em
+faixas diferentes.
+
+**Não há alavanca no ELK que resolva isso.** Medidos e inertes no `elkjs`
+0.12.0: `priority.straightness` (por aresta), `elk.margins` (por nó),
+`nodePlacement.favorStraightEdges`. As variantes de
+`nodePlacement.bk.fixedAlignment` funcionam mas escolhem **outro** vizinho para
+alinhar; nenhuma zera a diferença.
+
+Como o motor já é dono de 100% da geometria (#2 §8 — é por isso que
+`childLayout` é proibido), o encaixe mora em `motor/alinhar.cjs` e é
+conservador: só mexe em desalinhamento ≤ 30 px, move a **coluna inteira** para
+não comer o vão do vizinho, e **desfaz** se o resultado sobrepõe qualquer coisa.
+
+## Como a aresta indica o caminho
+
+`--fluxo solido | tracejado | animado`. A diferença entre as duas últimas é do
+**renderizador**, não de gosto:
+
+| | PNG | SVG / HTML |
+|---|---|---|
+| `tracejado` | ✅ | ✅ |
+| `animado` (`flowAnimation=1`) | ❌ **vira tracejado estático, sem erro** | ✅ |
+
+O #4 mediu e este protótipo confirmou com os próprios arquivos: o PNG do
+`animado` difere do `tracejado` **só na fase do tracejado** — é um quadro
+congelado. Por isso a suite exporta a variante animada para **SVG** e checa que
+o `@keyframes ge-flow-animation` está lá; gerar PNG dela seria prova falsa. A
+CLI avisa quando alguém pede `animado`.
 
 ## O que este protótipo descobriu
 

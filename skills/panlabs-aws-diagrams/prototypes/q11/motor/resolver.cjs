@@ -30,9 +30,12 @@ const GRUPO_DE = {
 
 // Métrica de texto. Não há como medir fonte sem renderizar, então isto é
 // estimativa calibrada — e é por isso que o validador geométrico (#18) existe.
-const LARG_CAR = 6.4;          // largura média por caractere a ~11px
-const ALT_LINHA = 15;
-const ROTULO_MIN = 20;
+// As styles do catálogo desenham rótulo de folha com `fontSize=12`, não 10 —
+// a primeira versão estimou por 10 e subdimensionou a faixa do rótulo em ~25%.
+// Foi assim que o "VPC endpoint" encostou no rótulo "Catálogo" do RDS.
+const LARG_CAR = 6.7;          // largura média por caractere a 12px
+const ALT_LINHA = 17;
+const ROTULO_MIN = 23;
 // O rótulo do service icon quebra nesta largura. Fixá-la é o que permite manter
 // a caixa do layout igual à caixa do ícone: o transbordo passa a ser uma
 // constante conhecida, comprada em `spacing`, e não uma caixa de largura

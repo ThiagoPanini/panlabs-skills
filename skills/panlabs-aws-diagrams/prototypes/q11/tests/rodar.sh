@@ -46,6 +46,18 @@ if [ ! -x "$DRAWIO" ]; then
   echo "   (ver docs/research/drawio-headless-rendering-wsl2.md)"
 else
   for d in "$Q11"/saida/*.drawio; do
+    # a variante animada NÃO vai para PNG: o #4 mediu e este motor confirmou que
+    # o `flowAnimation` vira tracejado estático, sem erro. PNG dela seria prova falsa.
+    if [[ "$(basename "$d")" == *animado* ]]; then
+      svg="${d%.drawio}.svg"
+      xvfb-run -a "$DRAWIO" -x -f svg --no-sandbox --disable-gpu -o "$svg" "$d" 2>/dev/null
+      if grep -q 'ge-flow-animation' "$svg" 2>/dev/null; then
+        echo "   $(basename "$svg") ok (animação presente)"
+      else
+        echo "   $(basename "$svg") SEM ANIMAÇÃO"; falhou=1
+      fi
+      continue
+    fi
     png="${d%.drawio}.png"
     xvfb-run -a "$DRAWIO" -x -f png -s 2 --no-sandbox --disable-gpu -o "$png" "$d" 2>/dev/null
     [ -s "$png" ] && echo "   $(basename "$png") ok" || { echo "   $(basename "$png") VAZIO"; falhou=1; }

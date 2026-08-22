@@ -1,0 +1,83 @@
+{
+  "esquema": "panlabs-aws-diagrams/elaboracao@1",
+  "sobre": "varejo-300-lojas",
+  "_": "O DELTA da fase técnica. Não é um segundo modelo — é o que a sessão 2 acrescenta ao modelo que ela recuperou de dentro do .drawio. Nenhum campo aqui alcança um casaco lógico: `elaborar.cjs` recusa, e a projeção confere depois.",
+
+  "nos": [
+    { "id": "nuvem", "camada": "tecnica", "tecnico": { "tipo": "nuvem", "rotulo": "AWS Cloud" } },
+
+    { "id": "papel-leitura", "camada": "tecnica", "dentro": "aterrissagem",
+      "tecnico": { "tipo": "servico", "servico": "role", "rotulo": "Papel de leitura cross-account" } },
+
+    { "id": "barramento", "camada": "tecnica", "dentro": "processamento",
+      "tecnico": { "tipo": "servico", "servico": "eventbridge", "rotulo": "EventBridge" } },
+
+    { "id": "vpc-dados", "camada": "tecnica", "dentro": "processamento",
+      "tecnico": { "tipo": "vpc", "rotulo": "VPC de processamento · 10.20.0.0/16", "cidr": "10.20.0.0/16" } },
+
+    { "id": "sub-app", "camada": "tecnica", "dentro": "vpc-dados",
+      "tecnico": { "tipo": "subnet", "rotulo": "Private subnet", "acesso": "privada", "az": "us-east-1a", "cidr": "10.20.1.0/24" } },
+
+    { "id": "endpoint-s3", "camada": "tecnica", "dentro": "sub-app",
+      "tecnico": { "tipo": "servico", "servico": "endpoints", "rotulo": "VPC endpoint (S3)" } }
+  ],
+
+  "casacos": {
+    "loja":       { "tipo": "ator", "servico": "users" },
+    "diretoria":  { "tipo": "ator", "servico": "users" },
+
+    "aterrissagem":   { "tipo": "conta", "conta": "111122223333", "rotulo": "Conta lojas · 111122223333" },
+    "processamento":  { "tipo": "conta", "conta": "222233334444", "rotulo": "Conta dados · 222233334444" },
+    "consumo":        { "tipo": "conta", "conta": "333344445555", "rotulo": "Conta analytics · 333344445555" },
+
+    "receber-arquivo":      { "tipo": "servico", "servico": "transfer family", "rotulo": "Transfer Family (SFTP)" },
+    "guardar-bruto":        { "tipo": "servico", "servico": "s3", "rotulo": "S3 · zona bruta" },
+    "processar-na-chegada": { "tipo": "servico", "servico": "lambda", "rotulo": "Lambda · parse e curadoria" },
+    "tratar-falha":         { "tipo": "servico", "servico": "sqs", "rotulo": "SQS · fila de falha" },
+    "reter-objeto":         { "tipo": "servico", "servico": "s3", "rotulo": "S3 · zona curada", "nota": "ciclo de vida 5 anos" },
+    "consultar":            { "tipo": "servico", "servico": "athena", "rotulo": "Athena" },
+    "painel":               { "tipo": "servico", "servico": "quicksight", "rotulo": "QuickSight" }
+  },
+
+  "_reparenta": "A operação de risco do ticket, isolada num bloco só para ficar visível na revisão. Cada linha empurra um nó aprovado para dentro de um nível que só a camada técnica tem — e a projeção lógica tem de sair idêntica assim mesmo. É a prova de que o colapso funciona.",
+  "dentro": {
+    "aterrissagem": "nuvem",
+    "processamento": "nuvem",
+    "consumo": "nuvem",
+    "processar-na-chegada": "sub-app"
+  },
+
+  "_refina": "Uma aresta lógica vira um CAMINHO técnico. Declarar os saltos em vez de apagar a aresta e escrever duas novas é o que garante que os extremos sobrevivam — a contração da projeção reconstrói exatamente a aresta aprovada.",
+  "refina": {
+    "a-avisa": { "por": ["barramento"], "rotulos": ["ObjectCreated", "dispara"] }
+  },
+
+  "_arestas": "Como o Lambda ALCANÇA o arquivo é detalhe técnico: a vista lógica diz \"chegou arquivo novo, processa\", e é isso que foi aprovado. O caminho pelo VPC endpoint e o papel cross-account existem só na camada técnica — e é assim que a Q9 da sabatina (\"dados puxa de lojas\") aparece desenhada sem poluir a vista que a diretoria vê.",
+  "arestas": [
+    { "id": "a-le", "de": "processar-na-chegada", "para": "endpoint-s3", "camada": "tecnica",
+      "rotulo": "GetObject", "dados": "volta" },
+    { "id": "a-le2", "de": "endpoint-s3", "para": "guardar-bruto", "camada": "tecnica",
+      "rotulo": "sem sair da rede AWS", "dados": "volta" },
+    { "id": "a-confia", "de": "processar-na-chegada", "para": "papel-leitura", "camada": "tecnica",
+      "rotulo": "assume papel", "protocolo": "sts" }
+  ],
+
+  "arestasCasaco": {
+    "a-envia": { "rotulo": "SFTP · porta 22" },
+    "a-varre": { "rotulo": "varre o prefixo curado" }
+  },
+
+  "notas": [
+    { "id": "n-kms", "camada": "tecnica", "origem": "premissa",
+      "texto": "Chave gerenciada pelo cliente (KMS) nas duas zonas do lago — Q7 da sabatina." }
+  ],
+
+  "dossie": {
+    "estacionamento": [
+      { "nome": "Lambda", "capacidade": "processar-na-chegada", "estado": "devolvido",
+        "nota": "voltou na fase técnica como sugestão inferida contra a capacidade, e foi confirmado (#15 §5)." },
+      { "nome": "S3", "capacidade": "reter-objeto", "estado": "devolvido",
+        "nota": "voltou e foi confirmado, nas duas zonas do lago." }
+    ]
+  }
+}

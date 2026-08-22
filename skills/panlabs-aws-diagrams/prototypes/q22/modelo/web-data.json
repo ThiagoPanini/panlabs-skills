@@ -1,0 +1,10 @@
+{
+  "titulo": "Web subnet · Data subnet",
+  "nos": [
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC · web" },
+    { "id": "data", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "dentro": "vpc" },
+    { "id": "aurora", "tipo": "servico", "rotulo": "Amazon Aurora", "servico": "aurora", "dentro": "data" },
+    { "id": "web", "tipo": "subnet", "rotulo": "Web subnet", "acesso": "privada", "dentro": "vpc" },
+    { "id": "ecs", "tipo": "servico", "rotulo": "Amazon ECS", "servico": "ecs", "dentro": "web" }
+  ]
+}

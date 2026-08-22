@@ -1,0 +1,10 @@
+{
+  "titulo": "App subnet · Data subnet",
+  "nos": [
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC · aplicação" },
+    { "id": "data", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "dentro": "vpc" },
+    { "id": "rds", "tipo": "servico", "rotulo": "Amazon RDS", "servico": "rds", "dentro": "data" },
+    { "id": "app", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "dentro": "vpc" },
+    { "id": "ec2", "tipo": "servico", "rotulo": "Amazon EC2", "servico": "ec2", "dentro": "app" }
+  ]
+}

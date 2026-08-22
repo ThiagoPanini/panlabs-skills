@@ -1,0 +1,10 @@
+{
+  "titulo": "Ingest subnet · Core subnet",
+  "nos": [
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC · ingestão" },
+    { "id": "core", "tipo": "subnet", "rotulo": "Core subnet", "acesso": "privada", "dentro": "vpc" },
+    { "id": "dynamodb", "tipo": "servico", "rotulo": "Amazon DynamoDB", "servico": "dynamodb", "dentro": "core" },
+    { "id": "ingest", "tipo": "subnet", "rotulo": "Ingest subnet", "acesso": "privada", "dentro": "vpc" },
+    { "id": "lambda", "tipo": "servico", "rotulo": "AWS Lambda", "servico": "lambda", "dentro": "ingest" }
+  ]
+}

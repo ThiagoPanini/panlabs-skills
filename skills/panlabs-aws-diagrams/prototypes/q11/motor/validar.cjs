@@ -176,6 +176,16 @@ function referencias(m) {
     if (nt.sobre !== undefined && !porId.has(nt.sobre))
       erros.push(`nota[${i}]: sobre="${nt.sobre}" não existe`);
 
+  // habilitador de permissão (#6 E9): o alvo tem de existir, e não pode ser o
+  // próprio habilitador — um IAM role que autoriza a si mesmo é seta em círculo
+  for (const n of m.nos) {
+    if (n.habilita === undefined) continue;
+    if (!porId.has(n.habilita))
+      erros.push(`nó "${n.id}": habilita="${n.habilita}" não existe`);
+    else if (n.habilita === n.id)
+      erros.push(`nó "${n.id}": habilita a si mesmo`);
+  }
+
   return { erros, porId };
 }
 
@@ -188,6 +198,14 @@ function dominio(m, porId) {
   const ancestrais = n => { const out = []; let c = pai(n); while (c) { out.push(c); c = pai(c); } return out; };
 
   for (const n of m.nos) {
+    // Uma conta dentro de outra conta não existe na AWS: a árvore do
+    // Organizations vai OU › OU › conta, e a conta é sempre folha dessa árvore.
+    // Como a OU aqui é dimensão e não container (#12), conta aninhada em conta
+    // só pode ser erro de modelagem — e desenhada leria como fronteira de posse
+    // dentro de fronteira de posse, que é uma rede que não existe.
+    if (n.tipo === 'conta' && ancestrais(n).some(a => a.tipo === 'conta'))
+      erros.push(`nó "${n.id}": conta dentro de conta. A OU é dimensão ("ou"), não um nível de contenção (#12).`);
+
     if (n.tipo === 'subnet' && !ancestrais(n).some(a => a.tipo === 'vpc'))
       erros.push(`nó "${n.id}": subnet fora de qualquer VPC. A árvore de contenção é Cloud › VPC › Subnet (#19).`);
 

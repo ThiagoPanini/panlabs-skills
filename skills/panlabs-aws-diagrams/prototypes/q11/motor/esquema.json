@@ -67,6 +67,15 @@
         "acesso": { "enum": ["publica", "privada"], "description": "So com tipo=subnet." },
         "cidr": { "type": "string", "description": "Bloco CIDR de vpc ou subnet." },
         "conta": { "type": "string", "pattern": "^[0-9]{12}$", "description": "So com tipo=conta." },
+        "ou": {
+          "type": "string",
+          "minLength": 1,
+          "description": "DIMENSAO da conta, nunca um container (#12). O deck oficial nao tem shape de Organizational unit — a OU e par icone+rotulo flutuando acima do primeiro membro, sem caixa (#6 G2). Mesma forma da AZ no #19: o motor decide sozinho se vira faixa desenhada ou fica implicita. So com tipo=conta."
+        },
+        "habilita": {
+          "$ref": "#/definitions/identificador",
+          "description": "Id do componente que este no AUTORIZA. Habilitador de permissao (IAM role, bucket policy, event bus policy) e no ANEXADO com seta curta apontando para dentro do componente, nunca rotulo de aresta (#6 E9). O motor decide onde ancorar."
+        },
         "nota": { "type": "string", "description": "Anotacao presa a este no." }
       },
       "allOf": [
@@ -81,6 +90,10 @@
         {
           "if": { "properties": { "az": { "type": "string" } }, "required": ["az"] },
           "then": { "properties": { "tipo": { "const": "subnet" } } }
+        },
+        {
+          "if": { "properties": { "ou": { "type": "string" } }, "required": ["ou"] },
+          "then": { "properties": { "tipo": { "const": "conta" } } }
         }
       ]
     },

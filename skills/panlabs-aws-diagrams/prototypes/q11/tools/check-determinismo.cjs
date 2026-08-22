@@ -30,7 +30,11 @@ const RAIZ = path.join(__dirname, '..');
 const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
 
 const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
-const modelos = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json'));
+// o diretório de modelos é argumento para que outro protótipo aponte os SEUS
+// modelos para esta mesma régua — o determinismo é propriedade do motor, não
+// de um conjunto de exemplos
+const DIR_MODELOS = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'modelo');
+const modelos = fs.readdirSync(DIR_MODELOS).filter(f => f.endsWith('.json'));
 
 /** Só a geometria — ignora ids, estilos e a ordem em que as células saíram. */
 function digital(xml) {
@@ -56,7 +60,7 @@ function embaralhar(arr, semente) {
   let falhas = 0;
 
   for (const arq of modelos) {
-    const bruto = fs.readFileSync(path.join(RAIZ, 'modelo', arq), 'utf8');
+    const bruto = fs.readFileSync(path.join(DIR_MODELOS, arq), 'utf8');
     const modelo = JSON.parse(bruto);
     console.log(`\n  ${arq}`);
 
@@ -70,7 +74,7 @@ function embaralhar(arr, semente) {
     // 2. processo novo
     const outro = execFileSync(process.execPath, ['-e', `
       const { gerar } = require(${JSON.stringify(path.join(RAIZ, 'motor', 'gerar.cjs'))});
-      const m = JSON.parse(require('fs').readFileSync(${JSON.stringify(path.join(RAIZ, 'modelo', arq))}, 'utf8'));
+      const m = JSON.parse(require('fs').readFileSync(${JSON.stringify(path.join(DIR_MODELOS, arq))}, 'utf8'));
       gerar(m).then(r => process.stdout.write(require('crypto').createHash('sha256').update(r.xml).digest('hex').slice(0,16)));
     `], { encoding: 'utf8' });
     const novoOk = outro === hs[0];

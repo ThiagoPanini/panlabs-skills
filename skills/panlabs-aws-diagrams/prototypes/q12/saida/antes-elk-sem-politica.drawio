@@ -1,0 +1,97 @@
+<mxfile host="panlabs-aws-diagrams" compressed="false">
+  <diagram id="plataforma-3-contas" name="Plataforma de eventos · três contas">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1815" pageHeight="834"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Plataforma de eventos · três contas" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="414" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista técnica T5 · rede compartilhada, workload e dados — o cenário que o #12 pediu" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="616" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="cliente" value="Clientes" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;" vertex="1" parent="1">
+          <mxGeometry x="44" y="459" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="nuvem" value="AWS Cloud" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="275" y="100" width="1496" height="667" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-rede" value="Network · shared" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="837" y="46" width="238" height="426" as="geometry"/>
+        </mxCell>
+        <mxCell id="tgw" value="Transit Gateway" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.transit_gateway;" vertex="1" parent="c-rede">
+          <mxGeometry x="27" y="313" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpc-insp" value="VPC de inspeção" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="c-rede">
+          <mxGeometry x="27" y="46" width="184" height="217" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub-insp" value="Inspection subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#00A4A6;dashed=0;" vertex="1" parent="vpc-insp">
+          <mxGeometry x="12" y="46" width="160" height="159" as="geometry"/>
+        </mxCell>
+        <mxCell id="fw" value="Network Firewall" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.network_firewall;" vertex="1" parent="sub-insp">
+          <mxGeometry x="27" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-workload" value="Workload · pedidos" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="19" y="221" width="537" height="275" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpc-app" value="VPC de aplicação" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="c-workload">
+          <mxGeometry x="19" y="46" width="499" height="217" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub-pub" value="Public subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#7AA116;fillColor=#F2F6E8;verticalAlign=top;align=left;spacingLeft=30;fontColor=#248814;dashed=0;" vertex="1" parent="vpc-app">
+          <mxGeometry x="19" y="46" width="134" height="159" as="geometry"/>
+        </mxCell>
+        <mxCell id="alb" value="ALB" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.application_load_balancer;" vertex="1" parent="sub-pub">
+          <mxGeometry x="27" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub-priv" value="Private subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#00A4A6;dashed=0;" vertex="1" parent="vpc-app">
+          <mxGeometry x="340" y="46" width="140" height="159" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecs" value="ECS · pedidos" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;" vertex="1" parent="sub-priv">
+          <mxGeometry x="27" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-dados" value="Data · analytics" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="837" y="496" width="647" height="159" as="geometry"/>
+        </mxCell>
+        <mxCell id="bus" value="Event bus" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;" vertex="1" parent="c-dados">
+          <mxGeometry x="27" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3" value="Data lake" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="c-dados">
+          <mxGeometry x="542" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="glue" value="Glue ETL" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;" vertex="1" parent="c-dados">
+          <mxGeometry x="264" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-cliente-alb0" value="&lt;b&gt;1.&lt;/b&gt; HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="cliente" target="alb">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e-alb-ecs1" value="&lt;b&gt;2.&lt;/b&gt; encaminha" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="alb" target="ecs">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e-ecs-tgw2" value="&lt;b&gt;3.&lt;/b&gt; atracamento VPC" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ecs" target="tgw">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e-ecs-bus3" value="&lt;b&gt;4.&lt;/b&gt; PutEvents cross-account" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ecs" target="bus">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="848" y="511"/>
+              <mxPoint x="848" y="681"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-bus-glue4" value="&lt;b&gt;5.&lt;/b&gt; dispara" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="bus" target="glue">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e-glue-s35" value="&lt;b&gt;6.&lt;/b&gt; grava parquet" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="glue" target="s3">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;plataforma-3-contas&quot;,&quot;titulo&quot;:&quot;Plataforma de eventos · três contas&quot;,&quot;subtitulo&quot;:&quot;Vista técnica T5 · rede compartilhada, workload e dados — o cenário que o #12 pediu&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;cliente&quot;,&quot;tipo&quot;:&quot;ator&quot;,&quot;servico&quot;:&quot;users&quot;,&quot;rotulo&quot;:&quot;Clientes&quot;},{&quot;id&quot;:&quot;nuvem&quot;,&quot;tipo&quot;:&quot;nuvem&quot;,&quot;rotulo&quot;:&quot;AWS Cloud&quot;},{&quot;id&quot;:&quot;c-rede&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;111111111111&quot;,&quot;rotulo&quot;:&quot;Network · shared&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;tgw&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;transit gateway&quot;,&quot;rotulo&quot;:&quot;Transit Gateway&quot;,&quot;dentro&quot;:&quot;c-rede&quot;},{&quot;id&quot;:&quot;vpc-insp&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de inspeção&quot;,&quot;cidr&quot;:&quot;10.0.0.0/16&quot;,&quot;dentro&quot;:&quot;c-rede&quot;},{&quot;id&quot;:&quot;sub-insp&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Inspection subnet&quot;,&quot;acesso&quot;:&quot;privada&quot;,&quot;dentro&quot;:&quot;vpc-insp&quot;},{&quot;id&quot;:&quot;fw&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;network firewall&quot;,&quot;rotulo&quot;:&quot;Network Firewall&quot;,&quot;dentro&quot;:&quot;sub-insp&quot;},{&quot;id&quot;:&quot;c-workload&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;222222222222&quot;,&quot;rotulo&quot;:&quot;Workload · pedidos&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;vpc-app&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de aplicação&quot;,&quot;cidr&quot;:&quot;10.1.0.0/16&quot;,&quot;dentro&quot;:&quot;c-workload&quot;},{&quot;id&quot;:&quot;sub-pub&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Public subnet&quot;,&quot;acesso&quot;:&quot;publica&quot;,&quot;dentro&quot;:&quot;vpc-app&quot;},{&quot;id&quot;:&quot;alb&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;application load balancer&quot;,&quot;rotulo&quot;:&quot;ALB&quot;,&quot;dentro&quot;:&quot;sub-pub&quot;},{&quot;id&quot;:&quot;sub-priv&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Private subnet&quot;,&quot;acesso&quot;:&quot;privada&quot;,&quot;dentro&quot;:&quot;vpc-app&quot;},{&quot;id&quot;:&quot;ecs&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;ecs&quot;,&quot;rotulo&quot;:&quot;ECS · pedidos&quot;,&quot;dentro&quot;:&quot;sub-priv&quot;},{&quot;id&quot;:&quot;c-dados&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;333333333333&quot;,&quot;rotulo&quot;:&quot;Data · analytics&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;bus&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;eventbridge&quot;,&quot;rotulo&quot;:&quot;Event bus&quot;,&quot;dentro&quot;:&quot;c-dados&quot;},{&quot;id&quot;:&quot;s3&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;s3&quot;,&quot;rotulo&quot;:&quot;Data lake&quot;,&quot;dentro&quot;:&quot;c-dados&quot;},{&quot;id&quot;:&quot;glue&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;glue&quot;,&quot;rotulo&quot;:&quot;Glue ETL&quot;,&quot;dentro&quot;:&quot;c-dados&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;cliente&quot;,&quot;para&quot;:&quot;alb&quot;,&quot;rotulo&quot;:&quot;HTTPS&quot;,&quot;protocolo&quot;:&quot;https&quot;,&quot;ordem&quot;:1},{&quot;de&quot;:&quot;alb&quot;,&quot;para&quot;:&quot;ecs&quot;,&quot;rotulo&quot;:&quot;encaminha&quot;,&quot;ordem&quot;:2},{&quot;de&quot;:&quot;ecs&quot;,&quot;para&quot;:&quot;tgw&quot;,&quot;rotulo&quot;:&quot;atracamento VPC&quot;,&quot;ordem&quot;:3},{&quot;de&quot;:&quot;ecs&quot;,&quot;para&quot;:&quot;bus&quot;,&quot;rotulo&quot;:&quot;PutEvents cross-account&quot;,&quot;ordem&quot;:4},{&quot;de&quot;:&quot;bus&quot;,&quot;para&quot;:&quot;glue&quot;,&quot;rotulo&quot;:&quot;dispara&quot;,&quot;ordem&quot;:5},{&quot;de&quot;:&quot;glue&quot;,&quot;para&quot;:&quot;s3&quot;,&quot;rotulo&quot;:&quot;grava parquet&quot;,&quot;ordem&quot;:6}]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

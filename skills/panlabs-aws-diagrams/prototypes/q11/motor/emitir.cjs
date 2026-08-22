@@ -60,23 +60,44 @@ function verticeComDados(c, ind) {
     `${p}  </mxCell>\n${p}</object>`;
 }
 
+/**
+ * Aresta. Uma ponta pode ser SOLTA — sem nó do outro lado.
+ *
+ * O barramento do `E4` (#6) é literalmente isso: um segmento paralelo à fileira
+ * de contas que não sai de lugar nenhum nem chega em lugar nenhum; quem entra
+ * nas contas são os stubs perpendiculares. No mxGraph uma ponta sem `source`/
+ * `target` só fica onde foi posta se a geometria trouxer `sourcePoint`/
+ * `targetPoint` — sem isso a aresta colapsa na origem, e o draw.io não reclama.
+ */
 function aresta(c, ind) {
   const p = ' '.repeat(ind);
   const pontos = (c.pontos || []).map(pt => `\n${p}      <mxPoint x="${r(pt.x)}" y="${r(pt.y)}"/>`).join('');
-  const arr = pontos ? `\n${p}    <Array as="points">${pontos}\n${p}    </Array>\n${p}  ` : '';
+  const arr = pontos ? `\n${p}    <Array as="points">${pontos}\n${p}    </Array>` : '';
+
+  const solta = c.solta || {};
+  const ponta = (nome, x, y) =>
+    `\n${p}    <mxPoint x="${r(x)}" y="${r(y)}" as="${nome}"/>`;
+  const soltas =
+    (c.de ? '' : (solta.x1 !== undefined ? ponta('sourcePoint', solta.x1, solta.y1) : '')) +
+    (c.para ? '' : (solta.x2 !== undefined ? ponta('targetPoint', solta.x2, solta.y2) : ''));
+
+  const corpo = arr + soltas;
+  const geo = corpo
+    ? `<mxGeometry relative="1" as="geometry">${corpo}\n${p}  </mxGeometry>`
+    : `<mxGeometry relative="1" as="geometry"/>`;
+
   return `${p}<mxCell id="${esc(c.id)}" value="${esc(c.rotulo || '')}" style="${esc(c.style)}" edge="1" ` +
-    `parent="${esc(c.pai)}" source="${esc(c.de)}" target="${esc(c.para)}">\n` +
-    `${p}  <mxGeometry relative="1" as="geometry">${arr}</mxGeometry>\n${p}</mxCell>`;
+    `parent="${esc(c.pai)}"${c.de ? ` source="${esc(c.de)}"` : ''}${c.para ? ` target="${esc(c.para)}"` : ''}>\n` +
+    `${p}  ${geo}\n${p}</mxCell>`;
 }
 
-function emitir(plano) {
+function pagina(plano) {
   const corpo = plano.celulas.map(c =>
     c.tipo === 'aresta' ? aresta(c, 8)
       : c.dados ? verticeComDados(c, 8)
       : vertice(c, 8)).join('\n');
 
-  return `<mxfile host="panlabs-aws-diagrams" compressed="false">
-  <diagram id="${esc(plano.id)}" name="${esc(plano.nome || plano.titulo)}">
+  return `  <diagram id="${esc(plano.id)}" name="${esc(plano.nome || plano.titulo)}">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
         arrows="1" fold="1" page="1" pageScale="1" pageWidth="${r(plano.larg)}" pageHeight="${r(plano.alt)}"
         math="0" shadow="0"${plano.fundo ? ` background="${esc(plano.fundo)}"` : ''}>
@@ -86,7 +107,25 @@ function emitir(plano) {
 ${corpo}
       </root>
     </mxGraphModel>
-  </diagram>
+  </diagram>`;
+}
+
+/**
+ * Um `<mxfile>` com N páginas.
+ *
+ * A decomposição do #6 `D2` não é fallback de saturação: "emita SEMPRE uma
+ * vista de detalhe por conta, em paralelo à consolidada". A estrutura do PPTX
+ * oficial do SRA é exatamente essa — slide 3 consolidado (0 conectores) e
+ * slides 7–12 uma conta cada (2 a 7 conectores intra-conta). E o `.drawio`
+ * suporta isso nativamente: `<diagram>` repetido é aba de página no app.
+ *
+ * O id de cada página é derivado do domínio, nunca sorteado — é o que faz o
+ * arquivo versionar com diff limpo (#11).
+ */
+function emitir(planos) {
+  const lista = Array.isArray(planos) ? planos : [planos];
+  return `<mxfile host="panlabs-aws-diagrams" compressed="false">
+${lista.map(pagina).join('\n')}
 </mxfile>
 `;
 }

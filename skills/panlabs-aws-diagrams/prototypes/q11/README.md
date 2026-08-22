@@ -4,6 +4,24 @@ Protótipo do ticket
 [Motor de geração: IR → layout → mxGraph XML](https://github.com/ThiagoPanini/panlabs-skills/issues/11).
 É a decisão central do mapa: tudo depois dela é variação.
 
+> ### ⚠️ Este motor continuou crescendo depois que o #11 fechou
+>
+> O [#12](https://github.com/ThiagoPanini/panlabs-skills/issues/12) estende o
+> motor daqui em vez de forká-lo — o protótipo dele é `../q12/`, e a suite dele
+> roda esta como primeira camada. O que mudou, e onde está documentado:
+>
+> | Mudou | Onde |
+> |---|---|
+> | **Terceiro caminho de layout** (`porContas`), para multi-conta | `q12/README.md` §1–3 |
+> | O IR ganhou `ou` (dimensão da conta) e `habilita` (habilitador de permissão) | `q12/README.md` §1, §4 |
+> | O `.drawio` passou a ter **N páginas** — consolidada + 1 por conta | `q12/README.md` §5 |
+> | **A grade de AZ agora tem dois eixos**, escolhidos por regra do #21 | `q12/README.md` "A dívida herdada" |
+> | A grade passou a **desenhar arestas** (o parágrafo abaixo que diz o contrário é de antes) | idem |
+> | A ordem dos **irmãos** e das **arestas** passou a ser derivada | `q12/README.md` "O que este protótipo descobriu" §1 |
+>
+> `web-multi-az` continua saindo **byte a byte idêntico**: sem passo numerado, a
+> AZ fica com a coluna, que é o que o #21 decidiu para esse regime.
+
 > **Onde isto vai morar dentro da skill ainda não está decidido** — a estrutura
 > das `references/` é névoa no mapa. A proposta é `skills/panlabs-aws-diagrams/motor/`,
 > irmão de `catalog/`. Mover é `git mv` mais uma linha em `resolver.cjs`
@@ -61,6 +79,10 @@ quem reclama é o gerador.
 
 ## Os dois caminhos de layout, e quem escolhe
 
+> Hoje são **três** — o #12 acrescentou o de multi-conta, que ganha dos outros
+> dois quando o modelo tem ≥2 contas. Esta seção descreve os dois que o #11
+> decidiu; o terceiro está em `../q12/README.md`.
+
 Não é opção do agente — cai do modelo, pela regra do #19:
 
 ```
@@ -78,6 +100,12 @@ faixas de AZ = ≥2 AZs distintas E algum PAPEL de subnet presente em ≥2 AZs
 **As faixas de AZ não estão em nenhum dos dois modelos.** O motor derivou que a
 arquitetura afirma redundância zonal e desenhou as colunas. É a decisão do #19
 virando código em vez de script avulso.
+
+> **Desatualizado pelo #12:** a grade passou a desenhar arestas, porque o #21
+> amarrou o eixo à presença de **passo numerado** e não desenhar o passo tornaria
+> a escolha de eixo inconferível. O parágrafo abaixo é o raciocínio que valia
+> enquanto o eixo estava em aberto, e continua explicando por que a lacuna
+> existiu.
 
 O caminho da grade **não desenha arestas** — e isso não é lacuna preenchida com
 desculpa: o [#6](https://github.com/ThiagoPanini/panlabs-skills/issues/6) mediu
@@ -186,9 +214,12 @@ formato de persistência**; não há um segundo arquivo para dessincronizar.
   `fontColor` que o #17 deixou de propósito para a camada de estilo (#13). O
   motor é fiel ao catálogo; o render mostra o custo, que é o insumo que o #13
   precisa.
-- **O caminho da grade recusa o que não sabe desenhar.** Conta, região, grupo
-  de segurança e folha fora de subnet fazem o motor **falhar com a lista**, em
-  vez de omitir em silêncio — omissão calada é o que a rubrica chama de A4.2.
+- **O caminho da grade recusa o que não sabe desenhar.** Região, grupo de
+  segurança e folha fora de subnet fazem o motor **falhar com a lista**, em vez
+  de omitir em silêncio — omissão calada é o que a rubrica chama de A4.2.
+  (**Conta** saiu desta lista: o #12 lhe deu caminho próprio. O que sobra é a
+  vista de detalhe de uma conta que tem faixa de AZ — ver `q12/README.md`,
+  "O que ficou aberto".)
 - **Aresta pode passar por baixo do rótulo de um nó.** O ELK reserva para
   rótulo de aresta (porque eu entrego) mas não para rótulo de nó (porque a
   caixa é o ícone). O `transbordo` compra o vão entre camadas; uma aresta

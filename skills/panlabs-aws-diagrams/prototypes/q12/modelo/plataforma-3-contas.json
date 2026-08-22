@@ -1,0 +1,41 @@
+{
+  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "id": "plataforma-3-contas",
+  "titulo": "Plataforma de eventos · três contas",
+  "subtitulo": "Vista técnica T5 · rede compartilhada, workload e dados — o cenário que o #12 pediu",
+  "vista": "tecnica",
+  "genero": "T5",
+
+  "nos": [
+    { "id": "cliente", "tipo": "ator", "servico": "users", "rotulo": "Clientes" },
+
+    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
+
+    { "id": "c-rede", "tipo": "conta", "conta": "111111111111", "ou": "Infrastructure", "rotulo": "Network · shared", "dentro": "nuvem" },
+    { "id": "tgw", "tipo": "servico", "servico": "transit gateway", "rotulo": "Transit Gateway", "dentro": "c-rede" },
+    { "id": "vpc-insp", "tipo": "vpc", "rotulo": "VPC de inspeção", "cidr": "10.0.0.0/16", "dentro": "c-rede" },
+    { "id": "sub-insp", "tipo": "subnet", "rotulo": "Inspection subnet", "acesso": "privada", "dentro": "vpc-insp" },
+    { "id": "fw", "tipo": "servico", "servico": "network firewall", "rotulo": "Network Firewall", "dentro": "sub-insp" },
+
+    { "id": "c-workload", "tipo": "conta", "conta": "222222222222", "ou": "Workloads", "rotulo": "Workload · pedidos", "dentro": "nuvem" },
+    { "id": "vpc-app", "tipo": "vpc", "rotulo": "VPC de aplicação", "cidr": "10.1.0.0/16", "dentro": "c-workload" },
+    { "id": "sub-pub", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "dentro": "vpc-app" },
+    { "id": "alb", "tipo": "servico", "servico": "application load balancer", "rotulo": "ALB", "dentro": "sub-pub" },
+    { "id": "sub-priv", "tipo": "subnet", "rotulo": "Private subnet", "acesso": "privada", "dentro": "vpc-app" },
+    { "id": "ecs", "tipo": "servico", "servico": "ecs", "rotulo": "ECS · pedidos", "dentro": "sub-priv" },
+
+    { "id": "c-dados", "tipo": "conta", "conta": "333333333333", "ou": "Workloads", "rotulo": "Data · analytics", "dentro": "nuvem" },
+    { "id": "bus", "tipo": "servico", "servico": "eventbridge", "rotulo": "Event bus", "dentro": "c-dados" },
+    { "id": "s3", "tipo": "servico", "servico": "s3", "rotulo": "Data lake", "dentro": "c-dados" },
+    { "id": "glue", "tipo": "servico", "servico": "glue", "rotulo": "Glue ETL", "dentro": "c-dados" }
+  ],
+
+  "arestas": [
+    { "de": "cliente", "para": "alb", "rotulo": "HTTPS", "protocolo": "https", "ordem": 1 },
+    { "de": "alb", "para": "ecs", "rotulo": "encaminha", "ordem": 2 },
+    { "de": "ecs", "para": "tgw", "rotulo": "atracamento VPC", "ordem": 3 },
+    { "de": "ecs", "para": "bus", "rotulo": "PutEvents cross-account", "ordem": 4 },
+    { "de": "bus", "para": "glue", "rotulo": "dispara", "ordem": 5 },
+    { "de": "glue", "para": "s3", "rotulo": "grava parquet", "ordem": 6 }
+  ]
+}

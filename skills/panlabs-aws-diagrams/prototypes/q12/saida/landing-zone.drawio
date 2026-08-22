@@ -1,0 +1,338 @@
+<mxfile host="panlabs-aws-diagrams" compressed="false">
+  <diagram id="landing-zone" name="Landing zone · seis contas em três OUs">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="2007" pageHeight="964"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Landing zone · seis contas em três OUs" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="449" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista técnica T5 · o conjunto canônico do AWS SRA — mesmo vocabulário do outro modelo, outro modo de vista" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="784" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="nuvem" value="AWS Cloud" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="88" width="1967" height="758" as="geometry"/>
+        </mxCell>
+        <mxCell id="ou-security" value="OU – Security" style="text;html=1;fontSize=13;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="nuvem">
+          <mxGeometry x="244" y="54" width="140" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ou-infrastructure" value="OU – Infrastructure" style="text;html=1;fontSize=13;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="nuvem">
+          <mxGeometry x="851" y="54" width="144" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="ou-workloads" value="OU – Workloads" style="text;html=1;fontSize=13;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="nuvem">
+          <mxGeometry x="1515" y="54" width="140" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-mgmt" value="Org Management" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="12" y="108" width="144" height="296" as="geometry"/>
+        </mxCell>
+        <mxCell id="ct" value="Control Tower" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.control_tower;" vertex="1" parent="c-mgmt">
+          <mxGeometry x="33" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="orgs" value="Organizations" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.organizations;" vertex="1" parent="c-mgmt">
+          <mxGeometry x="33" y="172" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-log" value="Log Archive" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="244" y="108" width="519" height="296" as="geometry"/>
+        </mxCell>
+        <mxCell id="politica" value="Bucket policy" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management;" vertex="1" parent="c-log">
+          <mxGeometry x="33" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="trilha" value="CloudTrail" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudtrail;" vertex="1" parent="c-log">
+          <mxGeometry x="33" y="172" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="balde" value="Log bucket" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="c-log">
+          <mxGeometry x="408" y="172" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-trilha-balde0" value="grava trilha da organização" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="trilha" target="balde">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-sec" value="Security Tooling" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="244" y="426" width="385" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="gd" value="GuardDuty" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.guardduty;" vertex="1" parent="c-sec">
+          <mxGeometry x="33" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="hub" value="Security Hub" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.security_hub;" vertex="1" parent="c-sec">
+          <mxGeometry x="274" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-gd-hub2" value="achados" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="gd" target="hub">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-net" value="Network" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="851" y="108" width="576" height="320" as="geometry"/>
+        </mxCell>
+        <mxCell id="tgw" value="Transit Gateway" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.transit_gateway;" vertex="1" parent="c-net">
+          <mxGeometry x="465" y="138" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpc-net" value="VPC de egresso" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="c-net">
+          <mxGeometry x="33" y="46" width="175" height="228" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub-net" value="Public subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#7AA116;fillColor=#F2F6E8;verticalAlign=top;align=left;spacingLeft=30;fontColor=#248814;dashed=0;" vertex="1" parent="vpc-net">
+          <mxGeometry x="12" y="46" width="144" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="nat" value="NAT gateway" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.nat_gateway;" vertex="1" parent="sub-net">
+          <mxGeometry x="33" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-nat-tgw4" value="egresso centralizado" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nat" target="tgw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-shared" value="Shared Services" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="851" y="450" width="147" height="296" as="geometry"/>
+        </mxCell>
+        <mxCell id="idc" value="IAM Identity Center" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.single_sign_on;" vertex="1" parent="c-shared">
+          <mxGeometry x="33" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="r53" value="Route 53 resolver" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;" vertex="1" parent="c-shared">
+          <mxGeometry x="33" y="172" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-app" value="Application" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="nuvem">
+          <mxGeometry x="1515" y="108" width="440" height="320" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpc-app" value="VPC de aplicação" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="c-app">
+          <mxGeometry x="12" y="46" width="416" height="228" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub-app" value="Private subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#00A4A6;dashed=0;" vertex="1" parent="vpc-app">
+          <mxGeometry x="12" y="46" width="392" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecs" value="ECS" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;" vertex="1" parent="sub-app">
+          <mxGeometry x="33" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="rds" value="RDS" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;" vertex="1" parent="sub-app">
+          <mxGeometry x="281" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-ecs-rds1" value="consulta" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ecs" target="rds">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="hab-politica" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#5A6C86;strokeWidth=1.4;dashed=1;dashPattern=6 4;endArrow=blockThin;endFill=1;endSize=6;" edge="1" parent="1" source="politica" target="balde">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="notas" value="As colunas de OU não estão no modelo — cada conta só declara a dimensão &quot;ou&quot;. O motor decidiu que a declaração agrupa (uma OU com ≥2 contas, e conta fora dela) e desenhou os rótulos, sem caixa: o deck oficial não tem shape de Organizational unit.&lt;br&gt;As travessias de conta foram SUPRIMIDAS nesta vista. É a regra soberana E1 do #6: o diagrama multi-conta carro-chefe da AWS (SRA slide 3, 6 contas) tem zero conectores. Elas aparecem em texto nas vistas de detalhe, uma por conta." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0B34D;fontColor=#6B4E00;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="32" y="878" width="1943" height="54" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;landing-zone&quot;,&quot;titulo&quot;:&quot;Landing zone · seis contas em três OUs&quot;,&quot;subtitulo&quot;:&quot;Vista técnica T5 · o conjunto canônico do AWS SRA — mesmo vocabulário do outro modelo, outro modo de vista&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;nuvem&quot;,&quot;tipo&quot;:&quot;nuvem&quot;,&quot;rotulo&quot;:&quot;AWS Cloud&quot;},{&quot;id&quot;:&quot;c-mgmt&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000001&quot;,&quot;rotulo&quot;:&quot;Org Management&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;orgs&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;organizations&quot;,&quot;rotulo&quot;:&quot;Organizations&quot;,&quot;dentro&quot;:&quot;c-mgmt&quot;},{&quot;id&quot;:&quot;ct&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;control tower&quot;,&quot;rotulo&quot;:&quot;Control Tower&quot;,&quot;dentro&quot;:&quot;c-mgmt&quot;},{&quot;id&quot;:&quot;c-sec&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000002&quot;,&quot;ou&quot;:&quot;Security&quot;,&quot;rotulo&quot;:&quot;Security Tooling&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;hub&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;security hub&quot;,&quot;rotulo&quot;:&quot;Security Hub&quot;,&quot;dentro&quot;:&quot;c-sec&quot;},{&quot;id&quot;:&quot;gd&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;guardduty&quot;,&quot;rotulo&quot;:&quot;GuardDuty&quot;,&quot;dentro&quot;:&quot;c-sec&quot;},{&quot;id&quot;:&quot;c-log&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000003&quot;,&quot;ou&quot;:&quot;Security&quot;,&quot;rotulo&quot;:&quot;Log Archive&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;trilha&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;cloudtrail&quot;,&quot;rotulo&quot;:&quot;CloudTrail&quot;,&quot;dentro&quot;:&quot;c-log&quot;},{&quot;id&quot;:&quot;balde&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;s3&quot;,&quot;rotulo&quot;:&quot;Log bucket&quot;,&quot;dentro&quot;:&quot;c-log&quot;},{&quot;id&quot;:&quot;politica&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;iam&quot;,&quot;rotulo&quot;:&quot;Bucket policy&quot;,&quot;dentro&quot;:&quot;c-log&quot;,&quot;habilita&quot;:&quot;balde&quot;},{&quot;id&quot;:&quot;c-net&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000004&quot;,&quot;ou&quot;:&quot;Infrastructure&quot;,&quot;rotulo&quot;:&quot;Network&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;tgw&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;transit gateway&quot;,&quot;rotulo&quot;:&quot;Transit Gateway&quot;,&quot;dentro&quot;:&quot;c-net&quot;},{&quot;id&quot;:&quot;vpc-net&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de egresso&quot;,&quot;cidr&quot;:&quot;10.0.0.0/16&quot;,&quot;dentro&quot;:&quot;c-net&quot;},{&quot;id&quot;:&quot;sub-net&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Public subnet&quot;,&quot;acesso&quot;:&quot;publica&quot;,&quot;dentro&quot;:&quot;vpc-net&quot;},{&quot;id&quot;:&quot;nat&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;nat gateway&quot;,&quot;rotulo&quot;:&quot;NAT gateway&quot;,&quot;dentro&quot;:&quot;sub-net&quot;},{&quot;id&quot;:&quot;c-shared&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000005&quot;,&quot;ou&quot;:&quot;Infrastructure&quot;,&quot;rotulo&quot;:&quot;Shared Services&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;idc&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;iam identity center&quot;,&quot;rotulo&quot;:&quot;IAM Identity Center&quot;,&quot;dentro&quot;:&quot;c-shared&quot;},{&quot;id&quot;:&quot;r53&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;route 53&quot;,&quot;rotulo&quot;:&quot;Route 53 resolver&quot;,&quot;dentro&quot;:&quot;c-shared&quot;},{&quot;id&quot;:&quot;c-app&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000006&quot;,&quot;ou&quot;:&quot;Workloads&quot;,&quot;rotulo&quot;:&quot;Application&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;vpc-app&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de aplicação&quot;,&quot;cidr&quot;:&quot;10.1.0.0/16&quot;,&quot;dentro&quot;:&quot;c-app&quot;},{&quot;id&quot;:&quot;sub-app&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Private subnet&quot;,&quot;acesso&quot;:&quot;privada&quot;,&quot;dentro&quot;:&quot;vpc-app&quot;},{&quot;id&quot;:&quot;ecs&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;ecs&quot;,&quot;rotulo&quot;:&quot;ECS&quot;,&quot;dentro&quot;:&quot;sub-app&quot;},{&quot;id&quot;:&quot;rds&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;rds&quot;,&quot;rotulo&quot;:&quot;RDS&quot;,&quot;dentro&quot;:&quot;sub-app&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;trilha&quot;,&quot;para&quot;:&quot;balde&quot;,&quot;rotulo&quot;:&quot;grava trilha da organização&quot;},{&quot;de&quot;:&quot;ecs&quot;,&quot;para&quot;:&quot;rds&quot;,&quot;rotulo&quot;:&quot;consulta&quot;,&quot;protocolo&quot;:&quot;sql&quot;},{&quot;de&quot;:&quot;gd&quot;,&quot;para&quot;:&quot;hub&quot;,&quot;rotulo&quot;:&quot;achados&quot;},{&quot;de&quot;:&quot;ecs&quot;,&quot;para&quot;:&quot;balde&quot;,&quot;rotulo&quot;:&quot;logs de acesso&quot;},{&quot;de&quot;:&quot;nat&quot;,&quot;para&quot;:&quot;tgw&quot;,&quot;rotulo&quot;:&quot;egresso centralizado&quot;},{&quot;de&quot;:&quot;idc&quot;,&quot;para&quot;:&quot;ecs&quot;,&quot;rotulo&quot;:&quot;acesso federado&quot;}],&quot;notas&quot;:[{&quot;texto&quot;:&quot;As colunas de OU não estão no modelo — cada conta só declara a dimensão \&quot;ou\&quot;. O motor decidiu que a declaração agrupa (uma OU com ≥2 contas, e conta fora dela) e desenhou os rótulos, sem caixa: o deck oficial não tem shape de Organizational unit.&quot;,&quot;origem&quot;:&quot;legenda&quot;},{&quot;texto&quot;:&quot;As travessias de conta foram SUPRIMIDAS nesta vista. É a regra soberana E1 do #6: o diagrama multi-conta carro-chefe da AWS (SRA slide 3, 6 contas) tem zero conectores. Elas aparecem em texto nas vistas de detalhe, uma por conta.&quot;,&quot;origem&quot;:&quot;legenda&quot;}]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="landing-zone-c-mgmt" name="Org Management">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="441"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Org Management" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="171" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista de detalhe · Landing zone · seis contas em três OUs" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="425" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-mgmt" value="Org Management" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="100" width="140" height="274" as="geometry"/>
+        </mxCell>
+        <mxCell id="ct" value="Control Tower" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.control_tower;" vertex="1" parent="c-mgmt">
+          <mxGeometry x="17" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="orgs" value="Organizations" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.organizations;" vertex="1" parent="c-mgmt">
+          <mxGeometry x="17" y="161" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;landing-zone-c-mgmt&quot;,&quot;titulo&quot;:&quot;Org Management&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Landing zone · seis contas em três OUs&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-mgmt&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000001&quot;,&quot;rotulo&quot;:&quot;Org Management&quot;},{&quot;id&quot;:&quot;orgs&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;organizations&quot;,&quot;rotulo&quot;:&quot;Organizations&quot;,&quot;dentro&quot;:&quot;c-mgmt&quot;},{&quot;id&quot;:&quot;ct&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;control tower&quot;,&quot;rotulo&quot;:&quot;Control Tower&quot;,&quot;dentro&quot;:&quot;c-mgmt&quot;}],&quot;arestas&quot;:[],&quot;faixas&quot;:[],&quot;notas&quot;:[]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="landing-zone-c-sec" name="Security Tooling">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="326"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Security Tooling" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="195" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista de detalhe · Landing zone · seis contas em três OUs" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="425" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-sec" value="Security Tooling" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="100" width="269" height="159" as="geometry"/>
+        </mxCell>
+        <mxCell id="gd" value="GuardDuty" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.guardduty;" vertex="1" parent="c-sec">
+          <mxGeometry x="14" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="hub" value="Security Hub" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.security_hub;" vertex="1" parent="c-sec">
+          <mxGeometry x="177" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-gd-hub0" value="achados" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="gd" target="hub">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;landing-zone-c-sec&quot;,&quot;titulo&quot;:&quot;Security Tooling&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Landing zone · seis contas em três OUs&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-sec&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000002&quot;,&quot;ou&quot;:&quot;Security&quot;,&quot;rotulo&quot;:&quot;Security Tooling&quot;},{&quot;id&quot;:&quot;hub&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;security hub&quot;,&quot;rotulo&quot;:&quot;Security Hub&quot;,&quot;dentro&quot;:&quot;c-sec&quot;},{&quot;id&quot;:&quot;gd&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;guardduty&quot;,&quot;rotulo&quot;:&quot;GuardDuty&quot;,&quot;dentro&quot;:&quot;c-sec&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;gd&quot;,&quot;para&quot;:&quot;hub&quot;,&quot;rotulo&quot;:&quot;achados&quot;}],&quot;faixas&quot;:[],&quot;notas&quot;:[]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="landing-zone-c-log" name="Log Archive">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="499"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Log Archive" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="136" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista de detalhe · Landing zone · seis contas em três OUs" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="425" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-log" value="Log Archive" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="100" width="423" height="274" as="geometry"/>
+        </mxCell>
+        <mxCell id="politica" value="Bucket policy" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management;" vertex="1" parent="c-log">
+          <mxGeometry x="17" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="trilha" value="CloudTrail" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudtrail;" vertex="1" parent="c-log">
+          <mxGeometry x="17" y="161" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="balde" value="Log bucket" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="c-log">
+          <mxGeometry x="328" y="161" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-trilha-balde0" value="grava trilha da organização" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="trilha" target="balde">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="notas" value="Entra nesta conta: logs de acesso ← Application" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0B34D;fontColor=#6B4E00;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="32" y="429" width="836" height="38" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;landing-zone-c-log&quot;,&quot;titulo&quot;:&quot;Log Archive&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Landing zone · seis contas em três OUs&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-log&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000003&quot;,&quot;ou&quot;:&quot;Security&quot;,&quot;rotulo&quot;:&quot;Log Archive&quot;},{&quot;id&quot;:&quot;trilha&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;cloudtrail&quot;,&quot;rotulo&quot;:&quot;CloudTrail&quot;,&quot;dentro&quot;:&quot;c-log&quot;},{&quot;id&quot;:&quot;balde&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;s3&quot;,&quot;rotulo&quot;:&quot;Log bucket&quot;,&quot;dentro&quot;:&quot;c-log&quot;},{&quot;id&quot;:&quot;politica&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;iam&quot;,&quot;rotulo&quot;:&quot;Bucket policy&quot;,&quot;dentro&quot;:&quot;c-log&quot;,&quot;habilita&quot;:&quot;balde&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;trilha&quot;,&quot;para&quot;:&quot;balde&quot;,&quot;rotulo&quot;:&quot;grava trilha da organização&quot;}],&quot;faixas&quot;:[],&quot;notas&quot;:[{&quot;texto&quot;:&quot;Entra nesta conta: logs de acesso ← Application&quot;,&quot;origem&quot;:&quot;legenda&quot;}]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="landing-zone-c-net" name="Network">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="465"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Network" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="90" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista de detalhe · Landing zone · seis contas em três OUs" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="425" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-net" value="Network" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="100" width="510" height="298" as="geometry"/>
+        </mxCell>
+        <mxCell id="tgw" value="Transit Gateway" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.transit_gateway;" vertex="1" parent="c-net">
+          <mxGeometry x="408" y="138" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpc-net" value="VPC de egresso" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="c-net">
+          <mxGeometry x="24" y="46" width="165" height="217" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub-net" value="Public subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#7AA116;fillColor=#F2F6E8;verticalAlign=top;align=left;spacingLeft=30;fontColor=#248814;dashed=0;" vertex="1" parent="vpc-net">
+          <mxGeometry x="12" y="46" width="134" height="159" as="geometry"/>
+        </mxCell>
+        <mxCell id="nat" value="NAT gateway" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.nat_gateway;" vertex="1" parent="sub-net">
+          <mxGeometry x="24" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-nat-tgw0" value="egresso centralizado" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="nat" target="tgw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;landing-zone-c-net&quot;,&quot;titulo&quot;:&quot;Network&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Landing zone · seis contas em três OUs&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-net&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000004&quot;,&quot;ou&quot;:&quot;Infrastructure&quot;,&quot;rotulo&quot;:&quot;Network&quot;},{&quot;id&quot;:&quot;tgw&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;transit gateway&quot;,&quot;rotulo&quot;:&quot;Transit Gateway&quot;,&quot;dentro&quot;:&quot;c-net&quot;},{&quot;id&quot;:&quot;vpc-net&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de egresso&quot;,&quot;cidr&quot;:&quot;10.0.0.0/16&quot;,&quot;dentro&quot;:&quot;c-net&quot;},{&quot;id&quot;:&quot;sub-net&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Public subnet&quot;,&quot;acesso&quot;:&quot;publica&quot;,&quot;dentro&quot;:&quot;vpc-net&quot;},{&quot;id&quot;:&quot;nat&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;nat gateway&quot;,&quot;rotulo&quot;:&quot;NAT gateway&quot;,&quot;dentro&quot;:&quot;sub-net&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;nat&quot;,&quot;para&quot;:&quot;tgw&quot;,&quot;rotulo&quot;:&quot;egresso centralizado&quot;}],&quot;faixas&quot;:[],&quot;notas&quot;:[]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="landing-zone-c-shared" name="Shared Services">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="532"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Shared Services" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="183" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista de detalhe · Landing zone · seis contas em três OUs" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="425" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-shared" value="Shared Services" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="100" width="147" height="296" as="geometry"/>
+        </mxCell>
+        <mxCell id="idc" value="IAM Identity Center" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.single_sign_on;" vertex="1" parent="c-shared">
+          <mxGeometry x="33" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="r53" value="Route 53 resolver" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.route_53;" vertex="1" parent="c-shared">
+          <mxGeometry x="33" y="172" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="notas" value="Sai desta conta: acesso federado → Application" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0B34D;fontColor=#6B4E00;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="32" y="462" width="836" height="38" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;landing-zone-c-shared&quot;,&quot;titulo&quot;:&quot;Shared Services&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Landing zone · seis contas em três OUs&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-shared&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000005&quot;,&quot;ou&quot;:&quot;Infrastructure&quot;,&quot;rotulo&quot;:&quot;Shared Services&quot;},{&quot;id&quot;:&quot;idc&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;iam identity center&quot;,&quot;rotulo&quot;:&quot;IAM Identity Center&quot;,&quot;dentro&quot;:&quot;c-shared&quot;},{&quot;id&quot;:&quot;r53&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;route 53&quot;,&quot;rotulo&quot;:&quot;Route 53 resolver&quot;,&quot;dentro&quot;:&quot;c-shared&quot;}],&quot;arestas&quot;:[],&quot;faixas&quot;:[],&quot;notas&quot;:[{&quot;texto&quot;:&quot;Sai desta conta: acesso federado → Application&quot;,&quot;origem&quot;:&quot;legenda&quot;}]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="landing-zone-c-app" name="Application">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="516"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Application" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="30" width="136" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista de detalhe · Landing zone · seis contas em três OUs" style="text;html=1;fontSize=12;fontColor=#5A6C86;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="58" width="425" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="c-app" value="Application" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#E7157B;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="100" width="314" height="275" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpc-app" value="VPC de aplicação" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="c-app">
+          <mxGeometry x="12" y="46" width="290" height="217" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub-app" value="Private subnet" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#00A4A6;dashed=0;" vertex="1" parent="vpc-app">
+          <mxGeometry x="12" y="46" width="266" height="159" as="geometry"/>
+        </mxCell>
+        <mxCell id="ecs" value="ECS" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;" vertex="1" parent="sub-app">
+          <mxGeometry x="12" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="rds" value="RDS" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;" vertex="1" parent="sub-app">
+          <mxGeometry x="176" y="46" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-ecs-rds0" value="consulta" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=12;html=1;jettySize=auto;orthogonalLoop=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ecs" target="rds">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="notas" value="Sai desta conta: logs de acesso → Log Archive&lt;br&gt;Entra nesta conta: acesso federado ← Shared Services" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E0B34D;fontColor=#6B4E00;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="32" y="430" width="836" height="54" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;landing-zone-c-app&quot;,&quot;titulo&quot;:&quot;Application&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Landing zone · seis contas em três OUs&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-app&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;100000000006&quot;,&quot;ou&quot;:&quot;Workloads&quot;,&quot;rotulo&quot;:&quot;Application&quot;},{&quot;id&quot;:&quot;vpc-app&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de aplicação&quot;,&quot;cidr&quot;:&quot;10.1.0.0/16&quot;,&quot;dentro&quot;:&quot;c-app&quot;},{&quot;id&quot;:&quot;sub-app&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Private subnet&quot;,&quot;acesso&quot;:&quot;privada&quot;,&quot;dentro&quot;:&quot;vpc-app&quot;},{&quot;id&quot;:&quot;ecs&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;ecs&quot;,&quot;rotulo&quot;:&quot;ECS&quot;,&quot;dentro&quot;:&quot;sub-app&quot;},{&quot;id&quot;:&quot;rds&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;rds&quot;,&quot;rotulo&quot;:&quot;RDS&quot;,&quot;dentro&quot;:&quot;sub-app&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;ecs&quot;,&quot;para&quot;:&quot;rds&quot;,&quot;rotulo&quot;:&quot;consulta&quot;,&quot;protocolo&quot;:&quot;sql&quot;}],&quot;faixas&quot;:[],&quot;notas&quot;:[{&quot;texto&quot;:&quot;Sai desta conta: logs de acesso → Log Archive&quot;,&quot;origem&quot;:&quot;legenda&quot;},{&quot;texto&quot;:&quot;Entra nesta conta: acesso federado ← Shared Services&quot;,&quot;origem&quot;:&quot;legenda&quot;}]}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

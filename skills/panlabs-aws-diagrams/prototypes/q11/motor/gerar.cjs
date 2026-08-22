@@ -29,6 +29,78 @@ const { emitir, conferirXml } = require('./emitir.cjs');
 
 const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'esquema.json'), 'utf8'));
 
+/**
+ * As vistas de detalhe, uma por conta — e elas NÃO são plano B.
+ *
+ * O #6 `D2` é explícito, e a estrutura do PPTX oficial do SRA prova: slide 3 é
+ * a consolidada (6 contas, ZERO conectores) e os slides 7–12 são uma conta cada,
+ * com 2 a 7 conectores intra-conta. As duas coisas são publicadas ao mesmo
+ * tempo. O corte não acontece "quando fica cheio demais" — é estrutural.
+ *
+ * O jeito de construí-las é a melhor prova de que a fronteira do motor está no
+ * lugar: a vista de detalhe é O MESMO motor rodando num SUBMODELO. Nada aqui
+ * sabe desenhar; recorta semântica e chama o pipeline de novo.
+ */
+async function paginasDeDetalhe(modelo, d, res, opts, relatorio) {
+  const planejar = require('./planejar.cjs');
+  const dispor = require('./dispor.cjs');
+  const paginas = [];
+
+  for (const conta of modelo.nos.filter(n => n.tipo === 'conta')) {
+    const dentro = new Set();
+    (function marcar(id) { dentro.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(conta.id);
+
+    // as travessias viram TEXTO, não geometria — `E3`: "o texto substitui a
+    // cardinalidade". A vista de detalhe carrega só aresta intra-conta.
+    const entram = d.travessias.filter(a => a.contaPara === conta.id);
+    const saem = d.travessias.filter(a => a.contaDe === conta.id);
+    const nomeDaConta = id => {
+      const c = d.t.porId.get(id);
+      return (c && c.rotulo) || id;
+    };
+    const notas = [];
+    for (const a of saem)
+      notas.push({ texto: `Sai desta conta: ${a.rotulo || 'ligação'} → ${nomeDaConta(a.contaPara)}`, origem: 'legenda' });
+    for (const a of entram)
+      notas.push({ texto: `Entra nesta conta: ${a.rotulo || 'ligação'} ← ${nomeDaConta(a.contaDe)}`, origem: 'legenda' });
+
+    const sub = {
+      esquema: modelo.esquema,
+      id: `${modelo.id}-${conta.id}`,
+      titulo: `${conta.rotulo || conta.id}`,
+      subtitulo: `Vista de detalhe · ${modelo.titulo}`,
+      vista: modelo.vista,
+      ...(modelo.genero ? { genero: modelo.genero } : {}),
+      nos: modelo.nos
+        .filter(n => dentro.has(n.id))
+        .map(n => (n.id === conta.id ? { ...n, dentro: undefined } : { ...n }))
+        .map(n => { const c = { ...n }; if (c.dentro === undefined) delete c.dentro; return c; }),
+      arestas: (modelo.arestas || []).filter(a => dentro.has(a.de) && dentro.has(a.para)),
+      faixas: (modelo.faixas || []).filter(f => f.membros.every(m => dentro.has(m))),
+      notas,
+    };
+
+    try {
+      const v = validar(sub, ESQUEMA);
+      if (!v.ok) throw Object.assign(new Error(`submodelo inválido (${v.fase})`), { erros: v.erros });
+      const ds = derivar(sub);
+      if (ds.az.desenhar) {
+        // a grade de AZ ainda não desenha a caixa de conta como raiz — ver o
+        // README. Recusar alto é melhor que desenhar a conta fora do lugar.
+        throw new Error('a grade de AZ não desenha conta como container raiz');
+      }
+      const layout = await dispor.porElk(sub, ds, res);
+      const p = planejar.planoDeElk(sub, ds, res, layout, opts);
+      paginas.push(p);
+    } catch (e) {
+      relatorio.avisos.push(
+        `vista de detalhe de "${conta.id}" não saiu: ${e.message}` +
+        (e.erros ? ` — ${e.erros[0]}` : ''));
+    }
+  }
+  return paginas;
+}
+
 async function gerar(modelo, opts = {}) {
   const relatorio = { avisos: [], passos: [] };
   const marco = (nome, extra) => relatorio.passos.push({ nome, ...extra });
@@ -43,7 +115,25 @@ async function gerar(modelo, opts = {}) {
   marco('derivar', { faixasAz: d.az.desenhar, porque: d.az.porque, azs: d.az.azs });
 
   let plano, caminho;
-  if (d.az.desenhar) {
+  const paginas = [];
+  if (d.modo.modo !== 'nenhum') {
+    // multi-conta manda no caminho, mesmo com faixa de AZ possível: a conta é o
+    // nível mais externo da árvore, e quem escolhe a grade é o container mais
+    // externo que precisa de grade. A faixa de AZ dentro de uma conta é
+    // trabalho da vista de detalhe daquela conta (D2).
+    caminho = 'contas';
+    const g = await dispor.porContas(modelo, d, res);
+    plano = planejar.planoDeContas(modelo, d, res, g, opts);
+    marco('dispor', {
+      modo: d.modo.modo, contas: d.modo.contas, travessias: d.modo.travessias,
+      ordem: g.ordem.map(c => c.id).join('→'),
+      varredura: g.varredura.varridas ? `${g.varredura.varridas} permutações, custo ${g.varredura.custo}` : 'canônica',
+    });
+    relatorio.avisos.push(`modo "${d.modo.modo}": ${d.modo.porque}`);
+    relatorio.avisos.push(`travessia nível ${d.politica.nivel} (${d.politica.mecanismo}): ${d.politica.porque}`);
+    if (d.ou.desenhar) relatorio.avisos.push(`faixas de OU: ${d.ou.porque}`);
+    paginas.push(...await paginasDeDetalhe(modelo, d, res, opts, relatorio));
+  } else if (d.az.desenhar) {
     caminho = 'grade';
     // O caminho da grade é uma vista de REDE: ele sabe desenhar nuvem › VPC ›
     // subnet › conteúdo e nada mais. Silenciar um container que ele não modela
@@ -60,6 +150,14 @@ async function gerar(modelo, opts = {}) {
     }
     const g = await dispor.porGrade(modelo, d, res);
     plano = planejar.planoDeGrade(modelo, d, res, g, opts);
+    marco('dispor', {
+      eixo: g.eixo,
+      raias: g.zonas.join('/'),
+      varredura: g.varreduraRaias.varridas
+        ? `${g.varreduraRaias.varridas} permutações, custo ${g.varreduraRaias.custo}`
+        : 'ordem declarada',
+    });
+    relatorio.avisos.push(`eixo da grade "${g.eixo}": ${g.porqueEixo}`);
   } else {
     caminho = 'elk';
     const layout = await dispor.porElk(modelo, d, res);
@@ -72,9 +170,12 @@ async function gerar(modelo, opts = {}) {
         relatorio.avisos.push(`encaixe DESFEITO em "${x.aresta}" (${x.delta}px): ${x.porque}`);
     }
   }
-  marco('planejar', { caminho, celulas: plano.celulas.length, pagina: `${plano.larg}×${plano.alt}` });
+  marco('planejar', {
+    caminho, celulas: plano.celulas.length, pagina: `${plano.larg}×${plano.alt}`,
+    ...(paginas.length ? { paginas: 1 + paginas.length } : {}),
+  });
 
-  const xml = emitir(plano);
+  const xml = emitir([plano, ...paginas]);
 
   // O #19 achou isto do jeito caro: XML inválido faz o draw.io renderizar
   // truncado e sair com código 0. Se o gerador não conferir, ninguém confere.

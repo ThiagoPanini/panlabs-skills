@@ -27,6 +27,30 @@ const CROSS_OUT = 24;  // transbordo que faz o cruzamento SE VER
 const HEAD = 34;       // faixa de título de qualquer container — recursiva (#2 §3.2)
 
 /**
+ * A quinta calha, e ela é do #12: a linha onde o rótulo da OU mora.
+ *
+ * Sai da mesma medição das outras: no PPTX do SRA o ícone da OU tem 0,50" de
+ * altura e a primeira conta membro começa ≈0,12" abaixo dele (#6 §1.4/§2.2).
+ * Com as caixas de conta deste motor girando em 250–550 px de largura contra
+ * as 2,5–4" do SRA, a escala é ≈100 px por polegada, então 0,50" + 0,12" ≈ 62.
+ *
+ * Ela é irmã da `AZ_LANE` e existe pelo mesmo motivo: a faixa é desenhada FORA
+ * da árvore, então ninguém reserva espaço para o rótulo dela a não ser o motor.
+ */
+const OU_LANE = 62;
+
+/**
+ * E a sexta: a faixa de rótulo de uma RAIA de zona.
+ *
+ * Com a AZ em coluna, o rótulo das zonas fica todo numa tira só, acima da
+ * grade — é a `AZ_LANE`. Transposta, cada raia precisa da própria tira, porque
+ * o rótulo é desenhado no canto superior esquerdo da banda e há uma banda por
+ * linha. Então a reserva deixa de ser global e passa a viver no vão ENTRE as
+ * raias. 26 px é o que o rótulo de 12 px ocupa com folga.
+ */
+const RAIA_LANE = 26;
+
+/**
  * `BAND_LANE` não pode ser constante — descoberto ao ligar o motor no catálogo.
  *
  * O #19 calibrou 24 px contra um estilo de faixa escrito à mão. O estilo REAL
@@ -243,15 +267,110 @@ async function porElk(modelo, d, res) {
 // ------------------------------------------------------------------ caminho B
 
 /**
- * Grade de AZ. O motor fixa o `x` de cada coluna; dentro de cada célula
- * (uma subnet) o ELK arruma o conteúdo. As linhas são os PAPÉIS de subnet
- * — mesma linha, mesmo papel, colunas diferentes — que é o que faz a faixa
- * vertical ler como zona.
+ * Grade de AZ, nos DOIS eixos — e quem escolhe é o modelo, não o agente.
+ *
+ * O #11 escreveu esta grade com a AZ em COLUNAS, que era a orientação do
+ * protótipo do #19. O #21 fechou depois e decidiu o contrário — mas com uma
+ * condição que é fácil perder ao ler só a manchete:
+ *
+ *   > Quando as DUAS dimensões estão presentes, a dimensão ORDENADA fica com a
+ *   > horizontal; a paralela vira raia empilhada na vertical. Passo numerado é
+ *   > ordenado; réplica zonal é intercambiável — é isso que "redundância" quer
+ *   > dizer. **Sem fluxo numerado, a AZ pode ficar com a coluna, como no deck.**
+ *
+ * Então a dívida herdada não era "transponha tudo": era "o motor tem de saber
+ * os dois eixos, e a escolha é regra". A régua do #21 mediu por quê — 24
+ * combinações realistas, fluxo na horizontal vencendo em 24 de 24 QUANDO há
+ * passo numerado, porque aí a dimensão ordenada tem 5–11 posições e a paralela
+ * tem 2–4, e a dimensão longa vai no lado longo do papel. Sem passo numerado o
+ * regime muda e a coluna do deck volta a empatar.
+ *
+ * A grade é escrita em coordenadas ABSTRATAS — `principal` (papéis de subnet, o
+ * eixo do fluxo) e `transversal` (as zonas) — e só no fim é mapeada para (x,y).
+ * Transpor é trocar o mapeamento, não reescrever a grade. As VPCs empilham ao
+ * longo do PRINCIPAL, porque a faixa de zona atravessa todas elas e ela corre
+ * nessa direção.
  */
+function eixoDaGrade(modelo) {
+  const numerado = (modelo.arestas || []).some(a => a.ordem !== undefined);
+  return {
+    eixo: numerado ? 'raia' : 'coluna',
+    porque: numerado
+      ? 'há passo numerado — a dimensão ordenada fica com a horizontal (#21)'
+      : 'sem passo numerado — a AZ fica com a coluna, como no deck (#21)',
+  };
+}
+
+/**
+ * A ordem das raias — VARREDURA, não heurística.
+ *
+ * O #21 mediu as 6 permutações de 3 zonas nos dois eixos e achou piso ZERO de
+ * `A5.5` em duas delas; mediu também que a heurística óbvia ("põe o alvo da
+ * convergência no meio") apenas TROCA um cruzamento por outro. Com 2 a 4 zonas
+ * são 2 a 24 permutações: varrer é exato e barato.
+ *
+ * O custo é o do #21: aresta entre zonas não vizinhas cruza a faixa de quem
+ * está no meio, que é `A5.5` da rubrica (#8).
+ */
+function ordemDeRaias(modelo, d, subnets) {
+  const zonas = [...new Set(subnets.map(s => s.az).filter(Boolean))].sort();
+  if (zonas.length < 3) return { zonas, custo: 0, varridas: 0 };
+
+  const zonaDo = id => {
+    const n = d.t.porId.get(id);
+    if (!n) return null;
+    const s = n.tipo === 'subnet' ? n : d.t.ancestrais(n).find(a => a.tipo === 'subnet');
+    return s ? s.az : null;
+  };
+  const cruzam = (modelo.arestas || [])
+    .map(a => [zonaDo(a.de), zonaDo(a.para)])
+    .filter(([x, y]) => x && y && x !== y);
+  if (!cruzam.length) return { zonas, custo: 0, varridas: 0 };
+
+  let melhor = null;
+  const todas = permutar(zonas);
+  for (const perm of todas) {
+    const idx = new Map(perm.map((z, i) => [z, i]));
+    let custo = 0;
+    for (const [x, y] of cruzam) custo += Math.max(0, Math.abs(idx.get(x) - idx.get(y)) - 1);
+    if (!melhor || custo < melhor.custo) melhor = { perm, custo };
+  }
+  return { zonas: melhor.perm, custo: melhor.custo, varridas: todas.length };
+}
+
+/**
+ * A QUINTA CALHA — a que o #21 achou e o #11 não tinha.
+ *
+ *   > A calha só empilha se as bandas SE SOBREPÕEM no eixo transversal; lado a
+ *   > lado dividem. Sem essa correção as três faixas de AZ saem em escada.
+ *
+ * A regra do #19 cobrava a calha na primeira linha que a faixa toca e ficava no
+ * MÁXIMO entre as faixas daquela linha — certo para faixas lado a lado, errado
+ * para faixas que se sobrepõem, porque essas precisam de espaço uma DEPOIS da
+ * outra.
+ *
+ * Vira um máximo de somas: para cada posição transversal, some as calhas das
+ * faixas que começam naquela linha E cobrem aquela posição; a calha da linha é
+ * o maior desses totais. Lado a lado, cada posição só vê uma faixa e a soma
+ * degenera no máximo de antes — a regra velha é o caso particular desta, e é
+ * por isso que trocar uma pela outra não mexe em nenhum desenho existente.
+ */
+function calhaDaLinha(faixasDaLinha, zonas) {
+  let maior = 0;
+  for (const z of zonas) {
+    let soma = 0;
+    for (const f of faixasDaLinha) if (f.zonas.has(z)) soma += f.calha;
+    maior = Math.max(maior, soma);
+  }
+  for (const f of faixasDaLinha) if (!f.zonas.size) maior = Math.max(maior, f.calha);
+  return maior;
+}
+
 async function porGrade(modelo, d, res) {
   const elk = new ELK();
   const caixas = new Map();
-  const azs = d.az.azs;
+  const { eixo, porque: porqueEixo } = eixoDaGrade(modelo);
+  const raia = eixo === 'raia';
 
   const vpcs = modelo.nos.filter(n => n.tipo === 'vpc');
   const subnets = modelo.nos.filter(n => n.tipo === 'subnet');
@@ -281,18 +400,20 @@ async function porGrade(modelo, d, res) {
     intra.set(s.id, { w: r.width, h: r.height, filhos: r.children });
   }
 
-  // 2. a coluna é tão larga quanto a subnet mais larga daquela zona; a linha,
-  //    tão alta quanto a mais alta daquele papel.
   const papel = s => `${(d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id}|${s.acesso || '?'}|${s.rotulo || ''}`;
+  const vpcDe = s => (d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
+
+  const varreduraRaias = ordemDeRaias(modelo, d, subnets);
+  const zonas = varreduraRaias.zonas;
+
   const papeisPorVpc = new Map();
   for (const v of vpcs) papeisPorVpc.set(v.id, []);
   for (const s of subnets) {
-    const v = (d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
-    const lista = papeisPorVpc.get(v);
+    const lista = papeisPorVpc.get(vpcDe(s));
     if (lista && !lista.includes(papel(s))) lista.push(papel(s));
   }
   /**
-   * A ORDEM DAS LINHAS É DERIVADA, não herdada da ordem do arquivo.
+   * A ORDEM DOS PAPÉIS É DERIVADA, não herdada da ordem do arquivo.
    *
    * A primeira versão empilhava as linhas na ordem em que as subnets apareciam
    * em `nos`. Reordenar a lista reordenava o desenho — exatamente a incerteza 4
@@ -301,79 +422,493 @@ async function porGrade(modelo, d, res) {
    * agente, e nenhum LLM emite a mesma lista na mesma ordem duas vezes; sem
    * ordem derivada, regerar o mesmo diagrama produz um diff inteiro.
    *
-   * Critério: exposição primeiro (pública em cima, que é o sentido de leitura
-   * do deck), rótulo como desempate.
+   * Critério: exposição primeiro (pública antes, que é o sentido de leitura do
+   * deck), rótulo como desempate.
    *
    * ⚠️ O desempate alfabético é PLACEHOLDER. Ele acerta "App subnet" antes de
    * "Data subnet" por coincidência do alfabeto, e erraria "Web subnet" depois
    * de "Data subnet". Ordenar camadas privadas por significado exige um fato
    * que o IR ainda não tem — é decisão, não bug. Anotado para o mapa.
    */
-  const ordem = { publica: 0, privada: 1, '?': 2 };
+  const ordemAcesso = { publica: 0, privada: 1, '?': 2 };
   for (const lista of papeisPorVpc.values())
     lista.sort((a, b) => {
       const [, aa, ra] = a.split('|'), [, ab, rb] = b.split('|');
-      return (ordem[aa] ?? 9) - (ordem[ab] ?? 9) || ra.localeCompare(rb, 'pt');
+      return (ordemAcesso[aa] ?? 9) - (ordemAcesso[ab] ?? 9) || ra.localeCompare(rb, 'pt');
     });
 
-  const colW = new Map(azs.map(z => [z, Math.max(200, ...subnets.filter(s => s.az === z).map(s => intra.get(s.id).w))]));
-  const colX = new Map();
-  let x = 0;
-  for (const z of azs) { colX.set(z, x); x += colW.get(z) + COL_GAP; }
-  const larguraGrade = x - COL_GAP;
+  // 2. a extensão TRANSVERSAL de cada zona: largura com AZ em coluna, altura
+  //    com AZ em raia. É aqui, e só aqui, que a transposição encosta na medida.
+  const extT = s => raia ? intra.get(s.id).h : intra.get(s.id).w;
+  const extP = s => raia ? intra.get(s.id).w : intra.get(s.id).h;
+  const minT = raia ? 90 : 200;
+  const minP = raia ? 200 : 90;
 
-  // 3. empilhar as VPCs; dentro de cada uma, uma linha por papel
-  const faixasMembro = (modelo.faixas || []);
-  const calhas = new Map();          // id da faixa -> calha lida do estilo dela
-  const linhaComFaixa = new Map();   // vpc -> Map(linha -> maior calha que começa nela)
-  for (const f of faixasMembro) {
+  /**
+   * O gap PRINCIPAL com a grade transposta tem de caber o rótulo da aresta.
+   *
+   * Com a AZ em coluna, o principal é o Y e o vão entre papéis só separa
+   * caixas — 14 px bastam. Transposta, o principal é o X e é exatamente ali que
+   * o rótulo do passo numerado é desenhado. É o mesmo achado do #11 no caminho
+   * do ELK ("entregue o rótulo ao layout, senão ele aproxima os nós até o texto
+   * cair em cima do ícone vizinho"), só que aqui não há ELK para entregar: quem
+   * reserva é a grade.
+   */
+  const larguraDoRotulo = Math.max(0, ...d.arestas.map(a => res.larguraDoTexto(textoDaAresta(a))));
+  const GAP_T = raia ? 14 : COL_GAP;
+  const GAP_P = raia ? Math.max(ROW_GAP, larguraDoRotulo + 24) : ROW_GAP;
+
+  const tamT = new Map(zonas.map(z =>
+    [z, Math.max(minT, ...subnets.filter(s => s.az === z).map(extT))]));
+
+  /**
+   * 3. as faixas de membros, e em QUE EIXO a calha delas é cobrada.
+   *
+   * A calha existe para o RÓTULO da faixa, e o rótulo da faixa é desenhado no
+   * topo dela — em -Y, sempre, porque é onde o `verticalAlign=top` do estilo o
+   * põe. Então a calha é cobrada no eixo que estiver mapeado em Y:
+   *
+   *   AZ em coluna  Y é o PRINCIPAL     → cobra na linha de papel onde a faixa começa
+   *   AZ em raia    Y é o TRANSVERSAL   → cobra na raia onde a faixa começa
+   *
+   * O #19 só viu o primeiro caso, porque lá só havia um eixo. Ignorar isso na
+   * grade transposta foi visível no primeiro render: o Auto Scaling group subiu
+   * o próprio rótulo para dentro da faixa de título da VPC, e o gap entre as
+   * colunas de papel ganhou 49 px que ninguém pediu.
+   */
+  const calhas = new Map();
+  const porLinha = new Map();      // vpc -> Map(linha de papel -> [{calha, zonas}])
+  const porRaia = new Map();       // índice da raia -> calha acumulada
+  for (const f of (modelo.faixas || [])) {
     const calha = calhaDaFaixa(res.faixa(f).style);
     calhas.set(f.id, calha);
-    const linhas = f.membros.map(m => {
+    const membros = f.membros.map(m => {
       const s = d.t.ancestrais(d.t.porId.get(m)).find(a => a.tipo === 'subnet') || d.t.porId.get(m);
-      const v = (d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
-      return { v, idx: papeisPorVpc.get(v) ? papeisPorVpc.get(v).indexOf(papel(s)) : -1 };
+      const v = vpcDe(s);
+      return { v, az: s.az, idx: papeisPorVpc.get(v) ? papeisPorVpc.get(v).indexOf(papel(s)) : -1 };
     }).filter(x => x.idx >= 0);
-    // a calha só é cobrada na PRIMEIRA linha que a faixa toca — é ali que o rótulo mora
-    for (const v of new Set(linhas.map(l => l.v))) {
-      const primeira = Math.min(...linhas.filter(l => l.v === v).map(l => l.idx));
-      if (!linhaComFaixa.has(v)) linhaComFaixa.set(v, new Map());
-      const atual = linhaComFaixa.get(v);
-      atual.set(primeira, Math.max(atual.get(primeira) || 0, calha));
+
+    if (raia) {
+      const idxs = membros.map(l => zonas.indexOf(l.az)).filter(i => i >= 0);
+      if (!idxs.length) continue;
+      const primeira = Math.min(...idxs);
+      porRaia.set(primeira, Math.max(porRaia.get(primeira) || 0, calha));
+      continue;
+    }
+    for (const v of new Set(membros.map(l => l.v))) {
+      const meus = membros.filter(l => l.v === v);
+      const primeira = Math.min(...meus.map(l => l.idx));
+      if (!porLinha.has(v)) porLinha.set(v, new Map());
+      const mapa = porLinha.get(v);
+      if (!mapa.has(primeira)) mapa.set(primeira, []);
+      mapa.get(primeira).push({ calha, zonas: new Set(meus.map(l => l.az).filter(Boolean)) });
     }
   }
 
-  const pos = new Map();          // id -> {x,y,w,h} absoluto
-  let y = HEAD + AZ_LANE;         // regras 1+4: a calha de AZ nasce abaixo da faixa de título da nuvem
+  /**
+   * A reserva de cada raia é a SOMA de duas tiras, não o máximo.
+   *
+   * Empilhar em vez de compartilhar é a mesma regra que o #21 achou para duas
+   * bandas na mesma linha, aplicada entre uma banda DERIVADA (a raia de zona) e
+   * uma banda de MEMBROS (o Auto Scaling group): elas se sobrepõem no eixo
+   * transversal — o ASG está dentro da raia — então precisam de espaço uma
+   * depois da outra.
+   *
+   * Sem isso os dois rótulos caem na mesma linha. Visto no render: o
+   * "Auto Scaling group" laranja em cima do "Availability Zone · us-east-1b"
+   * ciano, porque o estilo `groupCenter` desenha o rótulo 25 px abaixo do topo
+   * da banda — exatamente onde o rótulo da raia estava.
+   */
+  const posT = new Map();
+  const reservaDaRaia = new Map();
+  let t = 0;
+  for (const [i, z] of zonas.entries()) {
+    if (i > 0) t += GAP_T;
+    const reserva = raia ? RAIA_LANE + (porRaia.get(i) || 0) : 0;
+    reservaDaRaia.set(z, reserva);
+    t += reserva;
+    posT.set(z, t);
+    t += tamT.get(z);
+  }
+  const extensaoT = t;
+
+  // 4. empilhar as VPCs ao longo do eixo PRINCIPAL
+  const pos = new Map();
   const vpcBox = new Map();
+  // regras 1+4 do #19: a calha da zona nasce sempre ABAIXO da faixa de título de
+  // quem a contém. Em coluna, isso é um deslocamento no principal (o Y); em
+  // raia, o rótulo da zona vive na calha ENTRE as raias, então o principal
+  // começa na margem e é o transversal que carrega a reserva.
+  let p = raia ? PAD : HEAD + AZ_LANE;
   for (const v of vpcs) {
     const papeis = papeisPorVpc.get(v.id);
-    const comFaixa = linhaComFaixa.get(v.id) || new Map();
+    const doVpc = porLinha.get(v.id) || new Map();
     const cV = res.container(v);
     caixas.set(v.id, { container: true, ...cV });
 
-    let h = cV.tituloH + PAD;
-    const rowY = [], rowH = [];
-    papeis.forEach((p, i) => {
-      if (i > 0) h += ROW_GAP + (comFaixa.get(i) || 0);
-      const alt = Math.max(90, ...subnets.filter(s => papel(s) === p).map(s => intra.get(s.id).h));
-      rowY.push(h); rowH.push(alt); h += alt;
+    // a faixa de título do container consome o PRINCIPAL quando o principal é o
+    // Y; com a grade transposta ela consome o transversal, não o principal
+    let corrida = raia ? PAD : cV.tituloH + PAD;
+    const posP = [], tamP = [];
+    papeis.forEach((pa, i) => {
+      if (i > 0) corrida += GAP_P + calhaDaLinha(doVpc.get(i) || [], zonas);
+      const ext = Math.max(minP, ...subnets.filter(s => papel(s) === pa).map(extP));
+      posP.push(corrida); tamP.push(ext); corrida += ext;
     });
-    h += PAD;
-    vpcBox.set(v.id, { x: PAD, y, w: larguraGrade + 2 * PAD, h });
+    corrida += PAD;
+
+    // o topo do conteúdo dentro da VPC: título + padding, mais a faixa de
+    // rótulo da primeira raia quando a grade está transposta
+    const desloT = raia ? HEAD + cV.tituloH + PAD : PAD + PAD;
+    vpcBox.set(v.id, raia
+      ? { x: p, y: HEAD, w: corrida, h: cV.tituloH + PAD + extensaoT + PAD }
+      : { x: PAD, y: p, w: extensaoT + 2 * PAD, h: corrida });
 
     for (const s of subnets) {
-      if ((d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id !== v.id) continue;
+      if (vpcDe(s) !== v.id) continue;
       const i = papeis.indexOf(papel(s));
-      pos.set(s.id, {
-        x: PAD + PAD + colX.get(s.az), y: y + rowY[i],
-        w: colW.get(s.az), h: rowH[i],
-      });
+      pos.set(s.id, raia
+        ? { x: p + posP[i], y: desloT + posT.get(s.az), w: tamP[i], h: tamT.get(s.az) }
+        : { x: PAD + PAD + posT.get(s.az), y: p + posP[i], w: tamT.get(s.az), h: tamP[i] });
     }
-    y += h + 44;
+    p += corrida + 44;
   }
 
-  return { pos, vpcBox, intra, caixas, calhas, colX, colW, azs, larguraGrade, fim: y - 44, AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD };
+  const fimP = p - 44;
+  const alturaRaia = vpcs.length
+    ? Math.max(...[...vpcBox.values()].map(b => b.y + b.h))
+    : HEAD;
+
+  return {
+    pos, vpcBox, intra, caixas, calhas, zonas, azs: zonas, eixo, raia, porqueEixo,
+    varreduraRaias, RAIA_LANE, reservaDaRaia,
+    colX: posT, colW: tamT, posT, tamT, extensaoT,
+    larguraGrade: raia ? fimP : extensaoT,
+    fim: raia ? alturaRaia : fimP,
+    AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD,
+  };
 }
 
-module.exports = { porElk, porGrade, textoDaAresta, calhaDaFaixa, OPCOES_RAIZ, AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD, limpar };
+// ------------------------------------------------------------------ caminho C
+
+/**
+ * Multi-conta (#12). Terceiro caminho, mesma divisão de trabalho dos outros
+ * dois: o motor fica com a grade, o ELK fica com o conteúdo de cada célula —
+ * só que aqui a célula é uma CONTA.
+ *
+ * Por que a conta não pode ser deixada com o ELK: `antes-elk-sem-politica.png`
+ * mostra o custo. O ELK dispõe as contas pelo grafo de arestas, então elas
+ * saem espalhadas na diagonal, de tamanhos díspares, sem ordem de leitura e
+ * com metade da nuvem vazia. Nenhuma das regras medidas no #6 — ordem
+ * canônica `P1`, alinhamento `S5`, calha `X1`, contraste de gap 1:4 `S3` — tem
+ * como ser expressa em opção de ELK: elas falam de CONTAS, e o ELK não sabe o
+ * que é uma conta.
+ */
+
+// Os gaps saem da geometria medida no PPTX do SRA (#6 §2.2), e o que carrega
+// peso é a RAZÃO, não o valor: gap entre irmãs da mesma OU 0,11–0,15";
+// gap entre grupos de OU ≈0,51". O contraste de 1:4 é o que faz o agrupamento
+// por OU ser legível SEM desenhar caixa nenhuma (`S3`) — e como a AWS não tem
+// shape de OU (`G2`), é ele que faz o trabalho todo.
+const GAP_IRMA = 22;
+const GAP_OU = 4 * GAP_IRMA;
+// `X1`/`X2`: na vista de integração as contas ficam lado a lado com uma calha
+// LARGA, porque é nela que mora o elemento compartilhado (peering, PrivateLink,
+// TGW) e é por ela que a travessia respira.
+const CALHA = 130;
+
+/**
+ * `P1` — a ordem de leitura canônica, medida em três diagramas oficiais
+ * independentes (SRA, MALZ, phase-1): governança → segurança → infraestrutura
+ * → workload. A conta sem OU vem primeiro porque é a Management, que o `P2`
+ * põe no topo e fora de qualquer OU.
+ */
+const RANK_OU = ['management', 'security', 'infrastructure', 'infra', 'network',
+  'shared services', 'shared', 'workloads', 'workload', 'application', 'sandbox'];
+
+function rankOu(ou) {
+  if (!ou) return -1;                       // sem OU = Management, e ela vem antes de tudo (P2)
+  const k = String(ou).toLowerCase();
+  const i = RANK_OU.findIndex(r => k.includes(r));
+  return i >= 0 ? i : RANK_OU.length;       // OU que a AWS não nomeia vai depois das que ela nomeia
+}
+
+/** Permutações de uma lista curta. Só é chamada com n ≤ 4 — ver `ordemDeContas`. */
+function permutar(xs) {
+  if (xs.length <= 1) return [xs];
+  const out = [];
+  for (let i = 0; i < xs.length; i++)
+    for (const resto of permutar([...xs.slice(0, i), ...xs.slice(i + 1)]))
+      out.push([xs[i], ...resto]);
+  return out;
+}
+
+/**
+ * A ordem das contas ao longo do eixo.
+ *
+ * VARREDURA, NÃO HEURÍSTICA — a lição do #21, que mediu que "põe o alvo da
+ * convergência no meio" apenas TROCA um cruzamento por outro. Lá as raias eram
+ * AZs; aqui são contas, e a aritmética é a mesma: `X1` limita a vista de
+ * integração a 4 contas, então são no máximo 24 permutações. Varrer é barato e
+ * exato; adivinhar é barato e errado.
+ *
+ * O custo tem dois termos, e a ordem entre eles é o que importa:
+ *
+ *   PULO (peso 10)  travessia entre contas não adjacentes — a aresta atravessa
+ *                   a caixa de uma terceira conta. É `A5.5` da rubrica (#8),
+ *                   aresta cortando faixa alheia, e é o que faz o desenho
+ *                   virar espaguete.
+ *   CONTRAMÃO (1)   travessia apontando para trás. `X5` diz que o eixo
+ *                   esquerda→direita segue o fluxo primário; uma aresta contra
+ *                   o eixo não mente, só lê pior.
+ *
+ * O desempate final é a ordem canônica `P1`, para que dois layouts de mesmo
+ * custo não dependam da ordem em que o agente escreveu a lista (#11 mediu que
+ * nenhum LLM emite a mesma lista duas vezes).
+ */
+function ordemDeContas(contas, cruz, modo) {
+  const canonica = [...contas].sort((a, b) =>
+    rankOu(a.ou) - rankOu(b.ou) ||
+    String(a.rotulo || a.id).localeCompare(String(b.rotulo || b.id), 'pt'));
+
+  if (modo !== 'integracao' || !cruz.length) return { ordem: canonica, custo: null, varridas: 0 };
+
+  const custoDe = (perm) => {
+    const pos = new Map(perm.map((c, i) => [c.id, i]));
+    let pulo = 0, contramao = 0;
+    for (const a of cruz) {
+      const i = pos.get(a.contaDe), j = pos.get(a.contaPara);
+      if (i === undefined || j === undefined) continue;
+      if (Math.abs(i - j) > 1) pulo += Math.abs(i - j) - 1;
+      if (j < i) contramao++;
+    }
+    return 10 * pulo + contramao;
+  };
+
+  /**
+   * O desempate é INVERSÕES contra a ordem canônica, e isso não é detalhe.
+   *
+   * Neste modelo de três contas duas permutações empatam em custo 1 — as duas
+   * que põem o workload no meio — e a diferença entre elas é ler
+   * `Network | Workload | Data` ou `Data | Workload | Network`. "A primeira que
+   * a enumeração achar" é determinística e arbitrária; contar inversões contra
+   * `P1` é determinística e SIGNIFICATIVA: entre dois layouts igualmente bons
+   * para a aresta, ganha o que estiver mais perto da ordem de leitura que a AWS
+   * usa.
+   */
+  const idxCanonico = new Map(canonica.map((c, i) => [c.id, i]));
+  const inversoes = (perm) => {
+    let n = 0;
+    for (let i = 0; i < perm.length; i++)
+      for (let j = i + 1; j < perm.length; j++)
+        if (idxCanonico.get(perm[i].id) > idxCanonico.get(perm[j].id)) n++;
+    return n;
+  };
+
+  let melhor = null;
+  const todas = permutar(canonica);
+  for (const perm of todas) {
+    const c = custoDe(perm), inv = inversoes(perm);
+    if (!melhor || c < melhor.custo || (c === melhor.custo && inv < melhor.inv))
+      melhor = { perm, custo: c, inv };
+  }
+  return { ordem: melhor.perm, custo: melhor.custo, inversoes: melhor.inv, varridas: todas.length };
+}
+
+/**
+ * Layout do INTERIOR de uma conta: o ELK arruma a subárvore e as arestas internas.
+ *
+ * Duas passadas, pelo mesmo motivo do caminho A: uma conta cujo conteúdo é
+ * estreito sai mais estreita que o próprio título, e o rótulo vaza por baixo da
+ * caixa. Foi o que aconteceu com "Org Management" e "Shared Services" no
+ * primeiro render da landing zone — duas linhas de texto pendurdas fora da
+ * borda magenta. A folga entra como `padding.right` e o ELK relayouta com ela,
+ * então nada precisa ser esticado depois (que é o contorno que o #7 propõe e
+ * que pode encostar num irmão).
+ */
+async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Map()) {
+  const espacamento = {
+    ...ESPACAMENTO,
+    'elk.spacing.nodeNode': String(14 + metrica.rotuloMax),
+    'elk.layered.spacing.nodeNodeBetweenLayers': String(12 + Math.ceil(2 * metrica.transbordo)),
+  };
+
+  const paraElk = (no) => {
+    const kids = d.t.filhos.get(no.id);
+    if (kids.length) {
+      const c = res.container(no);
+      caixas.set(no.id, { container: true, ...c });
+      const temFolha = kids.some(k => !d.t.filhos.get(k.id).length);
+      const folga = temFolha ? Math.ceil(metrica.transbordo) : 0;
+      return {
+        id: no.id,
+        layoutOptions: {
+          'elk.padding': `[top=${c.tituloH + PAD},left=${PAD + folga},` +
+            `bottom=${PAD + (temFolha ? metrica.rotuloMax : 0)},right=${PAD + folga + (medir.get(no.id) || 0)}]`,
+          ...espacamento,
+        },
+        children: kids.map(paraElk),
+      };
+    }
+    const f = res.folha(no);
+    caixas.set(no.id, { container: false, ...f });
+    return { id: no.id, width: f.caixaW || f.formaW, height: f.formaH };
+  };
+
+  const cC = res.container(conta);
+  caixas.set(conta.id, { container: true, ...cC });
+  const folgaConta = d.t.filhos.get(conta.id).some(k => !d.t.filhos.get(k.id).length)
+    ? metrica.transbordo : 0;
+
+  // só as arestas cujas DUAS pontas moram nesta conta — a travessia é do motor
+  const dentro = new Set();
+  (function marcar(id) { dentro.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(conta.id);
+  const internas = d.arestas.filter(a => dentro.has(a.de) && dentro.has(a.para));
+
+  const grafo = {
+    id: conta.id,
+    layoutOptions: {
+      ...OPCOES_RAIZ,
+      'elk.json.edgeCoords': 'CONTAINER',   // dentro da conta, o espaço é o da conta
+      // a folga lateral vale para a CONTA também, não só para os containers de
+      // dentro: o rótulo da folha é desenhado centrado sob o ícone e mais largo
+      // que ele, então sem isto "IAM Identity Center" encosta na borda magenta
+      'elk.padding': `[top=${cC.tituloH + PAD},left=${PAD + folgaConta},` +
+        `bottom=${PAD + metrica.rotuloMax},right=${PAD + folgaConta + (medir.get(conta.id) || 0)}]`,
+      ...espacamento,
+    },
+    children: d.t.filhos.get(conta.id).map(paraElk),
+    edges: internas.map(a => {
+      const txt = textoDaAresta(a);
+      return {
+        id: a.id, sources: [a.de], targets: [a.para],
+        ...(txt ? { labels: [{ id: a.id + '-rot', text: txt, width: res.larguraDoTexto(txt) + 8, height: 14 }] } : {}),
+      };
+    }),
+  };
+  return limpar(await elk.layout(grafo));
+}
+
+/** As duas medidas de rótulo que todo caminho precisa antes de montar grafo nenhum. */
+function metricaDeRotulo(modelo, d, res) {
+  let rotuloMax = 0, transbordo = 0;
+  for (const no of modelo.nos) {
+    if (d.t.filhos.get(no.id).length) continue;
+    const f = res.folha(no);
+    rotuloMax = Math.max(rotuloMax, f.rotuloH);
+    transbordo = Math.max(transbordo, Math.max(0, ((f.rotuloW || 0) - f.formaW) / 2));
+  }
+  return { rotuloMax, transbordo: Math.ceil(transbordo) };
+}
+
+async function porContas(modelo, d, res) {
+  const elk = new ELK();
+  const caixas = new Map();
+  const metrica = metricaDeRotulo(modelo, d, res);
+  const contas = modelo.nos.filter(n => n.tipo === 'conta');
+  const modo = d.modo.modo;
+
+  // 1. cada conta é layoutada isolada, para saber de que tamanho ela precisa (S4)
+  const interno = new Map();
+  for (const c of contas) {
+    let medir = new Map(), r = null;
+    for (let passada = 0; passada < 2; passada++) {
+      r = await layoutDaConta(elk, c, d, res, caixas, metrica, medir);
+      const proximo = new Map();
+      const def = deficitDeTitulo(c, caixas.get(c.id), r.width, res);
+      if (def > 0) proximo.set(c.id, def);
+      (function medirTitulos(n) {
+        for (const filho of n.children || []) {
+          const no = d.t.porId.get(filho.id);
+          const dd = deficitDeTitulo(no, caixas.get(filho.id), filho.width, res);
+          if (dd > 0) proximo.set(filho.id, dd);
+          medirTitulos(filho);
+        }
+      })(r);
+      if (!proximo.size) break;
+      medir = proximo;
+    }
+    interno.set(c.id, r);
+  }
+
+  // 2. a ordem ao longo do eixo — varrida na integração, canônica no inventário
+  const { ordem, custo, varridas } = ordemDeContas(contas, d.travessias, modo);
+
+  // `X6`: a conta que é hub ganha ênfase de borda, os spokes ficam finos. Só
+  // marca quem DOMINA — empate não tem hub, e uma ênfase que não distingue é
+  // ruído. Hub = quem mais participa de travessia.
+  const grau = new Map(contas.map(c => [c.id, 0]));
+  for (const a of d.travessias) {
+    grau.set(a.contaDe, (grau.get(a.contaDe) || 0) + 1);
+    grau.set(a.contaPara, (grau.get(a.contaPara) || 0) + 1);
+  }
+  const ranking = [...grau.entries()].sort((a, b) => b[1] - a[1]);
+  // e SÓ na vista de integração: `X6` sai dos diagramas em que a travessia está
+  // desenhada, e no inventário ela não está. Engrossar a borda de uma conta por
+  // causa de arestas que a vista suprimiu é afirmar uma ênfase que o leitor não
+  // tem como conferir.
+  const hub = modo === 'integracao' && ranking.length > 1 &&
+    ranking[0][1] > ranking[1][1] && ranking[0][1] >= 2
+    ? ranking[0][0] : null;
+
+  // 3. a grade. Integração: uma fileira, calha larga (X1). Inventário: uma
+  //    COLUNA por grupo de OU, contas empilhadas dentro dela (a disposição do
+  //    SRA, medida em §2.2), com o contraste de gap 1:4 fazendo o agrupamento.
+  const pos = new Map();
+  let larguraTotal = 0, alturaTotal = 0;
+  const colunas = [];
+
+  if (modo === 'integracao') {
+    let x = 0;
+    const alt = Math.max(...ordem.map(c => interno.get(c.id).height));
+    ordem.forEach((c, i) => {
+      const g = interno.get(c.id);
+      if (i > 0) x += CALHA;
+      // `S5` transposto: numa COLUNA as contas são left-aligned na origem; numa
+      // FILEIRA, top-aligned. O topo reto é o que deixa a travessia sair
+      // horizontal e curta.
+      pos.set(c.id, { x, y: 0, w: g.width, h: g.height });
+      x += g.width;
+    });
+    larguraTotal = x; alturaTotal = alt;
+    colunas.push({ ou: null, contas: ordem.map(c => c.id) });
+  } else {
+    // agrupa em colunas por OU, preservando a ordem canônica já calculada
+    let atual = null;
+    for (const c of ordem) {
+      const chave = c.ou || null;
+      if (!atual || atual.ou !== chave) { atual = { ou: chave, contas: [] }; colunas.push(atual); }
+      atual.contas.push(c.id);
+    }
+    let x = 0;
+    for (const [i, col] of colunas.entries()) {
+      if (i > 0) x += GAP_OU;
+      const larg = Math.max(...col.contas.map(id => interno.get(id).width));
+      let y = d.ou.desenhar ? OU_LANE : 0;   // a faixa de rótulo da OU nasce acima do primeiro membro
+      col.x = x; col.larg = larg; col.y = 0;
+      for (const id of col.contas) {
+        const g = interno.get(id);
+        pos.set(id, { x, y, w: g.width, h: g.height });   // S5: left-aligned na origem da coluna
+        y += g.height + GAP_IRMA;
+      }
+      col.alt = y - GAP_IRMA;
+      alturaTotal = Math.max(alturaTotal, col.alt);
+      x += larg;
+    }
+    larguraTotal = x;
+  }
+
+  return {
+    pos, interno, caixas, ordem, colunas, modo, hub,
+    largura: larguraTotal, altura: alturaTotal,
+    varredura: { custo, varridas },
+    metrica, GAP_IRMA, GAP_OU, CALHA, OU_LANE,
+  };
+}
+
+module.exports = {
+  porElk, porGrade, porContas, ordemDeContas, ordemDeRaias, eixoDaGrade, calhaDaLinha,
+  rankOu, metricaDeRotulo,
+  textoDaAresta, calhaDaFaixa, OPCOES_RAIZ,
+  AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD, GAP_IRMA, GAP_OU, CALHA, OU_LANE, limpar,
+};

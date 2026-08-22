@@ -130,20 +130,24 @@ function diferir(pagina, celulasDeReferencia) {
  * A politica. Separada da deteccao de proposito: detectar e medicao, decidir e
  * produto, e o #15 ja fixou a doutrina — *relata, propoe, nunca conserta calado*
  * e *bloqueia em bloco, uma vez so*.
+ *
+ * O glifo mora aqui junto com o resto. Ele estava numa tabela solta no
+ * briefing, e um estado novo obrigaria a lembrar de dois lugares — este e o
+ * unico que sabe o que cada estado significa.
  */
 function politica(estado) {
   switch (estado) {
     case 'intacto':
-      return { regerarEhSeguro: true, bloqueia: false,
+      return { glifo: '✓', regerarEhSeguro: true, bloqueia: false,
         diga: 'o desenho e o que o modelo produz. Sigo.' };
     case 'remanejado':
-      return { regerarEhSeguro: true, bloqueia: false, avisa: true,
+      return { glifo: '~', regerarEhSeguro: true, bloqueia: false, avisa: true,
         diga: 'voce moveu coisa neste desenho. O modelo continua valendo, mas regerar devolve o layout do motor e perde o seu ajuste — confirme antes.' };
     case 'divergente':
-      return { regerarEhSeguro: false, bloqueia: true,
+      return { glifo: '✗', regerarEhSeguro: false, bloqueia: true,
         diga: 'o desenho afirma uma arquitetura que o modelo nao afirma. Nao regero por cima: eu apagaria a sua edicao, e nao sei qual das duas versoes voce considera verdade.' };
     default:
-      return { regerarEhSeguro: false, bloqueia: true,
+      return { glifo: '?', regerarEhSeguro: false, bloqueia: true,
         diga: 'pagina sem selo — nao sei o que ela afirma nem quem a desenhou.' };
   }
 }

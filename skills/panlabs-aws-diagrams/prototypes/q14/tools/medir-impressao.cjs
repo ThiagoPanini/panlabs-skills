@@ -37,8 +37,13 @@ const DRAWIO = process.argv[2] || path.join(process.env.HOME, '.local/opt/drawio
 
 // ------------------------------------------------------------- as edicoes
 
-/** Troca um atributo dentro da tag de UMA celula, achada pelo id. */
-function naCelula(xml, id, fn) {
+/**
+ * Troca dentro da PRIMEIRA celula com este id. Aqui a base e uma pagina so, entao
+ * primeira e unica — o nome diz "primeira" mesmo assim, porque existe um irmao
+ * deste helper em `demo-divergencia.cjs` que casa a ULTIMA, e dois helpers com o
+ * mesmo nome e semanticas opostas e o jeito mais barato de plantar um bug.
+ */
+function naPrimeiraCelula(xml, id, fn) {
   const re = new RegExp(`(<mxCell id="${id}"[\\s\\S]*?</mxCell>)`);
   const m = re.exec(xml);
   if (!m) throw new Error(`celula "${id}" nao achada`);
@@ -52,14 +57,14 @@ const EDICOES = [
   { nome: 'arrastar uma caixa', esperado: 'remanejado',
     // Ancorar em `<mxGeometry x=` e obrigatorio: um `/x="(\d+)"/` solto casa
     // dentro de `vertex="1"` e a edicao vira outra coisa. Custou uma rodada.
-    faz: x => naCelula(x, 'processar-na-chegada',
+    faz: x => naPrimeiraCelula(x, 'processar-na-chegada',
       c => c.replace(/<mxGeometry x="(-?\d+)"/, (_, v) => `<mxGeometry x="${+v + 40}"`)) },
 
   { nome: 'trocar a fonte de um rotulo', esperado: 'remanejado',
-    faz: x => naCelula(x, 'titulo', c => c.replace('fontSize=19', 'fontSize=15')) },
+    faz: x => naPrimeiraCelula(x, 'titulo', c => c.replace('fontSize=19', 'fontSize=15')) },
 
   { nome: 'recolher um container', esperado: 'remanejado',
-    faz: x => naCelula(x, 'vpc-dados', c => c.replace('<mxCell id="vpc-dados"', '<mxCell id="vpc-dados" collapsed="1"')) },
+    faz: x => naPrimeiraCelula(x, 'vpc-dados', c => c.replace('<mxCell id="vpc-dados"', '<mxCell id="vpc-dados" collapsed="1"')) },
 
   { nome: 'reordenar celulas (ordem z)', esperado: 'remanejado',
     faz: x => {
@@ -69,11 +74,11 @@ const EDICOES = [
     } },
 
   { nome: 'repintar subnet privada de publica', esperado: 'divergente', controle: true,
-    faz: x => naCelula(x, 'sub-app', c => c.replace('#00A4A6', '#7AA116').replace('#E6F6F7', '#F2F6E8')),
+    faz: x => naPrimeiraCelula(x, 'sub-app', c => c.replace('#00A4A6', '#7AA116').replace('#E6F6F7', '#F2F6E8')),
     porque: 'mesma forma, mesmo grIcon — a fronteira publica/privada so existe no hex' },
 
   { nome: 'renomear um servico', esperado: 'divergente',
-    faz: x => naCelula(x, 'reter-objeto', c => c.replace('value="S3 · zona curada"', 'value="S3 · arquivo morto"')) },
+    faz: x => naPrimeiraCelula(x, 'reter-objeto', c => c.replace('value="S3 · zona curada"', 'value="S3 · arquivo morto"')) },
 
   { nome: 'apagar um no', esperado: 'divergente',
     faz: x => x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '') },
@@ -85,7 +90,7 @@ const EDICOES = [
       '        </mxCell>\n      </root>') },
 
   { nome: 'trocar o icone de um servico', esperado: 'divergente',
-    faz: x => naCelula(x, 'processar-na-chegada', c => c.replace(/resIcon=mxgraph\.aws4\.\w+/, 'resIcon=mxgraph.aws4.ec2')) },
+    faz: x => naPrimeiraCelula(x, 'processar-na-chegada', c => c.replace(/resIcon=mxgraph\.aws4\.\w+/, 'resIcon=mxgraph.aws4.ec2')) },
 ];
 
 // ------------------------------------------------------------- os esquemas

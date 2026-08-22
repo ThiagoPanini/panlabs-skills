@@ -13,6 +13,8 @@
  * lugar de onde ele retoma a conversa sem pedir ao usuario que repita nada.
  */
 
+const { politica } = require('./abrir.cjs');
+
 const cabeca = t => ['', `  ${t}`, `  ${'─'.repeat(Math.max(8, t.length))}`];
 
 function briefing(aberto, extra = {}) {
@@ -33,7 +35,7 @@ function briefing(aberto, extra = {}) {
   // ------------------------------------------------------- estado das paginas
   L.push(...cabeca('Paginas e o que o humano fez com elas'));
   for (const p of aberto.paginas) {
-    const marca = { intacto: '✓', remanejado: '~', divergente: '✗', 'sem-selo': '?' }[p.estado] || '?';
+    const marca = politica(p.estado).glifo;
     L.push(`    ${marca} ${String(p.nome || p.id).padEnd(34)} vista=${p.vista || '—'}  ${p.estado}`);
     if (p.porque) L.push(`        ${p.porque}`);
   }

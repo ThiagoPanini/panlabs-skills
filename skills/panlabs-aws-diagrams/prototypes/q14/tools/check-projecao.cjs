@@ -32,7 +32,7 @@ const clonar = o => JSON.parse(JSON.stringify(o));
 const no = (m, id) => m.nos.find(n => n.id === id);
 
 /**
- * Seis mutacoes que MUDAM o que foi aprovado. Todas sao coisas que um agente
+ * Sete mutacoes que a checagem TEM de pegar. Todas sao coisas que um agente
  * distraido faz na fase tecnica achando que esta so detalhando.
  */
 const DEVE_QUEBRAR = [
@@ -71,7 +71,7 @@ const DEVE_QUEBRAR = [
 ];
 
 /**
- * Cinco mutacoes que sao elaboracao tecnica legitima. Se a checagem reclamar de
+ * Cinco mutacoes que sao elaboracao tecnica LEGITIMA. Se a checagem reclamar de
  * alguma, ela esta apertada demais e vira ruido que o usuario aprende a ignorar.
  */
 const NAO_PODE_QUEBRAR = [
@@ -116,6 +116,31 @@ function main() {
   console.log(`    nenhum no com casaco logico some da projecao logica ....... ` +
     `${tecnico.nos.filter(n => n.logico).length === pl.nos.length ? '✓' : '✗'}`);
   if (tecnico.nos.filter(n => n.logico).length !== pl.nos.length) falhas++;
+
+  // A nota de no chega ate a projecao? O `else` sem chaves grudava no `if` de
+  // dentro do `for` e a vista logica perdia todo `casacoLogico.nota` em
+  // silencio. Uma linha de checagem para uma classe de bug que nao da erro.
+  // A nota e INJETADA aqui em vez de lida do caso: se o modelo do caso parar de
+  // usar `logico.nota` — e ele parou —, uma checagem que so conta o que ja
+  // existe passa contando zero. Verde por vacuidade e o modo de falhar que o
+  // #17 pagou caro para aprender.
+  const comNota = clonar(tecnico);
+  comNota.nos.find(n => n.id === 'tratar-falha').logico.nota = 'reprocessamento manual, por enquanto';
+  const notaProjetada = projetar(comNota, 'logica').modelo.nos.find(n => n.id === 'tratar-falha').nota;
+  console.log(`    a nota do casaco logico chega na projecao ................. ` +
+    `${notaProjetada ? '✓' : '✗'}  (${notaProjetada ? `"${notaProjetada}"` : 'sumiu'})`);
+  if (!notaProjetada) falhas++;
+
+  // Duas arestas aprovadas DISTINTAS entre o mesmo par tem de sobreviver as
+  // duas. A chave de deduplicacao ja foi so `de>para`, e nesse regime a segunda
+  // sumia — nas DUAS pontas da comparacao do acordo, o que deixava a checagem
+  // cega para a propria perda.
+  const paralelo = clonar(tecnico);
+  paralelo.arestas.push({ id: 'a-confirma', de: 'receber-arquivo', para: 'guardar-bruto', rotulo: 'confirma gravacao' });
+  const proj = projetar(paralelo, 'logica').modelo.arestas
+    .filter(a => a.de === 'receber-arquivo' && a.para === 'guardar-bruto').length;
+  console.log(`    duas arestas distintas no mesmo par sobrevivem ............ ${proj === 2 ? '✓' : '✗'}  (${proj} de 2)`);
+  if (proj !== 2) falhas++;
 
   // ------------------------------------------------- 2. experimento de controle
   console.log('\n  2 · Experimento de controle — o que TEM de quebrar\n');

@@ -21,12 +21,9 @@
     { "id": "loja", "rotulo": "Lojas (300)", "logico": { "tipo": "ator" } },
     { "id": "diretoria", "rotulo": "Diretoria", "logico": { "tipo": "ator" } },
 
-    { "id": "aterrissagem", "rotulo": "Aterrissagem de arquivos",
-      "logico": { "tipo": "grupo", "nota": "Quem é dono: time de integração." } },
-    { "id": "processamento", "rotulo": "Processamento e guarda",
-      "logico": { "tipo": "grupo", "nota": "Quem é dono: time de dados." } },
-    { "id": "consumo", "rotulo": "Consumo analítico",
-      "logico": { "tipo": "grupo", "nota": "Quem é dono: BI." } },
+    { "id": "aterrissagem", "rotulo": "Aterrissagem de arquivos", "logico": { "tipo": "grupo" } },
+    { "id": "processamento", "rotulo": "Processamento e guarda", "logico": { "tipo": "grupo" } },
+    { "id": "consumo", "rotulo": "Consumo analítico", "logico": { "tipo": "grupo" } },
 
     { "id": "receber-arquivo", "rotulo": "Receber arquivo da loja", "dentro": "aterrissagem", "logico": { "tipo": "bloco" } },
     { "id": "guardar-bruto", "rotulo": "Guardar arquivo bruto", "dentro": "aterrissagem", "logico": { "tipo": "bloco" } },
@@ -54,7 +51,9 @@
     { "id": "n-spof", "origem": "achado-recusado",
       "texto": "SPOF conhecido e aceito: o ponto de entrada de arquivo não tem par. Decisão de orçamento, revisar antes do go-live." },
     { "id": "n-retencao", "origem": "premissa", "sobre": "reter-objeto",
-      "texto": "Histórico de 5 anos por exigência de auditoria, com regra de ciclo de vida." }
+      "texto": "Histórico de 5 anos por exigência de auditoria, com regra de ciclo de vida." },
+    { "id": "n-donos", "origem": "legenda",
+      "texto": "Donos das fronteiras — aterrissagem: time de integração · processamento e guarda: time de dados · consumo analítico: BI." }
   ],
 
   "dossie": {

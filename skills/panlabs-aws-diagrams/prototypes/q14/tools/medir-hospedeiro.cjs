@@ -107,10 +107,29 @@ function main() {
     return 0;
   }
 
+  // O app morrer nao e falha desta medicao — e a maquina. Nesta aqui, sob
+  // pressao de memoria, o electron e morto sem mensagem e o `execFileSync`
+  // estoura; deixar estourar transforma uma maquina carregada num vermelho que
+  // nao fala do codigo. Duas tentativas, e depois disso a medicao se declara
+  // impossivel em vez de reprovada.
   const saida = path.join(TMP, 'volta.drawio');
-  execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', saida, entrada],
-    { stdio: ['ignore', 'ignore', 'ignore'] });
-  const depois = varrer(fs.readFileSync(saida, 'utf8'));
+  let bruto = null;
+  for (let tentativa = 1; tentativa <= 2 && bruto === null; tentativa++) {
+    try {
+      execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', saida, entrada],
+        { stdio: ['ignore', 'ignore', 'ignore'] });
+      bruto = fs.readFileSync(saida, 'utf8');
+    } catch (e) {
+      console.log(`  tentativa ${tentativa}: o app nao exportou (${e.status === undefined ? e.message : 'saiu com ' + e.status}).`);
+    }
+  }
+  if (bruto === null) {
+    console.log('  O draw.io headless existe mas nao conseguiu exportar — nesta maquina isso e\n' +
+      '  pressao de memoria, nao resultado. Medicao nao realizada.');
+    fs.rmSync(TMP, { recursive: true, force: true });
+    return 0;
+  }
+  const depois = varrer(bruto);
 
   console.log('\n  Round-trip pelo codec do proprio draw.io (-x -f xml)\n');
   console.log('    hospedeiro                              sobreviveu  intacto');

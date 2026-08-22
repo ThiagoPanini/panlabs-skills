@@ -81,9 +81,17 @@ ONDE o modelo mora    → embutido em <object>, não sidecar
 COMO as vistas moram  → duas páginas <diagram> do MESMO arquivo
 ```
 
-Sidecar `.yaml` cai por argumento, não por medição, e é o mesmo argumento que o #11 usou:
+Sidecar `.yaml` cai por **argumento, não por medição**, e é o mesmo argumento que o #11 usou:
 **dois arquivos dessincronizam**. O usuário arrasta o `.drawio` para o Slack e o par se desfaz
 na primeira vez. Duas páginas em vez de dois arquivos é o mesmo argumento um nível acima.
+
+> **O sidecar tem um argumento a favor, e ele é o número medido abaixo:** com o modelo embutido
+> em duas páginas, o selo é **58% do arquivo**. Um sidecar não pagaria isso. A troca é
+> *dessincronização certa* contra *arquivo 2,3× maior*, e este protótipo escolhe o arquivo maior
+> porque o `.drawio` circula sozinho — anexo de e-mail, canal de Slack, pasta compartilhada — e
+> um modelo que só existe ao lado do desenho é um modelo que some. Se o dossiê real (sabatina
+> inteira, dez achados, transcrição de ata) tornar a conta insustentável, a decisão merece ser
+> reaberta com o número real na mão, e não foi medida com dossiê grande.
 
 **Onde, dentro do XML**, foi medido — sete hospedeiros pelo codec do próprio app:
 
@@ -97,16 +105,19 @@ na primeira vez. Duas páginas em vez de dois arquivos é o mesmo argumento um n
 | `<UserObject>` em célula oculta | sim | sim |
 | `<object>` oculto na **segunda** página | sim | sim |
 
-O selo é escrito em **toda página**, não só na primeira. A medição decide: apagar uma página é
-a operação mais banal do mundo no draw.io, e com uma cópia só ela leva a sessão junto. A cópia
-por página domina o atributo no `<mxfile>` nas duas operações que importam — apagar uma página
-(as duas sobrevivem) e **extrair uma página para um arquivo novo** (só a cópia por página
-sobrevive).
+O selo é escrito em **toda página**, não só na primeira.
 
-> **O custo é real e está medido:** o selo é **57% do arquivo** (19,9 KB por página, com o
-> modelo de sessão escapado). A segunda cópia custa 19,9 KB. Se um dossiê grande tornar isso
-> incômodo, a saída medida é uma cópia só no `<mxfile>` — sobrevive igual, e perde só a
-> extração de página.
+**O que a medição estabelece:** que a segunda página preserva o payload byte a byte, igual à
+primeira (linha 7 da tabela). Sem isso a cópia por página nem seria opção.
+
+**O que é argumento, não medição** — e a distinção importa: apagar uma página é a operação mais
+banal do mundo no draw.io, e com uma cópia só ela leva a sessão junto; extrair uma página para
+um arquivo novo mata até a cópia no `<mxfile>`. **Nenhuma das duas foi executada contra o app** —
+são consequências raciocinadas da tabela, não linhas medidas. Registrado assim de propósito: a
+tabela mede sobrevivência ao *codec*, e sobrevivência a *gesto de usuário* é outra coisa.
+
+**O custo, esse é medido:** o selo é **58% do arquivo** — 40.501 de 70.325 bytes, 19,8 KB por
+página, com o modelo de sessão escapado. A segunda cópia custa exatamente isso.
 
 ### 3 · Como a skill reconhece o próprio arquivo — e por que `host` não serve
 
@@ -122,7 +133,7 @@ round-trip byte a byte (medido).
 
 O reflexo é guardar um hash do arquivo. **Não serve**, e a medição mostra por dois motivos
 diferentes: ele acusa arquivo *intocado* — **abrir e salvar no app, sem tocar em nada, já
-reescreve o XML** (medido: 38.788 → 38.728 bytes numa página, 69.525 → 69.149 no arquivo de
+reescreve o XML** (medido: 39.172 → 39.112 bytes numa página, 70.325 → 69.917 no arquivo de
 duas) — e ele **não distingue arrastar uma caixa de apagar um serviço**, que são respostas
 opostas.
 
@@ -146,6 +157,11 @@ manual; colapsar em `divergente` bloqueia quem só moveu uma caixa — e bloquei
 | hash do arquivo inteiro | 5/10 |
 | semântica **sem cor** + aparência | 9/10 |
 | semântica **com cor** + aparência ← adotado | **10/10** |
+
+> A primeira das dez edições é *"salvar sem editar nada"*, e ela **precisa do draw.io headless**.
+> Sem o binário a régua roda as outras nove e diz que pulou — os placares viram 5/9, 8/9 e 9/9.
+> É justamente a linha que o binário destrava que derruba o hash de arquivo, então vale rodar
+> com ele antes de acreditar no primeiro número.
 
 O único caso que separa os dois últimos é o **experimento de controle**, e ele vale por si:
 
@@ -292,7 +308,27 @@ mesmo arquivo de duas páginas voltou com 2 numa execução (69.149 bytes) e com
 (25.588), sem erro nenhum nas duas. **Quem chama o app tem de conferir o que voltou**, porque o
 código de saída não conta. Vale para o motor de verdade, não só para o teste.
 
-**6 · O NUL byte.** Um `\0` entrou num literal de string ao gravar o arquivo, e o efeito é
+**6 · Dois bugs que só a revisão pegou, e os dois eram silenciosos.**
+
+O primeiro é um `else` sem chaves em `projetar.cjs`:
+
+```js
+if (vista === 'tecnica') for (const c of CAMPOS_TECNICOS) if (casaco[c] !== undefined) …
+else if (casaco.nota !== undefined) saida.nota = casaco.nota;   // ← gruda no `if` de dentro
+```
+
+O `else` liga ao `if` interno, dentro do `for`. Na vista lógica a linha inteira nunca roda, e
+**toda `casacoLogico.nota` sumia da projeção** — sem erro, sem aviso, e sem que o acordo pudesse
+notar, porque o recorte também não carregava o campo. O segundo: a chave de deduplicação da
+contração era `de>para`, então **duas arestas aprovadas distintas entre o mesmo par colapsavam
+numa só** — e como as duas pontas da comparação do acordo perdiam a mesma, a checagem ficava
+cega para a própria perda.
+
+O padrão dos dois é o mesmo e é o que este ticket inteiro persegue: **perda que não dá erro.**
+Os dois viraram guarda em `check-projecao.cjs`, e o da nota tem experimento de controle — com o
+`else` sem chaves de volta, a checagem sai 1.
+
+**7 · O NUL byte.** Um `\0` entrou num literal de string ao gravar o arquivo, e o efeito é
 pérfido: o `node` roda normalmente, mas o `grep` passa a tratar o arquivo como binário e **não
 imprime nada** — inclusive nas linhas certas. Diagnóstico só saiu com um dump de bytes.
 
@@ -303,7 +339,7 @@ imprime nada** — inclusive nas linhas certas. Diagnóstico só saiu com um dum
 - **Absorver a edição do humano.** A divergência é detectada, relatada e classificada em
   absorvível/opaca. Absorver de verdade — virar campo do modelo — é decisão de produto e não
   foi construída. Classificar já responde a pergunta do ticket; absorver é outro ticket.
-- **Dossiê grande.** O selo já é 57% do arquivo com um dossiê de brinquedo. Sabatina real, com
+- **Dossiê grande.** O selo já é 58% do arquivo com um dossiê de brinquedo. Sabatina real, com
   transcrição de ata e dez achados, não foi medida.
 - **Mais de duas vistas.** O esquema tem exatamente dois casacos. Se aparecer uma terceira vista
   (C4 nível 1, por exemplo — hoje fora de escopo), `logico`/`tecnico` viram um mapa.
@@ -324,3 +360,9 @@ imprime nada** — inclusive nas linhas certas. Diagnóstico só saiu com um dum
 - **Nota presa a nó encosta em borda de container** (visível nos dois PNGs). Mesma família do
   "aresta pode raspar o rótulo de um nó" que o #11 já deixou para o
   [#18](https://github.com/ThiagoPanini/panlabs-skills/issues/18).
+- **`no.nota` viaja e não desenha.** O `modelo@1` do #11 declara `nota` no nó, mas o motor só
+  desenha `notas[]` — a anotação presa ao nó nunca vira célula. Não é regressão deste ticket
+  (o modelo do #11 já tinha `"nota": "single-AZ"` num RDS que sai sem ela), mas os dois casacos
+  daqui herdam o campo. **Consequência prática, e ela é do #11 e não do motor:** o que precisa
+  virar desenho vai em `notas[]` — foi assim que "quem é dono de cada fronteira" saiu do campo
+  inerte e virou legenda visível na vista lógica.

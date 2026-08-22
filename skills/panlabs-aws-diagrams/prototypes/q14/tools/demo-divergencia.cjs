@@ -28,22 +28,31 @@ const { lerPaginas } = require('../sessao/impressao.cjs');
 const RAIZ = path.join(__dirname, '..');
 const ARQ = path.join(RAIZ, 'saida', 'varejo.drawio');
 
-/** Aplica uma troca dentro da tag de UMA celula (a segunda pagina, a tecnica). */
-function naCelula(xml, id, fn) {
-  const re = new RegExp(`(<mxCell id="${id}"[\\s\\S]*?</mxCell>)`, 'g');
+/**
+ * Aplica uma troca na ULTIMA celula com este id — o arquivo tem duas paginas e o
+ * mesmo id aparece nas duas; a ultima e a tecnica.
+ *
+ * O recorte e por INDICE, nao por `String.replace(texto, ...)`: replace com
+ * padrao de string troca a PRIMEIRA ocorrencia do texto, entao ele so acertaria
+ * a pagina tecnica enquanto as duas celulas diferissem em algum byte. Casar por
+ * acaso e pior do que errar: funciona ate o dia em que as duas paginas
+ * desenham a celula igual.
+ */
+function naUltimaCelula(xml, id, fn) {
+  const re = new RegExp(`<mxCell id="${id}"[\\s\\S]*?</mxCell>`, 'g');
   const todas = [...xml.matchAll(re)];
   if (!todas.length) throw new Error(`celula "${id}" nao achada`);
-  const alvo = todas[todas.length - 1][1];         // a ultima ocorrencia = pagina tecnica
-  return xml.replace(alvo, fn(alvo));
+  const m = todas[todas.length - 1];
+  return xml.slice(0, m.index) + fn(m[0]) + xml.slice(m.index + m[0].length);
 }
 
 const SO_ARRASTOU = xml =>
-  naCelula(xml, 'reter-objeto', c => c.replace(/<mxGeometry x="(-?\d+)" y="(-?\d+)"/,
+  naUltimaCelula(xml, 'reter-objeto', c => c.replace(/<mxGeometry x="(-?\d+)" y="(-?\d+)"/,
     (_, x, y) => `<mxGeometry x="${+x + 60}" y="${+y + 24}"`));
 
 const MEXEU_NO_CONTEUDO = xml => {
   let x = SO_ARRASTOU(xml);
-  x = naCelula(x, 'tratar-falha', c => c.replace('value="SQS · fila de falha"', 'value="SQS · quarentena"'));
+  x = naUltimaCelula(x, 'tratar-falha', c => c.replace('value="SQS · fila de falha"', 'value="SQS · quarentena"'));
   // apagou o papel de leitura e a aresta que ia nele
   x = x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '');
   x = x.replace(/ *<mxCell id="a-confia"[\s\S]*?<\/mxCell>\n/, '');

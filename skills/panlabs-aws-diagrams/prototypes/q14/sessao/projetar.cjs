@@ -88,8 +88,14 @@ function projetar(sessao, vista) {
     const rotulo = casaco.rotulo !== undefined ? casaco.rotulo : n.rotulo;
     if (rotulo !== undefined) saida.rotulo = rotulo;
     if (pai !== undefined) saida.dentro = pai;
-    if (vista === 'tecnica') for (const c of CAMPOS_TECNICOS) if (casaco[c] !== undefined) saida[c] = casaco[c];
-    else if (casaco.nota !== undefined) saida.nota = casaco.nota;
+    // As chaves aqui NAO sao decoracao: sem elas o `else` gruda no `if` de
+    // dentro do `for` e a projecao LOGICA nunca copia `nota` — o casaco logico
+    // declara o campo, o esquema o documenta, e ele some sem erro nenhum.
+    if (vista === 'tecnica') {
+      for (const c of CAMPOS_TECNICOS) if (casaco[c] !== undefined) saida[c] = casaco[c];
+    } else if (casaco.nota !== undefined) {
+      saida.nota = casaco.nota;
+    }
     nos.push(saida);
   }
 
@@ -137,7 +143,13 @@ function projetar(sessao, vista) {
     for (const alvo of alcancaveis(a.para, new Set())) {
       if (alvo.id === a.de) continue;                          // contracao fechou um laco
       if (vistos.has(alvo.id)) continue;
-      const chave = `${a.de}>${alvo.id}`;
+      // A chave leva a ARESTA de origem, nao so o par (de, para). Sem isso, duas
+      // arestas aprovadas DISTINTAS entre o mesmo par — "envia pedido" e
+      // "confirma recebimento" entre os mesmos dois blocos — colapsariam numa
+      // so, e as duas pontas da comparacao do acordo perderiam a mesma, deixando
+      // a checagem cega para a perda. `vistos` continua deduplicando o leque de
+      // UMA aresta, que e o caso que a contracao realmente cria.
+      const chave = `${a.id || `${a.de}>${a.para}`}#${alvo.id}`;
       if (jaVistas.has(chave)) continue;
       jaVistas.add(chave); vistos.add(alvo.id);
       alvos.push(alvo);
@@ -214,13 +226,19 @@ function projetar(sessao, vista) {
  * que e como "SPOF conhecido e aceito" (#15 §4) sobrevive.
  */
 function recorteDoAcordo(modeloLogico) {
+  // As chaves de ordenacao levam separador e rotulo. Concatenar `de + para` cru
+  // faz ("a","bc") e ("ab","c") virarem a mesma chave; e o rotulo entra porque,
+  // com arestas paralelas entre o mesmo par, sem ele a ordem depende de quem
+  // chegou primeiro na lista — e a impressao do acordo deixaria de ser estavel.
+  const chaveDaAresta = a => `${a.de} ${a.para} ${a.rotulo || ''}`;
+  const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
   return {
-    nos: modeloLogico.nos.map(n => ({ id: n.id, tipo: n.tipo, rotulo: n.rotulo, dentro: n.dentro }))
-      .sort((a, b) => a.id < b.id ? -1 : 1),
+    nos: modeloLogico.nos.map(n => ({ id: n.id, tipo: n.tipo, rotulo: n.rotulo, dentro: n.dentro, nota: n.nota }))
+      .sort((a, b) => cmp(a.id, b.id)),
     arestas: (modeloLogico.arestas || []).map(a => ({ de: a.de, para: a.para, rotulo: a.rotulo, dados: a.dados }))
-      .sort((x, y) => (x.de + x.para) < (y.de + y.para) ? -1 : 1),
+      .sort((x, y) => cmp(chaveDaAresta(x), chaveDaAresta(y))),
     notas: (modeloLogico.notas || []).map(n => ({ texto: n.texto, sobre: n.sobre, origem: n.origem }))
-      .sort((a, b) => a.texto < b.texto ? -1 : 1),
+      .sort((a, b) => cmp(a.texto, b.texto)),
   };
 }
 

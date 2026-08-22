@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# A régua do protótipo do #14. Sete camadas.
+# A régua do protótipo do #14. Nove camadas.
 #
-# As cinco primeiras rodam em qualquer máquina. As duas últimas precisam do
-# draw.io headless (#9/#10) e avisam e seguem quando ele não existe — premissa 8
-# do #1: o renderizador é dependência de DESENVOLVIMENTO, não de execução.
+# As sete primeiras rodam em qualquer máquina — a 6 roda uma linha a menos sem o
+# app e avisa. As camadas 8 e 9 precisam do draw.io headless (#9/#10) e avisam e
+# seguem quando ele não existe — premissa 8 do #1: o renderizador é dependência
+# de DESENVOLVIMENTO, não de execução.
 set -u
 cd "$(dirname "$0")/.."
 

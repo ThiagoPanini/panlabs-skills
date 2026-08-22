@@ -1,0 +1,71 @@
+{
+  "esquema": "panlabs-aws-diagrams/restricoes@1",
+  "origem": {
+    "premissas": "skills/panlabs-aws-diagrams/prototypes/q16/exemplo-context-pack/premissas.md",
+    "exemplos": [
+      "skills/panlabs-aws-diagrams/prototypes/q16/exemplo-context-pack/exemplos/referencia.drawio"
+    ]
+  },
+  "catalogo": {
+    "proibidos": [
+      "internet gateway",
+      "nat gateway"
+    ],
+    "obrigatoriosQuandoAplicavel": [
+      "transit gateway",
+      "vpc endpoint"
+    ]
+  },
+  "topologia": [
+    {
+      "texto": "Toda subnet de conta de aplicação é privada. Não existe subnet pública em conta de aplicação — sem exceção de workload.",
+      "severidade": "obrigatorio"
+    },
+    {
+      "texto": "Todo egress, de qualquer natureza (internet, on-prem, outra VPC), atravessa a conta de trânsito via Transit Gateway. Uma VPC de aplicação nunca tem rota direta para um Internet Gateway.",
+      "severidade": "obrigatorio"
+    },
+    {
+      "texto": "A conta de trânsito é compartilhada por todas as contas de aplicação. Contas de aplicação anexam (`attach`) ao Transit Gateway; nunca se conectam direto entre si (sem VPC peering ponto-a-ponto entre contas de workload).",
+      "severidade": "obrigatorio"
+    }
+  ],
+  "nomenclatura": [
+    {
+      "texto": "Recurso: `acme-<camada>-<sufixo>`, minúsculo, kebab-case. Exemplos: `acme-app-1a`, `acme-tgw-hub`.",
+      "severidade": "obrigatorio"
+    },
+    {
+      "texto": "VPC: `acme-vpc-<propósito>`. Exemplos: `acme-vpc-workload`, `acme-vpc-transito`.",
+      "severidade": "obrigatorio"
+    }
+  ],
+  "seguranca": [
+    {
+      "texto": "Toda subnet com dado em repouso referencia uma chave gerenciada pelo cliente (KMS CMK) — nunca a chave gerenciada pela AWS (`aws/service`).",
+      "severidade": "obrigatorio"
+    },
+    {
+      "texto": "Todo serviço que fala com uma API AWS a partir de subnet privada usa VPC endpoint — ver \"Catálogo de serviços\" acima.",
+      "severidade": "obrigatorio"
+    }
+  ],
+  "estiloVisual": [
+    {
+      "alvo": "AWS Account",
+      "tipo": "grupo",
+      "chave": "strokeWidth",
+      "catalogo": null,
+      "observado": "3",
+      "fonte": "skills/panlabs-aws-diagrams/prototypes/q16/exemplo-context-pack/exemplos/referencia.drawio"
+    },
+    {
+      "alvo": "VPC",
+      "tipo": "grupo",
+      "chave": "fontColor",
+      "catalogo": "#AAB7B8",
+      "observado": "#232F3E",
+      "fonte": "skills/panlabs-aws-diagrams/prototypes/q16/exemplo-context-pack/exemplos/referencia.drawio"
+    }
+  ]
+}

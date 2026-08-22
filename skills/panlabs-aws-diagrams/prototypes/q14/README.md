@@ -7,6 +7,11 @@ estes arquivos ficam como fonte primária.
 
 **Abra `comparacao.html` com duplo clique** — as duas vistas lado a lado, com o alternador.
 
+> ⛔ **A vista técnica reprovou na inspeção humana** — setas por cima dos ícones, desenho ilegível.
+> A decisão de modelo/persistência/transição que este ticket foi buscar **está de pé**; o desenho
+> técnico **não**. Medido e nomeado por checagem em
+> [O veredito humano](#-o-veredito-humano-a-vista-técnica-saiu-ilegível).
+
 ---
 
 ## A pergunta
@@ -347,16 +352,97 @@ imprime nada** — inclusive nas linhas certas. Diagnóstico só saiu com um dum
   descartadas e os achados recusados. Qualquer um que abra *Extras › Editar diagrama* lê tudo.
   É consequência da decisão de persistência, e não foi tratada.
 
+## ⛔ O veredito humano: a vista técnica saiu ilegível
+
+O protótipo foi entregue para inspeção (premissa 11) e **reprovou no olho**:
+
+> *"As setas ficaram muito confusas e passando por cima dos ícones dos serviços. O diagrama ficou
+> extremamente ilegível nesse formato."*
+
+Isto **não é gosto**, e a diferença importa: gosto se registra e se discute, defeito se mede. Rodar
+o validador do [#18](https://github.com/ThiagoPanini/panlabs-skills/issues/18) contra
+`projetar(tecnico, 'tecnica')` nomeia exatamente o que o olho pegou.
+
+| checagem | | ocorrências |
+|---|---|---|
+| **A3.5** | aresta atravessando **nó** | **6** — `a-avisa` corta Transfer Family, Lambda e o VPC endpoint |
+| **A3.4** | aresta por cima de **rótulo** | **4** |
+| **A5.1** | cruzamentos de aresta | **5**, contra orçamento de ⌈12/10⌉ = **2** |
+| **A5.5** | aresta atravessando **fronteira alheia** | **5** — *tolerância zero, falha semântica* |
+
+A última é a que dói. `A5.5` não é estética: é a checagem que o
+[#8](https://github.com/ThiagoPanini/panlabs-skills/issues/8) reenquadrou como **guarda de
+veracidade**. `a-envia` (loja → Transfer Family) atravessa `processamento`, `vpc-dados` e `sub-app`
+— **o desenho afirma um caminho de rede que o modelo nega.** O usuário disse "ilegível"; o
+validador diz "mentiroso". As duas leituras apontam para a mesma linha.
+
+**E o laudo separa as duas vistas exatamente onde o olho separou:**
+
+| diagrama | falhas | **semânticas** | ocorrências |
+|---|---|---|---|
+| `pedidos-serverless` (#11) | 6 | 0 | — |
+| `web-multi-az` (#11) | 6 | 0 | — |
+| **q14 · vista lógica** | 8 | **0** | 67 |
+| **q14 · vista técnica** | **16** | **3** | **132** |
+
+A vista lógica — a que passou no olho — é a única coisa aqui sem patologia de aresta. A técnica tem
+o dobro das ocorrências e é a **única** das quatro com falha semântica.
+
+### Por que a suite deste protótipo estava verde
+
+Porque ela mede outra coisa. As nove camadas perguntam se a **projeção** é fiel — se o que foi
+aprovado sobrevive à elaboração técnica — e a resposta continua sendo sim. Nenhuma delas pergunta
+se o **desenho** é legível: o `#14` saiu da branch em `d10fd28` e o validador do `#18` não existia.
+
+É o aviso do [#17](https://github.com/ThiagoPanini/panlabs-skills/issues/17) uma volta acima.
+Lá: *"checagem estática não substitui render"*. Aqui: **suite verde sobre a semântica não substitui
+o portão sobre a geometria** — e protótipo que emite `.drawio` tem de passar pelos dois.
+
+### O motor do #12 melhora e **não** conserta
+
+Vale a pena saber, porque a dívida original apontava para o
+[#12](https://github.com/ThiagoPanini/panlabs-skills/issues/12) e ele **já fechou**. O protótipo do
+#12 entrou em `a83b48a` — **um commit depois** da base deste aqui — e acrescentou 1.676 linhas ao
+motor (`planejar.cjs` +599, `dispor.cjs` +641), incluindo a política de travessia cross-account que
+existe para este exato sintoma. O fechamento do #12 descreve o mesmo quadro: *"saiu em linha reta,
+cortou a VPC de aplicação inteira e largou o rótulo em cima do ícone do ALB — A3.2 e A5.5 de uma
+vez."*
+
+Rodando **o mesmo modelo técnico** nos dois motores, o caminho muda de `elk` para `contas` e:
+
+| | motor do #11 (o que o q14 congelou) | motor do #12 |
+|---|---|---|
+| **A5.5** fronteira alheia | FALHA ×5 | **FALHA ×2** |
+| **A5.1** cruzamentos | FALHA ×5 | **aviso ×2** (dentro do orçamento) |
+| **A3.5** aresta sobre nó | FALHA ×6 | **FALHA ×2** |
+| A3.2 colisão de rótulo | FALHA ×1 | FALHA ×4 |
+| A3.4 aresta sobre rótulo | FALHA ×4 | FALHA ×5 |
+| A3.7 fora do canvas | ok | FALHA ×1 |
+| **total** | **16 falhas, 3 semânticas** | **18 falhas, 3 semânticas** |
+
+Corta as arestas que o usuário viu quase pela metade, e **troca** por colisão de rótulo. **Não
+fecha a conta:** `A5.5` continua com tolerância zero e continua reprovando. A dívida é real, é
+aberta, e não tem ticket vivo — o #12 e o #18 fecharam.
+
+**Reproduzir** (o validador e o motor do #12 vivem em outras branches):
+
+```bash
+git archive prototipos/q18 skills/panlabs-aws-diagrams/prototypes/q18 | tar -x -C /tmp/p
+git archive a83b48a       skills/panlabs-aws-diagrams/prototypes/q11 | tar -x -C /tmp/p12
+node tools/check-geometria.cjs <modelo-projetado.json>
+```
+
 ## Dívida que este protótipo empurra para outros tickets
 
-- **O sentido de leitura na vista técnica.** `dados: "volta"` é semântico — o modelo sabe qual
-  aresta é o caminho de volta — mas o layout ordena pela **seta**, e o `O1` do
-  [#5](https://github.com/ThiagoPanini/panlabs-skills/issues/5) (17 de 24 diagramas oficiais)
-  quer o fluxo correndo esquerda → direita. Na vista técnica multi-conta isso empurra a zona de
-  aterrissagem para a direita e cria uma aresta atravessando o desenho inteiro. Dar `dados` ao
-  ELK como dica de reversão é candidato a conserto — matéria do
-  [#12](https://github.com/ThiagoPanini/panlabs-skills/issues/12)/[#18](https://github.com/ThiagoPanini/panlabs-skills/issues/18),
-  não deste ticket, porque consertar aqui exigiria mexer no motor e derrubaria a afirmação de §1.
+- **O roteamento de aresta na vista técnica** — ver a seção acima. Medido, nomeado por checagem, e
+  **sem ticket vivo**: o [#12](https://github.com/ThiagoPanini/panlabs-skills/issues/12) e o
+  [#18](https://github.com/ThiagoPanini/panlabs-skills/issues/18) fecharam. Precisa de um.
+- **O sentido de leitura na vista técnica** — a causa raiz de parte do que está acima.
+  `dados: "volta"` é semântico — o modelo sabe qual aresta é o caminho de volta — mas o layout
+  ordena pela **seta**, e o `O1` do [#5](https://github.com/ThiagoPanini/panlabs-skills/issues/5)
+  (17 de 24 diagramas oficiais) quer o fluxo correndo esquerda → direita. Na vista técnica
+  multi-conta isso empurra a zona de aterrissagem para a direita e cria uma aresta atravessando o
+  desenho inteiro. Dar `dados` ao ELK como dica de reversão é candidato a conserto.
 - **Nota presa a nó encosta em borda de container** (visível nos dois PNGs). Mesma família do
   "aresta pode raspar o rótulo de um nó" que o #11 já deixou para o
   [#18](https://github.com/ThiagoPanini/panlabs-skills/issues/18).

@@ -1,0 +1,35 @@
+{
+  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "id": "web-multi-az",
+  "titulo": "Web · três camadas em duas zonas",
+  "subtitulo": "Mesmo vocabulário do outro modelo. Ninguém pediu faixa de AZ — o motor derivou que precisa de uma.",
+  "vista": "tecnica",
+  "genero": "T1",
+
+  "nos": [
+    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "dentro": "nuvem" },
+
+    { "id": "pub-a", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "pub-b", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "az": "us-east-1b", "dentro": "vpc" },
+    { "id": "app-a", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "app-b", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+    { "id": "dado-a", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "dado-b", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+
+    { "id": "nat-a", "tipo": "servico", "servico": "nat gateway", "rotulo": "NAT gateway", "dentro": "pub-a" },
+    { "id": "nat-b", "tipo": "servico", "servico": "nat gateway", "rotulo": "NAT gateway", "dentro": "pub-b" },
+    { "id": "ec2-a", "tipo": "servico", "servico": "ec2", "rotulo": "EC2", "dentro": "app-a" },
+    { "id": "ec2-b", "tipo": "servico", "servico": "ec2", "rotulo": "EC2", "dentro": "app-b" },
+    { "id": "rds-a", "tipo": "servico", "servico": "rds", "rotulo": "RDS primária", "dentro": "dado-a" },
+    { "id": "rds-b", "tipo": "servico", "servico": "rds", "rotulo": "RDS standby", "dentro": "dado-b" }
+  ],
+
+  "faixas": [
+    { "id": "asg", "tipo": "auto-scaling", "rotulo": "Auto Scaling group", "membros": ["ec2-a", "ec2-b"] }
+  ],
+
+  "notas": [
+    { "texto": "As colunas de zona não estão no modelo. O motor derivou que a arquitetura afirma redundância zonal (mesmo papel de subnet em ≥2 AZs) e desenhou as faixas — regra do #19, não escolha do agente.", "origem": "legenda" }
+  ]
+}

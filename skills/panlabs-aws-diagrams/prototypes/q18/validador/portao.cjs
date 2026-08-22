@@ -1,0 +1,102 @@
+'use strict';
+/**
+ * O portão — a decisão 2 do ticket #18, em código e não em prosa.
+ *
+ * `validarGeometria` devolve um laudo e não decide nada; quem transforma laudo
+ * em barreira é esta função, e ela existe separada por um motivo: julgar e
+ * bloquear são políticas diferentes. Um relatório de revisão quer o laudo
+ * inteiro; um pipeline de publicação quer parar. Misturar os dois obrigaria a
+ * escolher um dos comportamentos para todo mundo.
+ *
+ * ONDE ENCAIXA. No pipeline do #11 —
+ *
+ *     carregar › VALIDAR › resolver › derivar › dispor › planejar › emitir › conferir
+ *                                                        ^^^^^^^^^^
+ *                                                        aqui, entre os dois
+ *
+ * — é o único ponto onde a geometria já existe e o XML ainda não. São duas
+ * linhas em `motor/gerar.cjs`, logo depois de `planejar` e antes de `emitir`:
+ *
+ *     const { portao } = require('../../q18/validador/portao.cjs');
+ *     relatorio.geometria = portao(plano, { bloquear: opts.estrito });
+ *
+ * Com `bloquear: false` (o padrão) ele mede e devolve; o motor segue e o laudo
+ * viaja no relatório. Com `bloquear: true` ele lança no mesmo formato que o
+ * resto do motor já usa (`e.erros` como lista de linhas legíveis), e o `main`
+ * do `gerar.cjs` imprime sem precisar saber que existe um validador.
+ *
+ * O enxerto NÃO está aplicado no q11: o motor é protótipo de outro ticket, e
+ * mexer nele daqui misturaria as duas fronteiras de decisão. O que este módulo
+ * garante é que a decisão é executável, não uma intenção escrita no README —
+ * `tests/check-portao.cjs` roda o enxerto ponta a ponta.
+ *
+ * O QUE ELE NÃO FAZ. Não corrige, não reposiciona, não pede novo layout. A
+ * justificativa está em `validar-geometria.cjs`: um laço de correção comandado
+ * pelo validador é um segundo otimizador competindo com o ELK, sem gradiente e
+ * sem função objetivo, porque o B9 da rubrica proíbe combinar as 62 num score.
+ * Quem corrige é `alinhar.cjs`, que tem as alavancas na mão.
+ */
+
+const path = require('path');
+const { validarGeometria, formatar } = require(path.join(__dirname, 'validar-geometria.cjs'));
+
+/**
+ * Níveis de bloqueio, do mais frouxo ao mais apertado.
+ *
+ * `veracidade` é o default recomendado para um portão de publicação, e é o
+ * único que separa as duas coisas que o #18 insiste em não confundir: um
+ * diagrama INCOMPLETO (sem legenda, sem metadados) ainda é verdadeiro e pode
+ * ir para a parede; um diagrama que MENTE sobre a fronteira de rede, não.
+ */
+const NIVEIS = {
+  nenhum: () => false,
+  veracidade: laudo => laudo.semanticas.length > 0,
+  falha: laudo => laudo.falhas.length > 0,
+  estrito: laudo => laudo.falhas.length > 0 || laudo.avisos.length > 0,
+};
+
+/**
+ * Mede o plano e, conforme o nível, deixa passar ou lança.
+ *
+ * @param {object} plano                o plano do motor, pós-`planejar`
+ * @param {object} [opts]
+ * @param {string} [opts.nivel]         `nenhum` | `veracidade` | `falha` | `estrito`
+ * @param {boolean} [opts.bloquear]     atalho: `true` vira nível `falha`
+ * @param {object} [opts.modelo]        quando o plano não carrega o embutido
+ * @returns {object} o laudo, quando passa
+ * @throws {Error} com `.erros` (linhas legíveis) e `.laudo`, quando barra
+ */
+function portao(plano, opts = {}) {
+  const laudo = validarGeometria(plano, opts);
+  const nivel = opts.nivel || (opts.bloquear ? 'falha' : 'nenhum');
+  const barra = NIVEIS[nivel];
+  if (!barra) throw new Error(`nível de portão desconhecido: "${nivel}" (use ${Object.keys(NIVEIS).join(', ')})`);
+
+  // Um laudo incompleto nunca passa, em nenhum nível: se uma checagem que devia
+  // rodar não rodou, o verde não quer dizer nada — e é justamente no dia em que
+  // alguém quebra uma família que o portão precisa não estar mentindo.
+  const incompleto = laudo.cobertura.naoRodaram.length > 0 || laudo.resultados.some(r => r.estado === 'erro');
+
+  if (!barra(laudo) && !incompleto) return laudo;
+
+  const linhas = [];
+  if (incompleto) {
+    if (laudo.cobertura.naoRodaram.length)
+      linhas.push(`checagens que não rodaram: ${laudo.cobertura.naoRodaram.join(', ')}`);
+    for (const r of laudo.resultados.filter(x => x.estado === 'erro')) linhas.push(r.mensagem);
+  }
+  for (const r of [...laudo.semanticas, ...laudo.falhas.filter(f => !f.semantica)]) {
+    linhas.push(`${r.id} ${r.nome}${r.semantica ? ' (o desenho afirma o que o modelo nega)' : ''}: ${r.mensagem}`);
+    for (const o of r.ocorrencias.slice(0, 3)) linhas.push(`    · ${o.o_que}`);
+  }
+  if (nivel === 'estrito') for (const r of laudo.avisos) linhas.push(`${r.id} ${r.nome}: ${r.mensagem}`);
+
+  const erro = new Error(incompleto
+    ? 'laudo geométrico incompleto — há checagem que não rodou'
+    : `geometria reprovada no portão "${nivel}"`);
+  erro.erros = linhas;
+  erro.laudo = laudo;
+  throw erro;
+}
+
+module.exports = { portao, NIVEIS, formatar };

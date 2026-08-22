@@ -10,10 +10,9 @@
 
 const path = require('path');
 const { lim } = require(path.join(__dirname, '..', 'indice.cjs'));
-const { ok, aviso, falha, inaplicavel, pulada, conforme, arredonda, semTags } = require(path.join(__dirname, 'comum.cjs'));
+const { ok, aviso, falha, inaplicavel, pulada, conforme, arredonda, semTags, nome } = require(path.join(__dirname, 'comum.cjs'));
 const { catalogo, preenchimentoDe, stencilDe } = require(path.join(__dirname, 'catalogo.cjs'));
 
-const nome = e => `${e.id}${e.rotulo ? ` ("${semTags(e.rotulo)}")` : ''}`;
 
 /** Pontas de seta que os presets do deck AWS cobrem. */
 const SETAS_PRESET = new Set(['none', 'block', 'blockThin', 'open', 'openThin', 'classic', 'classicThin', 'oval', 'diamond', 'diamondThin', 'halfCircle', 'baseDash', 'ERone', 'ERmandOne']);

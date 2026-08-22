@@ -73,6 +73,43 @@ async function main() {
       console.log(`      achados (não travam a suíte): ${laudo.falhas.map(f => f.id).join(', ')}`);
   }
 
+  // ---------------------------------------------------- a separação, explícita
+  //
+  // O critério de aceite do ticket é "mostrar que separa os dois". Vale dizer
+  // em que EIXO a separação acontece, porque no eixo do relatório inteiro ela
+  // não acontece — e esconder isso seria vender a ferramenta melhor do que ela é.
+  //
+  // Os exemplos do #11 acumulam 6 falhas cada um: sem legenda, sem metadados,
+  // contraste do catálogo abaixo da WCAG. São defeitos REAIS. Então "tem falha"
+  // não distingue um diagrama bom de um quebrado — os dois têm.
+  //
+  // O que distingue é a VERACIDADE: o desenho afirma alguma coisa que o modelo
+  // nega? Aí a separação é limpa, e é ela que o portão usa como nível default.
+  const { portao } = require(path.join(__dirname, '..', 'validador', 'portao.cjs'));
+  const { CASOS } = require(path.join(__dirname, '..', 'casos', 'quebrados.cjs'));
+
+  console.log('\n  a separação, no eixo da veracidade:\n');
+  const mentirosos = CASOS.filter(c => ['A4.2', 'A4.4', 'A5.5', 'F1'].some(id => c.espera.includes(id)));
+  let barrados = 0;
+  for (const c of mentirosos) {
+    let barrou = false;
+    try { portao(c.plano, { modelo: c.modelo, nivel: 'veracidade' }); } catch { barrou = true; }
+    if (barrou) barrados++;
+    else { falhou = 1; console.log(`  ✗ "${c.nome}" passou o portão de veracidade`); }
+  }
+  console.log(`  ${barrados === mentirosos.length ? '✓' : '✗'} ${barrados}/${mentirosos.length} diagramas que mentem foram barrados`);
+
+  let passaram = 0;
+  for (const arquivo of modelos) {
+    const r = await gerar(JSON.parse(fs.readFileSync(path.join(Q11, 'modelo', arquivo), 'utf8')));
+    try { portao(r.plano, { nivel: 'veracidade' }); passaram++; }
+    catch (e) { falhou = 1; console.log(`  ✗ ${arquivo} foi barrado: ${e.erros.join(' | ')}`); }
+  }
+  console.log(`  ${passaram === modelos.length ? '✓' : '✗'} ${passaram}/${modelos.length} diagramas do #11 passaram`);
+  console.log('      (no eixo do relatório inteiro NÃO há separação, e é honesto: os');
+  console.log('       exemplos do #11 têm 6 falhas reais cada um. "Tem falha" não');
+  console.log('       distingue bom de quebrado; "mente" distingue.)');
+
   console.log(falhou
     ? '\n  ✗ há falha semântica ou laudo incompleto nos exemplos do #11'
     : '\n  ✓ os exemplos do #11 têm defeitos reportados, e nenhum deles é o desenho mentindo.');

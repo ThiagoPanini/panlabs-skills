@@ -21,7 +21,7 @@ A5.5**, mais a `F1` que o protótipo descobriu.
 ## Rodar
 
 ```bash
-./tests/rodar.sh                                          # a suíte inteira, sem dependência
+./tests/rodar.sh                                          # as cinco camadas, sem dependência
 node tools/check-geometria.cjs --exemplos                 # laudo dos diagramas do #11
 node tools/check-geometria.cjs --exemplos --tudo          # inclusive o que passou
 node tools/check-geometria.cjs modelo.json --json         # laudo em JSON
@@ -40,7 +40,8 @@ node tools/check-geometria.cjs modelo.json --estrito      # aviso também reprov
 | `validador/familias/a1..a8` | As oito famílias, na ordem de prioridade da rubrica. |
 | `validador/familias/extras.cjs` | `F1` — o achado do protótipo contra a rubrica. Fora das 62, de propósito. |
 | `validador/validar-geometria.cjs` | A fachada. Função pura: `validarGeometria(plano) → laudo`. |
-| `casos/quebrados.cjs` | 15 diagramas quebrados de propósito, mais o controle positivo. |
+| `validador/portao.cjs` | A decisão 2 em código: transforma laudo em barreira, em quatro níveis. |
+| `casos/quebrados.cjs` | 16 diagramas quebrados de propósito, mais o controle positivo. |
 | `tools/check-geometria.cjs` | CLI, com código de saída para pendurar em portão. |
 
 ## As cinco decisões que o ticket pediu
@@ -70,8 +71,28 @@ roda e não diz nada é indistinguível de uma que rodou e aprovou.
 
 **Portão depois de `planejar`, antes de `emitir`. Sem laço de correção.**
 
-É o único ponto do pipeline onde a geometria já existe e o XML ainda não. A função é pura e
-não escreve nada.
+É o único ponto do pipeline onde a geometria já existe e o XML ainda não. `validarGeometria` é
+pura e não escreve nada; quem transforma laudo em barreira é `validador/portao.cjs`, separado
+porque julgar e bloquear são políticas diferentes — um relatório de revisão quer o laudo
+inteiro, um pipeline de publicação quer parar.
+
+São quatro níveis: `nenhum`, **`veracidade`** (o default recomendado), `falha` e `estrito`.
+`veracidade` é o único que separa as duas coisas que o #18 insiste em não confundir — um
+diagrama **incompleto** ainda é verdadeiro e pode ir para a parede; um que **mente** sobre a
+fronteira de rede, não. Nenhum nível engole laudo incompleto: se uma checagem que devia rodar
+não rodou, o verde não quer dizer nada.
+
+O enxerto no motor são duas linhas em `gerar.cjs`, entre `planejar` e `emitir`:
+
+```js
+const { portao } = require('../../q18/validador/portao.cjs');
+relatorio.geometria = portao(plano, { nivel: 'veracidade' });
+```
+
+Não fica aplicado no q11 — o motor é protótipo de outro ticket, e mexer nele daqui misturaria
+as fronteiras. `tests/check-portao.cjs` roda o enxerto ponta a ponta e prova as duas metades:
+barra o plano que mente, e depois de passar, `emitir` produz o XML **byte a byte igual** — o
+portão é puro e não tocou no plano.
 
 O laço de correção foi considerado e recusado, por um argumento e um precedente:
 
@@ -189,6 +210,29 @@ Nenhum é falha semântica — os dois exemplos passam nas quatro checagens de v
 | **A2.7** | Todas as arestas são sólidas, e o modelo declara `protocolo` https e sql — um traço, dois significados. |
 | **A2.1** | 10 e 9 tipos de símbolo, acima do teto de 8 de Moody. |
 
+### Dois erros que a revisão pegou no próprio validador
+
+Estão aqui porque são o tipo de defeito que a suíte não pegaria sozinha — os dois devolviam
+número plausível, e o relatório ficava verde por não ter achado nada.
+
+- **O fundo efetivo excluía o preenchimento do próprio elemento.** `fundoEfetivoEm(ponto, e.z)`
+  cortava em `e.z`, mas o rótulo de um grupo é desenhado DENTRO da caixa dele — o preenchimento
+  do próprio grupo é o fundo daquele texto. O erro tem direção perigosa: um título `#00A4A6`
+  sobre subnet `#E6F6F7` dava 3,06:1 em vez de 2,75:1 (otimista, mas ainda reprovava), enquanto
+  **texto escuro sobre grupo escuro — `#232F3E` sobre `#232F3D`, 1,00:1 na tela — era medido
+  contra a página e passava com 13,57:1.** Falso negativo na única família normativa, e
+  exatamente a decisão 4. O caso virou fixture de regressão.
+- **A6.3 comparava razões sem orientação.** `Asp` é `min/max` por definição de Mooney, mas a
+  segunda metade da checagem compara o desenho com o canvas — e ali um desenho deitado numa
+  página em pé, com a mesma razão, dava diferença zero e passava. É precisamente o caso das
+  "faixas vazias grandes" que o limiar persegue.
+
+Mais três, menores: A7.5 era `conforme(id, [])` com lista vazia — uma checagem `fail` que não
+sabia reprovar, ocupando linha no relatório e devolvendo verde; A5.1 dividia a contagem crua de
+cruzamentos por um `c_max` medido em PARES; e um byte NUL literal em `a5-arestas.cjs` fazia
+`file` classificar o módulo como `data`, o que faz `grep -r` pular o arquivo inteiro em
+silêncio — num repo cujo wayfinding é `grep`.
+
 ### Duas armadilhas que a implementação encontrou do jeito caro
 
 - **A ponta da aresta não está no plano.** O plano guarda só as *dobras*; as pontas o mxGraph
@@ -218,12 +262,21 @@ verdes por não terem achado nada.
   resultado salta de 7,1792 para 7,2195, e uma implementação que devolva o mesmo nos quatro
   está com o ramo errado.
 - **`check-quebrados`** — o controle negativo, na convenção que o `check-fronteira.cjs` do #11
-  estabeleceu: 15 diagramas quebrados de propósito, cada um declarando a checagem que tem de
+  estabeleceu: 16 diagramas quebrados de propósito, cada um declarando a checagem que tem de
   acusar; mais o **controle positivo**, com o mesmo vocabulário e geometria correta, que prova
   que os 15 falham pelo defeito e não pelo jeito de construir o plano.
+- **`check-portao`** — o portão ponta a ponta: barra o que mente, deixa passar o que não
+  mente, e `emitir` roda depois produzindo XML idêntico.
 - **`check-bons`** — os exemplos do #11. Falha semântica trava a suíte; incompletude
   (sem legenda, sem metadados, contraste do catálogo) é reportada e **não** trava — travar
   transformaria achado do #18 em regressão do #11.
+
+**Em que eixo a separação acontece, e onde não acontece.** O ticket pede "mostrar que separa os
+dois". No eixo do relatório inteiro **não separa**, e vale dizer: os exemplos do #11 carregam 6
+falhas cada um, todas reais. "Tem falha" não distingue um diagrama bom de um quebrado — os dois
+têm. O que distingue é a **veracidade**: 4/4 dos diagramas que mentem são barrados no nível
+`veracidade`, 2/2 dos do #11 passam. É essa a separação que o validador entrega, e é por isso
+que `veracidade` é o nível default do portão.
 
 ## Onde isto encosta em outros tickets
 

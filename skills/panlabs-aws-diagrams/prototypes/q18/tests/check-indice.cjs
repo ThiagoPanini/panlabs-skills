@@ -40,6 +40,31 @@ const DA_RUBRICA = [
 // não são estéticas, e o ticket #18 pede confirmação explícita delas.
 const TOLERANCIA_ZERO = ['A4.2', 'A5.5'];
 
+// A SEVERIDADE QUE A RUBRICA ATRIBUIU, checagem por checagem, lida do campo
+// **Severidade:** de cada uma. Conferir só que o valor está em {fail, warn}
+// não prova nada: um índice que trocasse `fail` por `warn` em A4.2 passaria
+// nessa checagem e desarmaria a falha mais grave do validador em silêncio.
+// Onde a rubrica dá dois níveis ("warn / fail acima de X"), o esperado aqui é o
+// PIOR que a checagem pode emitir — que é o que o campo `severidade` significa.
+const SEVERIDADE_DA_RUBRICA = {
+  'A1.1': 'fail', 'A1.2': 'fail', 'A1.3': 'fail', 'A1.4': 'fail', 'A1.5': 'fail', 'A1.6': 'fail',
+  'A1.7': 'fail', 'A1.8': 'fail', 'A1.9': 'warn', 'A1.10': 'fail', 'A1.11': 'warn', 'A1.12': 'fail',
+  'A2.1': 'fail', 'A2.2': 'fail', 'A2.3': 'fail', 'A2.4': 'warn', 'A2.5': 'fail', 'A2.6': 'fail',
+  'A2.7': 'fail', 'A2.8': 'warn', 'A2.9': 'warn', 'A2.10': 'warn', 'A2.11': 'fail',
+  'A3.1': 'fail', 'A3.2': 'fail', 'A3.3': 'fail', 'A3.4': 'fail', 'A3.5': 'fail', 'A3.6': 'fail',
+  'A3.7': 'fail', 'A3.8': 'warn', 'A3.9': 'warn',
+  'A4.1': 'fail', 'A4.2': 'fail', 'A4.3': 'fail', 'A4.4': 'fail', 'A4.5': 'warn', 'A4.6': 'warn', 'A4.7': 'warn',
+  'A5.1': 'fail', 'A5.2': 'fail', 'A5.3': 'fail', 'A5.4': 'fail', 'A5.5': 'fail',
+  'A5.6': 'warn', 'A5.7': 'warn', 'A5.8': 'fail', 'A5.9': 'warn',
+  'A6.1': 'fail', 'A6.2': 'warn', 'A6.3': 'warn', 'A6.4': 'warn', 'A6.5': 'warn',
+  'A7.1': 'fail', 'A7.2': 'fail', 'A7.3': 'fail', 'A7.4': 'warn', 'A7.5': 'fail',
+  'A8.1': 'fail', 'A8.2': 'warn', 'A8.3': 'warn', 'A8.4': 'warn',
+};
+
+// As que a rubrica escreve com DOIS níveis, e que por isso têm de trazer
+// `escalona: true` — quem decide o caso concreto é a checagem, não a tabela.
+const ESCALONAM = ['A2.1', 'A5.1', 'A5.2', 'A5.3', 'A5.4', 'A6.1', 'A8.1'];
+
 const falhas = [];
 const anota = m => falhas.push(m);
 
@@ -63,6 +88,10 @@ for (const c of CHECAGENS) {
   if (!c.nome) anota(`${c.id} sem nome`);
   if (c.familia !== c.id.split('.')[0]) anota(`${c.id} declara família "${c.familia}"`);
   if (!SEVERIDADES.includes(c.severidade)) anota(`${c.id} tem severidade "${c.severidade}", fora de ${SEVERIDADES.join('|')}`);
+  else if (SEVERIDADE_DA_RUBRICA[c.id] && c.severidade !== SEVERIDADE_DA_RUBRICA[c.id])
+    anota(`${c.id} está como "${c.severidade}" e a rubrica diz "${SEVERIDADE_DA_RUBRICA[c.id]}"`);
+  if (ESCALONAM.includes(c.id) && !c.escalona) anota(`${c.id} tem dois níveis na rubrica e não traz escalona: true`);
+  if (!ESCALONAM.includes(c.id) && c.escalona) anota(`${c.id} se diz escalonável, e a rubrica lhe dá um nível só`);
   if (!INSUMOS.includes(c.insumo)) anota(`${c.id} tem insumo "${c.insumo}", fora de ${INSUMOS.join('|')}`);
   if (!c.mede) anota(`${c.id} não diz o que mede`);
   if (!c.fonte) anota(`${c.id} não cita a fonte — a rubrica cita, o índice tem de citar`);

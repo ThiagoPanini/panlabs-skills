@@ -138,12 +138,22 @@ module.exports = function a6(cena) {
     const env = g.envolvente(cena.caixas.map(e => e.caixa));
     if (!env || !env.w || !env.h) saida.push(inaplicavel('A6.3', 'o desenho não tem área'));
     else {
+      // `Asp` é a métrica de Mooney e é `min/max` por definição — ela mede
+      // alongamento, não orientação. Mas a SEGUNDA metade de A6.3, que compara
+      // o desenho com o canvas, não pode usar min/max: um desenho deitado numa
+      // página em pé, com a mesma razão, daria diferença ZERO e passaria — e é
+      // exatamente o caso das "faixas vazias grandes" que o limiar persegue.
+      // Ali a razão tem de ser orientada.
       const asp = arredonda(Math.min(env.h, env.w) / Math.max(env.h, env.w));
-      const aspCanvas = Math.min(canvas.h, canvas.w) / Math.max(canvas.h, canvas.w);
-      const diferenca = arredonda(Math.abs(asp - aspCanvas) / (aspCanvas || 1));
+      const razaoDesenho = env.w / env.h;
+      const razaoCanvas = canvas.w / canvas.h;
+      const diferenca = arredonda(Math.abs(razaoDesenho - razaoCanvas) / (razaoCanvas || 1));
       const q1 = lim('razaoDeAspectoQ1');
       const tol = lim('toleranciaDeRazaoDeAspecto');
-      const medida = { Asp: asp, Asp_canvas: arredonda(aspCanvas), diferenca_relativa: diferenca, Q1: q1, tolerancia: tol };
+      const medida = {
+        Asp: asp, razao_desenho: arredonda(razaoDesenho, 2), razao_canvas: arredonda(razaoCanvas, 2),
+        diferenca_relativa: diferenca, Q1: q1, tolerancia: tol,
+      };
       const motivos = [];
       if (asp < q1) motivos.push({ o_que: `Asp = ${asp} < ${q1} (Q1): o desenho é uma faixa muito alongada`, ids: [] });
       if (diferenca > tol) motivos.push({ o_que: `a razão do desenho difere da do canvas em ${arredonda(diferenca * 100, 0)}% (tolerância ${arredonda(tol * 100, 0)}%): sobram faixas vazias`, ids: [] });

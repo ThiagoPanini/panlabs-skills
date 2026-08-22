@@ -17,9 +17,8 @@ const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometria.cjs'));
 const cor = require(path.join(__dirname, '..', 'cor.cjs'));
 const { lim } = require(path.join(__dirname, '..', 'indice.cjs'));
-const { ok, inaplicavel, conforme, pares, arredonda, semTags } = require(path.join(__dirname, 'comum.cjs'));
+const { ok, inaplicavel, conforme, pares, arredonda, semTags, nome } = require(path.join(__dirname, 'comum.cjs'));
 
-const nome = e => `${e.id}${e.rotulo ? ` ("${semTags(e.rotulo)}")` : ''}`;
 
 /** O piso da WCAG depende do tamanho: texto grande pede menos. */
 function pisoDeTexto(px, negrito) {
@@ -47,16 +46,13 @@ module.exports = function a7(cena) {
         casos.push({ o_que: `${nome(e)}: ${e.corDaFonte} sobre ${fundo} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1 para ${grande ? 'texto grande' : `${e.tamanhoDaFonte} px`})`, ids: [e.id] });
     }
     for (const a of arestas) {
-      if (!semTags(a.rotulo)) continue;
-      const halo = a.estilo.labelBackgroundColor;
-      const fundo = cor.ehCor(halo) ? halo : (a.rotuloCaixa ? cena.fundoEfetivoEm(cena.pontoNoMeio(a.pontos), a.z) : cena.fundo);
-      const fonte = cor.ehCor(a.estilo.fontColor) ? a.estilo.fontColor : '#000000';
-      const px = parseFloat(a.estilo.fontSize) || 12;
-      const razao = cor.contraste(fonte, fundo);
+      if (!semTags(a.rotulo) || !a.completa) continue;
+      const fundo = a.halo || cena.fundoEfetivoEm(cena.pontoNoMeio(a.pontos), a.z);
+      const razao = cor.contraste(a.corDaFonte, fundo);
       if (razao === null) continue;
-      const { piso } = pisoDeTexto(px, false);
+      const { piso } = pisoDeTexto(a.tamanhoDaFonte, a.negrito);
       medidos.push({ id: a.id, razao: arredonda(razao, 2), piso });
-      if (razao < piso) casos.push({ o_que: `a aresta "${a.id}": ${fonte} sobre ${fundo} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1)`, ids: [a.id] });
+      if (razao < piso) casos.push({ o_que: `a aresta "${a.id}": ${a.corDaFonte} sobre ${fundo} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1)`, ids: [a.id] });
     }
     const pior = medidos.length ? medidos.reduce((m, x) => (x.razao < m.razao ? x : m)) : null;
     saida.push(medidos.length
@@ -83,8 +79,16 @@ module.exports = function a7(cena) {
     // ícone perfeitamente visível. Quem carrega a informação e precisa se
     // destacar do que está atrás é o PREENCHIMENTO — o quadrado colorido.
     for (const e of nos) contra(e.id, e.preenchimento || e.traco, g.centro(e.caixa), e.z, `${nome(e)}`);
-    for (const a of arestas.filter(x => x.completa))
-      contra(a.id, a.estilo.strokeColor, cena.pontoNoMeio(a.pontos), a.z, `o traço da aresta "${a.id}"`);
+    for (const a of arestas.filter(x => x.completa)) {
+      contra(a.id, a.traco, cena.pontoNoMeio(a.pontos), a.z, `o traço da aresta "${a.id}"`);
+      // A rubrica nomeia quatro alvos, e a ponta de seta é o quarto. No mxGraph
+      // ela é pintada com o `strokeColor` da própria aresta, então a COR é a
+      // mesma — o que muda é o FUNDO: a ponta encosta no perímetro do destino,
+      // muitas vezes já dentro de um grupo com preenchimento próprio, enquanto
+      // o meio do traço pode estar sobre a página. São duas medidas, não uma.
+      const ponta = a.pontos[a.pontos.length - 1];
+      contra(a.id, a.traco, ponta, a.z, `a ponta de seta de "${a.id}"`);
+    }
     saida.push(medidos ? conforme('A7.2', casos, { medida: { elementos_medidos: medidos, abaixo_do_piso: casos.length, piso } })
       : inaplicavel('A7.2', 'não há traço nem preenchimento para medir'));
   }
@@ -120,15 +124,22 @@ module.exports = function a7(cena) {
   // ---------------------------------------------------------------- A7.4
   {
     const minimo = lim('deltaE00Minimo');
+    // "quaisquer duas cores que carreguem significados distintos" — não só o
+    // preenchimento. A borda de um grupo é o canal que distingue VPC de subnet
+    // de AZ neste catálogo, e deixá-la de fora fazia A7.4 medir metade da paleta.
     const porCor = new Map();
+    const anotaCor = (hex, significado) => {
+      if (!cor.ehCor(hex)) return;
+      if (!porCor.has(hex)) porCor.set(hex, new Set());
+      porCor.get(hex).add(significado);
+    };
     for (const e of [...nos, ...grupos, ...faixas]) {
-      if (!e.preenchimento) continue;
       const chave = e.tipoSemantico || e.classe;
-      if (!porCor.has(e.preenchimento)) porCor.set(e.preenchimento, new Set());
-      porCor.get(e.preenchimento).add(chave);
+      anotaCor(e.preenchimento, chave);
+      anotaCor(e.traco, chave);
     }
     const cores = [...porCor.keys()];
-    if (cores.length < 2) saida.push(inaplicavel('A7.4', 'menos de duas cores de preenchimento em uso'));
+    if (cores.length < 2) saida.push(inaplicavel('A7.4', 'menos de duas cores em uso'));
     else {
       const casos = [];
       let pior = { deltaE: Infinity };
@@ -145,16 +156,53 @@ module.exports = function a7(cena) {
         }
       }
       saida.push(conforme('A7.4', casos, {
-        medida: { cores: cores.length, pior_par: pior.deltaE === Infinity ? null : pior, minimo },
+        medida: { cores: cores.length, canais: 'preenchimento e traço', pior_par: pior.deltaE === Infinity ? null : pior, minimo },
         mensagem: casos.length ? `${casos.length} par(es) de cores indistinguíveis sob alguma deficiência` : 'as cores de significados distintos se separam nas três simulações',
       }));
     }
   }
 
   // ---------------------------------------------------------------- A7.5
-  saida.push(cena.legenda.length
-    ? conforme('A7.5', [], { medida: { entradas: cena.legenda.length }, mensagem: 'legenda medida com os mesmos pisos de A7.1 e A7.2' })
-    : inaplicavel('A7.5', 'não há legenda para medir — a ausência dela já é reportada por A1.2, e contar duas vezes inflaria o mesmo defeito'));
+  // A legenda tem de passar pelos mesmos pisos de A7.1 (o texto da entrada) e
+  // A7.2 (a amostra de cor). Nenhum motor deste repo emite legenda ainda, então
+  // na prática o ramo que roda hoje é o `inaplicavel` — mas o outro ramo é
+  // implementado de verdade, e não um `conforme(id, [])` que nunca pode falhar.
+  // Uma checagem `fail` que não sabe reprovar é pior que uma que não existe:
+  // ela ocupa a linha do relatório e devolve verde.
+  {
+    if (!cena.legenda.length) {
+      saida.push(inaplicavel('A7.5', 'não há legenda para medir — a ausência dela já é reportada por A1.2, e contar duas vezes inflaria o mesmo defeito'));
+    } else {
+      const casos = [];
+      const fundo = cena.fundo;
+      for (const [i, entrada] of cena.legenda.entries()) {
+        const quem = entrada.id || `legenda[${i}]`;
+        const texto = semTags(entrada.significado || entrada.texto || '');
+        const px = Number(entrada.tamanhoDaFonte) || 12;
+        const corTexto = cor.ehCor(entrada.corDaFonte) ? entrada.corDaFonte : '#000000';
+        const fundoDaEntrada = cor.ehCor(entrada.fundo) ? entrada.fundo : fundo;
+
+        if (texto) {
+          const razao = cor.contraste(corTexto, fundoDaEntrada);
+          const { piso, grande } = pisoDeTexto(px, !!entrada.negrito);
+          if (razao !== null && razao < piso)
+            casos.push({ o_que: `${quem}: o texto ${corTexto} sobre ${fundoDaEntrada} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1 para ${grande ? 'texto grande' : `${px} px`})`, ids: [quem] });
+        }
+        // a amostra de cor é objeto gráfico, não texto: piso de A7.2
+        const amostra = entrada.simbolo && entrada.simbolo.cor ? entrada.simbolo.cor : entrada.cor;
+        if (cor.ehCor(amostra)) {
+          const razao = cor.contraste(amostra, fundoDaEntrada);
+          const piso = lim('contrasteNaoTextual');
+          if (razao !== null && razao < piso)
+            casos.push({ o_que: `${quem}: a amostra ${amostra} sobre ${fundoDaEntrada} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1)`, ids: [quem] });
+        }
+      }
+      saida.push(conforme('A7.5', casos, {
+        medida: { entradas: cena.legenda.length, abaixo_do_piso: casos.length },
+        mensagem: casos.length ? `${casos.length} entrada(s) de legenda abaixo do piso` : `${cena.legenda.length} entrada(s) de legenda dentro dos pisos`,
+      }));
+    }
+  }
 
   return saida;
 };

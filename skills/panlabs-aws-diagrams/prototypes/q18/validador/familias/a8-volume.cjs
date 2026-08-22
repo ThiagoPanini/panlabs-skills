@@ -54,10 +54,11 @@ module.exports = function a8(cena) {
 
   // ---------------------------------------------------------------- A8.3
   {
-    if (!arestas.length) saida.push(inaplicavel('A8.3', 'o diagrama não tem arestas'));
+    if (!cena.grau.size) saida.push(inaplicavel('A8.3', arestas.length
+      ? 'nenhuma aresta liga dois ids que existem no plano'
+      : 'o diagrama não tem arestas'));
     else {
-      const grau = new Map();
-      for (const a of arestas) for (const id of [a.de, a.para]) grau.set(id, (grau.get(id) || 0) + 1);
+      const grau = cena.grau;
       const teto = lim('fanOutMaximo');
       const maximo = Math.max(...grau.values());
       const estourados = [...grau.entries()].filter(([, d]) => d > teto)

@@ -11,10 +11,9 @@
  */
 
 const path = require('path');
-const { ok, falha, inaplicavel, conforme, arredonda, semTags } = require(path.join(__dirname, 'comum.cjs'));
+const { ok, falha, inaplicavel, conforme, arredonda, semTags, nome } = require(path.join(__dirname, 'comum.cjs'));
 const { catalogo } = require(path.join(__dirname, 'catalogo.cjs'));
 
-const nome = e => `${e.id}${e.rotulo ? ` ("${semTags(e.rotulo)}")` : ''}`;
 
 /** Canais visuais que a legenda teria de explicar (A1.3). */
 function canaisUsados(cena) {

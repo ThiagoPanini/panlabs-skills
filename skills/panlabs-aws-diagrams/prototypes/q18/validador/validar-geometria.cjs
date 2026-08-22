@@ -43,7 +43,7 @@
 
 const path = require('path');
 const { criarCena } = require(path.join(__dirname, 'cena.cjs'));
-const { CHECAGENS, porId } = require(path.join(__dirname, 'indice.cjs'));
+const { CHECAGENS, DO_VALIDADOR, porId } = require(path.join(__dirname, 'indice.cjs'));
 
 // A ordem é a do §Resumo de prioridade da rubrica, não a alfabética.
 const FAMILIAS = [
@@ -84,7 +84,7 @@ function validarGeometria(plano, opts = {}) {
     resultados.push(...obtidos);
   }
 
-  const doValidador = CHECAGENS.filter(c => c.insumo !== 'render').map(c => c.id);
+  const doValidador = DO_VALIDADOR.map(c => c.id);
   const vistos = new Set(resultados.map(r => r.id));
   const naoRodaram = doValidador.filter(id => !vistos.has(id));
 
@@ -147,7 +147,4 @@ function formatar(r, opts = {}) {
   return linhas.join('\n');
 }
 
-/** Uma linha por checagem, para diffar dois laudos. */
-const resumirPorId = r => Object.fromEntries([...r.resultados, ...r.extras].map(x => [x.id, x.estado]));
-
-module.exports = { validarGeometria, formatar, resumirPorId, porId };
+module.exports = { validarGeometria, formatar, porId };

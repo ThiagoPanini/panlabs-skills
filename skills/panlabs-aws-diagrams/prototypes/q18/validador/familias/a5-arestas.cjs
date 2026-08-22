@@ -30,16 +30,14 @@ function cruzamentosEntre(a, b) {
 module.exports = function a5(cena) {
   const saida = [];
   const arestas = cena.arestas.filter(a => a.completa);
-  const semAresta = motivo => saida.push(inaplicavel(motivo.id, 'o diagrama não tem arestas'));
+  const semAresta = id => saida.push(inaplicavel(id, 'o diagrama não tem arestas'));
 
   if (!arestas.length) {
-    for (const id of ['A5.1', 'A5.2', 'A5.3', 'A5.4', 'A5.5', 'A5.6', 'A5.7', 'A5.8', 'A5.9']) semAresta({ id });
+    for (const id of ['A5.1', 'A5.2', 'A5.3', 'A5.4', 'A5.5', 'A5.6', 'A5.7', 'A5.8', 'A5.9']) semAresta(id);
     return saida;
   }
 
-  // grau de cada nó, para o c_max de A5.1 e para A6.1
-  const grau = new Map();
-  for (const a of arestas) for (const id of [a.de, a.para]) grau.set(id, (grau.get(id) || 0) + 1);
+  const grau = cena.grau;   // a cena monta uma vez; A6.1 e A8.3 leem o mesmo mapa
 
   // ------------------------------------------------- cruzamentos, uma vez só
   const cruzes = [];
@@ -53,9 +51,27 @@ module.exports = function a5(cena) {
     const E = arestas.length;
     const somaGraus = [...grau.values()].reduce((s, d) => s + (d * (d - 1)) / 2, 0);
     const cMax = Math.max(1, (E * (E - 1)) / 2 - somaGraus);
-    const EC = arredonda(1 - cruzes.length / cMax);
+
+    // A rubrica escreve `c = Σ_x |E(x)|²`, e essa forma NÃO normaliza contra o
+    // `c_max` que ela mesma dá: um único cruzamento simples tem |E(x)| = 2,
+    // logo c = 4, e com duas arestas (c_max = 1) o EC sairia −3, fora de [0,1].
+    // O `c_max = C(|E|,2) − Σ_v C(deg(v),2)` é a contagem máxima de PARES que
+    // podem se cruzar, então o numerador tem de ser em pares também. Onde k
+    // arestas passam pelo mesmo ponto, o par correspondente é C(k,2) — que
+    // vira a contagem simples quando não há três arestas concorrentes.
+    const porPonto = new Map();
+    for (const c of cruzes) {
+      const chave = `${Math.round(c.ponto.x)},${Math.round(c.ponto.y)}`;
+      if (!porPonto.has(chave)) porPonto.set(chave, new Set());
+      porPonto.get(chave).add(c.a).add(c.b);
+    }
+    const c = [...porPonto.values()].reduce((soma, arestasNoPonto) => {
+      const k = arestasNoPonto.size;
+      return soma + (k * (k - 1)) / 2;
+    }, 0);
+    const EC = arredonda(1 - c / cMax);
     const orcamento = Math.ceil(E / 10);
-    const medida = { cruzamentos: cruzes.length, EC, orcamento_de_falha: orcamento, c_max: cMax };
+    const medida = { cruzamentos: cruzes.length, c_em_pares: c, EC, orcamento_de_falha: orcamento, c_max: cMax };
     const ocorrencias = cruzes.map(c => ({ o_que: `"${c.a}" cruza "${c.b}" em (${arredonda(c.ponto.x, 0)}, ${arredonda(c.ponto.y, 0)}) a ${arredonda(c.angulo, 1)}°`, ids: [c.a, c.b] }));
     saida.push(!cruzes.length ? ok('A5.1', { medida, mensagem: `0 cruzamentos, EC = ${EC}` })
       : cruzes.length > orcamento ? falha('A5.1', { medida, mensagem: `${cruzes.length} cruzamentos, acima do orçamento de ⌈${E}/10⌉ = ${orcamento}`, ocorrencias })
@@ -208,7 +224,7 @@ module.exports = function a5(cena) {
     const casos = [];
     const porPar = new Map();
     for (const a of arestas) {
-      const chave = [a.de, a.para].sort().join(' ');
+      const chave = [a.de, a.para].sort().join('|');
       if (!porPar.has(chave)) porPar.set(chave, []);
       porPar.get(chave).push(a);
     }

@@ -226,6 +226,22 @@ const CASOS = [
   },
 
   {
+    nome: 'texto escuro sobre grupo escuro',
+    porque: 'o caso que o corte de z errado deixava passar: 1,00:1 na tela virava 13,57:1 medido contra a página. '
+      + 'É a direção perigosa do bug — o falso NEGATIVO, que aprova o ilegível',
+    espera: ['A7.1'],
+    ...montar('a7.1-escuro', [
+      // grupo com preenchimento escuro e rótulo quase da mesma cor
+      v('grupo-escuro', '1', 60, 60, 400, 300,
+        grupo('#232F3E', '#232F3D').replace('fontColor=', 'fontColorAntigo=') + 'fontColor=#232F3E;'),
+      v('no', 'grupo-escuro', 40, 80, 78, 78, icone()),
+    ], mod([
+      { id: 'grupo-escuro', tipo: 'vpc' },
+      { id: 'no', tipo: 'servico', servico: 'lambda', dentro: 'grupo-escuro' },
+    ])),
+  },
+
+  {
     nome: 'desenho estourando o canvas',
     porque: 'o `drawio -x` exporta a caixa que contém tudo; o que passa da página vira imagem cortada ou faixa em branco',
     espera: ['A3.7'],

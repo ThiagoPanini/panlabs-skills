@@ -123,7 +123,9 @@ function caixaDeRotulo(caixa, rotulo, estilo) {
 
   // Container: o rótulo mora na faixa de título, no canto superior esquerdo.
   if (estilo.container === '1') {
-    const recuo = /grIcon=/.test(JSON.stringify(estilo)) || estilo.spacingLeft ? num(estilo, 'spacingLeft', 30) : 8;
+    // `estilo` já vem parseado: procurar "grIcon=" no JSON dele nunca casa,
+    // porque serializado o par vira `"grIcon":"..."`. A chave é que se testa.
+    const recuo = 'grIcon' in estilo || estilo.spacingLeft ? num(estilo, 'spacingLeft', 30) : 8;
     return {
       x: caixa.x + recuo, y: caixa.y,
       w: Math.min(caixa.w - recuo, texto.length * porCaractere),
@@ -221,6 +223,13 @@ function criarCena(plano, opts = {}) {
       elementos.push({
         id: c.id, classe: 'aresta', pai: c.pai, z, estilo, estiloBruto: c.style || '',
         rotulo: c.rotulo || '', de: c.de, para: c.para, dobras: c.pontos || [],
+        // os mesmos campos que as caixas ganham: sem isto cada família reparseia
+        // a style à mão, e A3.9 e A7.1 já divergiram no default de `fontSize`
+        traco: corDe(estilo, 'strokeColor'),
+        corDaFonte: corDe(estilo, 'fontColor') || '#000000',
+        tamanhoDaFonte: num(estilo, 'fontSize', 12),
+        negrito: estilo.fontStyle === '1' || estilo.fontStyle === '3',
+        halo: corDe(estilo, 'labelBackgroundColor'),
       });
       return;
     }
@@ -358,17 +367,39 @@ function criarCena(plano, opts = {}) {
     return fundo;
   }
 
-  /** O fundo efetivo sob o rótulo de um elemento, respeitando o halo se houver. */
+  /**
+   * O fundo efetivo sob o rótulo de um elemento, respeitando o halo se houver.
+   *
+   * O `+ 1` no corte de z não é detalhe: o rótulo de um grupo é desenhado DENTRO
+   * da caixa dele, na faixa de título, então o preenchimento do próprio grupo é
+   * o fundo daquele texto. Cortar em `e.z` exclui justamente a cor de trás e
+   * mede contra a página.
+   *
+   * O erro tem direção perigosa. Um título `#00A4A6` sobre uma subnet `#E6F6F7`
+   * dá 2,75:1, e medido contra o branco dá 3,06:1 — otimista, mas ainda reprova.
+   * Já texto escuro sobre grupo escuro (`#232F3E` sobre `#232F3D`) é 1,00:1 na
+   * tela e vira 13,57:1 medido contra a página: PASSA. Falso negativo na única
+   * família normativa do validador.
+   *
+   * Para rótulo desenhado fora da caixa (folha com `verticalLabelPosition=bottom`)
+   * incluir o próprio elemento não muda nada: o ponto do rótulo cai fora da
+   * caixa dele, e quem decide é o teste de contenção, não o corte de z.
+   */
   function fundoDoRotulo(e) {
     const halo = corDe(e.estilo, 'labelBackgroundColor');
     if (halo) return halo;
     const caixa = e.rotuloCaixa;
     if (!caixa) return plano.fundo || '#FFFFFF';
-    return fundoEfetivoEm({ x: caixa.x + caixa.w / 2, y: caixa.y + caixa.h / 2 }, e.z);
+    return fundoEfetivoEm({ x: caixa.x + caixa.w / 2, y: caixa.y + caixa.h / 2 }, e.z + 1);
   }
 
+  // Grau de cada nó. Mora aqui porque A5.1 (c_max), A6.1 e A8.3 querem o mesmo
+  // mapa, e três cópias é onde uma delas passa a contar aresta incompleta.
+  const grau = new Map();
+  for (const a of arestas) if (a.completa) for (const id of [a.de, a.para]) grau.set(id, (grau.get(id) || 0) + 1);
+
   return {
-    plano, modelo,
+    plano, modelo, grau,
     canvas: { x: 0, y: 0, w: plano.larg, h: plano.alt },
     fundo: plano.fundo || '#FFFFFF',
     elementos, nos, grupos, faixas, molduras, arestas, caixas,

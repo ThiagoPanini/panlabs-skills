@@ -10,9 +10,8 @@
 const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometria.cjs'));
 const { lim } = require(path.join(__dirname, '..', 'indice.cjs'));
-const { ok, aviso, falha, inaplicavel, conforme, pares, arredonda, semTags } = require(path.join(__dirname, 'comum.cjs'));
+const { ok, aviso, falha, inaplicavel, conforme, pares, arredonda, semTags, nome } = require(path.join(__dirname, 'comum.cjs'));
 
-const nome = e => `${e.id}${e.rotulo ? ` ("${semTags(e.rotulo)}")` : ''}`;
 
 module.exports = function a3(cena) {
   const saida = [];

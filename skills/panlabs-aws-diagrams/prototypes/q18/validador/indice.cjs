@@ -473,7 +473,6 @@ const CHECAGENS = [
 
 const INDICE = new Map(CHECAGENS.map(c => [c.id, c]));
 const porId = id => INDICE.get(id);
-const daFamilia = f => CHECAGENS.filter(c => c.familia === f);
 
 /** As que o validador obrigatório cobre — tudo que não foi entregue ao render. */
 const DO_VALIDADOR = CHECAGENS.filter(c => c.insumo !== 'render');
@@ -482,5 +481,5 @@ const DO_RENDER = CHECAGENS.filter(c => c.insumo === 'render');
 
 module.exports = {
   CHECAGENS, INDICE, LIMIARES, SEVERIDADES, INSUMOS,
-  DO_VALIDADOR, DO_RENDER, porId, daFamilia, lim,
+  DO_VALIDADOR, DO_RENDER, porId, lim,
 };

@@ -55,9 +55,7 @@ function pulada(id) {
  */
 function conforme(id, ocorrencias, extra = {}) {
   if (!ocorrencias.length) return ok(id, extra);
-  const c = porId(id);
-  const grave = extra.escalar === undefined ? c.severidade === 'fail' : extra.escalar;
-  return resultado(id, grave ? 'falha' : 'aviso', { ...extra, ocorrencias });
+  return resultado(id, porId(id).severidade === 'fail' ? 'falha' : 'aviso', { ...extra, ocorrencias });
 }
 
 /** Pares não ordenados de uma lista, sem repetir e sem parear consigo mesmo. */
@@ -73,4 +71,13 @@ const arredonda = (x, n = 3) => Number(Number(x).toFixed(n));
 /** Texto do rótulo sem a marcação HTML que o motor injeta (`<b>1.</b> ...`). */
 const semTags = s => String(s || '').replace(/<[^>]+>/g, '').trim();
 
-module.exports = { resultado, ok, aviso, falha, inaplicavel, pulada, conforme, pares, media, desvio, arredonda, semTags };
+/**
+ * Como um elemento é citado numa mensagem: o id, mais o rótulo quando existe.
+ *
+ * Mora aqui porque mensagem de erro é produto, e seis cópias da mesma linha é
+ * onde uma delas passa a citar só o id — e aí a ocorrência de A4.2 diz
+ * "srv está dentro de vpc-b" em vez de dizer de que serviço se trata.
+ */
+const nome = e => `${e.id}${semTags(e.rotulo) ? ` ("${semTags(e.rotulo)}")` : ''}`;
+
+module.exports = { resultado, ok, aviso, falha, inaplicavel, pulada, conforme, pares, media, desvio, arredonda, semTags, nome };

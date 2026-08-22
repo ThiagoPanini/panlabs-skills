@@ -21,9 +21,8 @@
 const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometria.cjs'));
 const { lim } = require(path.join(__dirname, '..', 'indice.cjs'));
-const { ok, inaplicavel, conforme, pares, media, desvio, arredonda, semTags } = require(path.join(__dirname, 'comum.cjs'));
+const { ok, inaplicavel, conforme, pares, media, desvio, arredonda, semTags, nome } = require(path.join(__dirname, 'comum.cjs'));
 
-const nome = e => `${e.id}${e.rotulo ? ` ("${semTags(e.rotulo)}")` : ''}`;
 
 module.exports = function a4(cena) {
   const saida = [];

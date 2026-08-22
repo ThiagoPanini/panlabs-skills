@@ -28,9 +28,8 @@
 
 const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometria.cjs'));
-const { semTags, arredonda } = require(path.join(__dirname, 'comum.cjs'));
+const { semTags, arredonda, nome } = require(path.join(__dirname, 'comum.cjs'));
 
-const nome = e => `${e.id}${e.rotulo ? ` ("${semTags(e.rotulo)}")` : ''}`;
 
 module.exports = function extras(cena) {
   const saida = [];

@@ -3,7 +3,7 @@
 #
 #   ./tests/rodar.sh
 #
-# Quatro camadas, e a ordem tem motivo. O índice vem primeiro porque, se ele
+# Cinco camadas, e a ordem tem motivo. O índice vem primeiro porque, se ele
 # derivou da rubrica, todo o resto está medindo uma lista que não é mais a das
 # 62. As primitivas vêm em seguida porque uma conta de geometria ou de cor
 # errada não estoura — ela devolve um número plausível, e as checagens ficam
@@ -34,7 +34,11 @@ echo "== 3. o validador reprova o que deve, e absolve o que não deve =="
 node "$Q18/tests/check-quebrados.cjs" || falhou=1
 
 echo
-echo "== 4. os diagramas bons do #11, laudados =="
+echo "== 4. o portão barra o que mente e cabe entre planejar e emitir =="
+node "$Q18/tests/check-portao.cjs" || falhou=1
+
+echo
+echo "== 5. os diagramas bons do #11, laudados =="
 # Não usa `|| falhou=1`: os exemplos do #11 TÊM falhas reais (sem legenda, sem
 # metadados, contraste de título abaixo de 4,5:1), e são achados do protótipo,
 # não regressão da suíte. O que a suíte cobra aqui é que nenhuma falha

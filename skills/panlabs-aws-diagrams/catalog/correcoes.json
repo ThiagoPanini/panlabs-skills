@@ -144,26 +144,34 @@
   },
   "preenchimentoDeGrupo": {
     "_nota": [
-      "Achado no #13, medindo contraste sobre um render real — não na extração.",
-      "DUAS das 20 entradas de grupo saem do draw.io com preenchimento tingido:",
-      "Private subnet #E6F6F7 e Public subnet #F2F6E8. As outras 18 são fillColor=none.",
-      "O deck da AWS é o oposto: A2 do docs/research/aws-diagramming-conventions.md",
-      "mede <a:noFill/> em TODOS os grupos, nos 156 slides. O tingimento é prática",
-      "observada em alguns diagramas oficiais, não o preset.",
-      "O que decidiu não foi a estética e sim a régua: a paleta AWS é calibrada para",
-      "branco PURO — #ED7100 (Compute/Containers/Media) só alcança os 3:1 da WCAG",
-      "1.4.11 contra #FFFFFF. Com o tingimento #E6F6F7 embaixo, um ícone de Lambda",
-      "dentro da subnet privada cai para 2,71:1. Duas razões independentes apontam",
-      "para o mesmo lado, então o delta zera o fill.",
-      "Isto NÃO é decisão de tema: não existe token de cor de grupo no vocabulário",
-      "do tema, justamente porque essa cor é normativa."
+      "CORREÇÃO RETIRADA no #13, depois do retorno do dono do mapa. Fica registrada porque",
+      "a medição que a motivou continua verdadeira — o que estava errado era a conclusão.",
+      "",
+      "O que eu tinha feito: zerar o fillColor de Private subnet (#E6F6F7) e Public subnet",
+      "(#F2F6E8), as duas únicas das 20 entradas de grupo que o draw.io entrega tingidas,",
+      "alegando o A2 do deck (<a:noFill/> em 156 lâminas) e o fato de o tingimento derrubar",
+      "um ícone #ED7100 dentro da subnet de 3,02 para 2,71:1.",
+      "",
+      "Por que estava errado, em três camadas:",
+      "1. A pesquisa do #5 JÁ DIZIA, na ressalva honesta do A2, que diagramas oficiais reais",
+      "   tingem subnet (Web Application Architecture, EKS, Security Automations for WAF,",
+      "   DeepRacer) e que 'sem preenchimento' é padrão de fábrica, NÃO proibição. Eu li a",
+      "   regra e ignorei a ressalva.",
+      "2. O tingimento do draw.io não é arbitrário: medido, ele é exatamente 10% da PRÓPRIA",
+      "   cor normativa do grupo sobre o fundo da página. 10% de #00A4A6 sobre branco dá",
+      "   #E6F6F6 contra os #E6F6F7 entregues; 10% de #7AA116 dá #F2F6E8 exato. Ou seja: o",
+      "   tingimento REFORÇA a legenda por cor em vez de inventar canal novo.",
+      "3. O 2,71:1 é do QUADRADO do ícone, uma área sólida de 48 px identificada pelo glifo",
+      "   branco que ela contém — não de um traço fino. Aplicar a ele o mesmo limiar duro de",
+      "   uma borda de 1,25 pt era leitura estrita demais da WCAG 1.4.11. O portão passou a",
+      "   separar traço (reprova) de área (avisa).",
+      "",
+      "O que ficou no lugar: o tingimento voltou a ser do catálogo, e o VALOR virou derivação",
+      "do tema (`grupo.tingimento`), porque um azul-claro que funciona no deck claro é um",
+      "bloco luminoso num fundo escuro. Ver prototypes/q13/tema/esquema.json."
     ],
-    "para": "none",
-    "afeta": [
-      "Private subnet",
-      "Public subnet"
-    ],
-    "evidencia": "fillColor=#E6F6F7 / #F2F6E8 literais em Sidebar-AWS4.js; A2 do deck = <a:noFill/>; contraste medido em prototypes/q13/tools/medir-regua.cjs"
+    "_retiradaEm": "https://github.com/ThiagoPanini/panlabs-skills/issues/13",
+    "afeta": []
   },
   "renomes": {
     "_nota": [

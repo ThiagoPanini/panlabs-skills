@@ -62,17 +62,26 @@ def dominante(img):
 UNIVERSAIS = [
     ('ausente', '#AAB7B8', 'rótulo cinza do VPC: o catálogo entrega, o tema sobrescreve (2,06:1 no branco)'),
     ('ausente', '#248814', 'rótulo verde-escuro da Public subnet: idem'),
-    ('ausente', '#E6F6F7', 'tingimento da Private subnet: correção de catálogo achada no #13'),
-    ('ausente', '#F2F6E8', 'tingimento da Public subnet: idem'),
+    # NÃO afirme aqui que o tingimento FIXO do draw.io (#E6F6F7) está ausente.
+    # A afirmação seria INDECIDÍVEL, e por um motivo que é justamente o achado: o
+    # valor derivado no tema claro é #E6F6F6 — um único degrau de azul de distância.
+    # Nenhuma tolerância de pixel separa os dois, porque eles são a mesma cor.
+    # Uma afirmação que não sabe falhar não vale mais do que uma checagem que não
+    # sabe falhar. Onde ela DECIDE é no tema escuro, e é lá que ela mora.
 ]
 
 POR_TEMA = {
-    'claro':       [('presente', '#FFFFFF', 'fundo da página'),
+    'claro':       [('presente', '#E6F6F6', 'tingimento derivado da Private subnet — 10% de #00A4A6 sobre branco'),
+                    ('presente', '#F2F6E8', 'tingimento derivado da Public subnet — 10% de #7AA116, idêntico ao do draw.io'),
+                    ('presente', '#FFFFFF', 'fundo da página'),
                     ('presente', '#232F3E', 'tinta forte / borda do AWS Cloud'),
                     ('presente', '#ED7100', 'quadrado do Lambda — cor de categoria intocada'),
                     ('presente', '#8C4FFF', 'borda do VPC — cor normativa intocada')],
-    'escuro':      [('presente', '#161E2D', 'fundo da página'),
+    'escuro':      [('presente', '#1C1C1C', 'fundo da página, neutro e mais escuro (retorno do #13)'),
+                    ('presente', '#192A2A', 'tingimento derivado no escuro: a MESMA regra, outro fundo'),
                     ('presente', '#FFFFFF', 'tinta forte / AWS Cloud invertido, como no deck escuro'),
+                    ('ausente',  '#161E2D', 'o azul-noite anterior: substituído, não pode sobrar'),
+                    ('ausente',  '#E6F6F7', 'o tingimento FIXO do draw.io: aqui a derivação DECIDE, e some'),
                     ('presente', '#ED7100', 'cor de categoria NÃO muda entre os decks'),
                     ('presente', '#8C4FFF', 'borda do VPC NÃO muda entre os decks'),
                     ('ausente',  '#232F3E', 'squid ink: 1,23:1 no fundo escuro — tem de ter sumido inteiro')],

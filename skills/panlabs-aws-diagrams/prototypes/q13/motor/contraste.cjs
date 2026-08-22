@@ -8,9 +8,24 @@
  * arquivo de tema: um tema, sozinho, não sabe sobre o que vai cair. O tema é
  * hipótese; o plano é onde ela vira número.
  *
- *   A7.1  texto        >= 4,5:1  (>= 3:1 se >= 24 px, ou >= 18,5 px em negrito)
- *   A7.2  não-texto    >= 3:1
- *   A7.3  cor não é o único canal
+ *   A7.1   texto            >= 4,5:1  (>= 3:1 se >= 24 px, ou >= 18,5 px em negrito)
+ *   A7.2   traço            >= 3:1    REPROVA
+ *   A7.2a  área sólida      >= 3:1    AVISA
+ *   A7.3   cor não é o único canal
+ *
+ * A separação entre TRAÇO e ÁREA entrou no retorno do #13, e não é conveniência:
+ * uma borda de grupo de 1,25 pt e o quadrado de 48 px de um service icon são
+ * coisas diferentes para a WCAG 1.4.11, que fala das "important parts ... required
+ * to understand". Achar uma linha fina de teal sobre off-white é genuinamente
+ * difícil; um bloco laranja saturado sobre um azul de 10% é perfeitamente visível,
+ * e a identidade dele é carregada pelo GLIFO branco de dentro — que é medido à
+ * parte, contra o próprio quadrado, e não muda com o fundo.
+ *
+ * Tratar os dois com o mesmo limiar duro fez este protótipo condenar o tingimento
+ * de subnet do draw.io, que os diagramas oficiais da AWS usam e que a ressalva do
+ * A2 no #5 já autorizava. Por isso ÁREA avisa e TRAÇO reprova. O limiar de área é
+ * operacionalização de engenharia, não texto da WCAG — mesma marcação que a
+ * rubrica dá ao A7.4.
  *
  * ⚠️ A armadilha do #4 §3.2 vale AQUI TAMBÉM: nas formas `mxgraph.aws4.*`,
  * `strokeColor` não é a cor da borda — é a cor do GLIFO. Um validador que
@@ -98,9 +113,9 @@ function paresDe(cel, porId, fundoPagina) {
   const stroke = cor(chave(st, 'strokeColor'));
 
   if (ehIconeDeServico(st)) {
-    // o quadrado da categoria contra o que está atrás dele
+    // o quadrado da categoria contra o que está atrás dele — ÁREA, portanto aviso
     const atras = fundoEfetivo(cel, porId, fundoPagina, true);
-    if (fill) pares.push({ regra: 'A7.2', o_que: 'quadrado do ícone', frente: fill, fundo: atras.cor, alvo: 3.0 });
+    if (fill) pares.push({ regra: 'A7.2a', o_que: 'quadrado do ícone', frente: fill, fundo: atras.cor, alvo: 3.0, aviso: true });
     // e o GLIFO contra o quadrado — `strokeColor` pinta o glifo (#4 §3.2)
     if (stroke && fill) pares.push({ regra: 'A7.2', o_que: 'glifo dentro do ícone', frente: stroke, fundo: fill, alvo: 3.0 });
     // o rótulo do service icon é desenhado FORA da caixa (verticalLabelPosition=bottom):
@@ -177,21 +192,24 @@ function medir(plano) {
   }
   achados.push(...corNaoEUnicoCanal(plano.celulas).map(v => ({ ...v, id: '(paleta)', razao: null, passa: false, alvo: null })));
 
-  const falhas = achados.filter(a => !a.passa);
+  const abaixo = achados.filter(a => !a.passa);
+  const falhas = abaixo.filter(a => !a.aviso);
+  const avisos = abaixo.filter(a => a.aviso);
   return {
     ok: falhas.length === 0,
     total: achados.length,
-    falhas,
+    falhas, avisos,
     piorTexto: Math.min(Infinity, ...achados.filter(a => a.regra === 'A7.1').map(a => a.razao)),
     piorGrafismo: Math.min(Infinity, ...achados.filter(a => a.regra === 'A7.2').map(a => a.razao)),
+    piorArea: Math.min(Infinity, ...achados.filter(a => a.regra === 'A7.2a').map(a => a.razao)),
     achados,
   };
 }
 
 /** Uma linha por falha, agrupada — 40 rótulos com a mesma tinta são um problema, não 40. */
-function resumir(r) {
+function resumir(r, quais) {
   const grupos = new Map();
-  for (const f of r.falhas) {
+  for (const f of (quais || r.falhas)) {
     const k = `${f.regra}|${f.o_que}|${f.frente}|${f.fundo}`;
     if (!grupos.has(k)) grupos.set(k, { ...f, quantos: 0, ids: [] });
     const g = grupos.get(k);

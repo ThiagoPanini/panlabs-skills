@@ -26,6 +26,17 @@
       }
     },
 
+    "grupo": {
+      "description": "O ÚNICO token que fala de grupo, e ele foi aberto no retorno do #13 — a primeira volta tratava qualquer preenchimento de grupo como indizível. Estava errado, e a pesquisa do #5 já dizia: a ressalva honesta do A2 registra que diagramas oficiais reais tingem subnet, e que `<a:noFill/>` é padrão de fábrica, não proibição. Note o que este token NÃO deixa dizer: não há hex. QUAIS grupos são tingidos continua sendo fato do catálogo (o draw.io tinge duas subnets e mais nada), e o VALOR é derivado da própria cor normativa daquele grupo. Medido: 10% de #00A4A6 sobre branco dá #E6F6F6 contra o #E6F6F7 que o draw.io entrega, e 10% de #7AA116 dá #F2F6E8 exato — ou seja, o tingimento do produto JÁ É essa derivação. Por isso ele reforça a legenda por cor em vez de inventar canal novo, e por isso pode ser dito.",
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "tingimento": {
+          "description": "`derivado` mistura 10% da cor normativa do grupo com o fundo da página — reproduz o draw.io no tema claro e resolve sozinho no escuro, onde um azul-claro fixo viraria bloco luminoso e engoliria o rótulo branco. `nenhum` obedece o preset do deck ao pé da letra.",
+          "enum": ["derivado", "nenhum"]
+        }
+      }
+    },
+
     "tinta": {
       "type": "object", "additionalProperties": false,
       "properties": {

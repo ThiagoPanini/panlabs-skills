@@ -59,9 +59,9 @@ pode **mostrar ou esconder** — o texto em si é fato da arquitetura, não esco
 
 | Arquivo | O que é | portão |
 |---|---|---|
-| `saida/a-claro` | O default. Branco puro, squid ink, Arial 12, grade base 8, seta sólida. | passa (texto 5,35 · grafismo 3,02) |
-| `saida/b-escuro` | O deck escuro da AWS: `AWS Cloud` invertido, ícones monocromáticos invertidos, **cor de grupo e de categoria intocadas**. | passa (texto 8,39 · grafismo 3,02) |
-| `saida/c-corporativo` | A camada da casa no máximo — Arial normativa, título 24 pt, densidade 1,25, seta `#545B64` com ponta *open*, cantos vivos, qualificador em itálico (`O21`) e linha de revisão técnica (`O24`). **No branco, porque a régua não deixa outra coisa.** | passa (texto 5,35 · grafismo 3,02) |
+| `saida/a-claro` | O default. Branco puro, squid ink, Arial 12, grade base 8, seta sólida. | passa (texto 5,35 · traço 3,02 · área 2,71 ⚠) |
+| `saida/b-escuro` | O deck escuro da AWS: `AWS Cloud` invertido, ícones monocromáticos invertidos, **cor de grupo e de categoria intocadas**. Fundo `#1C1C1C`. | passa (texto 8,22 · traço 3,02 · área 3,32) |
+| `saida/c-corporativo` | A camada da casa no máximo — Arial normativa, título 24 pt, densidade 1,25, seta `#545B64` com ponta *open*, cantos vivos, qualificador em itálico (`O21`) e linha de revisão técnica (`O24`). **No branco, porque a régua não deixa outra coisa.** | passa (texto 5,35 · traço 3,02 · área 2,71 ⚠) |
 | `saida/d-armadilha` | Dizível e errado: off-white `#F2F3F5`, tinta pálida, seta fininha. Gerado só com `--forcar`. | **reprova em 4 frentes** |
 | `saida/e-indizivel` | Indizível: `sketch=1`, cor de grupo trocada, `rounded=1` em vértice AWS4. Remendo bruto no XML, **depois** do motor. | passa no contraste — e mente assim mesmo |
 | `saida/f-fluxo-animado.svg` | `--fluxo animado`. **Abrir no navegador** — as setas correm. Não tem PNG de propósito. | passa |
@@ -102,13 +102,13 @@ para a página.** O que sobra para o fundo é o resto.
 
 A AWS publica dois decks, e o escuro muda **duas** coisas: a borda/ícone do `AWS Cloud`
 inverte e os callouts invertem (`#5` §2.1). Medindo as nove cores de grupo contra um fundo
-escuro, oito ficam entre 3,12 e 5,54:1 — e **só `#232F3E` desaba para 1,23**.
+escuro (`#1C1C1C`), oito ficam entre 3,18 e 5,65:1 — e **só `#232F3E` desaba para 1,26**.
 
 > A lista da medição e a lista do deck são a mesma. O deck escuro não é escolha estética da
 > AWS; é a única edição que a acessibilidade obriga.
 
 O mesmo vale para os assets: só as famílias `Res_General-Icons` têm variante `_Light`/`_Dark`
-no pacote oficial, e são exatamente as monocromáticas — `#232F3D`, 1,23:1 no escuro. O
+no pacote oficial, e são exatamente as monocromáticas — `#232F3D`, 1,25:1 no escuro. O
 draw.io traz **uma** variante só, então quem inverte é o tema.
 
 E o ícone do próprio `AWS Cloud` inverte junto, de graça: o stencil `group_aws_cloud_alt` não
@@ -118,7 +118,7 @@ trabalhando a favor). Trocando a borda para branco, o quadradinho vira **branco 
 de pixel do render, não deduzido.
 
 **Mas o deck escuro não é universalmente seguro.** Duas cores de categoria reprovam no fundo
-escuro — `#BC1356` (AR/VR, 2,68:1) e `#3334B9` (Customer Engagement, 1,85:1) —, o que atinge
+escuro — `#BC1356` (AR/VR, 2,73:1) e `#3334B9` (Customer Engagement, 1,89:1) —, o que atinge
 **6 dos 403 service icons**. Se o diagrama não usa esses serviços, passa. É por isso que o
 portão roda sobre o **plano**, e não sobre o arquivo de tema.
 
@@ -179,14 +179,45 @@ E a checagem pegou **quatro** coisas reais, em três execuções:
   bateria de um modelo só não distingue "token morto" de "modelo que não exercita o token"**;
   a partição agora roda contra dois.
 
-### 5. Duas correções de catálogo que só apareceram medindo contraste
+### 5. O tingimento de subnet — a correção que foi retirada
 
-**O draw.io tinge duas subnets.** `Private subnet` sai com `fillColor=#E6F6F7` e
+Esta entrada existe porque a primeira volta errou, e o erro é instrutivo.
+
+**O que eu tinha feito.** O draw.io entrega `Private subnet` com `fillColor=#E6F6F7` e
 `Public subnet` com `#F2F6E8`; as outras 18 entradas de grupo são `none`. O deck é o oposto
-(`A2`: `<a:noFill/>` nos 156 slides). E o tingimento não é inócuo: um ícone de Lambda dentro
-da subnet privada cai de 3,02 para **2,71:1**, porque o fundo efetivo dele deixou de ser
-branco. Duas razões independentes apontam para o mesmo lado, então o delta do catálogo passou
-a zerar o fill. Isso **não** é decisão de tema — não existe token de cor de grupo.
+(`A2`: `<a:noFill/>` nos 156 slides), e o tingimento derruba um ícone de Lambda dentro da
+subnet de 3,02 para **2,71:1**. Duas razões apontando para o mesmo lado — zerei o fill no
+delta do catálogo.
+
+**Por que estava errado**, em três camadas, e nenhuma delas é opinião:
+
+1. **A pesquisa do #5 já dizia.** A ressalva honesta do `A2` registra que diagramas oficiais
+   reais tingem subnet — *Web Application Architecture*, *EKS*, *Security Automations for WAF*,
+   *DeepRacer* — e que "sem preenchimento" é **padrão de fábrica, não proibição**. Li a regra e
+   ignorei a ressalva que estava três linhas abaixo.
+2. **O tingimento do draw.io não é arbitrário.** Medido: ele é exatamente **10% da própria cor
+   normativa do grupo sobre o fundo da página**. 10% de `#00A4A6` sobre branco dá `#E6F6F6`
+   contra os `#E6F6F7` entregues; 10% de `#7AA116` dá `#F2F6E8` **exato**. O tingimento
+   *reforça* a legenda por cor em vez de inventar canal novo — que era a única razão pela qual
+   ele seria indizível.
+3. **O 2,71:1 era o par errado.** É o **quadrado** do ícone, uma área sólida de 48 px cuja
+   identidade é carregada pelo glifo branco de dentro — e esse glifo é medido à parte, contra o
+   próprio quadrado, sem depender do fundo. Aplicar a ele o mesmo limiar duro de uma borda de
+   1,25 pt é leitura estrita demais da `1.4.11`.
+
+**O que ficou no lugar.** O portão passou a separar `A7.2` **traço** (reprova) de `A7.2a`
+**área** (avisa) — e o limiar de área está marcado como operacionalização de engenharia, não
+texto da WCAG, a mesma marcação que a rubrica dá ao `A7.4`. O tingimento voltou ao catálogo, e
+o **valor** virou derivação do tema (`grupo.tingimento`), porque um azul-claro que funciona no
+deck claro é um bloco luminoso num fundo escuro que engole o rótulo branco de quem cai dentro.
+
+Note a divisão que sobrou, que é a lição de arquitetura: **QUAIS grupos são tingidos continua
+sendo fato do catálogo** — o tema não tem palavra para mudar esse conjunto — **e o VALOR é
+derivado da cor que já estava lá.** Não existe hex de grupo no vocabulário, nem depois de
+abrir o token. E a derivação conserta o tema escuro de graça: lá o quadrado do Lambda sobe
+para **3,32:1**, melhor do que no claro.
+
+### 5b. E uma correção que ficou de pé
 
 **A calha do rótulo de nota era invisível.** `#E0B34D` sobre branco dá 1,96:1. Trocado por
 `#B7791F` (3,64:1). Escolha da casa, corrigida por régua.
@@ -197,14 +228,19 @@ Pela mesma razão que o `conferir` do #11 reprova XML mal formado: **rótulo que
 erro em lugar nenhum**. O arquivo abre, o PNG sai, e o diagrama passa a omitir informação em
 silêncio — a família `A4.2` da rubrica, o diagrama que mente por ausência.
 
-O tema `armadilha` (`#F2F3F5` + tinta `#AAB7B8`) reprova em quatro frentes de uma vez:
+O tema `armadilha` (`#F2F3F5` + tinta `#AAB7B8`) reprova em **cinco** frentes de uma vez:
 
 ```
 A7.1  texto: #AAB7B8 sobre #F2F3F5 = 1.86:1 (precisa 4.5)  — subtítulo
 A7.2  traço da aresta: #AAB7B8 sobre #F2F3F5 = 1.86:1      — 5 arestas
-A7.2  quadrado do ícone: #ED7100 sobre #F2F3F5 = 2.72:1    — Lambda
 A7.2  borda do grupo: #00A4A6 sobre #F2F3F5 = 2.76:1       — Region e Private subnet
+A7.1  rótulo do ícone: #5A6C86 sobre #DAEBED = 4.35:1      — Lambda e RDS
+A7.1  rótulo do grupo: #5A6C86 sobre #DAEBED = 4.35:1      — VPC endpoint
 ```
+
+As duas últimas apareceram quando o tingimento voltou: sobre um fundo off-white a subnet é
+tingida em `#DAEBED`, e a tinta pálida cai abaixo de 4,5 lá dentro. **O tingimento tornou a
+armadilha mais fácil de pegar, não mais difícil.**
 
 **E o portão não substitui a camada indizível.** O `e-indizivel` prova, e o próprio gerador
 mede em vez de afirmar: trocando a cor dos três grupos por um azul corporativo `#1B6AC9`
@@ -246,13 +282,17 @@ O que **não existe token** para dizer, e por quê:
 | cor de borda de grupo | a cor do grupo **é** a legenda (`#5` §6.4); 21 de 24 diagramas oficiais não têm legenda porque não precisam |
 | traço de grupo | `sysDash`/`dash`/sólido carregam significado (`A5`) |
 | cor de categoria de serviço | é a categoria (slide 26 do deck) |
-| preenchimento de grupo | `A2`, e tingir derruba `#ED7100` abaixo de 3:1 |
 | tamanho de ícone | `N1`: *"use icons at their predefined size and do not resize"* |
 | `sketch` / `comic` | o `RoughCanvas` jittera o **glifo** do stencil; a paleta oficial força `sketch=0` em 56/56 |
 | `glass`, `rounded` em vértice AWS4 | no-op **silencioso** — o pior tipo de opção: o pedido não aparece em lugar nenhum |
 | `shadow`, `gradientColor` | zero sombra em 156 lâminas; gradiente é ícone legacy pré-2022 |
 | `light-dark()` / `adaptiveColors` | o mesmo arquivo renderiza diferente em dois computadores |
 | `math`, `fontSource` | custo de render puro / PNG depende da fonte no servidor de export |
+
+Um item **saiu** desta lista no retorno do #13: o preenchimento de grupo. Ele agora é dizível
+como `grupo.tingimento`, com dois valores e nenhum hex — ver a seção 5. A régua para abrir uma
+palavra é essa: só quando o token comprovadamente **não consegue** inventar um canal de
+significado novo.
 
 `check-vocabulario.cjs` confere as duas pontas — o esquema recusa a **entrada**, e a style
 string emitida não carrega a chave na **saída** — e o controle injeta os 14 tokens de volta
@@ -267,6 +307,7 @@ no esquema para provar que a checagem sabe falhar.
 | **escala de espaçamento** | duas classes — **folga** escala com a densidade, **calha** não | calha é reserva de rótulo, derivada de métrica de fonte e do `spacingTop` do estilo (#11 achado 6). Encolher calha não aperta: derruba texto sobre borda |
 | **tinta do rótulo de grupo** | tinta neutra do tema, **nunca** a cor da borda | borda é grafismo (3:1), rótulo é texto (4,5:1). Dois limiares não cabem na mesma cor — e é o que o deck já dizia com `tx1` |
 | **tratamento de rótulo** | nome + qualificador em itálico embaixo (`O21`), opcional | forte em 4 corpora. É o que salva três buckets S3 idênticos e ilegíveis |
+| **tingimento de grupo** | derivado da cor normativa daquele grupo, a 10% sobre o fundo | é o que o draw.io já faz — medido, `#F2F6E8` sai exato. Derivar em vez de fixar é o que faz o tema escuro funcionar: lá o mesmo 10% dá um painel escuro em vez de um bloco luminoso |
 | **legenda** | **nenhum token** — e a ausência é a resposta | `O7`/`O20`: 21 de 24 sem legenda, e os 3 com legenda são exatamente os 3 que codificaram significado na cor da linha. **Legenda é a dívida de quem inventa notação** — e como este vocabulário não deixa inventar notação, a dívida nunca é contraída. Um `legenda: auto` teria um único valor alcançável, e knob de um valor só sugere uma escolha que não existe |
 | **bloco de título** | dentro do desenho, com título, subtítulo e linha de revisão opcional | `O8` põe o título fora, mas "fora" é a legenda do slide, que não existe num `.drawio` exportado. Os templates AWS do próprio draw.io põem dentro; `O24` dá a anatomia |
 | **vista lógica** | a casa manda de verdade — cor de caixa, canto, borda | é pré-serviços; a convenção AWS não alcança |
@@ -275,6 +316,7 @@ no esquema para provar que a checagem sabe falhar.
 
 | opção | valores | default | veredito |
 |---|---|---|---|
+| `grupo.tingimento` | `derivado` \| `nenhum` | **`derivado`** | **Vale**, e é o único token que fala de grupo. Sem hex: o conjunto de grupos tingidos é do catálogo e o valor é 10% da cor normativa daquele grupo. Ver a seção 5 |
 | `fundo` | `claro` \| `escuro` | **`claro`** | **Vale.** É normativo — a AWS publica os dois decks. Não é seletor de cor: é interruptor de dois estados, porque a régua não deixa terceiro |
 | `folga.densidade` | 0,6 – 2,0 | **1,0** | **Vale**, e é uma alavanca só, multiplicando a escala. Nunca toca calha |
 | `aresta.fluxo` | `solido` \| `tracejado` \| `animado` | **`solido`** | **Vale com aviso.** `N9`/`A11`: a seta oficial é **sempre sólida**, então tracejado e animado pagam dívida. `animado` degrada **calado** em PNG (#4 mediu, #11 e este confirmam) |
@@ -293,7 +335,7 @@ no esquema para provar que a checagem sabe falhar.
 **Uma opção pode quebrar uma checagem de contraste — e é o caso mais comum, não o exótico.**
 Três caminhos, todos medidos:
 
-1. `fundo` escuro **sem** virar a tinta → `A7.1` reprova em todo rótulo (1,23:1).
+1. `fundo` escuro **sem** virar a tinta → `A7.1` reprova em todo rótulo (1,26:1).
 2. Fundo off-white → `A7.2` reprova em três das nove cores de grupo antes de `#FAFAFA`.
 3. Canal de significado só em cor → `A7.3`. Este é o único dos três que **não pode acontecer**
    com o vocabulário atual, e é justamente por isso que não existe token de legenda.
@@ -322,11 +364,11 @@ O argumento que fecha não é a citação, é a medição: **borda é grafismo (
 
 | hex | onde | claro | escuro |
 |---|---|---|---|
-| `#AAB7B8` | rótulo do VPC | **2,06 ✗** | 8,09 |
-| `#248814` | Public subnet | 4,56 | **3,66 ✗** |
-| `#3F8624` | IoT Greengrass ×2 | 4,52 | **3,69 ✗** |
-| `#5A6C86` | Server contents, Corporate data center | 5,35 | **3,12 ✗** |
-| `#232F3E` | AWS Cloud | 13,57 | **1,23 ✗** |
+| `#AAB7B8` | rótulo do VPC | **2,06 ✗** | 8,26 |
+| `#248814` | Public subnet | 4,56 | **3,74 ✗** |
+| `#3F8624` | IoT Greengrass ×2 | 4,52 | **3,77 ✗** |
+| `#5A6C86` | Server contents, Corporate data center | 5,35 | **3,18 ✗** |
+| `#232F3E` | AWS Cloud | 13,57 | **1,26 ✗** |
 
 No fundo claro só uma reprova; no escuro reprovam as cinco. "Rótulo herda a cor da borda" é a
 leitura que **não sobrevive a nenhuma troca de fundo**.
@@ -376,6 +418,12 @@ categoria não tem token.
   **layout**, não estilo: o halo (`labelBackgroundColor`) mascara a aresta *dona* do rótulo,
   nunca uma terceira. Consertar aqui contradiria a própria tese do ticket — a partição diz que
   pintura não move coordenada, e mover coordenada é do #18. Registrado, não silenciado.
+- **Afirmação de pixel que não sabe falhar não vale mais que checagem que não sabe falhar.** A
+  verificação afirmava que o tingimento *fixo* do draw.io (`#E6F6F7`) estava ausente de todo
+  render — e a afirmação é **indecidível no tema claro**, porque o valor derivado é `#E6F6F6`,
+  um degrau de azul de distância. Nenhuma tolerância separa os dois: eles são a mesma cor. A
+  afirmação foi para onde ela decide, que é o tema escuro. Mesmo defeito que a checagem de
+  partição tinha, uma camada acima.
 - **Checagem sem controle não prova nada** (a lição do #17, de novo). Os 14 tokens proibidos
   são reinjetados no esquema para confirmar que a checagem acusa; os 17 tokens de pintura são
   conferidos também contra o XML, para pegar o caso "não moveu geometria **nem pintou nada**".

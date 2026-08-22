@@ -53,9 +53,22 @@ const NORMATIVO = {
   escuro: { nuvem: '#FFFFFF', mono: '#FFFFFF', callout: { fundo: '#FFFFFF', tinta: '#232F3E' } },
 };
 
+/** Quanto da cor normativa do grupo entra no tingimento derivado. */
+const TINGIMENTO = 0.10;
+
+/** Mistura linear em sRGB — não é composição perceptual; é o que o draw.io faz. */
+function misturar(cor, fundo, p) {
+  const canais = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const [a, b] = [canais(cor), canais(fundo)];
+  return '#' + [0, 1, 2]
+    .map(i => Math.round(a[i] * p + b[i] * (1 - p)).toString(16).padStart(2, '0'))
+    .join('').toUpperCase();
+}
+
 const PADRAO = {
   claro: {
     pagina: { cor: '#FFFFFF', margem: 32 },
+    grupo:  { tingimento: 'derivado' },
     tinta:  { forte: '#232F3E', fraca: '#5A6C86', halo: '#FFFFFF' },
     texto:  { familia: 'Arial,Helvetica', rotulo: 12, grupo: 12, aresta: 10, titulo: 19, subtitulo: 12, qualificador: false },
     aresta: { cor: '#232F3E', espessura: 1.6, ponta: 'blockThin', cantos: 12, saltos: 'arc', fluxo: 'solido' },
@@ -65,18 +78,25 @@ const PADRAO = {
     cartao: { revisao: null },
   },
   escuro: {
-    pagina: { cor: '#161E2D', margem: 32 },
+    // `#1C1C1C` e não `#161E2D`: o retorno do #13 pediu um tom mais escuro e mais
+    // neutro, "próximo a #222222". Medido, `#222222` é 24% MAIS CLARO em luminância
+    // que o azul-noite que estava aqui — ele lê como mais escuro por ser neutro, não
+    // por ser escuro — e derruba a borda do Generic group para 2,97:1, um triz abaixo
+    // do piso de 3:1. `#1C1C1C` entrega o neutro pedido, é de fato mais escuro que os
+    // dois, e passa com 3,18:1.
+    pagina: { cor: '#1C1C1C', margem: 32 },
+    grupo:  { tingimento: 'derivado' },
     // `#AEB9C6` e não `#AAB7B8`: o segundo é literalmente o cinza que o draw.io usa
     // como `fontColor` do VPC e que este ticket condenou por 2,06:1 no fundo claro.
     // Reaproveitá-lo como tinta secundária do tema escuro (onde ele mede 8,09:1 e
     // passaria) confunde duas coisas diferentes no mesmo hex — e torna impossível
     // afirmar no pixel que o rótulo cinza do VPC não sobrou em lugar nenhum.
-    tinta:  { forte: '#FFFFFF', fraca: '#AEB9C6', halo: '#161E2D' },
+    tinta:  { forte: '#FFFFFF', fraca: '#B4B4B4', halo: '#1C1C1C' },
     texto:  { familia: 'Arial,Helvetica', rotulo: 12, grupo: 12, aresta: 10, titulo: 19, subtitulo: 12, qualificador: false },
-    aresta: { cor: '#E9EDF2', espessura: 1.6, ponta: 'blockThin', cantos: 12, saltos: 'arc', fluxo: 'solido' },
+    aresta: { cor: '#EDEDED', espessura: 1.6, ponta: 'blockThin', cantos: 12, saltos: 'arc', fluxo: 'solido' },
     folga:  { base: 8, densidade: 1.0 },
-    nota:   { fundo: '#2E2718', borda: '#8A6D3B', tinta: '#F3DFAE' },
-    bloco:  { fundo: '#1E2738', borda: '#FFFFFF', cantos: 12 },
+    nota:   { fundo: '#2A2416', borda: '#8A6D3B', tinta: '#F3DFAE' },
+    bloco:  { fundo: '#242424', borda: '#FFFFFF', cantos: 12 },
     cartao: { revisao: null },
   },
 };
@@ -201,6 +221,28 @@ function montar(bruto, t) {
         fontFamily: t.texto.familia,
         fontSize: t.texto.grupo,
       };
+      /**
+       * TINGIMENTO — e note de onde vem cada metade da decisão.
+       *
+       * QUAIS grupos são tingidos é fato do CATÁLOGO: o draw.io entrega duas subnets
+       * com fill e as outras 18 com `none`, e o tema não tem palavra para mudar esse
+       * conjunto. O VALOR é derivado da própria cor normativa daquele grupo sobre o
+       * fundo da página — então o tingimento não pode inventar significado: ele é a
+       * cor que já estava lá, a 10%.
+       *
+       * Que essa derivação é MESMO a do produto, e não uma invenção nossa, está
+       * medido: 10% de `#00A4A6` sobre branco dá `#E6F6F6` contra o `#E6F6F7` que o
+       * draw.io entrega, e 10% de `#7AA116` dá `#F2F6E8` exato.
+       *
+       * Sem derivar, o tema escuro quebra: o `#E6F6F7` fixo do produto vira um bloco
+       * luminoso no fundo escuro, e o rótulo branco de quem cai dentro dele some.
+       */
+      const fill = (/(?:^|;)fillColor=([^;]*)/.exec(style) || [])[1];
+      if (fill && fill !== 'none') {
+        chaves.fillColor = t.grupo.tingimento === 'nenhum' ? 'none'
+          : misturar((/(?:^|;)strokeColor=(#[0-9A-Fa-f]{6})/.exec(style) || [])[1] || t.tinta.forte,
+                     t.pagina.cor, TINGIMENTO);
+      }
       // a única cor de grupo que o deck escuro inverte (#5 §2.1 leitura 2)
       if (/^AWS Cloud/i.test(titulo || '')) { chaves.strokeColor = norm.nuvem; chaves.fontColor = norm.nuvem; }
       return aplicar(style, chaves);
@@ -284,4 +326,4 @@ function listar() {
     .map(f => f.replace(/\.json$/, '')).sort();
 }
 
-module.exports = { carregar, comPatch, listar, ESQUEMA, PADRAO, NORMATIVO, PALETAS_MONO };
+module.exports = { carregar, comPatch, listar, misturar, ESQUEMA, PADRAO, NORMATIVO, PALETAS_MONO, TINGIMENTO };

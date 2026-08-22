@@ -75,14 +75,16 @@ sem uma linha de coordenada. Clique para abrir o PNG em tamanho cheio.</p>
 <div class="lado">
   <figure><a href="saida/a-claro.png" target="_blank"><img src="saida/a-claro.png" alt="tema claro"></a>
     <figcaption><b>claro (padrão)</b>Branco puro porque a régua não deixa outra coisa. Squid ink,
-    Arial 12, grade base 8, seta sólida.<br>portão: texto 5,35 · grafismo 3,02</figcaption></figure>
+    Arial 12, grade base 8, seta sólida, subnet tingida.<br>portão: texto 5,35 · traço 3,02 ·
+    área 2,71 ⚠</figcaption></figure>
   <figure><a href="saida/b-escuro.png" target="_blank"><img src="saida/b-escuro.png" alt="tema escuro"></a>
     <figcaption><b>escuro</b>Duas inversões e nada mais: AWS Cloud e ícones monocromáticos. Cor de
-    grupo e de categoria intocadas.<br>portão: texto 8,39 · grafismo 3,02</figcaption></figure>
+    grupo e de categoria intocadas. Fundo <code>#1C1C1C</code>, neutro.<br>portão: texto 8,22 ·
+    traço 3,02 · área 3,32</figcaption></figure>
   <figure><a href="saida/c-corporativo.png" target="_blank"><img src="saida/c-corporativo.png" alt="tema corporativo sóbrio"></a>
     <figcaption><b>corporativo sóbrio</b>A camada da casa no máximo — e ainda no branco. Arial 11,
     título 24 pt, densidade 1,25, seta #545B64 <i>open</i>, cantos vivos, qualificador
-    (O21) e linha de revisão (O24).<br>portão: texto 5,35 · grafismo 3,02</figcaption></figure>
+    (O21) e linha de revisão (O24).<br>portão: texto 5,35 · traço 3,02 · área 2,71 ⚠</figcaption></figure>
 </div>
 
 <h2>2 · Um de cada vez, com as armadilhas</h2>
@@ -123,15 +125,15 @@ glifo do service icon é <strong>branco sobre o quadrado da categoria</strong>, 
 <h2>4 · O deck escuro da AWS é a edição mínima que a WCAG exige</h2>
 <p class="lede">A AWS publica dois decks. O escuro muda <strong>duas</strong> coisas: a borda/ícone do
 <code>AWS Cloud</code> inverte, e os callouts invertem. As nove cores de grupo medidas contra
-<code>#161E2D</code>:</p>
+<code>#1C1C1C</code>:</p>
 
-<pre>  #ED7100   5,54:1     #7D8998   4,69:1     #DD344C   3,71:1
-  #7AA116   5,52:1     #E7157B   3,81:1     #5A6C86   3,12:1
-  #00A4A6   5,45:1     #8C4FFF   3,72:1   ✗ #232F3E   1,23:1  ← a única que desaba</pre>
+<pre>  #ED7100   5,65:1     #7D8998   4,79:1     #DD344C   3,79:1
+  #7AA116   5,63:1     #E7157B   3,89:1     #5A6C86   3,18:1
+  #00A4A6   5,57:1     #8C4FFF   3,80:1   ✗ #232F3E   1,26:1  ← a única que desaba</pre>
 
 <div class="note ok"><strong>A lista da medição e a lista do deck são a mesma.</strong> O mesmo padrão
 aparece nos assets: no pacote oficial só as famílias <code>Res_General-Icons</code> têm variante
-<code>_Light</code>/<code>_Dark</code>, e são exatamente as monocromáticas (<code>#232F3D</code>, 1,23:1
+<code>_Light</code>/<code>_Dark</code>, e são exatamente as monocromáticas (<code>#232F3D</code>, 1,25:1
 no escuro). O deck escuro não é escolha estética — é a única edição que a acessibilidade obriga.
 <br><br>E o ícone do <code>AWS Cloud</code> inverte junto, de graça: o stencil
 <code>group_aws_cloud_alt</code> não tem cor fixa, é preenchido com o <code>strokeColor</code> do grupo.
@@ -139,8 +141,8 @@ Trocando a borda para branco, o quadradinho vira <strong>branco com o wordmark <
 vazado</strong> — a variante invertida do deck. Conferido no pixel do render.</div>
 
 <div class="note warn"><strong>Mas ele não é universalmente seguro.</strong> Duas cores de categoria
-reprovam no fundo escuro — <code>#BC1356</code> (AR/VR, 2,68:1) e <code>#3334B9</code>
-(Customer Engagement, 1,85:1) —, atingindo <strong>6 dos 403 service icons</strong>. Se o diagrama não
+reprovam no fundo escuro — <code>#BC1356</code> (AR/VR, 2,73:1) e <code>#3334B9</code>
+(Customer Engagement, 1,89:1) —, atingindo <strong>6 dos 403 service icons</strong>. Se o diagrama não
 usa esses serviços, passa. É por isso que o portão roda sobre o <strong>plano</strong>, e não sobre o
 arquivo de tema.</div>
 
@@ -184,7 +186,7 @@ passa a omitir informação em silêncio — a família <code>A4.2</code> da rub
 
 <div class="note bad"><strong>E o portão não substitui a camada indizível.</strong> No
 <code>e-indizivel</code>, trocar a cor dos três grupos por um azul corporativo <code>#1B6AC9</code>
-(5,31:1 contra branco) <em>passa</em> no contraste — 38 pares medidos, pior grafismo 3,02:1 — e mesmo
+(5,31:1 contra branco) <em>passa</em> no contraste — 38 pares medidos, pior traço 3,02:1 — e mesmo
 assim três fronteiras diferentes viraram a mesma cor, o que apaga a legenda. Contraste é
 acessibilidade, não veracidade.</div>
 
@@ -197,11 +199,11 @@ fecha o argumento é a medição: <strong>borda é grafismo (3:1) e rótulo é t
 limiares não cabem na mesma cor.</p>
 <table>
 <tr><th>hex</th><th>onde</th><th class="num">no claro</th><th class="num">no escuro</th></tr>
-<tr><td><span class="sw" style="background:#AAB7B8"></span><code>#AAB7B8</code></td><td>rótulo do VPC</td><td class="num"><span class="tag no">2,06</span></td><td class="num">8,09</td></tr>
-<tr><td><span class="sw" style="background:#248814"></span><code>#248814</code></td><td>Public subnet</td><td class="num">4,56</td><td class="num"><span class="tag no">3,66</span></td></tr>
-<tr><td><span class="sw" style="background:#3F8624"></span><code>#3F8624</code></td><td>IoT Greengrass ×2</td><td class="num">4,52</td><td class="num"><span class="tag no">3,69</span></td></tr>
-<tr><td><span class="sw" style="background:#5A6C86"></span><code>#5A6C86</code></td><td>Server contents · Corporate data center</td><td class="num">5,35</td><td class="num"><span class="tag no">3,12</span></td></tr>
-<tr><td><span class="sw" style="background:#232F3E"></span><code>#232F3E</code></td><td>AWS Cloud</td><td class="num">13,57</td><td class="num"><span class="tag no">1,23</span></td></tr>
+<tr><td><span class="sw" style="background:#AAB7B8"></span><code>#AAB7B8</code></td><td>rótulo do VPC</td><td class="num"><span class="tag no">2,06</span></td><td class="num">8,26</td></tr>
+<tr><td><span class="sw" style="background:#248814"></span><code>#248814</code></td><td>Public subnet</td><td class="num">4,56</td><td class="num"><span class="tag no">3,74</span></td></tr>
+<tr><td><span class="sw" style="background:#3F8624"></span><code>#3F8624</code></td><td>IoT Greengrass ×2</td><td class="num">4,52</td><td class="num"><span class="tag no">3,77</span></td></tr>
+<tr><td><span class="sw" style="background:#5A6C86"></span><code>#5A6C86</code></td><td>Server contents · Corporate data center</td><td class="num">5,35</td><td class="num"><span class="tag no">3,18</span></td></tr>
+<tr><td><span class="sw" style="background:#232F3E"></span><code>#232F3E</code></td><td>AWS Cloud</td><td class="num">13,57</td><td class="num"><span class="tag no">1,26</span></td></tr>
 </table>
 <p class="lede" style="margin-top:10px">No claro só uma reprova; no escuro reprovam as cinco. "Rótulo
 herda a cor da borda" é a leitura que não sobrevive a nenhuma troca de fundo. O <code>#232F3E</code> do
@@ -219,14 +221,18 @@ AWS Cloud fica como está, como o #17 recomendou — e é justamente a cor que o
 
 <h2>8 · Duas correções que só apareceram medindo contraste</h2>
 <div class="grid">
-<div class="card"><h3>O draw.io tinge duas subnets</h3>
-<p class="sub">Achado no render, não na extração.</p>
+<div class="card"><h3>O tingimento de subnet: correção retirada</h3>
+<p class="sub">A primeira volta errou, e o erro é instrutivo.</p>
 <p style="font-size:14px;margin:0">
-<code>Private subnet</code> sai com <code>fillColor=#E6F6F7</code> e <code>Public subnet</code> com
-<code>#F2F6E8</code>; as outras 18 entradas de grupo são <code>none</code>. O deck é o oposto
-(<code>A2</code>: <code>&lt;a:noFill/&gt;</code> nos 156 slides). E não é inócuo: um Lambda dentro da
-subnet privada cai de 3,02 para <b>2,71:1</b>, porque o fundo efetivo dele deixou de ser branco.
-Duas razões independentes, mesmo lado — o delta do catálogo zera o fill.</p></div>
+Zerei o <code>fillColor</code> das duas subnets tingidas alegando o <code>A2</code> e o fato de o
+tingimento derrubar um Lambda de 3,02 para 2,71:1. <b>Estava errado por três razões.</b> A ressalva
+do <code>A2</code> no #5 <i>já dizia</i> que diagramas oficiais tingem subnet e que "sem
+preenchimento" é padrão de fábrica, não proibição. O tingimento do draw.io não é arbitrário: medido,
+ele é <b>10% da própria cor normativa do grupo</b> sobre o fundo — 10% de <code>#7AA116</code> dá
+<code>#F2F6E8</code> exato. E o 2,71:1 é do <i>quadrado</i> do ícone, área sólida identificada pelo
+glifo branco de dentro, não de um traço fino. O portão passou a separar <b>traço</b> (reprova) de
+<b>área</b> (avisa), e o valor do tingimento virou derivação do tema — o que conserta o tema escuro
+de graça.</p></div>
 <div class="card"><h3>A borda da nota era invisível</h3>
 <p class="sub">Escolha da casa, corrigida por régua.</p>
 <p style="font-size:14px;margin:0">
@@ -238,11 +244,11 @@ aceito": se a borda dele some, some a moldura do único texto que carrega uma de
 <script>
 const CENAS = [
  {id:'a-claro', rot:'a · claro (padrão)',
-  cap:'<b>O default.</b> Branco puro porque a régua não deixa outra coisa. Squid ink, Arial 12, grade base 8, seta sólida com salto em arco. Portão: texto 5,35 · grafismo 3,02.'},
+  cap:'<b>O default.</b> Branco puro porque a régua não deixa outra coisa. Squid ink, Arial 12, grade base 8, seta sólida com salto em arco. Portão: texto 5,35 · traço 3,02 · área 2,71 ⚠.'},
  {id:'b-escuro', rot:'b · escuro',
-  cap:'<b>O deck escuro da AWS.</b> Duas inversões e nada mais: borda/ícone do AWS Cloud, e o preenchimento dos ícones monocromáticos. Cor de grupo e de categoria intocadas. Portão: texto 8,39 · grafismo 3,02.'},
+  cap:'<b>O deck escuro da AWS.</b> Duas inversões e nada mais: borda/ícone do AWS Cloud, e o preenchimento dos ícones monocromáticos. Cor de grupo e de categoria intocadas, e o fundo agora é #1C1C1C, neutro. Portão: texto 8,22 · traço 3,02 · área 3,32.'},
  {id:'c-corporativo', rot:'c · corporativo sóbrio',
-  cap:'<b>A camada da casa no máximo</b> — e ainda no branco. Arial normativa em 11, título 24 pt, densidade 1,25, seta #545B64 com ponta <i>open</i> e cantos vivos, qualificador em itálico (O21) e linha de revisão técnica (O24). Portão: texto 5,35 · grafismo 3,02.'},
+  cap:'<b>A camada da casa no máximo</b> — e ainda no branco. Arial normativa em 11, título 24 pt, densidade 1,25, seta #545B64 com ponta <i>open</i> e cantos vivos, qualificador em itálico (O21) e linha de revisão técnica (O24). Portão: texto 5,35 · traço 3,02 · área 2,71 ⚠.'},
  {id:'d-armadilha', rot:'d · armadilha (dizível)',
   cap:'<b>Dizível e errado.</b> O off-white corporativo que todo mundo pede (#F2F3F5), tinta pálida, seta fininha. Nenhuma linha é proibida pelo vocabulário — quem reprova é o portão, e só depois do plano existir. Gerado com <code>--forcar</code>.'},
  {id:'g-vista-logica', rot:'g · vista lógica',

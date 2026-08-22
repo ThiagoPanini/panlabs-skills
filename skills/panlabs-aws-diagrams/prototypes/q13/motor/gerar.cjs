@@ -112,10 +112,12 @@ async function gerar(modelo, opts = {}) {
     throw e;
   }
   if (!c.ok) relatorio.avisos.push(`--forcar: ${c.falhas.length} par(es) abaixo do limiar WCAG, gerado assim mesmo`);
+  // A7.2a é ÁREA: avisa e não reprova (ver o cabeçalho de contraste.cjs)
+  for (const l of contraste.resumir(c, c.avisos)) relatorio.avisos.push(l);
+  const n = v => Number.isFinite(v) ? v.toFixed(2) : '-';
   marco('conferir', { ok: true, bytes: xml.length,
     contraste: c.ok ? 'passa' : 'FORÇADO',
-    piorTexto: Number.isFinite(c.piorTexto) ? c.piorTexto.toFixed(2) : '-',
-    piorGrafismo: Number.isFinite(c.piorGrafismo) ? c.piorGrafismo.toFixed(2) : '-' });
+    piorTexto: n(c.piorTexto), piorTraco: n(c.piorGrafismo), piorArea: n(c.piorArea) });
 
   // as folhas que caíram no ícone genérico são o sintoma de nome que o
   // catálogo não conhece — vale avisar, não vale falhar

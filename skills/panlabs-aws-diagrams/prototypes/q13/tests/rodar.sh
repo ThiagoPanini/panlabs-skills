@@ -3,7 +3,7 @@
 #
 #   ./tests/rodar.sh [binario-drawio]
 #
-# Seis camadas, na ordem em que uma falha invalida as seguintes:
+# Sete camadas, na ordem em que uma falha invalida as seguintes:
 #
 #   1. VOCABULÁRIO   a camada normativa da AWS é indizível — com experimento de
 #                    controle, porque checagem que não sabe falhar não prova nada.
@@ -34,6 +34,8 @@ echo "== 3. geração dos temas =="
 node "$Q13/motor/gerar.cjs" "$MODELO" --tema claro       --saida "$Q13/saida/a-claro.drawio"       || falhou=1
 node "$Q13/motor/gerar.cjs" "$MODELO" --tema escuro      --saida "$Q13/saida/b-escuro.drawio"      || falhou=1
 node "$Q13/motor/gerar.cjs" "$MODELO" --tema corporativo --saida "$Q13/saida/c-corporativo.drawio" || falhou=1
+node "$Q13/motor/gerar.cjs" "$Q13/modelo/logica-pedidos.json" --tema claro \
+  --saida "$Q13/saida/g-vista-logica.drawio" || falhou=1
 node "$Q13/tools/gerar-armadilha.cjs" > /dev/null       || falhou=1
 echo "   d-armadilha e e-indizivel gerados (ver tools/gerar-armadilha.cjs)"
 node "$Q13/motor/gerar.cjs" "$MODELO" --tema claro --fluxo animado \

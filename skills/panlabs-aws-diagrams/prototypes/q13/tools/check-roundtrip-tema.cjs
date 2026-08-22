@@ -21,6 +21,30 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+/**
+ * O export headless falha de formas que não são falha DESTE teste: outro
+ * processo draw.io pendurado na máquina derruba qualquer export posterior (ver
+ * `tools/renderizar.sh`). Uma exceção crua aqui viraria um stack trace de
+ * `execFileSync` no meio da suite, sem dizer o que aconteceu — então a chamada é
+ * embrulhada, com uma retentativa depois de ceifar pendurado.
+ */
+function exportarXml(origem, destino, perfil) {
+  const args = ['-a', DRAWIO, '-x', '-f', 'xml', '-o', destino, origem,
+    '--no-sandbox', '--disable-gpu', '--disable-update', '--user-data-dir=' + perfil];
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    try {
+      execFileSync('xvfb-run', args, { stdio: 'ignore' });
+      if (fs.existsSync(destino) && fs.statSync(destino).size > 0) return true;
+    } catch (e) { /* cai na retentativa */ }
+    try {
+      execFileSync('bash', ['-c',
+        "ps -o pid,etimes -C drawio --no-headers | awk '$2>180 {print $1}' | xargs -r kill -9"],
+        { stdio: 'ignore' });
+    } catch (e) { /* sem processo pendurado, ótimo */ }
+  }
+  return false;
+}
+
 const RAIZ = path.join(__dirname, '..');
 const DRAWIO = process.argv[2] || path.join(os.homedir(), '.local/opt/drawio/squashfs-root/drawio');
 
@@ -39,12 +63,15 @@ function main() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'q13-rt-'));
   let falhou = 0;
 
-  for (const nome of ['a-claro', 'b-escuro', 'c-corporativo']) {
+  for (const nome of ['a-claro', 'b-escuro', 'c-corporativo', 'g-vista-logica']) {
     const origem = path.join(RAIZ, 'saida', nome + '.drawio');
     if (!fs.existsSync(origem)) { console.log(`   ${nome}: .drawio ausente, pulado`); continue; }
     const destino = path.join(tmp, nome + '.xml');
-    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '-o', destino, origem,
-      '--no-sandbox', '--disable-gpu', '--disable-update'], { stdio: 'ignore' });
+    if (!exportarXml(origem, destino, tmp)) {
+      console.log(`   ✗ ${nome.padEnd(14)} o export headless não produziu XML (ver tools/renderizar.sh)`);
+      falhou = 1;
+      continue;
+    }
 
     const antes = fs.readFileSync(origem, 'utf8');
     const depois = fs.readFileSync(destino, 'utf8');

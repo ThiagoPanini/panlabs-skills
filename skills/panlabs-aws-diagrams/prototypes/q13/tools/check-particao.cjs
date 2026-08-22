@@ -29,8 +29,23 @@ const path = require('path');
 const { gerar } = require('../motor/gerar.cjs');
 const temaMod = require('../tema/tema.cjs');
 
-const MODELO = JSON.parse(fs.readFileSync(
-  path.join(__dirname, '..', 'modelo', 'pedidos-serverless.json'), 'utf8'));
+const ler = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'modelo', f), 'utf8'));
+const MODELO = ler('pedidos-serverless.json');
+
+/**
+ * DOIS modelos, e o segundo não é zelo.
+ *
+ * Os tokens `bloco.*` pintam a caixa da VISTA LÓGICA — o único lugar do produto
+ * onde a casa escolhe cor de caixa sem contrariar a AWS. Num modelo técnico não
+ * existe nenhum `bloco`, então eles não têm o que pintar e a checagem os acusa de
+ * inertes. O acusado certo, nesse caso, não é o token: é o modelo.
+ *
+ * É o mesmo caso do `texto.qualificador`, que também saiu inerte até o modelo
+ * ganhar qualificadores. A lição que sobra para o motor de verdade: **um token de
+ * estilo pode depender de um fato do modelo**, e uma bateria de um modelo só não
+ * distingue "token morto" de "modelo que não exercita o token".
+ */
+const LOGICO = ler('logica-pedidos.json');
 
 const PINTURA = [
   ['pagina.cor', { pagina: { cor: '#FAFAFA' } }],
@@ -46,9 +61,7 @@ const PINTURA = [
   ['nota.fundo', { nota: { fundo: '#EEEEEE' } }],
   ['nota.borda', { nota: { borda: '#555555' } }],
   ['nota.tinta', { nota: { tinta: '#000000' } }],
-  ['bloco.fundo', { bloco: { fundo: '#F5F5F5' } }],
-  ['bloco.borda', { bloco: { borda: '#777777' } }],
-  ['bloco.cantos', { bloco: { cantos: 0 } }],
+
   // PINTURA por uma razão medida, não por natureza: Arial e Helvetica têm as
   // mesmas larguras de avanço, então dentro do enum de três a métrica não muda.
   // Foi esta checagem que fechou o enum — com Verdana no lugar, ela acusava
@@ -56,7 +69,17 @@ const PINTURA = [
   ['texto.familia', { texto: { familia: 'Helvetica' } }],
 ];
 
+/** Pintura que só existe na vista lógica — medida contra o modelo lógico. */
+const PINTURA_LOGICA = [
+  ['bloco.fundo', { bloco: { fundo: '#F5F5F5' } }],
+  ['bloco.borda', { bloco: { borda: '#777777' } }],
+  ['bloco.cantos', { bloco: { cantos: 0 } }],
+];
+
 const METRICA = [
+  // margem da página não move nada DENTRO do desenho, mas desloca o desenho
+  // inteiro e muda a caixa da página — geometria, portanto métrica
+  ['pagina.margem', { pagina: { margem: 56 } }],
   ['texto.rotulo', { texto: { rotulo: 16 } }],
   ['texto.grupo', { texto: { grupo: 18 } }],
   ['texto.aresta', { texto: { aresta: 16 } }],
@@ -69,6 +92,20 @@ const METRICA = [
   // isso que não é pintura: muda o conjunto de células, não só a cor delas
   ['cartao.revisao', { cartao: { revisao: 'Revisado em 2026-08-21' } }],
 ];
+
+/**
+ * O XML sem o payload do tema.
+ *
+ * A primeira versão comparava `r.xml === base.xml` cru — e essa comparação NUNCA
+ * podia dar verdadeiro, porque `comPatch` renomeia o tema para `claro+patch` e o
+ * `panlabsTema` embutido carrega o `id`. Era uma condição que não sabia disparar:
+ * exatamente o defeito que esta ferramenta existe para pegar nos tokens, dentro
+ * da própria ferramenta. Tirando o payload, "o token não pintou nada" volta a ser
+ * detectável.
+ */
+function semPayload(xml) {
+  return xml.replace(/panlabsTema="[^"]*"/, 'panlabsTema=""');
+}
 
 /** Assinatura de geometria: id -> x,y,w,h. Pintura não pode mudar nenhuma. */
 function geometria(plano) {
@@ -93,17 +130,29 @@ function diferencas(a, b) {
 async function main() {
   const base = await gerar(MODELO, { tema: 'claro', forcar: true });
   const g0 = geometria(base.plano);
+  const baseLog = await gerar(LOGICO, { tema: 'claro', forcar: true });
+  const gLog = geometria(baseLog.plano);
   let falhou = 0;
 
-  console.log(`referência: tema "claro", ${g0.size} células\n`);
+  console.log(`referência: tema "claro" · técnico ${g0.size} células · lógico ${gLog.size} células\n`);
   console.log('PINTURA — não pode mover coordenada');
-  for (const [nome, patch] of PINTURA) {
-    const r = await gerar(MODELO, { tema: temaMod.comPatch('claro', patch), forcar: true });
-    const d = diferencas(g0, geometria(r.plano));
-    const mesmaString = r.xml === base.xml;
-    if (d.length) { console.log(`  ✗ ${nome.padEnd(20)} moveu ${d.length} célula(s): ${d.slice(0, 2).join(' · ')}`); falhou = 1; }
-    else console.log(`  ✓ ${nome.padEnd(20)} geometria idêntica${mesmaString ? '  ⚠ e o XML também — o token não pintou nada' : ''}`);
-    if (!d.length && mesmaString) falhou = 1;
+  for (const [nome, patch, ehLogico] of [...PINTURA, ...PINTURA_LOGICA.map(p => [...p, true])]) {
+    const modelo = ehLogico ? LOGICO : MODELO;
+    const ref = ehLogico ? gLog : g0;
+    const refXml = ehLogico ? baseLog.xml : base.xml;
+    const r = await gerar(modelo, { tema: temaMod.comPatch('claro', patch), forcar: true });
+    const d = diferencas(ref, geometria(r.plano));
+    const inerte = semPayload(r.xml) === semPayload(refXml);
+    if (d.length) {
+      console.log(`  ✗ ${nome.padEnd(20)} moveu ${d.length} célula(s): ${d.slice(0, 2).join(' · ')}`);
+      falhou = 1;
+    } else if (inerte) {
+      // pintura que não move coordenada E não muda o XML é token morto
+      console.log(`  ✗ ${nome.padEnd(20)} não moveu nem pintou — token inerte`);
+      falhou = 1;
+    } else {
+      console.log(`  ✓ ${nome.padEnd(20)} geometria idêntica, style mudou${ehLogico ? '  (vista lógica)' : ''}`);
+    }
   }
 
   console.log('\nMÉTRICA — tem de mover alguma coisa');

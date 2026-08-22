@@ -24,7 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 const { gerar } = require('../motor/gerar.cjs');
-const contraste = require('../tools/contraste.cjs');
+const contraste = require('../motor/contraste.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const MODELO = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'pedidos-serverless.json'), 'utf8'));
@@ -70,8 +70,9 @@ async function main() {
   const v = contraste.medir(planoRemendado);
   console.log(`\n   E note o que este arquivo prova sobre o portão: a versão remendada ` +
     `${v.ok ? 'PASSA' : 'REPROVA'} no contraste`);
-  console.log(`   (${v.total} pares medidos, pior grafismo ${v.piorGrafismo.toFixed(2)}:1, ` +
-    `pior texto ${v.piorTexto.toFixed(2)}:1) e mesmo assim o diagrama passou a mentir —`);
+  const n = x => Number.isFinite(x) ? x.toFixed(2) + ':1' : 'sem par medido';
+  console.log(`   (${v.total} pares medidos, pior grafismo ${n(v.piorGrafismo)}, ` +
+    `pior texto ${n(v.piorTexto)}) e mesmo assim o diagrama passou a mentir —`);
   console.log('   três fronteiras diferentes na mesma cor. Contraste é acessibilidade, não');
   console.log('   veracidade: por isso a camada normativa precisa ser INDIZÍVEL, e não');
   console.log('   apenas medida.');

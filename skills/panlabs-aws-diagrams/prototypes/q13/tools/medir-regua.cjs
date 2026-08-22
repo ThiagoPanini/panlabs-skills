@@ -16,7 +16,7 @@
  *   node tools/medir-regua.cjs
  */
 
-const { razao, luminancia } = require('./contraste.cjs');
+const { razao, luminancia } = require('../motor/contraste.cjs');
 const cat = require('../../../catalog/aws-shapes.cjs').carregar();
 const tema = require('../tema/tema.cjs');
 

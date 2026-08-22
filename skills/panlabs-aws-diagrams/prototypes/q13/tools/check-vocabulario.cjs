@@ -85,7 +85,16 @@ async function testarSaida() {
     const modelo = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'modelo', arquivo), 'utf8'));
     for (const id of temaMod.listar()) {
       let r;
-      try { r = await gerar(modelo, { tema: id, forcar: true }); } catch (e) { continue; }
+      // `forcar: true` desarma o portão de contraste, então qualquer exceção aqui
+      // é defeito de verdade. Engolir com `continue` contaria como aprovado o
+      // tema que nem chegou a gerar — e o cabeçalho deste arquivo diz que
+      // checagem que não sabe falhar não prova nada.
+      try {
+        r = await gerar(modelo, { tema: id, forcar: true });
+      } catch (e) {
+        achados.push(`${arquivo} + tema ${id}: geração falhou (${e.message}) — não dá para conferir a saída`);
+        continue;
+      }
       for (const chave of CHAVES_PROIBIDAS)
         if (r.xml.includes(chave)) achados.push(`${arquivo} + tema ${id}: XML contém "${chave}"`);
     }

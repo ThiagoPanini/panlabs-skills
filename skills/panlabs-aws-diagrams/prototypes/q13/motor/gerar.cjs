@@ -32,7 +32,7 @@ const dispor = require('./dispor.cjs');
 const planejar = require('./planejar.cjs');
 const { emitir, conferirXml } = require('./emitir.cjs');
 const temaMod = require('../tema/tema.cjs');
-const contraste = require('../tools/contraste.cjs');
+const contraste = require('./contraste.cjs');
 
 const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'esquema.json'), 'utf8'));
 
@@ -45,14 +45,14 @@ async function gerar(modelo, opts = {}) {
   relatorio.avisos.push(...v.avisos);
   marco('validar', { nos: modelo.nos.length, arestas: (modelo.arestas || []).length });
 
-  const tema = opts.tema === null ? null
-    : (opts.tema && typeof opts.tema === 'object') ? opts.tema
-    : temaMod.carregar(opts.tema || 'claro');
   // `--fluxo` é override de invocação sobre o token do tema: a mesma arquitetura
   // com o mesmo tema pode querer marcar o caminho quente numa entrega e não na
-  // outra. Sobrescreve o token, não cria um segundo lugar onde a decisão mora.
-  if (tema && opts.fluxo) tema.tokens.aresta.fluxo = opts.fluxo;
-  if (tema) marco('tema', { id: tema.id, fundo: tema.fundo, densidade: tema.tokens.folga.densidade, fluxo: tema.tokens.aresta.fluxo });
+  // outra. Sobrescreve o token, e NÃO mutando o objeto de quem chamou — um tema
+  // é um valor, e `comPatch` devolve outro.
+  const base = (opts.tema && typeof opts.tema === 'object') ? opts.tema
+    : temaMod.carregar(opts.tema || 'claro');
+  const tema = opts.fluxo ? temaMod.comPatch(base, { aresta: { fluxo: opts.fluxo } }) : base;
+  marco('tema', { id: tema.id, fundo: tema.fundo, densidade: tema.tokens.folga.densidade, fluxo: tema.tokens.aresta.fluxo });
   const res = resolverMod.criar(tema, opts.catalogo);
   const d = derivar(modelo);
   marco('derivar', { faixasAz: d.az.desenhar, porque: d.az.porque, azs: d.az.azs });
@@ -107,7 +107,7 @@ async function gerar(modelo, opts = {}) {
   const c = contraste.medir(plano);
   relatorio.contraste = c;
   if (!c.ok && !opts.forcar) {
-    const e = new Error(`o tema "${tema ? tema.id : '(sem tema)'}" reprova no portão de contraste (A7 da rubrica #8)`);
+    const e = new Error(`o tema "${tema.id}" reprova no portão de contraste (A7 da rubrica #8)`);
     e.erros = [...contraste.resumir(c), '', 'para gerar assim mesmo e VER o estrago: --forcar'];
     throw e;
   }
@@ -134,7 +134,7 @@ async function main() {
   const entrada = args.find(a => !a.startsWith('--'));
   if (!entrada) {
     console.error('uso: node gerar.cjs <modelo.json> [--saida arquivo.drawio] [--tema ' +
-      temaMod.listar().join('|') + '|sem] [--fluxo solido|tracejado|animado] [--forcar] [--explicar]');
+      temaMod.listar().join('|') + '] [--fluxo solido|tracejado|animado] [--forcar] [--explicar]');
     process.exit(2);
   }
   const iSaida = args.indexOf('--saida');
@@ -155,7 +155,7 @@ async function main() {
   catch (e) { console.error(`não consegui ler ${entrada}: ${e.message}`); process.exit(1); }
 
   let r;
-  try { r = await gerar(modelo, { fluxo: fluxo || undefined, tema: nomeTema === 'sem' ? null : nomeTema, forcar }); }
+  try { r = await gerar(modelo, { fluxo: fluxo || undefined, tema: nomeTema, forcar }); }
   catch (e) {
     console.error(`\n✗ ${e.message}`);
     for (const linha of e.erros || []) console.error(`    · ${linha}`);
@@ -166,8 +166,7 @@ async function main() {
     console.log(`  ${p.nome.padEnd(10)} ${Object.entries(p).filter(([k]) => k !== 'nome')
       .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('/') : v}`).join('  ')}`);
   for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  const fluxoEfetivo = fluxo || (r.tema ? r.tema.tokens.aresta.fluxo : 'solido');
-  if (fluxoEfetivo === 'animado')
+  if (r.tema.tokens.aresta.fluxo === 'animado')
     console.log('  ⚠ fluxo "animado" só se vê em SVG ou HTML. O #4 mediu e este motor confirmou: ' +
       'exportado para PNG vira um tracejado ESTÁTICO, sem erro nenhum. Exporte com -f svg.');
 

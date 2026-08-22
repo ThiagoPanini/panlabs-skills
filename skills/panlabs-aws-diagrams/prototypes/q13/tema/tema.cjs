@@ -167,10 +167,12 @@ function montar(bruto, t) {
    * muda a geometria. Ver tools/check-particao.cjs, que separa os tokens que
    * movem coordenada dos que só pintam — e prova a separação gerando.
    */
+  const porPt = pt => 6.7 * (pt / 12);
   const metrica = {
-    largCar: 6.7 * (t.texto.rotulo / 12),
+    largCar: porPt(t.texto.rotulo),
     altLinha: 17 * (t.texto.rotulo / 12),
-    largCarAresta: 6.7 * (t.texto.aresta / 12),
+    largCarAresta: porPt(t.texto.aresta),
+    largCarGrupo: porPt(t.texto.grupo),
   };
 
   const api = {
@@ -180,9 +182,6 @@ function montar(bruto, t) {
     g,
     /** Calha: reserva de rótulo. NÃO leva densidade — ver o esquema. */
     calha: n => Math.round(n * t.folga.base),
-
-    /** Atributos de página do `<mxGraphModel>` — o nível D' do #4 §7. */
-    pagina: () => ({ fundo: t.pagina.cor, margem: t.pagina.margem }),
 
     /**
      * Grupo (container). O tema pinta APENAS a tinta do rótulo e a fonte.
@@ -264,7 +263,6 @@ function montar(bruto, t) {
       if (!t.texto.qualificador || !qualificador) return nome;
       return `${nome}<br><i>${qualificador}</i>`;
     },
-    usaQualificador: () => !!t.texto.qualificador,
   };
   return api;
 }
@@ -286,4 +284,4 @@ function listar() {
     .map(f => f.replace(/\.json$/, '')).sort();
 }
 
-module.exports = { carregar, comPatch, listar, fundir, montar, ESQUEMA, PADRAO, NORMATIVO, PALETAS_MONO, FLUXO, aplicar };
+module.exports = { carregar, comPatch, listar, ESQUEMA, PADRAO, NORMATIVO, PALETAS_MONO };

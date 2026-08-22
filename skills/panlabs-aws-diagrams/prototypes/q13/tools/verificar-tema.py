@@ -81,6 +81,12 @@ POR_TEMA = {
                     ('presente', '#ED7100', 'cor de categoria intocada')],
     'armadilha':   [('presente', '#F2F3F5', 'o off-white que o portão reprova'),
                     ('presente', '#AAB7B8', 'a tinta pálida que o portão reprova')],
+    # vista lógica: pré-serviços, então a paleta AWS quase não aparece — o que
+    # aparece é a caixa da casa, e é a única prova visual de que os tokens
+    # `bloco.*` chegam no render
+    'logica':      [('presente', '#FFFFFF', 'fundo e preenchimento do bloco'),
+                    ('presente', '#232F3E', 'borda do bloco na tinta forte do tema'),
+                    ('ausente',  '#8C4FFF', 'nenhuma cor de categoria: não há serviço nomeado')],
     # o indizível: prova que o remendo bruto chegou, e que a legenda por cor sumiu.
     # `#8C4FFF` fica de fora de propósito: o remendo troca `strokeColor` (a borda do
     # VPC) e não `fillColor`, então o roxo continua legítimo no quadrado do API
@@ -116,7 +122,7 @@ def main():
     if '--todos' in sys.argv:
         mapa = {'a-claro': 'claro', 'b-escuro': 'escuro',
                 'c-corporativo': 'corporativo', 'd-armadilha': 'armadilha',
-                'e-indizivel': 'indizivel'}
+                'e-indizivel': 'indizivel', 'g-vista-logica': 'logica'}
         falhou = 0
         for nome, tema in mapa.items():
             png = AQUI / 'saida' / f'{nome}.png'

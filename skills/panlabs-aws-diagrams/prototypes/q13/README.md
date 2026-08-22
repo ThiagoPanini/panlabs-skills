@@ -43,9 +43,10 @@ pode **mostrar ou esconder** — o texto em si é fato da arquitetura, não esco
 | `tema/esquema.json` | O **vocabulário fechado**, JSON Schema com `additionalProperties: false` em todo objeto. Cada descrição carrega a evidência que fecha aquele token. |
 | `tema/tema.cjs` | Tokens → style string. É onde as duas inversões do deck escuro da AWS moram, e o único lugar que sabe que `strokeColor` num shape `aws4` pinta o **glifo**. |
 | `tema/{claro,escuro,corporativo,armadilha}.json` | Os quatro temas. `claro` e `escuro` são só o interruptor; `corporativo` é a camada da casa no máximo; `armadilha` é dizível e errado, de propósito. |
-| `motor/` | Fork do motor do #11 com o tema costurado. `dispor.cjs` — o layout — recebe o tema porque **tem de** receber (ver a partição). |
+| `motor/` | Fork do motor do #11 com o tema costurado. **Não existe caminho sem tema**: `dispor.cjs` — o layout — recebe o tema porque *tem de* receber (ver a partição). |
+| `modelo/logica-pedidos.json` | A mesma arquitetura na **vista lógica** (premissa 2). Existe porque é o único lugar onde a casa escolhe cor de caixa — sem ele os tokens `bloco.*` não têm o que pintar. |
 | `tools/medir-regua.cjs` | **A régua do fundo.** Até onde a paleta AWS aguenta a página mudar de cor. |
-| `tools/contraste.cjs` | O portão: `A7.1`/`A7.2`/`A7.3` da rubrica do [#8](https://github.com/ThiagoPanini/panlabs-skills/issues/8), rodando sobre o **plano**. |
+| `motor/contraste.cjs` | O portão: `A7.1`/`A7.2`/`A7.3` da rubrica do [#8](https://github.com/ThiagoPanini/panlabs-skills/issues/8), rodando sobre o **plano**. Mora em `motor/` porque **é estágio de pipeline**, não checagem de fora. |
 | `tools/check-vocabulario.cjs` | A camada normativa é indizível — com experimento de controle. |
 | `tools/check-particao.cjs` | Pintura × métrica, provado perturbando um token por vez e regerando. |
 | `tools/gerar-armadilha.cjs` | As duas armadilhas, desenhadas. |
@@ -64,6 +65,7 @@ pode **mostrar ou esconder** — o texto em si é fato da arquitetura, não esco
 | `saida/d-armadilha` | Dizível e errado: off-white `#F2F3F5`, tinta pálida, seta fininha. Gerado só com `--forcar`. | **reprova em 4 frentes** |
 | `saida/e-indizivel` | Indizível: `sketch=1`, cor de grupo trocada, `rounded=1` em vértice AWS4. Remendo bruto no XML, **depois** do motor. | passa no contraste — e mente assim mesmo |
 | `saida/f-fluxo-animado.svg` | `--fluxo animado`. **Abrir no navegador** — as setas correm. Não tem PNG de propósito. | passa |
+| `saida/g-vista-logica` | A vista lógica: pré-serviços, onde a convenção AWS não alcança e a casa manda de verdade. | passa (texto 5,35 · grafismo 3,64) |
 
 Gerar e conferir:
 
@@ -129,10 +131,10 @@ portão roda sobre o **plano**, e não sobre o arquivo de tema.
 | `emitir.cjs` | **0** | o emissor de XML **não sabe que existe tema** |
 | `alinhar.cjs` | **0** | o passe de encaixe geométrico, idem |
 | `derivar.cjs` | **0** | o gatilho de faixa de AZ do #19, idem |
-| `resolver.cjs` | 62 | onde o tema encosta no catálogo e onde a métrica de texto nasce |
-| `planejar.cjs` | 67 | título, subtítulo, nota, aresta, fundo de página |
-| `dispor.cjs` | 71 | **a escala de folga** — o layout precisa do tema |
-| `gerar.cjs` | 40 | `--tema`, `--forcar` e o portão |
+| `resolver.cjs` | 59 | onde o tema encosta no catálogo e onde a métrica de texto nasce |
+| `planejar.cjs` | 126 | título, subtítulo, nota, aresta, fundo e **moldura** de página |
+| `dispor.cjs` | 73 | **a escala de folga** — o layout precisa do tema |
+| `gerar.cjs` | 38 | `--tema`, `--forcar` e o portão |
 | `validar.cjs` | 11 | `type` como lista, que o esquema do tema exigiu |
 
 A leitura: o #11 previu que "de `planejar` para frente ninguém sabe de onde veio o desenho, o
@@ -140,18 +142,24 @@ que deixa o #13 trocar estilo sem tocar no layout". **Meia previsão certa.** Pa
 `planejar` a costura segurou perfeitamente — `emitir.cjs` tem zero linhas de diferença. Para
 *cima* não: a densidade e o corpo do rótulo entram em `dispor`, porque texto ocupa espaço.
 
+**E não existe caminho sem tema.** A primeira versão deste protótipo carregava um ramo de
+fábrica em todo lugar (`tema ? … : …`) para "manter o #11 rodando idêntico" — e ele **não
+mantinha**: um literal `+10` de `porGrade` virou `+PAD` e o `web-multi-az` saía 6 px mais alto
+sem que nada acusasse. Compatibilidade que ninguém exercita não é compatibilidade, é peso; o
+ramo saiu inteiro, e com ele a última style string literal do motor.
+
 ### 4. O tema NÃO é downstream do layout
 
 A intuição confortável é que estilo entra no fim. É falsa, e `check-particao.cjs` mede onde:
 
 | classe | tokens | efeito na geometria |
 |---|---|---|
-| **pintura** | `pagina.cor`, `tinta.*`, `aresta.cor/espessura/ponta/cantos/saltos/fluxo`, `nota.*`, `bloco.*`, `texto.familia` | **17 de 17** não movem uma coordenada |
-| **métrica** | `texto.rotulo/grupo/aresta/titulo/subtitulo/qualificador`, `folga.base/densidade`, `cartao.revisao` | **9 de 9** movem — de 1 a 13 células |
+| **pintura** | `pagina.cor`, `tinta.*`, `aresta.cor/espessura/ponta/cantos/saltos/fluxo`, `nota.*`, `bloco.*`, `texto.familia` | **17 de 17** não movem uma coordenada — e o XML muda em todos, senão seria token morto |
+| **métrica** | `pagina.margem`, `texto.rotulo/grupo/aresta/titulo/subtitulo/qualificador`, `folga.base/densidade`, `cartao.revisao` | **10 de 10** movem — de 5 a 13 células |
 
 Texto reserva espaço, e espaço é geometria. **O tema entra em `resolver`, antes de `dispor`.**
 
-E a checagem pegou duas coisas reais na primeira execução:
+E a checagem pegou **quatro** coisas reais, em três execuções:
 
 - **A faixa de título do container não olhava para `texto.grupo`.** Subir o rótulo de grupo
   para 18 pt não movia nada — a calha continuava em 4 degraus e o texto passava a raspar a
@@ -161,6 +169,15 @@ E a checagem pegou duas coisas reais na primeira execução:
   **encolher a opção**: o enum tem três valores (`Arial`, `Arial,Helvetica`, `Helvetica`),
   que são metricamente intercambiáveis, e a família passa a ser **pintura**. Qualquer outra
   fonte exigiria uma tabela de largura por família que o motor não tem.
+- **A própria checagem tinha uma condição que não sabia disparar.** O ramo "o token não pintou
+  nada" comparava o XML cru, e o XML cru *nunca* podia ser igual: `comPatch` renomeia o tema e
+  o `panlabsTema` embutido carrega o `id`. Tirando o payload da comparação, três tokens caíram
+  na hora — `bloco.fundo`, `bloco.borda`, `bloco.cantos`.
+- **E o acusado era o modelo, não os tokens.** Os `bloco.*` pintam a caixa da **vista lógica**,
+  e o modelo de referência é técnico — não tem nenhum `bloco` para pintar. Mesmo caso do
+  `texto.qualificador`, que também saiu inerte até o modelo ganhar qualificadores. **Uma
+  bateria de um modelo só não distingue "token morto" de "modelo que não exercita o token"**;
+  a partição agora roda contra dois.
 
 ### 5. Duas correções de catálogo que só apareceram medindo contraste
 

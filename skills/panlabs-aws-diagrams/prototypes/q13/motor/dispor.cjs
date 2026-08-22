@@ -52,21 +52,26 @@ function calhaDaFaixa(style) {
   return Math.max(BAND_LANE, recuo + 18 + 6);
 }
 
-const PAD = 12;
-const COL_GAP = 30;
-const ROW_GAP = 14;
+// Os valores do #11, guardados como referência histórica da escala anterior.
+// Nenhum deles é lido: quem manda é `folgas(tema)`.
+//   PAD 12 · COL_GAP 30 · ROW_GAP 14 · nodeNode 30 · entreCamadas 46
 
 /**
- * A grade base do tema (#13). Os valores de fábrica acima vieram do #11 sem
- * denominador comum; a camada da casa os reancora numa escala de base 8 — e 8
- * não é gosto: o ícone de serviço é 48 px e o de grupo 40 px (A9/A6 do #5,
- * travados no preset), ambos múltiplos de 8, e a folga mínima entre grupos
- * aninhados (N7: 0.05") é 4,8 px, cujo degrau imediatamente acima é 8.
+ * A escala de folga, derivada da grade base do tema (#13).
  *
- * Sem tema, tudo cai nos valores de fábrica e o #11 roda idêntico.
+ * Os valores do #11 acima ficam como o que eram — números sem denominador comum,
+ * chegados um a um. A camada da casa os reancora numa escala de base 8, e 8 não é
+ * gosto: o ícone de serviço é 48 px e o de grupo 40 px (A9/A6 do #5, travados no
+ * preset), ambos múltiplos de 8, e a folga mínima entre grupos aninhados
+ * (N7: 0.05") é 4,8 px, cujo degrau imediatamente acima é 8.
+ *
+ * Não existe caminho sem tema. A primeira versão deste protótipo carregava um
+ * ramo de fábrica para "manter o #11 rodando idêntico", e ele **não mantinha**:
+ * um literal `+10` virou `+PAD` e o `web-multi-az` saiu 6 px mais alto sem que
+ * ninguém percebesse. Compatibilidade que ninguém exercita não é compatibilidade,
+ * é peso — e o `prototypes/README.md` diz que nada aqui vira produção.
  */
 function folgas(tema) {
-  if (!tema) return { PAD, COL_GAP, ROW_GAP, nodeNode: 30, entreCamadas: 46, edgeNode: 22, edgeEdge: 14, edgeLabel: 8 };
   const g = tema.g;
   return {
     PAD: g(1), COL_GAP: g(4), ROW_GAP: g(2),
@@ -97,7 +102,13 @@ function folgas(tema) {
  *
  * Por isso `espalhar()` existe e por isso todo container recebe o bloco
  * inteiro. Quem acrescentar uma opção de espaçamento aqui precisa acrescentar
- * em ESPACAMENTO, nunca só em OPCOES_RAIZ.
+ * em `espacamentoDe`, nunca só em OPCOES_RAIZ.
+ */
+/**
+ * ⚠️ QUEM ACRESCENTAR UMA OPÇÃO DE ESPAÇAMENTO mexe em DOIS lugares: `folgas()`,
+ * que dá o valor, e aqui, que dá o nome do ELK. Duas metades da mesma decisão —
+ * e o aviso de OPCOES_RAIZ abaixo continua valendo, porque o bloco inteiro tem
+ * de ser repetido por container.
  */
 function espacamentoDe(fg) {
   return {
@@ -109,7 +120,6 @@ function espacamentoDe(fg) {
     'elk.edgeLabels.placement': 'CENTER',
   };
 }
-const ESPACAMENTO = espacamentoDe(folgas(null));
 
 const OPCOES_RAIZ = {
   'elk.algorithm': 'layered',
@@ -120,7 +130,6 @@ const OPCOES_RAIZ = {
   'elk.randomSeed': '1',                          // 0 == semente do relógio
   'elk.json.shapeCoords': 'PARENT',               // == semântica do mxGeometry
   'elk.json.edgeCoords': 'ROOT',                  // default na raiz é CONTAINER, não ROOT
-  ...ESPACAMENTO,
 };
 
 /** O texto que a aresta vai de fato mostrar — é dele que sai a largura reservada. */
@@ -175,7 +184,7 @@ function montarElk(modelo, d, res, medir) {
   }
 
   // O espaçamento efetivo depende do rótulo, e precisa ser IDÊNTICO na raiz e
-  // em cada container — ver o aviso em ESPACAMENTO.
+  // em cada container — ver o aviso acima de OPCOES_RAIZ.
   const espacamento = {
     ...espacamentoDe(FOLGA),
     // vizinho de cima/baixo tem de caber o rótulo do de cima, que é desenhado
@@ -406,7 +415,7 @@ async function porGrade(modelo, d, res) {
   }
 
   return { pos, vpcBox, intra, caixas, calhas, colX, colW, azs, larguraGrade,
-    fim: y - FOLGA.COL_GAP - FOLGA.ROW_GAP, AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD: FOLGA.PAD, folgas: FOLGA };
+    fim: y - FOLGA.COL_GAP - FOLGA.ROW_GAP, AZ_LANE, BAND_LANE, CROSS_OUT, HEAD };
 }
 
-module.exports = { porElk, porGrade, textoDaAresta, calhaDaFaixa, OPCOES_RAIZ, AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD, limpar, folgas };
+module.exports = { porElk, porGrade, textoDaAresta, calhaDaFaixa, OPCOES_RAIZ, AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, limpar, folgas };

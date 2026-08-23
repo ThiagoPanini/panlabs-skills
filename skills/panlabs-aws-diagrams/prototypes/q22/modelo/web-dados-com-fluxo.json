@@ -1,0 +1,36 @@
+{
+  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "id": "web-dados-com-fluxo",
+  "titulo": "Web · Data, agora com borda e fluxo",
+  "subtitulo": "O mesmo caso da linha 2, com um andar público e arestas — o melhor cenário possível para a candidata da distância da borda.",
+  "vista": "tecnica",
+  "genero": "T1",
+
+  "nos": [
+    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "dentro": "nuvem" },
+
+    { "id": "pub-a", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "pub-b", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "az": "us-east-1b", "dentro": "vpc" },
+    { "id": "web-a", "tipo": "subnet", "rotulo": "Web subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "web-b", "tipo": "subnet", "rotulo": "Web subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+    { "id": "dado-a", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "dado-b", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+
+    { "id": "alb-a", "tipo": "servico", "servico": "application load balancer", "rotulo": "ALB", "dentro": "pub-a" },
+    { "id": "alb-b", "tipo": "servico", "servico": "application load balancer", "rotulo": "ALB", "dentro": "pub-b" },
+    { "id": "ec2-a", "tipo": "servico", "servico": "ec2", "rotulo": "Front-end", "dentro": "web-a" },
+    { "id": "ec2-b", "tipo": "servico", "servico": "ec2", "rotulo": "Front-end", "dentro": "web-b" },
+    { "id": "aurora-a", "tipo": "servico", "servico": "aurora", "rotulo": "Aurora writer", "dentro": "dado-a" },
+    { "id": "aurora-b", "tipo": "servico", "servico": "aurora", "rotulo": "Aurora reader", "dentro": "dado-b" }
+  ],
+
+  "arestas": [
+    { "de": "alb-a", "para": "ec2-a", "rotulo": "http", "protocolo": "http" },
+    { "de": "ec2-a", "para": "aurora-a", "rotulo": "sql", "protocolo": "sql" }
+  ],
+
+  "notas": [
+    { "texto": "Este modelo existe para dar à candidata rival o melhor cenário dela: há nó exposto de onde contar e há aresta para contar por cima. Se a distância da borda fosse uma segunda fonte de informação, é aqui que ela discordaria do conteúdo — e ela não discorda.", "origem": "legenda" }
+  ]
+}

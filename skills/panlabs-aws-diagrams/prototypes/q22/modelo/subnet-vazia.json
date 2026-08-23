@@ -1,9 +1,0 @@
-{
-  "titulo": "Subnet vazia · sem evidência",
-  "nos": [
-    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC · fallback auditável" },
-    { "id": "data", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "dentro": "vpc" },
-    { "id": "rds", "tipo": "servico", "rotulo": "Amazon RDS", "servico": "rds", "dentro": "data" },
-    { "id": "vazia", "tipo": "subnet", "rotulo": "Subnet vazia · camada indefinida", "acesso": "privada", "dentro": "vpc" }
-  ]
-}

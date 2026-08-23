@@ -416,6 +416,9 @@ draw.io. Procurar no lugar certo teria economizado a bisseção inteira.
   implementados.** São a resposta da AWS para cardinalidade *indeterminada*, e
   nenhum dos modelos aqui tem essa forma. Ficam como entrada para o ticket que
   tratar de escala.
-- **O desempate alfabético dos papéis de subnet continua placeholder**, herdado
-  do #11 e pelo mesmo motivo: ordenar camadas privadas por significado exige um
-  fato que o IR ainda não tem.
+- ~~**O desempate alfabético dos papéis de subnet continua placeholder**~~ —
+  **fechado pelo [#22](https://github.com/ThiagoPanini/panlabs-skills/issues/22).**
+  O fato que faltava no IR não precisava ser perguntado: ele estava no catálogo
+  do #17, na categoria AWS de cada serviço. Quem ordena passou a ser a **camada
+  de rede**, lida do que a subnet guarda. Nenhum desenho daqui mudou — os papéis
+  destes modelos já saíam na ordem certa. Ver `../q22/README.md`.

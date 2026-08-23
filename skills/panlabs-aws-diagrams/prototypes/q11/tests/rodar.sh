@@ -30,6 +30,15 @@ for m in "$Q11"/modelo/*.json; do
   nome="$(basename "$m" .json)"
   node "$Q11/motor/gerar.cjs" "$m" --saida "$Q11/saida/$nome.drawio" || falhou=1
 done
+# As variantes de fluxo saem do MESMO modelo, só com outra opção de aresta — e
+# por não estarem neste laço elas ficaram para trás quando o #12 derivou a ordem
+# dos irmãos: o `.drawio` versionado continuou com a ordem de células de antes,
+# sem um pixel de diferença e sem nada acusar. Gerar aqui é o que impede a
+# prova de envelhecer calada.
+node "$Q11/motor/gerar.cjs" "$Q11/modelo/pedidos-serverless.json" --fluxo tracejado \
+  --saida "$Q11/saida/pedidos-tracejado.drawio" || falhou=1
+node "$Q11/motor/gerar.cjs" "$Q11/modelo/pedidos-serverless.json" --fluxo animado \
+  --saida "$Q11/saida/pedidos-animado.drawio" || falhou=1
 
 echo
 echo "== 4. determinismo =="

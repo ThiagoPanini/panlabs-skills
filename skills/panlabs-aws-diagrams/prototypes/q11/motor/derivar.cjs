@@ -9,6 +9,28 @@
  * modelo não tem onde escrevê-la nem como forçá-la.
  */
 
+const path = require('path');
+const {
+  camadasDeSubnets, lacunasDeCamada, ordemDeCamada, ordemDeAcesso, chaveDePapel,
+} = require('./camadas.cjs');
+
+const CAMINHO_CATALOGO = path.join(__dirname, '..', '..', '..', 'catalog', 'aws-shapes.cjs');
+let _catalogo = null;
+
+/**
+ * A derivação passou a depender do catálogo por causa do #22.
+ *
+ * Até aqui `derivar` era função só da semântica do modelo. A camada de rede de
+ * uma subnet sai da CATEGORIA AWS do que ela guarda, e quem sabe categoria é o
+ * catálogo (#17) — então ele entra aqui. A dependência é injetável (`opts.cat`)
+ * para que a régua possa rodar contra um catálogo de teste, e memoizada porque
+ * o `require` já é, mas a montagem do índice não.
+ */
+function catalogoPadrao() {
+  if (!_catalogo) _catalogo = require(CAMINHO_CATALOGO).carregar();
+  return _catalogo;
+}
+
 /**
  * A ordem dos IRMÃOS é derivada, não herdada do arquivo.
  *
@@ -24,27 +46,52 @@
  * lugar. Com aresta, o ELK decide e este critério só desempata.
  *
  * Critério: exposição primeiro (pública antes da privada, o sentido de leitura
- * do deck), depois o que está escrito na caixa. Mesmo espírito da ordem de
- * linhas da grade — e com a mesma ressalva: o desempate por rótulo é
- * alfabético, que é placeholder até o IR ter um fato melhor.
+ * do deck), depois a CAMADA DE REDE, depois o que está escrito na caixa.
+ *
+ * O #22 tirou daqui o placeholder: o desempate do meio era alfabético e
+ * derrubava `Web · Data` e `Ingest · Core`. Agora quem desempata é a camada
+ * que a subnet ocupa, lida do que ela guarda (`camadas.cjs`). O alfabeto
+ * sobreviveu como ÚLTIMO desempate, e mudou de função: ele não carrega mais
+ * significado nenhum, só garante ordem total entre coisas que a semântica
+ * empatou — que é o que o determinismo precisa.
+ *
+ * A exposição continua na frente, e isso é decisão, não inércia: uma subnet
+ * PÚBLICA que só hospeda compute continua acima de uma subnet PRIVADA que
+ * hospeda um Transit Gateway. Público em cima é o sentido de leitura do deck, e
+ * a camada ordena dentro dele.
+ *
+ * ⚠️ Efeito colateral que vale dizer em voz alta: como só subnet tem camada, a
+ * segunda chave vale `SEM_CAMADA` para todo o resto, e isso faz as subnets de
+ * um container virem ANTES dos serviços soltos que dividem o container com
+ * elas. É consequência, não pedido do #22 — mas é boa (numa VPC, ler a rede
+ * antes do avulso), é determinística, e mantém o comparador uma ordem TOTAL.
+ * Pular a chave quando um dos dois não é subnet deixaria o comparador
+ * intransitivo, que é pior que a assimetria.
  */
-const ORDEM_ACESSO = { publica: 0, privada: 1 };
-
-function chaveDeIrmao(n) {
+function chaveDeIrmao(n, camadaDe) {
   return [
-    ORDEM_ACESSO[n.acesso] ?? 9,
+    ordemDeAcesso(n.acesso),
+    ordemDeCamada(camadaDe(n.id)),      // só subnet tem camada; o resto cai no piso
     String(n.rotulo || n.servico || n.id),
     String(n.id),
   ];
 }
 
-function compararIrmaos(a, b) {
-  const ka = chaveDeIrmao(a), kb = chaveDeIrmao(b);
-  return ka[0] - kb[0] || ka[1].localeCompare(kb[1], 'pt') || ka[2].localeCompare(kb[2]);
+function compararIrmaos(a, b, camadaDe) {
+  const ka = chaveDeIrmao(a, camadaDe), kb = chaveDeIrmao(b, camadaDe);
+  return ka[0] - kb[0] || ka[1] - kb[1] ||
+    ka[2].localeCompare(kb[2], 'pt') || ka[3].localeCompare(kb[3]);
 }
 
-/** Árvore de contenção a partir da lista plana. */
-function arvore(modelo) {
+/**
+ * Árvore de contenção a partir da lista plana.
+ *
+ * `camadaDe` é opcional porque a árvore é construída DUAS vezes: a primeira
+ * sem camada nenhuma, só para poder navegar até os descendentes de cada subnet
+ * (é deles que a camada sai); a segunda já sabendo ordenar. A primeira passada
+ * só é usada para consultar ancestralidade, que não depende de ordem.
+ */
+function arvore(modelo, camadaDe = () => null) {
   const porId = new Map(modelo.nos.map(n => [n.id, n]));
   const filhos = new Map(modelo.nos.map(n => [n.id, []]));
   const raizes = [];
@@ -52,8 +99,9 @@ function arvore(modelo) {
     if (n.dentro === undefined) raizes.push(n);
     else filhos.get(n.dentro).push(n);
   }
-  raizes.sort(compararIrmaos);
-  for (const lista of filhos.values()) lista.sort(compararIrmaos);
+  const cmp = (a, b) => compararIrmaos(a, b, camadaDe);
+  raizes.sort(cmp);
+  for (const lista of filhos.values()) lista.sort(cmp);
   const pai = n => n.dentro === undefined ? null : porId.get(n.dentro);
   const ancestrais = n => { const o = []; let c = pai(n); while (c) { o.push(c); c = pai(c); } return o; };
   const profundidade = n => ancestrais(n).length;
@@ -74,22 +122,28 @@ function gatilhoAz(modelo, t) {
   if (azs.length < 2)
     return { desenhar: false, azs, porque: `só ${azs.length} AZ distinta declarada` };
 
-  const vpcDe = s => (t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
+  // a chave de papel é a do `camadas.cjs` — a mesma que vira LINHA da grade.
+  // Ela estava escrita à mão aqui também, e papel é conceito de um dono só.
   const porPapel = new Map();
   for (const s of subnets) {
     if (!s.az) continue;
-    const k = `${vpcDe(s)}|${s.acesso || '?'}|${s.rotulo || ''}`;
-    if (!porPapel.has(k)) porPapel.set(k, new Set());
-    porPapel.get(k).add(s.az);
+    const k = chaveDePapel(s, t);
+    if (!porPapel.has(k))
+      porPapel.set(k, {
+        vpc: (t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id,
+        acesso: s.acesso || '?',
+        zonas: new Set(),
+      });
+    porPapel.get(k).zonas.add(s.az);
   }
-  const redundantes = [...porPapel.entries()].filter(([, zs]) => zs.size >= 2);
+  const redundantes = [...porPapel.values()].filter(p => p.zonas.size >= 2);
   if (!redundantes.length)
     return { desenhar: false, azs, porque: `${azs.length} AZs, mas nenhum papel de subnet se repete entre elas` };
 
   return {
     desenhar: true, azs,
     porque: `${redundantes.length} papel(is) em ≥2 AZs: ` +
-      redundantes.map(([k, zs]) => `${k.split('|')[0]}/${k.split('|')[1]}×${zs.size}`).join(', '),
+      redundantes.map(p => `${p.vpc}/${p.acesso}×${p.zonas.size}`).join(', '),
   };
 }
 
@@ -328,8 +382,22 @@ function ancestralComum(a, b, t) {
   return null;
 }
 
-function derivar(modelo) {
-  const t = arvore(modelo);
+function derivar(modelo, opts = {}) {
+  const cat = opts.cat || catalogoPadrao();
+
+  /**
+   * A camada de rede das subnets, e onde a falta dela muda o desenho (#22).
+   *
+   * Duas passadas na árvore: a primeira só para navegar (a camada sai dos
+   * DESCENDENTES da subnet, então a árvore tem de existir antes), a segunda já
+   * com a camada na mão, que é o que ordena os irmãos.
+   */
+  const nav = arvore(modelo);
+  const camadas = camadasDeSubnets(modelo, nav, cat);
+  const lacunas = lacunasDeCamada(modelo, nav, camadas);
+  const camadaDe = id => (camadas.get(id) || {}).camada || null;
+
+  const t = arvore(modelo, camadaDe);
   const az = gatilhoAz(modelo, t);
 
   // Faixas de AZ nunca vêm do modelo — são construídas aqui, uma por zona,
@@ -407,6 +475,7 @@ function derivar(modelo) {
   return {
     t, az, faixasAz, arestas, faixas,
     ou, faixasOu, modo, travessias: cruz, politica, habilitadores,
+    camadas, lacunas,
   };
 }
 

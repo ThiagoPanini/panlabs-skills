@@ -65,6 +65,10 @@
           "description": "DIMENSAO da subnet, nunca um container (#19). O motor decide sozinho se vira faixa desenhada ou rotulo."
         },
         "acesso": { "enum": ["publica", "privada"], "description": "So com tipo=subnet." },
+        "camada": {
+          "enum": ["borda", "aplicacao", "dados"],
+          "description": "ANDAR DE REDE da subnet — semantica, nunca posicao (#22). ESCAPE, nao pergunta: por padrao o motor le a camada do QUE A SUBNET GUARDA, pela categoria AWS do catalogo (#17), e o agente nao responde nada a mais. Declare so quando o conteudo nao souber dizer (subnet vazia) ou disser errado (a subnet de ingestao que hospeda os brokers). Declarado vence o derivado, e divergencia entre os dois vira aviso. So com tipo=subnet."
+        },
         "cidr": { "type": "string", "description": "Bloco CIDR de vpc ou subnet." },
         "conta": { "type": "string", "pattern": "^[0-9]{12}$", "description": "So com tipo=conta." },
         "ou": {
@@ -94,6 +98,10 @@
         {
           "if": { "properties": { "ou": { "type": "string" } }, "required": ["ou"] },
           "then": { "properties": { "tipo": { "const": "conta" } } }
+        },
+        {
+          "if": { "properties": { "camada": { "type": "string" } }, "required": ["camada"] },
+          "then": { "properties": { "tipo": { "const": "subnet" } } }
         }
       ]
     },

@@ -58,11 +58,9 @@ node tools/check-geometria.cjs <modelo-em-construcao.json>
 corpus), mais `A1.5` e `A1.12` assim que qualquer nota tiver `sobre`. Toda outra
 entrada de `A1` que aparecer é uma pergunta a fazer.
 
-Se o que você está construindo é um `sessao@1`, projete para `modelo@1` antes de
-rodar a checagem — [`guia/sabatina.md`](guia/sabatina.md) traz o comando.
-
-O protocolo inteiro — eixos, procedência, estacionamento, material de entrada —
-está em [`guia/sabatina.md`](guia/sabatina.md).
+[`guia/sabatina.md`](guia/sabatina.md) traz o protocolo inteiro — eixos,
+procedência, estacionamento, material de entrada — e o comando que projeta um
+`sessao@1` para `modelo@1`, que é o que a checagem come.
 
 ### 3 · Proponha candidatas, e deixe o humano escolher
 

@@ -64,9 +64,17 @@ ok()  { echo "  ✓ $1"; }
 ruim() { echo "  ✗ $1"; falhou=1; }
 
 # ------------------------------------------------------------------ um link
-# $1 = caminho do link · $2 = para onde ele aponta
+# $1 = caminho do link · $2 = o texto que o link carrega · $3 = onde ele tem de
+# ACABAR depois de resolvido
+#
+# ⚠️ Os dois últimos são coisas diferentes, e confundi-los foi um bug real aqui.
+# O link de `~/.claude/` carrega um caminho RELATIVO (`../../.agents/…`), e
+# `readlink -f` sobre uma string relativa resolve contra o diretório de trabalho
+# de quem chama — não contra o diretório do link. O `--conferir` reprovava um
+# link perfeitamente correto. Quem decide é o DESTINO FINAL: os dois links têm de
+# acabar na mesma raiz da skill, qualquer que seja o texto que carreguem.
 ligar() {
-  local link="$1" para="$2"
+  local link="$1" para="$2" destino="$3"
   local dir; dir="$(dirname "$link")"
 
   if [ ! -d "$dir" ]; then
@@ -76,8 +84,8 @@ ligar() {
 
   if [ -L "$link" ]; then
     local atual; atual="$(readlink -f "$link" 2>/dev/null || true)"
-    if [ "$atual" = "$(readlink -f "$para")" ]; then ok "$link → $para (já estava)"; return; fi
-    [ "$CONFERIR" = 1 ] && { ruim "$link aponta para $atual, não para $para"; return; }
+    if [ "$atual" = "$(readlink -f "$destino")" ]; then ok "$link → $atual (já estava)"; return; fi
+    [ "$CONFERIR" = 1 ] && { ruim "$link resolve para $atual, não para $destino"; return; }
     rm -f "$link"
   elif [ -e "$link" ]; then
     # diretório REAL: pode ser uma skill de outra origem. Não se apaga por conta.
@@ -97,8 +105,8 @@ ligar() {
 echo
 echo "instalando \"$NOME\""
 echo
-ligar "$HOME/.agents/skills/$NOME" "$ALVO"
-ligar "$HOME/.claude/skills/$NOME" "../../.agents/skills/$NOME"
+ligar "$HOME/.agents/skills/$NOME" "$ALVO" "$ALVO"
+ligar "$HOME/.claude/skills/$NOME" "../../.agents/skills/$NOME" "$ALVO"
 
 # --------------------------------------------- e a prova: rodar DE LÁ, não daqui
 echo

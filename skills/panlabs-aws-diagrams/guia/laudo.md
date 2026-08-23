@@ -25,12 +25,25 @@ Tolerância zero nas três não é rigor, é o mínimo: um diagrama assim não �
 **mentiroso**, e como não há diferença contra IaC neste escopo, **nada a jusante
 pega isso**.
 
-`F1` — *a faixa abraça exatamente os membros que declara* — tem a mesma
-tolerância zero e fica **fora das 62 de propósito**. A rubrica modela uma árvore
-de contenção só, e o motor desenha duas coisas: **grupo afirma contenção, faixa
-afirma atributo compartilhado**. Aplicar as checagens de aninhamento sobre faixas
-reprovava o desenho certo pelo motivo de maior gravidade do validador — uma faixa
-existe justamente para **cruzar** outras caixas.
+Duas checagens de **faixa** têm a mesma tolerância zero e ficam **fora das 62 de
+propósito**. A rubrica modela uma árvore de contenção só, e o motor desenha duas
+coisas: **grupo afirma contenção, faixa afirma atributo compartilhado**. Aplicar
+as checagens de aninhamento sobre faixas reprovava o desenho certo pelo motivo de
+maior gravidade do validador — uma faixa existe justamente para **cruzar** outras
+caixas.
+
+| | o que acusa | espelho de |
+|---|---|---|
+| `F1` | a faixa não abraça exatamente os membros que declara | `A4.2` |
+| `F2` | a aresta atravessa a caixa de uma faixa que não é dela | `A5.5` |
+
+`F2` nasceu no [#26](https://github.com/ThiagoPanini/panlabs-skills/issues/26) e
+a razão é que **ela não existia**: `A5.5` varre `cena.grupos`, faixa é outra
+classe, e o motor era estruturalmente cego ao defeito que o fallback do #21
+existe para evitar. Ela entra **armada e calada** — medida em malha completa de
+3 a 6 zonas, `F2` = 0 nas quatro. O que ela compra é a regressão: no dia em que
+uma mudança de roteamento reintroduzir o cruzamento, o portão `veracidade` barra.
+Ver [`../docs/corpus.md`](../docs/corpus.md).
 
 ## As oito famílias
 

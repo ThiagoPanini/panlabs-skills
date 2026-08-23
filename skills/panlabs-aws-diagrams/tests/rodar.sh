@@ -111,13 +111,13 @@ passo "o orçamento de roteamento do #24"           node "$AQUI/check-roteamento
 # não-membro layoutado no meio cai dentro dela por definição, e nenhuma escolha
 # de traçado desfaz isso. Corpo de prova que não se conserta por acidente.
 #
-# ⚠️ E `F1` está FORA das 62 de propósito (#18), então este passo sozinho não
-# provaria que uma família DA RUBRICA barra. Quem prova isso é o passo acima:
-# desde o #24 o `check-portao-geometrico.cjs` roda `A4.2`, `A4.4`, `A5.5` e `F1`
-# — as quatro de tolerância zero —, cada uma contra o seu caso plantado, e exige
-# que a mensagem nomeie a checagem. A divisão é: LÁ o portão prova que barra cada
+# ⚠️ E `F1`/`F2` estão FORA das 62 de propósito (#18), então este passo sozinho
+# não provaria que uma família DA RUBRICA barra. Quem prova isso é o passo acima:
+# o `check-portao-geometrico.cjs` roda `A4.2`, `A4.4`, `A5.5`, `F1` e `F2` — as
+# CINCO de tolerância zero —, cada uma contra o seu caso plantado, e exige que a
+# mensagem nomeie a checagem. A divisão é: LÁ o portão prova que barra cada
 # família; AQUI o motor prova que chama o portão e obedece ao nível. Não há
-# modelo que faça `A5.5` ponta a ponta porque o motor não produz mais nenhum.
+# modelo que faça `A5.5` nem `F2` ponta a ponta porque o motor não produz nenhum.
 passo "e o portão está ENXERTADO no motor"         bash -c '
   G="'"$RAIZ"'/motor/gerar.cjs"
   M="'"$RAIZ"'/modelo/recusa/faixa-que-mente.json"

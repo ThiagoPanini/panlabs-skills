@@ -1,0 +1,14 @@
+# Worktrees do Claude Code — checkouts DESTE repo dentro dele mesmo.
+#
+# `EnterWorktree` cria worktrees git sob `.claude/worktrees/`, e como o diretório
+# fica dentro da árvore de trabalho ele aparecia como untracked: 4 checkouts,
+# 568 arquivos, 39 MB. Commitá-los duplicaria o repo dentro de si e quebraria em
+# qualquer clone — a ligação de um worktree é metadado local da máquina.
+#
+# Nada se perde ignorando: as branches que eles apontam (`prototipos/q14`,
+# `prototipos/q16`, `prototipos/q18`, `worktree-catalogo-shapes-aws`) já estão
+# no remoto e são alcançáveis a partir da `main`.
+#
+# ⚠️ Só `worktrees/`, não `.claude/` inteiro: configuração de projeto (settings,
+# skills, agentes) mora ali e é para ser versionada.
+.claude/worktrees/

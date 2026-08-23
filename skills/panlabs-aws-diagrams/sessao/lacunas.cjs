@@ -129,8 +129,23 @@ function alcance(adj, raiz, sem = null) {
  *      Medido: sem esta cláusula o `pedidos-serverless` acusa o VPC endpoint
  *      ("único caminho de cliente até ddb" — orfana exatamente 1) e o
  *      `logica-atendimento` acusa a trilha de auditoria por separar só a política
- *      de retenção. Quatro modelos do corpus estouravam o teto do §4.2; com ela,
- *      nenhum estoura por `spof`.
+ *      de retenção.
+ *
+ *   3. SÓ OS MAXIMAIS. Um estrangulamento cujo órfãos estão TODOS contidos nos
+ *      órfãos de outro é o mesmo corte, contado de novo mais fundo. Numa cadeia
+ *      linear `A→B→C→D` toda ligação é ponto de articulação e os conjuntos são
+ *      encaixados — reportar os quatro é dizer quatro vezes *"esta cadeia não tem
+ *      par em lugar nenhum"*.
+ *
+ *      Medido no caso ponta a ponta do #26: a `frota-preditiva` é uma cadeia de
+ *      ponta a ponta e acusava SEIS `spof` num modelo de 11 nós — pior que o
+ *      protótipo do #15 que motivou toda esta calibração. Com a cláusula, dois:
+ *      a recepção (tudo está atrás dela, visto do caminhão) e o aviso (tudo está
+ *      atrás dele, visto da oficina) — que são de fato as duas pontas.
+ *
+ *      A informação não se perde: o `porque` diz quantos pontos únicos ficam
+ *      ATRÁS do que foi reportado. Consertar o de fora não conserta os de
+ *      dentro, e o texto diz isso em vez de escondê-lo.
  */
 const ORFAOS_MINIMOS = 2;
 
@@ -151,7 +166,7 @@ function regraSpof(modelo, ctx) {
   }
   const temPar = n => membrosDeFaixa.has(n.id) || (n.servico && porServico.get(n.servico) > 1);
 
-  const achados = [];
+  const candidatos = [];
   const jaVisto = new Set();
   for (const ator of atores) {
     const base = alcance(adj, ator.id);
@@ -162,13 +177,23 @@ function regraSpof(modelo, ctx) {
       if (temPar(no)) continue;
       const semEle = alcance(adj, ator.id, cand);
       // perdeu alguém além do próprio candidato: ele estava no meio do caminho
-      const perdeu = [...base].filter(x => x !== cand && !semEle.has(x));
-      if (perdeu.length < ORFAOS_MINIMOS) continue;
+      const perdeu = new Set([...base].filter(x => x !== cand && !semEle.has(x)));
+      if (perdeu.size < ORFAOS_MINIMOS) continue;
       jaVisto.add(cand);
-      achados.push(achado('spof', cand,
-        `sem par, e é o único caminho de "${ator.id}" até ${perdeu.length} outros componentes`));
+      candidatos.push({ id: cand, ator: ator.id, orfaos: perdeu });
     }
   }
+
+  // ...e agora só os MAXIMAIS: cai quem tem os órfãos todos dentro dos de outro.
+  const contido = (a, b) => a.size < b.size && [...a].every(x => b.has(x));
+  const maximais = candidatos.filter(c => !candidatos.some(o => o !== c && contido(c.orfaos, o.orfaos)));
+
+  const achados = maximais.map(c => {
+    const atras = candidatos.filter(o => o !== c && contido(o.orfaos, c.orfaos)).length;
+    return achado('spof', c.id,
+      `sem par, e é o único caminho de "${c.ator}" até ${c.orfaos.size} outros componentes` +
+      (atras ? ` — e ${atras} deles também não tem par, atrás deste` : ''));
+  });
   return { achados, muda: null };
 }
 

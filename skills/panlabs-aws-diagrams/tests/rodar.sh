@@ -141,6 +141,7 @@ passo "o manifesto do motor de produção"           node "$AQUI/check-motor-int
 passo "a projeção, com 12 mutações de controle"    node "$AQUI/check-projecao.cjs"
 passo "sessão 1 — vista lógica aprovada"           node "$RAIZ/tools/sessao1.cjs"
 passo "sessão 2 — retomada e elaboração técnica"   node "$RAIZ/tools/sessao2.cjs"
+passo "o arco ponta a ponta, num caso novo (#26)"  node "$AQUI/check-arco.cjs"
 passo "a privacidade do dossiê"                    node "$AQUI/check-dossie.cjs"
 
 echo

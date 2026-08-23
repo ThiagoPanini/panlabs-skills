@@ -33,30 +33,24 @@ const REGRAS = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publ
   'cross-account-sem-confianca', 'assincrono-sem-dlq'];
 
 /**
- * ⚠️ EXCEÇÃO NOMEADA AO L4 — uma, e ela tem endereço.
+ * ⚠️ EXCEÇÕES NOMEADAS AO L4 — nenhuma, e a lista vazia é resultado, não descuido.
  *
- * `plataforma-3-contas` faz 6 achados com teto 5. Os seis foram conferidos um a
- * um e os seis se sustentam: dois ALB/ECS/bus sem par no caminho do cliente,
- * duas travessias cross-account sem habilitador desenhado, e a VPC de inspeção
- * cujo atracamento no Transit Gateway o modelo de fato não desenha.
+ * Ela teve uma, e a história dela é o mecanismo funcionando. `plataforma-3-contas`
+ * fazia 6 achados com teto 5, os seis foram conferidos à mão, e a entrada ficou
+ * aqui com o motivo medido: o denominador do teto é contagem de nós, e achado
+ * escala com SUPERFÍCIE de arquitetura.
  *
- * O que falha aqui é o TETO, não as regras — e o critério de `docs/corpus.md`
- * proíbe ajustá-lo depois de ver o número, de propósito. A razão medida é que o
- * denominador está errado: achado escala com SUPERFÍCIE de arquitetura (contas,
- * VPCs, pontos de entrada), não com contagem de nós. O `web-fluxo-3-az` tem 20
- * nós, uma VPC e zero achados; este tem 17 nós, três contas e duas VPCs.
+ * Aí o caso ponta a ponta do #26 achou a cláusula que faltava no `spof` — só os
+ * estrangulamentos MAXIMAIS, porque numa cadeia linear toda ligação é ponto de
+ * articulação — e a exceção expirou sozinha: este teste ficou vermelho com a
+ * mensagem que ele mesmo tinha preparado (*"ela não estoura mais: APAGUE a
+ * entrada"*), e a entrada foi apagada. É a mesma trajetória da quarentena do #23,
+ * que o #24 fez expirar do mesmo jeito.
  *
- * Fica como refino conhecido (premissa 12 do mapa). Se o dia em que alguém
- * trocar o denominador chegar, este teste fica VERMELHO e manda apagar a
- * entrada — igual à quarentena do #23, que expirou exatamente assim.
+ * A observação sobre o denominador continua valendo e continua registrada em
+ * `docs/corpus.md` — ela só não tem mais nenhum modelo do corpus para provar.
  */
-const FORA_DO_TETO = {
-  'plataforma-3-contas': {
-    achados: 6, teto: 5,
-    porque: 'o teto usa nós como denominador e o achado escala com superfície ' +
-      '(3 contas, 2 VPCs). Os 6 achados foram conferidos e se sustentam.',
-  },
-};
+const FORA_DO_TETO = {};
 
 let falhou = 0;
 const anota = (ok, o_que, detalhe) => {
@@ -146,4 +140,6 @@ console.log('\n4 · a régua contra o protótipo do #15\n');
 
 console.log();
 if (falhou) { console.log(`  ✗ ${falhou} asserção(ões) da revisão de lacunas falharam.`); process.exit(1); }
-console.log('  ✓ as seis regras sabem disparar e sabem calar, e o teto tem uma exceção nomeada.');
+console.log(`  ✓ as seis regras sabem disparar e sabem calar, e ${Object.keys(FORA_DO_TETO).length
+  ? `o teto tem ${Object.keys(FORA_DO_TETO).length} exceção(ões) nomeada(s)`
+  : 'nenhum modelo estoura o teto'}.`);

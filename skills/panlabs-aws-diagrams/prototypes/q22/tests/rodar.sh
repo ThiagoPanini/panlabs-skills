@@ -39,6 +39,10 @@ echo "== 4. a candidata rival, medida no corpus inteiro =="
 node "$Q22/tools/check-saltos.cjs" || falhou=1
 
 echo
+echo "== 4b. a resposta anterior (9b27d6f), medida contra a que ficou =="
+node "$Q22/tools/check-standalone.cjs" || falhou=1
+
+echo
 echo "== 5. geração dos exemplos =="
 for m in "$Q22"/modelo/*.json; do
   nome="$(basename "$m" .json)"

@@ -1,0 +1,122 @@
+{
+  "esquema": "panlabs-aws-diagrams/sessao@1",
+  "id": "varejo-300-lojas",
+  "titulo": "Varejo · 300 lojas",
+  "estagio": "logica",
+
+  "vistas": {
+    "logica": {
+      "genero": "L2",
+      "titulo": "Varejo · 300 lojas · vista lógica",
+      "subtitulo": "Capacidades e fronteiras de responsabilidade — zero nome de serviço AWS. Continuação direta da sabatina do #15."
+    },
+    "tecnica": {
+      "genero": "T5",
+      "titulo": "Varejo · 300 lojas · vista técnica",
+      "subtitulo": "T5 multi-conta · a MESMA vista aprovada, agora com serviços AWS e topologia de rede."
+    }
+  },
+
+  "nos": [
+    { "id": "loja", "rotulo": "Lojas (300)", "logico": { "tipo": "ator" } },
+    { "id": "diretoria", "rotulo": "Diretoria", "logico": { "tipo": "ator" } },
+
+    { "id": "aterrissagem", "rotulo": "Aterrissagem de arquivos", "logico": { "tipo": "grupo" } },
+    { "id": "processamento", "rotulo": "Processamento e guarda", "logico": { "tipo": "grupo" } },
+    { "id": "consumo", "rotulo": "Consumo analítico", "logico": { "tipo": "grupo" } },
+
+    { "id": "receber-arquivo", "rotulo": "Receber arquivo da loja", "dentro": "aterrissagem", "logico": { "tipo": "bloco" } },
+    { "id": "guardar-bruto", "rotulo": "Guardar arquivo bruto", "dentro": "aterrissagem", "logico": { "tipo": "bloco" } },
+
+    { "id": "processar-na-chegada", "rotulo": "Processar na chegada", "dentro": "processamento", "logico": { "tipo": "bloco" } },
+    { "id": "tratar-falha", "rotulo": "Tratar arquivo que falhou", "dentro": "processamento", "logico": { "tipo": "bloco" } },
+    { "id": "reter-objeto", "rotulo": "Reter objeto curado", "dentro": "processamento", "logico": { "tipo": "bloco" } },
+
+    { "id": "consultar", "rotulo": "Consultar histórico", "dentro": "consumo", "logico": { "tipo": "bloco" } },
+    { "id": "painel", "rotulo": "Painel da diretoria", "dentro": "consumo", "logico": { "tipo": "bloco" } }
+  ],
+
+  "arestas": [
+    { "id": "a-envia", "de": "loja", "para": "receber-arquivo", "rotulo": "envia arquivo", "protocolo": "sftp", "ordem": 1 },
+    { "id": "a-deposita", "de": "receber-arquivo", "para": "guardar-bruto", "rotulo": "deposita", "ordem": 2 },
+    { "id": "a-avisa", "de": "guardar-bruto", "para": "processar-na-chegada", "rotulo": "chegou arquivo novo", "ordem": 3 },
+    { "id": "a-falha", "de": "processar-na-chegada", "para": "tratar-falha", "rotulo": "arquivo que não faz parse", "ordem": 4 },
+    { "id": "a-grava", "de": "processar-na-chegada", "para": "reter-objeto", "rotulo": "grava curado", "ordem": 5 },
+    { "id": "a-abre", "de": "diretoria", "para": "painel", "rotulo": "abre de manhã", "ordem": 6 },
+    { "id": "a-consulta", "de": "painel", "para": "consultar", "rotulo": "consulta", "dados": "volta", "ordem": 7 },
+    { "id": "a-varre", "de": "consultar", "para": "reter-objeto", "rotulo": "varre o histórico", "dados": "volta", "ordem": 8 }
+  ],
+
+  "notas": [
+    { "id": "n-spof", "origem": "achado-recusado",
+      "texto": "SPOF conhecido e aceito: o ponto de entrada de arquivo não tem par. Decisão de orçamento, revisar antes do go-live." },
+    { "id": "n-retencao", "origem": "premissa", "sobre": "reter-objeto",
+      "texto": "Histórico de 5 anos por exigência de auditoria, com regra de ciclo de vida." },
+    { "id": "n-donos", "origem": "legenda",
+      "texto": "Donos das fronteiras — aterrissagem: time de integração · processamento e guarda: time de dados · consumo analítico: BI." }
+  ],
+
+  "dossie": {
+    "eixos": {
+      "E1": "gerenciado sem compute próprio",
+      "E2": "assíncrono por evento (chegada do arquivo)",
+      "E3": "objeto / data lake com camada analítica",
+      "E4": "privado, com ponto de entrega controlado",
+      "E5": "três fronteiras: aterrissagem, processamento, consumo"
+    },
+
+    "fatos": [
+      { "fato": "300 lojas enviam arquivo de venda", "procedencia": "perguntado", "confirmado": true },
+      { "fato": "os arquivos caem de madrugada, mas há loja que envia fora de hora", "procedencia": "inferido", "confirmado": true, "de": "ata de kickoff + Q6" },
+      { "fato": "4 GB por dia", "procedencia": "perguntado", "confirmado": true },
+      { "fato": "histórico de 5 anos por auditoria", "procedencia": "perguntado", "confirmado": true },
+      { "fato": "as lojas entregam por SFTP e isso não muda", "procedencia": "perguntado", "confirmado": true },
+      { "fato": "sem norma escrita de residência; chave gerenciada pelo cliente", "procedencia": "inferido", "confirmado": true, "de": "Q7" },
+      { "fato": "quem inicia a travessia entre fronteiras é o processamento", "procedencia": "perguntado", "confirmado": true, "de": "Q9" }
+    ],
+
+    "estacionamento": [
+      { "nome": "Lambda", "capacidade": "processar-na-chegada", "estado": "estacionado",
+        "nota": "dito na ata em linguagem hedge (\"acho que dava pra fazer com Lambda\") — entrou como opção, nunca como fato (#15 §5)." },
+      { "nome": "S3", "capacidade": "reter-objeto", "estado": "estacionado",
+        "nota": "dito na ata (\"joga tudo no S3\")." }
+    ],
+
+    "candidatas": [
+      { "id": "cand-a", "nome": "Só chegou, já processou", "estado": "escolhida",
+        "tupla": ["gerenciado-sem-compute", "evento", "data-lake", "privado", "multi-fronteira"],
+        "compra": "painel fresco minutos após a loja enviar; zero runtime seu.",
+        "paga": "custo por evento imprevisível em dia de pico; depurar fluxo assíncrono é chato.",
+        "escolhaSe": "\"painel velho\" é a dor principal da diretoria.",
+        "erradaSe": "o volume por loja crescer 10× — aí o custo por evento passa o de lote.",
+        "porque": "a dor declarada é frescor, e a separação de fronteiras da ata sobrevive." },
+
+      { "id": "cand-b", "nome": "Micro-lote de 15 minutos", "estado": "descartada", "difereEm": ["E2"],
+        "tupla": ["gerenciado-sem-compute", "lote-agendado", "data-lake", "privado", "multi-fronteira"],
+        "compra": "custo previsível, reprocessamento trivial, uma janela para consertar arquivo torto.",
+        "paga": "até 15 min de atraso — a reclamação da diretoria volta menor, não some.",
+        "escolhaSe": "auditoria e reprocessamento pesam mais que frescor.",
+        "erradaSe": "alguém prometeu \"tempo real\" para a diretoria.",
+        "porque": "descartada: o atraso residual não resolve a dor declarada. Fica em pé se o custo por evento estourar." },
+
+      { "id": "cand-c", "nome": "Transformação na borda", "estado": "descartada", "difereEm": ["E1", "E3", "E5"],
+        "tupla": ["conteineres", "evento", "relacional-gerenciado", "privado", "fronteira-unica"],
+        "compra": "lógica de negócio complexa por loja em código comum; consulta relacional direta.",
+        "paga": "você opera cluster; colapsa as três fronteiras e perde a separação de auditoria.",
+        "escolhaSe": "a transformação por loja for regra de negócio pesada, não parsing.",
+        "erradaSe": "a separação de fronteiras for exigência de compliance — e a ata sugere que é.",
+        "porque": "descartada: perde a fronteira de auditoria, que a ata trata como dada." }
+    ],
+
+    "achados": [
+      { "regra": "spof", "alvo": "receber-arquivo", "estado": "recusado", "em": "2026-08-21", "viaNota": "n-spof",
+        "nota": "ponto de entrada sem par. O time aceitou para a fase 1 por orçamento — vira nota no diagrama, não conserto calado." },
+      { "regra": "assincrono-sem-dlq", "alvo": "processar-na-chegada", "estado": "aceito", "em": "2026-08-21",
+        "nota": "virou a capacidade \"Tratar arquivo que falhou\"." },
+      { "regra": "cross-account-sem-confianca", "alvo": "processamento", "estado": "aceito", "em": "2026-08-21",
+        "nota": "a travessia entre fronteiras precisa de caminho de confiança declarado — desenha na fase técnica." },
+      { "regra": "retencao-sem-regra", "alvo": "reter-objeto", "estado": "aceito", "em": "2026-08-21",
+        "nota": "5 anos declarado; virou premissa anotada no nó." }
+    ]
+  }
+}

@@ -78,9 +78,10 @@ function temChave(style, chave) {
 
 /**
  * Aplica ao grupo o delta "o que o draw.io entrega" -> "o que a AWS prescreve":
- * cores da paleta pré-2022 e a falta de container=1. Ver correcoes.json.
+ * cores da paleta pré-2022, a falta de container=1 e o tingimento das duas
+ * subnets. Ver correcoes.json.
  */
-function corrigirGrupo(style, correcoes) {
+function corrigirGrupo(style, correcoes, titulo) {
   let s = style;
   const aplicadas = [];
 
@@ -96,6 +97,18 @@ function corrigirGrupo(style, correcoes) {
     const sufixo = correcoes.container.sufixo;
     s = (s.endsWith(';') ? s : s + ';') + sufixo;
     aplicadas.push('container=1');
+  }
+
+  // Duas subnets saem do draw.io TINGIDAS (#E6F6F7 / #F2F6E8) enquanto as outras
+  // 18 são `none`. O deck é `<a:noFill/>` em todos (A2), e o tingimento derruba
+  // #ED7100 de 3,02 para 2,71:1 em quem cai dentro. Ver preenchimentoDeGrupo.
+  const pg = correcoes.preenchimentoDeGrupo;
+  if (pg && (pg.afeta || []).includes(titulo)) {
+    const antes = (/(?:^|;)fillColor=([^;]*)/.exec(s) || [])[1];
+    if (antes && antes !== pg.para) {
+      s = setChave(s, 'fillColor', pg.para);
+      aplicadas.push(`fillColor ${antes}->${pg.para}`);
+    }
   }
 
   return { style: s, correcoes: aplicadas };
@@ -253,7 +266,7 @@ function carregar(dir) {
   function grupo(nome) {
     const g = gruposPorNome.get(normalizar(nome));
     if (!g) return null;
-    const { style, correcoes: aplicadas } = corrigirGrupo(g.style, correcoes);
+    const { style, correcoes: aplicadas } = corrigirGrupo(g.style, correcoes, g.title);
     return {
       style, title: g.title, w: g.w, h: g.h,
       shapeClass: g.shapeClass, grIcon: g.grIcon,

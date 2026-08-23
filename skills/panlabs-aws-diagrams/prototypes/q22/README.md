@@ -10,6 +10,14 @@ Protótipo do ticket
 > irmãos é espinha dos dois, e um fork criaria duas verdades. As suites do #11 e
 > do #12 rodam como primeira camada da suite daqui.
 
+> ### ⚠️ Este diretório substituiu uma resposta anterior
+>
+> O commit **`9b27d6f`** já respondia o #22 com um protótipo **autônomo** —
+> `camadas.cjs` e `gerar.cjs` próprios, emissor draw.io próprio, quatro modelos.
+> O cabeçalho da decisão era o mesmo desta: **derivar do conteúdo, `camada` como
+> escape**. Ele foi substituído, não descartado, e o porquê está medido em
+> `tools/check-standalone.cjs` — ver §6. Os arquivos continuam em `9b27d6f`.
+
 ## A resposta em uma frase
 
 > **O que põe a subnet de dados embaixo é o que ela guarda.**
@@ -51,6 +59,7 @@ node ../q11/motor/gerar.cjs modelo/web-dados.json --explicar   # a trilha da cam
 | `tools/check-camada.cjs` | A regra isolada do pixel: tabela do ticket, leitura, mistura, escape, lacuna, controle. |
 | `tools/check-saltos.cjs` | A candidata "distância da borda", medida no corpus inteiro dos três protótipos. |
 | `tools/gerar-antes.sh` | Materializa o motor de `a83b48a` a partir do git e roda contra o modelo de hoje. |
+| `tools/check-standalone.cjs` | A regra do protótipo substituído (`9b27d6f`), carregada do git e medida contra a que ficou. |
 
 ---
 
@@ -230,6 +239,61 @@ diagrama, e é justamente ela que mais precisa da ordem.
 
 Por isso a distância não entrou nem como desempate: ela custaria um segundo
 critério para não mudar nenhuma resposta.
+
+---
+
+## 6 · A resposta anterior, e por que esta ficou no lugar dela
+
+O `9b27d6f` chegou ao **mesmo cabeçalho**: derivar do conteúdo, `camada` como
+escape semântico, exposição primeiro. Isso não é coincidência — é o sinal de que
+a decisão é a certa, e vale registrar que duas passadas independentes caíram nela.
+
+Divergem em três pontos, e um deles é medível.
+
+**1 · Onde a regra mora.** Lá ela vive num emissor próprio, ao lado do motor;
+aqui ela está **dentro** do motor do #11 — `motor/camadas.cjs`, consumida por
+`derivar.cjs` e por `dispor.cjs`. É a diferença entre demonstrar a decisão e
+tê-la valendo: os desenhos de lá saem de 151 linhas de emissor de protótipo, os
+daqui saem do mesmo caminho que produz `web-multi-az` e a landing zone, com
+faixa de AZ, catálogo corrigido e as 62 checagens do #18 à espera.
+
+**2 · Mistura.** Lá, subnet com serviços de mais de uma camada vira
+`indefinida` e vai para o fim. Aqui, **vence o mais fundo**.
+
+**3 · A tabela.** Lá são 7 categorias, aqui 9 —
+`security_identity_compliance`, `application_integration` e `analytics`
+entraram.
+
+Os pontos 2 e 3 têm o mesmo efeito e a mesma medida. `tools/check-standalone.cjs`
+carrega a regra de lá **do próprio git** e roda as duas sobre os modelos de rede
+do q11 e do q12 — escritos antes das duas, por outros tickets:
+
+| | |
+|---|---|
+| subnets medidas | **23** |
+| sem camada pela regra de `9b27d6f` | **3** |
+| sem camada pela regra que ficou | **0** |
+
+As três:
+
+| modelo | subnet | lá | aqui |
+|---|---|---|---|
+| `q11/pedidos-serverless` | `Private subnet` | `indefinida` (conteúdo misto) | `dados` |
+| `q12/landing-zone-6-contas` | `Private subnet` | `indefinida` (conteúdo misto) | `dados` |
+| `q12/plataforma-3-contas` | `Inspection subnet` | `indefinida` (sem evidência) | `borda` |
+
+Duas caem pela regra de mistura, e não são casos exóticos: `lambda + endpoints
++ rds` e `ecs + rds` são a forma normal de uma subnet de aplicação. A terceira
+cai pela tabela curta — `Network Firewall` é `security_identity_compliance`, e
+sem essa linha a subnet **mais de borda de todo o corpus** é a que a regra não
+sabe nomear.
+
+E "sem camada" não é neutro: a subnet indefinida vai para o **fim** do grupo de
+exposição dela. Isso é uma posição, e uma posição que ninguém escolheu — é o
+mesmo defeito do alfabeto, com outro nome.
+
+A régua trava o achado: ela **falha** se um dia a regra que ficou deixar de
+nomear mais que a anterior.
 
 ---
 

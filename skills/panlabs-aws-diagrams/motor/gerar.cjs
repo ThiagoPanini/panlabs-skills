@@ -226,8 +226,8 @@ async function gerar(modelo, opts = {}) {
    * é protótipo de outro ticket"). A consolidação do #23 aplica, e escolhe o
    * default com cuidado:
    *
-   *   O LAUDO SAI SEMPRE. Ele viaja em `relatorio.geometria` e aparece no
-   *   `--explicar`. Um portão que só existe quando alguém pede é um portão que
+   *   O LAUDO SAI SEMPRE. Ele viaja em `relatorio.geometria` e o `--explicar` o
+   *   imprime. Um portão que só existe quando alguém pede é um portão que
    *   ninguém sabe que existe.
    *
    *   BLOQUEAR É OPT-IN (`--portao`). O próprio #18 chama `veracidade` de
@@ -236,6 +236,15 @@ async function gerar(modelo, opts = {}) {
    *   é dívida real, nomeada e de dono conhecido (#24): a geração pararia por um
    *   defeito de roteamento que este ticket decidiu não consertar. Recusar
    *   desenhar é decisão de quem entrega, e ela tem hora.
+   *
+   *   ⚠️ E QUEM DECIDE SE BARRA É O `portao()`, NÃO ESTE ARQUIVO. A primeira
+   *   versão desta seção chamava `portao(p, {nivel:'nenhum'})` dentro de um
+   *   `try` e reimplementava o `NIVEIS[nivel](laudo)` aqui fora — e com isso
+   *   engolia a garantia mais importante do #18: *"um laudo incompleto nunca
+   *   passa, EM NENHUM NÍVEL"*. Uma família de checagem quebrada virava
+   *   `{erro: ...}`, o `if (!laudo) continue` pulava a página, e o portão saía
+   *   verde sobre um laudo que não mediu nada. Chamar `portao()` com o nível
+   *   pedido e deixar ele lançar é ao mesmo tempo a correção e a simplificação.
    */
   const nivel = opts.portao || 'nenhum';
   if (!(nivel in NIVEIS)) {
@@ -243,30 +252,25 @@ async function gerar(modelo, opts = {}) {
     e.erros = [`níveis: ${Object.keys(NIVEIS).join(', ')}`];
     throw e;
   }
-  const laudos = [plano, ...paginas].map((p, i) => {
-    try { return { pagina: p.id || `p${i}`, laudo: portao(p, { nivel: 'nenhum' }) }; }
-    catch (e) { return { pagina: p.id || `p${i}`, erro: e.message }; }
-  });
+  const laudos = [];
+  for (const [i, p] of [plano, ...paginas].entries()) {
+    const pagina = p.id || `p${i}`;
+    try {
+      laudos.push({ pagina, laudo: portao(p, { nivel }) });
+    } catch (e) {
+      e.message = `a página "${pagina}": ${e.message}`;
+      throw e;
+    }
+  }
   relatorio.geometria = laudos;
-  const semanticas = laudos.flatMap(l => (l.laudo ? l.laudo.semanticas : []));
-  const falhas = laudos.flatMap(l => (l.laudo ? l.laudo.falhas : []));
+  const semanticas = laudos.flatMap(l => l.laudo.semanticas);
+  const falhas = laudos.flatMap(l => l.laudo.falhas);
   marco('geometria', {
     paginas: laudos.length,
     falha: falhas.length,
     semanticas: semanticas.length,
     portao: nivel,
   });
-  if (nivel !== 'nenhum') {
-    for (const { pagina, laudo } of laudos) {
-      if (!laudo) continue;
-      if (!NIVEIS[nivel](laudo)) continue;
-      const e = new Error(`a página "${pagina}" não passa no portão geométrico "${nivel}" (#18)`);
-      e.erros = [...(laudo.semanticas.length ? laudo.semanticas : laudo.falhas)
-        .map(f => `${f.id} ${f.nome}: ${f.mensagem}`)];
-      e.laudo = laudo;
-      throw e;
-    }
-  }
   // uma falha SEMÂNTICA é o desenho mentindo, e isso vale um aviso mesmo quando
   // ninguém pediu portão — senão o motor entrega em silêncio o que a rubrica
   // chama de "a falha de maior gravidade de todo o validador"
@@ -379,6 +383,20 @@ async function main() {
       for (const [id, c] of r.derivado.camadas)
         console.log(`    ${String(id).padEnd(20)} ${String(c.camada || '—').padEnd(11)} [${c.via || 'sem evidência'}]` +
           (c.evidencia.length ? `  ← ${c.evidencia.map(e => `${e.servico}(${e.categoria})`).join(', ')}` : ''));
+    }
+
+    // O laudo geométrico (#18), pagina a pagina. Sai aqui porque o `--explicar`
+    // e a trilha de auditoria do motor: quem quer saber POR QUE o desenho ficou
+    // assim quer as duas listas, a do catalogo e a da rubrica.
+    console.log('\n  laudo geométrico (#18):');
+    for (const { pagina, laudo } of r.relatorio.geometria) {
+      const s = laudo.resumo;
+      console.log(`    ${String(pagina).padEnd(38)} ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ` +
+        `${s.inaplicavel} inaplicável · ${s.pulada} do render`);
+      for (const f of laudo.semanticas)
+        console.log(`      ⛔ ${f.id} ${f.nome}: ${f.mensagem}`);
+      if (laudo.falhas.length)
+        console.log(`      achados: ${laudo.falhas.map(f => f.id).join(', ')}`);
     }
     return;
   }

@@ -11,9 +11,9 @@
  * embaralha:
  *
  *   o desenho está INCOMPLETO — falta legenda, faltam metadados de frescor, o
- *   título de um grupo tem contraste de 3,06:1. São defeitos reais, do motor do
- *   #11, e o protótipo os reporta em vez de escondê-los. Não travam a suíte:
- *   travar aqui seria transformar achado do #18 em regressão do #11.
+ *   título de um grupo tem contraste de 3,06:1. São defeitos reais do motor, e a
+ *   suíte os reporta em vez de escondê-los. Não travam: travar aqui seria
+ *   transformar achado do #18 em regressão do motor.
  *
  *   o desenho está MENTINDO — um nó desenhado numa VPC de que não é membro,
  *   uma aresta cortando uma rede alheia, uma faixa afirmando um atributo que o
@@ -74,7 +74,7 @@ async function main() {
     try {
       r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', arquivo), 'utf8')));
     } catch (e) {
-      console.log(`  ✗ ${nome}: o motor do #11 não gerou — ${e.message}`);
+      console.log(`  ✗ ${nome}: o motor não gerou — ${e.message}`);
       falhou = 1;
       continue;
     }

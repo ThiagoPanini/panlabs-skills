@@ -30,7 +30,13 @@ set -uo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RAIZ="$(dirname "$AQUI")"
+# ⚠️ EXPORTADO, e não só passado como argumento — a versão anterior passava o
+# binário para dois dos quatro checks da camada 7 e os outros dois caíam num
+# default DIFERENTE (`AppRun` em vez de `drawio`), podendo pular em silêncio
+# enquanto a camada se dizia executada. Com `export`, o resolvedor único
+# (`tools/drawio.cjs`) e o `render.sh` herdam o mesmo valor.
 DRAWIO="${1:-$HOME/.local/opt/drawio/squashfs-root/drawio}"
+export DRAWIO
 falhou=0
 declare -a VERMELHAS=()
 
@@ -124,10 +130,10 @@ if [ ! -x "$DRAWIO" ]; then
   echo "   draw.io headless não encontrado em $DRAWIO — camada 7 pulada."
   echo "   (ver docs/research/drawio-headless-rendering-wsl2.md)"
 else
-  passo "impressão: 10 edições humanas × 3 esquemas" node "$AQUI/check-impressao.cjs"
+  passo "impressão: 10 edições humanas × 3 esquemas" node "$AQUI/check-impressao.cjs" "$DRAWIO"
   passo "round-trip do modelo pelo codec do app"     node "$AQUI/check-roundtrip-modelo.cjs" "$DRAWIO"
   passo "round-trip do tema pelo codec do app"       node "$AQUI/check-roundtrip-tema.cjs" "$DRAWIO"
-  passo "round-trip do arquivo de sessão"            node "$AQUI/check-roundtrip-sessao.cjs"
+  passo "round-trip do arquivo de sessão"            node "$AQUI/check-roundtrip-sessao.cjs" "$DRAWIO"
 
   # O RENDER é a outra metade da validação em duas camadas (premissa 9), e a
   # ordem aqui não é acidental: primeiro o corpus, depois as variantes de tema,

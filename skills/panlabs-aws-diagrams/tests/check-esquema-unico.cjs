@@ -115,7 +115,20 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
       bruto = execFileSync('git', ['show', `HEAD:skills/panlabs-aws-diagrams/${alvo}`],
         { cwd: REPO, encoding: 'utf8', maxBuffer: 8 << 20 });
     } catch (e) {
-      console.log(`  · ${rot}: não deu para ler do git (${e.message.split('\n')[0]}) — pulado`);
+      /**
+       * ⚠️ PULAR NÃO É PASSAR. A primeira versão fazia `continue` sem contar, e
+       * então no dia em que `prototypes/` sair da árvore — que é o futuro
+       * explicitamente planejado em `tools/medir-antes-depois.cjs` — a seção
+       * inteira sairia verde afirmando "nada se perdeu" sem ter comparado nada.
+       *
+       * Aqui o pulo é FALHA, e a saída é deliberada: quando os protótipos
+       * saírem, quem tirar substitui a comparação contra o git pela lista
+       * congelada de propriedades (as quatro checagens logo abaixo já são o
+       * começo dela) — em vez de herdar um verde vazio.
+       */
+      falhas++;
+      console.log(`  ✗ ${rot}: não deu para ler do git (${e.message.split('\n')[0]}) — ` +
+        'a comparação NÃO rodou, e um pulo silencioso aqui seria um verde vazio');
       continue;
     }
     const antigas = props(JSON.parse(bruto));

@@ -12,8 +12,10 @@ com validador geométrico, camada de tema e persistência de sessão.
 ```bash
 node motor/gerar.cjs modelo/web-multi-az.json --saida saida/x.drawio
 node motor/gerar.cjs modelo/pedidos-serverless.json --tema escuro --explicar
-node sessao/publicar.cjs saida/varejo.drawio     # a cópia que circula
-./tests/rodar.sh                                  # a régua inteira
+node motor/gerar.cjs modelo/x.json --portao veracidade   # recusa o desenho que mente
+node sessao/publicar.cjs saida/varejo.drawio             # a cópia que circula
+./tests/rodar.sh                                          # a régua inteira
+./tools/medir-candidatos.sh                               # a medição que escolheu o motor
 ```
 
 ## A ideia em uma frase
@@ -37,7 +39,7 @@ mecanicamente, com experimento de controle.
 | `catalog/` | 403 service icons + 606 resource icons do draw.io 31.3.1, com o delta de correções escrito à mão (#17). |
 | `modelo/` | O corpus. `modelo@1` na raiz, `modelo/recusa/` para o que o motor **deve** recusar, `modelo/sessao/` para `sessao@1`. |
 | `tests/` | A união das suítes, em 8 camadas. |
-| `tools/` | Bisseção, render, medição antes/depois, as duas sessões de demonstração. |
+| `tools/` | Bisseção, render, as duas medições (candidatos, antes/depois), as sessões de demonstração. `drawio.cjs` é o único lugar que sabe onde o binário mora. |
 | `saida/` | O que o motor produziu, e o render como prova. |
 | `prototypes/` | **Fonte primária, não produção.** Um diretório por pergunta respondida. Nada da árvore de produção alcança daqui — e há checagem disso. |
 
@@ -83,6 +85,17 @@ não para o humano.
 | tema que reprova no contraste | rótulo que some não dá erro em lugar nenhum. `--forcar` gera assim mesmo, para o estrago poder ser visto |
 | subnet sem camada de rede, no caminho da grade | a ordem das linhas é o desenho, e ordem inventada põe a camada de dados em cima |
 | nó que o caminho da grade não modela | omitir em silêncio é `A4.2` da rubrica — o diagrama que mente por ausência |
+
+## O portão, e quando ele barra
+
+O laudo geométrico (#18) sai **sempre**, em `relatorio.geometria` e no
+`--explicar`; uma falha semântica vira aviso mesmo sem ninguém pedir. Bloquear é
+`--portao <nenhum|veracidade|falha|estrito>`, e o default é `nenhum` porque o
+próprio #18 chama `veracidade` de default de **publicação** — publicar não é
+desenhar, e recusar desenhar tem hora.
+
+Um laudo **incompleto** nunca passa, em nenhum nível: se uma família de checagem
+parou de rodar, o verde não quer dizer nada.
 
 ## Zero dependência de rede ou de binário em runtime
 

@@ -1,22 +1,22 @@
 <mxfile host="panlabs-aws-diagrams" compressed="false">
   <diagram id="plataforma-3-contas" name="Plataforma de eventos · três contas">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
-        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1758" pageHeight="682"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1758" pageHeight="681"
         math="0" shadow="0" background="#FFFFFF">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
         <mxCell id="titulo" value="Plataforma de eventos · três contas" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="30" width="414" height="27" as="geometry"/>
+          <mxGeometry x="32" y="28" width="414" height="27" as="geometry"/>
         </mxCell>
         <mxCell id="subtitulo" value="Vista técnica T5 · rede compartilhada, workload e dados — o cenário que o #12 pediu" style="text;html=1;fontSize=12;fontColor=#5A6C86;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="57" width="616" height="17" as="geometry"/>
+          <mxGeometry x="32" y="55" width="616" height="17" as="geometry"/>
         </mxCell>
         <mxCell id="nuvem" value="AWS Cloud" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="162" y="77" width="1572" height="565" as="geometry"/>
+          <mxGeometry x="162" y="76" width="1572" height="565" as="geometry"/>
         </mxCell>
         <mxCell id="cliente" value="Clientes" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="32" y="231" width="78" height="78" as="geometry"/>
+          <mxGeometry x="32" y="230" width="78" height="78" as="geometry"/>
         </mxCell>
         <mxCell id="c-rede" value="Network · shared" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontFamily=Arial,Helvetica;" vertex="1" parent="nuvem">
           <mxGeometry x="8" y="98" width="229" height="385" as="geometry"/>
@@ -75,27 +75,27 @@
         <mxCell id="e-ecs-tgw2" value="&lt;b&gt;3.&lt;/b&gt; atracamento VPC" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="ecs" target="tgw">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1067" y="334"/>
-              <mxPoint x="1067" y="600"/>
-              <mxPoint x="464" y="600"/>
-              <mxPoint x="464" y="254"/>
+              <mxPoint x="1067" y="333"/>
+              <mxPoint x="1067" y="599"/>
+              <mxPoint x="464" y="599"/>
+              <mxPoint x="464" y="253"/>
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="e-ecs-bus3" value="&lt;b&gt;4.&lt;/b&gt; PutEvents cross-account" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="ecs" target="bus">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1067" y="334"/>
-              <mxPoint x="1067" y="254"/>
+              <mxPoint x="1067" y="333"/>
+              <mxPoint x="1067" y="253"/>
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="e-cliente-alb0" value="&lt;b&gt;1.&lt;/b&gt; HTTPS" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="cliente" target="alb">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="71" y="149"/>
-              <mxPoint x="464" y="149"/>
-              <mxPoint x="464" y="334"/>
+              <mxPoint x="71" y="148"/>
+              <mxPoint x="464" y="148"/>
+              <mxPoint x="464" y="333"/>
             </Array>
           </mxGeometry>
         </mxCell>
@@ -109,19 +109,19 @@
   </diagram>
   <diagram id="plataforma-3-contas-c-rede" name="Network · shared">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
-        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="599"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="598"
         math="0" shadow="0" background="#FFFFFF">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
         <mxCell id="titulo" value="Network · shared" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="30" width="195" height="27" as="geometry"/>
+          <mxGeometry x="32" y="28" width="195" height="27" as="geometry"/>
         </mxCell>
         <mxCell id="subtitulo" value="Vista de detalhe · Plataforma de eventos · três contas" style="text;html=1;fontSize=12;fontColor=#5A6C86;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="57" width="403" height="17" as="geometry"/>
+          <mxGeometry x="32" y="55" width="403" height="17" as="geometry"/>
         </mxCell>
         <mxCell id="c-rede" value="Network · shared" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="44" y="89" width="229" height="385" as="geometry"/>
+          <mxGeometry x="44" y="88" width="229" height="385" as="geometry"/>
         </mxCell>
         <mxCell id="tgw" value="Transit Gateway" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.transit_gateway;fontFamily=Arial,Helvetica;" vertex="1" parent="c-rede">
           <mxGeometry x="76" y="40" width="78" height="78" as="geometry"/>
@@ -136,7 +136,7 @@
           <mxGeometry x="23" y="40" width="78" height="78" as="geometry"/>
         </mxCell>
         <mxCell id="notas" value="Entra nesta conta: atracamento VPC ← Workload · pedidos" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#B7791F;fontColor=#6B4E00;fontFamily=Arial,Helvetica;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="32" y="529" width="836" height="38" as="geometry"/>
+          <mxGeometry x="32" y="528" width="836" height="38" as="geometry"/>
         </mxCell>
         <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;plataforma-3-contas-c-rede&quot;,&quot;titulo&quot;:&quot;Network · shared&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Plataforma de eventos · três contas&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-rede&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;111111111111&quot;,&quot;ou&quot;:&quot;Infrastructure&quot;,&quot;rotulo&quot;:&quot;Network · shared&quot;},{&quot;id&quot;:&quot;tgw&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;transit gateway&quot;,&quot;rotulo&quot;:&quot;Transit Gateway&quot;,&quot;dentro&quot;:&quot;c-rede&quot;},{&quot;id&quot;:&quot;vpc-insp&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de inspeção&quot;,&quot;cidr&quot;:&quot;10.0.0.0/16&quot;,&quot;dentro&quot;:&quot;c-rede&quot;},{&quot;id&quot;:&quot;sub-insp&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Inspection subnet&quot;,&quot;acesso&quot;:&quot;privada&quot;,&quot;dentro&quot;:&quot;vpc-insp&quot;},{&quot;id&quot;:&quot;fw&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;network firewall&quot;,&quot;rotulo&quot;:&quot;Network Firewall&quot;,&quot;dentro&quot;:&quot;sub-insp&quot;}],&quot;arestas&quot;:[],&quot;faixas&quot;:[],&quot;notas&quot;:[{&quot;texto&quot;:&quot;Entra nesta conta: atracamento VPC ← Workload · pedidos&quot;,&quot;origem&quot;:&quot;legenda&quot;}]}" panlabsTema="{&quot;id&quot;:&quot;claro&quot;,&quot;fundo&quot;:&quot;claro&quot;,&quot;tokens&quot;:{&quot;pagina&quot;:{&quot;cor&quot;:&quot;#FFFFFF&quot;,&quot;margem&quot;:32},&quot;grupo&quot;:{&quot;tingimento&quot;:&quot;derivado&quot;},&quot;tinta&quot;:{&quot;forte&quot;:&quot;#232F3E&quot;,&quot;fraca&quot;:&quot;#5A6C86&quot;,&quot;halo&quot;:&quot;#FFFFFF&quot;},&quot;texto&quot;:{&quot;familia&quot;:&quot;Arial,Helvetica&quot;,&quot;rotulo&quot;:12,&quot;grupo&quot;:12,&quot;aresta&quot;:10,&quot;titulo&quot;:19,&quot;subtitulo&quot;:12,&quot;qualificador&quot;:false},&quot;aresta&quot;:{&quot;cor&quot;:&quot;#232F3E&quot;,&quot;espessura&quot;:1.6,&quot;ponta&quot;:&quot;blockThin&quot;,&quot;cantos&quot;:12,&quot;saltos&quot;:&quot;arc&quot;,&quot;fluxo&quot;:&quot;solido&quot;},&quot;folga&quot;:{&quot;base&quot;:8,&quot;densidade&quot;:1},&quot;nota&quot;:{&quot;fundo&quot;:&quot;#FFF8E1&quot;,&quot;borda&quot;:&quot;#B7791F&quot;,&quot;tinta&quot;:&quot;#6B4E00&quot;},&quot;bloco&quot;:{&quot;fundo&quot;:&quot;#FFFFFF&quot;,&quot;borda&quot;:&quot;#232F3E&quot;,&quot;cantos&quot;:12},&quot;cartao&quot;:{&quot;revisao&quot;:null},&quot;fundo&quot;:&quot;claro&quot;}}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
@@ -148,19 +148,19 @@
   </diagram>
   <diagram id="plataforma-3-contas-c-workload" name="Workload · pedidos">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
-        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="475"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="474"
         math="0" shadow="0" background="#FFFFFF">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
         <mxCell id="titulo" value="Workload · pedidos" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="30" width="217" height="27" as="geometry"/>
+          <mxGeometry x="32" y="28" width="217" height="27" as="geometry"/>
         </mxCell>
         <mxCell id="subtitulo" value="Vista de detalhe · Plataforma de eventos · três contas" style="text;html=1;fontSize=12;fontColor=#5A6C86;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="57" width="403" height="17" as="geometry"/>
+          <mxGeometry x="32" y="55" width="403" height="17" as="geometry"/>
         </mxCell>
         <mxCell id="c-workload" value="Workload · pedidos" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="44" y="89" width="433" height="245" as="geometry"/>
+          <mxGeometry x="44" y="88" width="433" height="245" as="geometry"/>
         </mxCell>
         <mxCell id="vpc-app" value="VPC de aplicação" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontFamily=Arial,Helvetica;" vertex="1" parent="c-workload">
           <mxGeometry x="8" y="40" width="417" height="197" as="geometry"/>
@@ -181,7 +181,7 @@
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="notas" value="Sai desta conta: atracamento VPC → Network · shared&lt;br&gt;Sai desta conta: PutEvents cross-account → Data · analytics" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#B7791F;fontColor=#6B4E00;fontFamily=Arial,Helvetica;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="32" y="389" width="836" height="54" as="geometry"/>
+          <mxGeometry x="32" y="388" width="836" height="54" as="geometry"/>
         </mxCell>
         <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;plataforma-3-contas-c-workload&quot;,&quot;titulo&quot;:&quot;Workload · pedidos&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Plataforma de eventos · três contas&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-workload&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;222222222222&quot;,&quot;ou&quot;:&quot;Workloads&quot;,&quot;rotulo&quot;:&quot;Workload · pedidos&quot;},{&quot;id&quot;:&quot;vpc-app&quot;,&quot;tipo&quot;:&quot;vpc&quot;,&quot;rotulo&quot;:&quot;VPC de aplicação&quot;,&quot;cidr&quot;:&quot;10.1.0.0/16&quot;,&quot;dentro&quot;:&quot;c-workload&quot;},{&quot;id&quot;:&quot;sub-pub&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Public subnet&quot;,&quot;acesso&quot;:&quot;publica&quot;,&quot;dentro&quot;:&quot;vpc-app&quot;},{&quot;id&quot;:&quot;alb&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;application load balancer&quot;,&quot;rotulo&quot;:&quot;ALB&quot;,&quot;dentro&quot;:&quot;sub-pub&quot;},{&quot;id&quot;:&quot;sub-priv&quot;,&quot;tipo&quot;:&quot;subnet&quot;,&quot;rotulo&quot;:&quot;Private subnet&quot;,&quot;acesso&quot;:&quot;privada&quot;,&quot;dentro&quot;:&quot;vpc-app&quot;},{&quot;id&quot;:&quot;ecs&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;ecs&quot;,&quot;rotulo&quot;:&quot;ECS · pedidos&quot;,&quot;dentro&quot;:&quot;sub-priv&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;alb&quot;,&quot;para&quot;:&quot;ecs&quot;,&quot;rotulo&quot;:&quot;encaminha&quot;,&quot;ordem&quot;:2}],&quot;faixas&quot;:[],&quot;notas&quot;:[{&quot;texto&quot;:&quot;Sai desta conta: atracamento VPC → Network · shared&quot;,&quot;origem&quot;:&quot;legenda&quot;},{&quot;texto&quot;:&quot;Sai desta conta: PutEvents cross-account → Data · analytics&quot;,&quot;origem&quot;:&quot;legenda&quot;}]}" panlabsTema="{&quot;id&quot;:&quot;claro&quot;,&quot;fundo&quot;:&quot;claro&quot;,&quot;tokens&quot;:{&quot;pagina&quot;:{&quot;cor&quot;:&quot;#FFFFFF&quot;,&quot;margem&quot;:32},&quot;grupo&quot;:{&quot;tingimento&quot;:&quot;derivado&quot;},&quot;tinta&quot;:{&quot;forte&quot;:&quot;#232F3E&quot;,&quot;fraca&quot;:&quot;#5A6C86&quot;,&quot;halo&quot;:&quot;#FFFFFF&quot;},&quot;texto&quot;:{&quot;familia&quot;:&quot;Arial,Helvetica&quot;,&quot;rotulo&quot;:12,&quot;grupo&quot;:12,&quot;aresta&quot;:10,&quot;titulo&quot;:19,&quot;subtitulo&quot;:12,&quot;qualificador&quot;:false},&quot;aresta&quot;:{&quot;cor&quot;:&quot;#232F3E&quot;,&quot;espessura&quot;:1.6,&quot;ponta&quot;:&quot;blockThin&quot;,&quot;cantos&quot;:12,&quot;saltos&quot;:&quot;arc&quot;,&quot;fluxo&quot;:&quot;solido&quot;},&quot;folga&quot;:{&quot;base&quot;:8,&quot;densidade&quot;:1},&quot;nota&quot;:{&quot;fundo&quot;:&quot;#FFF8E1&quot;,&quot;borda&quot;:&quot;#B7791F&quot;,&quot;tinta&quot;:&quot;#6B4E00&quot;},&quot;bloco&quot;:{&quot;fundo&quot;:&quot;#FFFFFF&quot;,&quot;borda&quot;:&quot;#232F3E&quot;,&quot;cantos&quot;:12},&quot;cartao&quot;:{&quot;revisao&quot;:null},&quot;fundo&quot;:&quot;claro&quot;}}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
@@ -193,19 +193,19 @@
   </diagram>
   <diagram id="plataforma-3-contas-c-dados" name="Data · analytics">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
-        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="363"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="362"
         math="0" shadow="0" background="#FFFFFF">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
         <mxCell id="titulo" value="Data · analytics" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="30" width="195" height="27" as="geometry"/>
+          <mxGeometry x="32" y="28" width="195" height="27" as="geometry"/>
         </mxCell>
         <mxCell id="subtitulo" value="Vista de detalhe · Plataforma de eventos · três contas" style="text;html=1;fontSize=12;fontColor=#5A6C86;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="32" y="57" width="403" height="17" as="geometry"/>
+          <mxGeometry x="32" y="55" width="403" height="17" as="geometry"/>
         </mxCell>
         <mxCell id="c-dados" value="Data · analytics" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_account;strokeColor=#E7157B;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="44" y="89" width="444" height="149" as="geometry"/>
+          <mxGeometry x="44" y="88" width="444" height="149" as="geometry"/>
         </mxCell>
         <mxCell id="s3" value="Data lake" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#7AA116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fontFamily=Arial,Helvetica;" vertex="1" parent="c-dados">
           <mxGeometry x="358" y="40" width="78" height="78" as="geometry"/>
@@ -223,7 +223,7 @@
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="notas" value="Entra nesta conta: PutEvents cross-account ← Workload · pedidos" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#B7791F;fontColor=#6B4E00;fontFamily=Arial,Helvetica;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
-          <mxGeometry x="32" y="293" width="836" height="38" as="geometry"/>
+          <mxGeometry x="32" y="292" width="836" height="38" as="geometry"/>
         </mxCell>
         <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;plataforma-3-contas-c-dados&quot;,&quot;titulo&quot;:&quot;Data · analytics&quot;,&quot;subtitulo&quot;:&quot;Vista de detalhe · Plataforma de eventos · três contas&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T5&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;c-dados&quot;,&quot;tipo&quot;:&quot;conta&quot;,&quot;conta&quot;:&quot;333333333333&quot;,&quot;ou&quot;:&quot;Workloads&quot;,&quot;rotulo&quot;:&quot;Data · analytics&quot;},{&quot;id&quot;:&quot;bus&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;eventbridge&quot;,&quot;rotulo&quot;:&quot;Event bus&quot;,&quot;dentro&quot;:&quot;c-dados&quot;},{&quot;id&quot;:&quot;s3&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;s3&quot;,&quot;rotulo&quot;:&quot;Data lake&quot;,&quot;dentro&quot;:&quot;c-dados&quot;},{&quot;id&quot;:&quot;glue&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;glue&quot;,&quot;rotulo&quot;:&quot;Glue ETL&quot;,&quot;dentro&quot;:&quot;c-dados&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;bus&quot;,&quot;para&quot;:&quot;glue&quot;,&quot;rotulo&quot;:&quot;dispara&quot;,&quot;ordem&quot;:5},{&quot;de&quot;:&quot;glue&quot;,&quot;para&quot;:&quot;s3&quot;,&quot;rotulo&quot;:&quot;grava parquet&quot;,&quot;ordem&quot;:6}],&quot;faixas&quot;:[],&quot;notas&quot;:[{&quot;texto&quot;:&quot;Entra nesta conta: PutEvents cross-account ← Workload · pedidos&quot;,&quot;origem&quot;:&quot;legenda&quot;}]}" panlabsTema="{&quot;id&quot;:&quot;claro&quot;,&quot;fundo&quot;:&quot;claro&quot;,&quot;tokens&quot;:{&quot;pagina&quot;:{&quot;cor&quot;:&quot;#FFFFFF&quot;,&quot;margem&quot;:32},&quot;grupo&quot;:{&quot;tingimento&quot;:&quot;derivado&quot;},&quot;tinta&quot;:{&quot;forte&quot;:&quot;#232F3E&quot;,&quot;fraca&quot;:&quot;#5A6C86&quot;,&quot;halo&quot;:&quot;#FFFFFF&quot;},&quot;texto&quot;:{&quot;familia&quot;:&quot;Arial,Helvetica&quot;,&quot;rotulo&quot;:12,&quot;grupo&quot;:12,&quot;aresta&quot;:10,&quot;titulo&quot;:19,&quot;subtitulo&quot;:12,&quot;qualificador&quot;:false},&quot;aresta&quot;:{&quot;cor&quot;:&quot;#232F3E&quot;,&quot;espessura&quot;:1.6,&quot;ponta&quot;:&quot;blockThin&quot;,&quot;cantos&quot;:12,&quot;saltos&quot;:&quot;arc&quot;,&quot;fluxo&quot;:&quot;solido&quot;},&quot;folga&quot;:{&quot;base&quot;:8,&quot;densidade&quot;:1},&quot;nota&quot;:{&quot;fundo&quot;:&quot;#FFF8E1&quot;,&quot;borda&quot;:&quot;#B7791F&quot;,&quot;tinta&quot;:&quot;#6B4E00&quot;},&quot;bloco&quot;:{&quot;fundo&quot;:&quot;#FFFFFF&quot;,&quot;borda&quot;:&quot;#232F3E&quot;,&quot;cantos&quot;:12},&quot;cartao&quot;:{&quot;revisao&quot;:null},&quot;fundo&quot;:&quot;claro&quot;}}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">

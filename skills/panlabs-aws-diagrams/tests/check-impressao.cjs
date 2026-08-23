@@ -33,7 +33,8 @@ const { elaborar } = require('../sessao/elaborar.cjs');
 const { desenhar } = require('../sessao/desenhar.cjs');
 
 const RAIZ = path.join(__dirname, '..');
-const DRAWIO = process.argv[2] || path.join(process.env.HOME, '.local/opt/drawio/squashfs-root/AppRun');
+const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
+const DRAWIO = binario(process.argv[2]);
 
 // ------------------------------------------------------------- as edicoes
 
@@ -130,7 +131,7 @@ async function main() {
   const base = (await desenhar(tecnico, 'tecnica')).xml;
 
   const temApp = fs.existsSync(DRAWIO);
-  const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'q14-imp-'));
+  const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'impressao-'));
 
   const selos = ESQUEMAS.map(e => e.selar(base));
   const linhas = [];

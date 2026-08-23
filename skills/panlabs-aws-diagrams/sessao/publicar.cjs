@@ -60,28 +60,39 @@
  * que só existia na conversa, não.**
  */
 
-const { esc, conferirXml, limparGremlins } = require('../motor/emitir.cjs');
-const { lerPaginas, ID_SELO } = require('./impressao.cjs');
+const { reescreverSelos } = require('./impressao.cjs');
 
 const ESQUEMA_PUBLICADO = 'panlabs-aws-diagrams/publicado@1';
 
-const RE_SELO_G = /[ \t]*<object id="panlabs-modelo"[\s\S]*?<\/object>\n?/g;
-
-/** Os campos que a régua manda embora, para a checagem poder citar a mesma lista. */
+/**
+ * A RÉGUA, EM DADOS — uma lista só, e é dela que saem as três coisas que
+ * precisam concordar: o que a poda tira, o que o aviso conta, e o que a checagem
+ * planta.
+ *
+ * Escrever a régua três vezes é o erro que este arquivo cometeu na primeira
+ * versão e que a revisão pegou: a poda tirava `compra` e `difereEm`, o contador
+ * não olhava para eles, e uma sessão cuja única deliberação fosse `compra` era
+ * podada enquanto o CLI dizia *"nada — o arquivo já não trazia deliberação"*.
+ * Com a lista aqui, divergir exige mexer nos três de uma vez.
+ *
+ * `onde` é o caminho no dossiê; `campos` é o que sai de cada item; `filtro`
+ * (quando existe) diz quais ITENS somem inteiros.
+ */
 const DELIBERACAO = [
-  'dossie.candidatas[estado=descartada]',
-  'dossie.candidatas[].porque',
-  'dossie.candidatas[].paga',
-  'dossie.candidatas[].compra',
-  'dossie.candidatas[].escolhaSe',
-  'dossie.candidatas[].erradaSe',
-  'dossie.candidatas[].difereEm',
-  'dossie.achados[].nota',
-  'dossie.estacionamento',
-  'dossie.fatos[].de',
-  'dossie.acordo.por',
-  'dossie.acordo.recorte',
+  { onde: 'candidatas', filtro: c => c.estado === 'descartada',
+    campos: ['porque', 'paga', 'compra', 'escolhaSe', 'erradaSe', 'difereEm'],
+    porque: 'as candidatas descartadas somem; da escolhida sobra o que descreve o desenho' },
+  { onde: 'achados', campos: ['nota'],
+    porque: 'o QUE foi achado é técnico; o texto costuma citar a conversa' },
+  { onde: 'estacionamento', filtro: () => true, campos: ['nota'],
+    porque: 'é fala de pessoa em reunião, com aspas' },
+  { onde: 'fatos', campos: ['de'],
+    porque: 'a citação sai; o fato fica, é premissa da arquitetura' },
+  { onde: 'acordo', campos: ['por', 'recorte'],
+    porque: 'nome de pessoa, e a deliberação da fase lógica' },
 ];
+
+const listaDe = (d, onde) => (Array.isArray(d[onde]) ? d[onde] : d[onde] ? [d[onde]] : []);
 
 /** A sessão sem a deliberação. Função pura: devolve outra, não muta a de dentro. */
 function podar(sessao) {
@@ -89,37 +100,33 @@ function podar(sessao) {
   const d = s.dossie;
   if (!d) return s;
 
-  if (Array.isArray(d.candidatas))
-    d.candidatas = d.candidatas
-      .filter(c => c.estado === 'escolhida')
-      .map(({ id, nome, tupla, estado }) => ({ id, nome, tupla, estado }));
-
-  if (Array.isArray(d.achados))
-    d.achados = d.achados.map(({ regra, alvo, estado, viaNota, em }) => {
-      const a = { regra, estado };
-      if (alvo !== undefined) a.alvo = alvo;
-      // `viaNota` fica: é o elo que prova que a recusa chegou ao desenho, e ele
-      // aponta para uma nota que o leitor já vê na página.
-      if (viaNota !== undefined) a.viaNota = viaNota;
-      if (em !== undefined) a.em = em;
-      return a;
-    });
-
-  delete d.estacionamento;
-
-  if (Array.isArray(d.fatos))
-    d.fatos = d.fatos.map(({ fato, procedencia, confirmado }) => {
-      const f = { fato, procedencia };
-      if (confirmado !== undefined) f.confirmado = confirmado;
-      return f;
-    });
-
-  if (d.acordo) {
-    const { vista, impressao, em } = d.acordo;
-    d.acordo = { vista, impressao };
-    if (em !== undefined) d.acordo.em = em;
+  for (const r of DELIBERACAO) {
+    if (d[r.onde] === undefined) continue;
+    const ehLista = Array.isArray(d[r.onde]);
+    let itens = listaDe(d, r.onde);
+    if (r.filtro) itens = itens.filter(x => !r.filtro(x));
+    // `estacionamento` some inteiro: o filtro dele casa com todo item
+    if (r.filtro && !itens.length && ehLista && r.onde === 'estacionamento') { delete d[r.onde]; continue; }
+    for (const it of itens) for (const c of r.campos) delete it[c];
+    d[r.onde] = ehLista ? itens : itens[0];
   }
   return s;
+}
+
+/** Quantos itens de deliberação uma sessão ainda carrega. Mesma lista da poda. */
+function contarDeliberacao(sessao) {
+  const d = (sessao && sessao.dossie) || {};
+  let n = 0;
+  for (const r of DELIBERACAO) {
+    for (const it of listaDe(d, r.onde)) {
+      // um item que a régua manda embora INTEIRO conta uma vez, e não outra por
+      // cada campo dentro dele — senão uma candidata descartada com `porque`
+      // aparecia como dois itens
+      if (r.filtro && r.filtro(it)) { n += 1; continue; }
+      if (r.campos.some(c => it[c] !== undefined)) n += 1;
+    }
+  }
+  return n;
 }
 
 /**
@@ -130,49 +137,29 @@ function podar(sessao) {
  * está vendo é o que saiu daqui. Tirá-las não protegeria nada e tiraria a única
  * garantia que a cópia ainda pode dar.
  */
-function publicar(xml, opts = {}) {
-  const { paginas } = lerPaginas(xml);
-  if (!paginas.length) throw new Error('publicar recebeu um XML sem pagina nenhuma');
+const PORQUE_PADRAO =
+  'copia publicada: a deliberacao da sessao (candidatas descartadas, motivo das recusas, ' +
+  'estacionamento, quem aprovou) foi podada. Retome a partir do arquivo de trabalho.';
 
-  const semSelo = paginas.filter(p => !p.selo || !p.selo.panlabsSessao);
-  if (semSelo.length === paginas.length)
-    throw new Error('nenhuma pagina traz selo de sessao — nao ha dossie para podar');
-
-  let i = 0;
-  const saida = xml.replace(RE_SELO_G, () => {
-    const p = paginas[i] || paginas[paginas.length - 1];
-    i += 1;
+function publicar(xml) {
+  const r = reescreverSelos(xml, p => {
     const selo = p.selo || {};
     let sessao = null;
     try { sessao = JSON.parse(selo.panlabsSessao); } catch (e) { sessao = null; }
-    const novo = {
+    return {
       panlabsEsquema: ESQUEMA_PUBLICADO,
       panlabsVista: selo.panlabsVista,
       panlabsSemantica: selo.panlabsSemantica,
       panlabsAparencia: selo.panlabsAparencia,
       panlabsMotor: selo.panlabsMotor,
       panlabsRetomavel: 'nao',
-      panlabsPorque: opts.porque ||
-        'copia publicada: a deliberacao da sessao (candidatas descartadas, motivo das recusas, ' +
-        'estacionamento, quem aprovou) foi podada. Retome a partir do arquivo de trabalho.',
+      panlabsPorque: PORQUE_PADRAO,
       panlabsSessao: sessao ? JSON.stringify(podar(sessao)) : '',
     };
-    const attrs = Object.entries(novo)
-      .filter(([, v]) => v !== undefined && v !== null)
-      .map(([k, v]) => `${k}="${esc(limparGremlins(v))}"`).join(' ');
-    return `        <object id="${ID_SELO}" label="" ${attrs}>\n` +
-      `          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">\n` +
-      `            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>\n` +
-      `          </mxCell>\n` +
-      `        </object>\n`;
   });
-
-  if (i !== paginas.length)
-    throw new Error(`o XML tem ${paginas.length} pagina(s) mas ${i} selo(s) — alguma pagina ficou sem podar`);
-
-  const erros = conferirXml(saida);
-  if (erros.length) { const e = new Error('a poda produziu XML mal formado'); e.erros = erros; throw e; }
-  return saida;
+  if (r.paginas.every(p => !p.selo || !p.selo.panlabsSessao))
+    throw new Error('nenhuma pagina traz selo de sessao — nao ha dossie para podar');
+  return r.xml;
 }
 
 /**
@@ -181,23 +168,18 @@ function publicar(xml, opts = {}) {
  * deliberação é este módulo — a régua mora num lugar só.
  */
 function avisoDeDossie(sessao) {
-  const d = (sessao && sessao.dossie) || {};
   /**
-   * Conta DELIBERAÇÃO PRESENTE, não "existe um achado recusado".
+   * Conta DELIBERAÇÃO PRESENTE, pela MESMA lista que a poda usa.
    *
-   * A diferença importa e a checagem pegou: a cópia podada guarda que um achado
-   * foi recusado — é fato técnico, e a nota dele já está no desenho — mas não
-   * guarda o motivo. Contar por estado faria a cópia publicada avisar sobre uma
-   * deliberação que ela não carrega mais, que é o aviso mentindo.
+   * Duas armadilhas que a revisão do #23 pegou, e as duas eram o mesmo erro —
+   * a régua escrita duas vezes:
+   *
+   *   · contar por ESTADO fazia a cópia podada avisar sobre deliberação que ela
+   *     já não carrega (ela guarda que um achado foi recusado — fato técnico —
+   *     mas não o motivo);
+   *   · contar por estado E por campo somava a mesma candidata duas vezes.
    */
-  const quantos =
-    (d.candidatas || []).filter(c => c.estado === 'descartada').length +
-    (d.candidatas || []).filter(c => c.porque || c.paga || c.erradaSe || c.escolhaSe).length +
-    (d.achados || []).filter(a => a.nota).length +
-    (d.estacionamento || []).length +
-    (d.fatos || []).filter(f => f.de).length +
-    (d.acordo && d.acordo.por ? 1 : 0) +
-    (d.acordo && d.acordo.recorte ? 1 : 0);
+  const quantos = contarDeliberacao(sessao);
   if (!quantos) return null;
   return `este arquivo carrega ${quantos} item(ns) de deliberacao no selo — candidata descartada, ` +
     'recusa com motivo, estacionamento ou quem aprovou. Legiveis em Extras > Editar diagrama. ' +
@@ -209,32 +191,44 @@ function avisoDeDossie(sessao) {
 function main() {
   const fs = require('fs');
   const path = require('path');
+  // ⚠️ `--saida x.drawio y.drawio` — o valor de uma flag NÃO é a entrada. A
+  // primeira versão usava `args.find(a => !a.startsWith('--'))` e, com a flag
+  // na frente, publicava o arquivo de SAÍDA.
   const args = process.argv.slice(2);
-  const entrada = args.find(a => !a.startsWith('--'));
+  const iSaida = args.indexOf('--saida');
+  if (iSaida >= 0 && args[iSaida + 1] === undefined) {
+    console.error('--saida precisa de um caminho');
+    process.exit(2);
+  }
+  const entrada = args.find((a, i) => !a.startsWith('--') && i !== iSaida + 1);
   if (!entrada) {
     console.error('uso: node sessao/publicar.cjs <trabalho.drawio> [--saida <copia>.drawio]');
     console.error('  Produz a copia que CIRCULA: sem candidatas descartadas, sem o motivo das');
     console.error('  recusas, sem estacionamento e sem quem aprovou. Ela NAO retoma a sessao.');
     process.exit(2);
   }
-  const i = args.indexOf('--saida');
-  const saida = i >= 0 ? args[i + 1] : entrada.replace(/\.drawio$/, '') + '.publicado.drawio';
+  const saida = iSaida >= 0 ? args[iSaida + 1] : entrada.replace(/\.drawio$/, '') + '.publicado.drawio';
   const xml = fs.readFileSync(entrada, 'utf8');
   let copia;
   try { copia = publicar(xml); }
   catch (e) { console.error(`\n✗ ${e.message}`); for (const l of e.erros || []) console.error(`    · ${l}`); process.exit(1); }
 
   let sessao = null;
-  try { sessao = JSON.parse(lerPaginas(xml).paginas[0].selo.panlabsSessao); } catch (e) { /* sem selo legivel */ }
-  const antes = sessao ? avisoDeDossie(sessao) : null;
+  try {
+    sessao = JSON.parse(require('./impressao.cjs').lerPaginas(xml).paginas[0].selo.panlabsSessao);
+  } catch (e) { /* sem selo legivel */ }
+  const antes = sessao ? contarDeliberacao(sessao) : 0;
 
   fs.mkdirSync(path.dirname(path.resolve(saida)), { recursive: true });
   fs.writeFileSync(saida, copia);
   console.log(`  → ${saida}  (${copia.length} bytes, era ${xml.length})`);
-  console.log(`  podado: ${antes ? antes.replace(/\. Para mandar.*/, '') : 'nada — o arquivo ja nao trazia deliberacao'}`);
+  console.log(antes
+    ? `  podado: ${antes} item(ns) de deliberacao — ` +
+      DELIBERACAO.map(r => r.onde).join(', ')
+    : '  podado: nada — o arquivo ja nao trazia deliberacao');
   console.log('  esta copia NAO retoma a sessao. Guarde o arquivo de trabalho.');
 }
 
 if (require.main === module) main();
 
-module.exports = { publicar, podar, avisoDeDossie, ESQUEMA_PUBLICADO, DELIBERACAO };
+module.exports = { publicar, podar, avisoDeDossie, contarDeliberacao, ESQUEMA_PUBLICADO, DELIBERACAO };

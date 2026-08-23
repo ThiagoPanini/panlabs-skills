@@ -26,7 +26,7 @@ const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
 const temaMod = require(path.join(RAIZ, 'tema', 'tema.cjs'));
-const { razao } = require(path.join(RAIZ, 'motor', 'contraste.cjs'));
+const { razao, limiarDeTexto } = require(path.join(RAIZ, 'motor', 'contraste.cjs'));
 
 let falhas = 0;
 const ok = (cond, titulo, detalhe) => {
@@ -73,30 +73,54 @@ for (const [nome, literal] of Object.entries(LITERAIS)) {
         : `${Object.keys(a).length} chaves idênticas` + (novas.length ? ` + ${novas.join(', ')}` : ''));
 }
 
-console.log('\n2 · o mapeamento token → literal, explícito\n');
+console.log('\n2 · o mapeamento token → literal, uma asserção por linha\n');
 const t = claro.tokens;
-for (const [token, valor, onde] of [
-  ['tinta.forte', t.tinta.forte, 'S_OU fontColor'],
-  ['tinta.fraca', t.tinta.fraca, 'S_HABILITA strokeColor'],
-  ['tinta.halo', t.tinta.halo, 'S_STUB labelBackgroundColor'],
-  ['aresta.cor', t.aresta.cor, 'S_BARRAMENTO/S_STUB strokeColor'],
-  ['aresta.espessura', t.aresta.espessura, 'S_BARRAMENTO/S_STUB strokeWidth'],
-  ['aresta.ponta', t.aresta.ponta, 'S_STUB endArrow'],
-  ['texto.aresta', t.texto.aresta, 'S_STUB fontSize'],
-  ['texto.grupo + 1', t.texto.grupo + 1, 'S_OU fontSize'],
-]) console.log(`  · ${String(token).padEnd(18)} ${String(valor).padEnd(10)} ${onde}`);
+/**
+ * ⚠️ ISTO ERA UM `console.log` E SÓ — uma seção numerada que não sabia falhar,
+ * pega na revisão do #23. Ela imprimia os valores dos tokens e chamava aquilo de
+ * prova; o que ela precisa afirmar é que **o valor do token é o valor que o #12
+ * escreveu à mão**, e isso é uma comparação.
+ */
+for (const [token, valor, estilo, chave] of [
+  ['tinta.forte', t.tinta.forte, 'ou', 'fontColor'],
+  ['tinta.fraca', t.tinta.fraca, 'habilitador', 'strokeColor'],
+  ['tinta.halo', t.tinta.halo, 'stub', 'labelBackgroundColor'],
+  ['aresta.cor', t.aresta.cor, 'barramento', 'strokeColor'],
+  ['aresta.espessura', t.aresta.espessura, 'barramento', 'strokeWidth'],
+  ['aresta.ponta', t.aresta.ponta, 'stub', 'endArrow'],
+  ['texto.aresta', t.texto.aresta, 'stub', 'fontSize'],
+  ['texto.grupo + 1', t.texto.grupo + 1, 'ou', 'fontSize'],
+]) {
+  const noLiteral = chaves(LITERAIS[estilo])[chave];
+  ok(String(valor) === String(noLiteral), `${String(token).padEnd(18)} → S_${estilo.toUpperCase()}.${chave}`,
+    `token ${valor} · literal do #12 ${noLiteral}`);
+}
 
 console.log('\n3 · e no deck escuro os quatro passam no contraste — o que a troca comprou\n');
 const escuro = temaMod.carregar('escuro');
 const fundo = escuro.tokens.pagina.cor;
+/**
+ * QUAIS dos quatro o literal do #12 teria QUEBRADO no escuro — e o número está
+ * escrito porque o valor da troca é ele.
+ *
+ * `habilitador` é o que NÃO quebraria: `#5A6C86` dá 3,18:1, um triz acima do
+ * piso de grafismo. Deixar isso implícito faria a seção vender a troca melhor do
+ * que ela é; a asserção abaixo cobra os três E cobra que o quarto passe, para
+ * que o dia em que a paleta mudar apareça aqui em vez de sumir.
+ */
+const QUEBRARIAM = new Set(['ou', 'barramento', 'stub']);
 for (const nome of Object.keys(LITERAIS)) {
   const antes = chaves(LITERAIS[nome]).strokeColor || chaves(LITERAIS[nome]).fontColor;
   const depois = (k => k.strokeColor || k.fontColor)(chaves(escuro[nome]()));
   const rAntes = razao(antes, fundo), rDepois = razao(depois, fundo);
-  const piso = nome === 'ou' ? 4.5 : 3.0;   // rótulo é texto (1.4.3), traço é grafismo (1.4.11)
-  ok(rDepois >= piso, `${nome} no escuro`,
-    `literal do #12 ${antes} = ${rAntes.toFixed(2)}:1 (${rAntes >= piso ? 'passaria' : 'REPROVA'}) · ` +
-    `token ${depois} = ${rDepois.toFixed(2)}:1 (piso ${piso}:1)`);
+  // rótulo é texto (WCAG 1.4.3) e traço é grafismo (1.4.11) — o piso do texto sai
+  // de `limiarDeTexto`, que já conhece o corte de 24px/18,5px em negrito
+  const piso = nome === 'ou' ? limiarDeTexto(escuro.ou()) : 3.0;
+  ok(rDepois >= piso, `${nome} no escuro passa por token`,
+    `${depois} = ${rDepois.toFixed(2)}:1 (piso ${piso}:1)`);
+  ok((rAntes < piso) === QUEBRARIAM.has(nome),
+    `e o literal do #12 ${QUEBRARIAM.has(nome) ? 'QUEBRARIA' : 'passaria'} — como esperado`,
+    `${antes} = ${rAntes.toFixed(2)}:1`);
 }
 
 console.log(falhas

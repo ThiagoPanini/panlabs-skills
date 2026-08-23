@@ -40,8 +40,9 @@ async function main() {
   const modelos = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).sort();
 
   console.log('\n  o mesmo modelo nos dois motores — laudo do validador do #18\n');
-  console.log('  ' + 'modelo'.padEnd(30) + 'antes'.padEnd(26) + 'depois');
-  console.log('  ' + '─'.repeat(84));
+  const L = comBytes ? 32 : 26;
+  console.log('  ' + 'modelo'.padEnd(30) + 'antes'.padEnd(L) + 'depois');
+  console.log('  ' + '─'.repeat(30 + 2 * L));
 
   let mudouSemantica = 0, mudouFalha = 0, naoGerou = 0;
   for (const arq of modelos) {

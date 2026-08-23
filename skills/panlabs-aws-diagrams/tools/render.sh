@@ -19,6 +19,7 @@ set -uo pipefail
 ENTRADA="$1"
 SAIDA="$2"
 FORMATO="${3:-png}"
+# o caminho tem UM dono: `tools/drawio.cjs`. Aqui só a mesma ordem de resolução.
 DRAWIO="${DRAWIO:-$HOME/.local/opt/drawio/squashfs-root/drawio}"
 LIMITE="${LIMITE:-40}"
 

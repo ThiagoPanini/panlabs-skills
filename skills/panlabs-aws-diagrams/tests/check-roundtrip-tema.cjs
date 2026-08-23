@@ -46,7 +46,8 @@ function exportarXml(origem, destino, perfil) {
 }
 
 const RAIZ = path.join(__dirname, '..');
-const DRAWIO = process.argv[2] || path.join(os.homedir(), '.local/opt/drawio/squashfs-root/drawio');
+const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
+const DRAWIO = binario(process.argv[2]);
 
 const ENTIDADES = { '&quot;': '"', '&#39;': "'", '&lt;': '<', '&gt;': '>', '&#xa;': '\n', '&#x9;': '\t', '&#xd;': '\r', '&amp;': '&' };
 const desescapar = s => String(s).replace(/&(?:quot|#39|lt|gt|#xa|#x9|#xd|amp);/g, e => ENTIDADES[e]);

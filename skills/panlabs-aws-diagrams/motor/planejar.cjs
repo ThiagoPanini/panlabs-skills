@@ -13,16 +13,37 @@
 const { AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, calhaDaFaixa, folgas } = require('./dispor.cjs');
 
 /**
+ * A altura de uma linha do bloco de título, em função do corpo dela.
+ *
+ * ⚠️ UM FATOR SÓ, e ele estava escrito duas vezes com valores diferentes — 1,5
+ * em `moldura` e 1,4 em `cabecalho`, pegos na revisão do #23. A reserva e o
+ * consumo têm de sair da mesma conta, senão o topo da página é 1 px maior ou
+ * menor que o bloco que mora nele, e a diferença cresce com a densidade do tema.
+ *
+ * 1,4 é entrelinha tipográfica comum e é o que o `resolver.cjs` já usa para a
+ * folha (17 px a 12 pt ≈ 1,42).
+ */
+const LINHA = px => Math.round(px * 1.4);
+
+/**
  * A margem da página é token (`pagina.margem`, default 32 = 4 degraus da grade
  * base). O topo é a margem mais a altura do bloco de título, que cresce com o
  * corpo do título e com a linha de revisão do `O24` — por isso é calculado, e
  * não uma constante como no #11.
+ *
+ * ⚠️ A linha de SUBTÍTULO é reservada SEMPRE, e isso é decisão, não descuido —
+ * a versão anterior escrevia `texto.subtitulo ? … : 0`, que testa um CORPO DE
+ * FONTE (12 nos quatro temas) e portanto nunca era falso: parecia condicional e
+ * era constante. O que ela queria testar — *este modelo tem subtítulo?* — não
+ * cabe aqui, porque `moldura` é do TEMA e o `mo.topo` é a origem de todo o
+ * conteúdo da página; fazê-lo variar por modelo faria dois diagramas do mesmo
+ * tema terem origens diferentes sem que o tema tivesse mudado. Reservar sempre
+ * custa uma linha de margem num diagrama sem subtítulo; os 15 do corpus têm.
  */
 function moldura(res) {
   const t = res.tema;
   const m = t.tokens.pagina.margem;
-  const alturaTitulo = Math.round(t.tokens.texto.titulo * 1.4) +
-    (t.tokens.texto.subtitulo ? Math.round(t.tokens.texto.subtitulo * 1.5) : 0) +
+  const alturaTitulo = LINHA(t.tokens.texto.titulo) + LINHA(t.tokens.texto.subtitulo) +
     (t.tokens.cartao.revisao ? Math.round(t.tokens.texto.subtitulo * 1.3) : 0);
   return { x: m, topo: m + alturaTitulo, rodape: m };
 }
@@ -89,8 +110,17 @@ function cabecalho(plano, modelo, res) {
   const p = pintura(res);
   const mo = moldura(res);
   const larg = (texto, px) => Math.ceil(res.larguraDoTexto(texto) * px / 11) + 8;
-  let y = Math.round(mo.x * 0.94);
-  const alt = px => Math.round(px * 1.4);
+  /**
+   * O bloco de título começa um pouco ACIMA da margem lateral, e o fator sai de
+   * uma assimetria real: a margem lateral é medida até a BORDA do primeiro
+   * container, e a de cima até o topo da CAIXA DE TEXTO do título — que já traz
+   * ar interno, porque o glifo não encosta no topo dela. `LINHA(px)` reserva
+   * 1,4× o corpo para um texto cuja altura de glifo é ≈0,7×, então metade do
+   * excesso fica em cima. Descontar isso é o que faz a margem óptica de cima
+   * bater com a lateral em vez de parecer maior.
+   */
+  let y = mo.x - Math.round((LINHA(p.ptTitulo) - p.ptTitulo) / 2);
+  const alt = LINHA;
   plano.celulas.push({
     tipo: 'vertice', id: 'titulo', pai: '1', rotulo: modelo.titulo, style: p.titulo,
     geo: { x: mo.x, y, w: larg(modelo.titulo, p.ptTitulo), h: alt(p.ptTitulo) },

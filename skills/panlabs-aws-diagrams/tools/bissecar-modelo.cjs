@@ -37,7 +37,8 @@ function podar(modelo, ids) {
   };
 }
 
-const DRAWIO = process.env.DRAWIO || path.join(process.env.HOME || '', '.local/opt/drawio/squashfs-root/drawio');
+const { binario } = require('./drawio.cjs');
+const DRAWIO = binario(process.argv[3]);
 const TEM_APP = fs.existsSync(DRAWIO) && fs.existsSync(RENDER);
 
 async function testar(nome, modelo) {

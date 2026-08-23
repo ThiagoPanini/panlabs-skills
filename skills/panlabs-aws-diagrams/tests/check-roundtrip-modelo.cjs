@@ -23,7 +23,8 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const RAIZ = path.join(__dirname, '..');
-const DRAWIO = process.argv[2] || path.join(process.env.HOME, '.local/opt/drawio/squashfs-root/drawio');
+const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
+const DRAWIO = binario(process.argv[2]);
 const TMP = process.env.TMPDIR || '/tmp';
 
 const DESESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'" };

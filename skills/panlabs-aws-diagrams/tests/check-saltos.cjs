@@ -13,9 +13,11 @@
  *   2. ONDE ela alcança, se DISCORDA da regra de conteúdo. Se concordar, ela
  *      não acrescenta informação: é a mesma ordem por um caminho mais frágil.
  *
- * O corpus é o de rede dos três protótipos — q11, q12 e q22 —, não só os
- * modelos escritos para esta pergunta. Medir a candidata só nos exemplos que eu
- * desenhei para a candidata vencedora seria fazer a régua concordar comigo.
+ * O corpus é o de rede INTEIRO da skill, não só os modelos escritos para esta
+ * pergunta — e a contagem separa os dois grupos, porque medir a candidata só nos
+ * exemplos desenhados para a vencedora seria fazer a régua concordar comigo. A
+ * separação, que era de diretório enquanto o corpus morava nos protótipos, virou
+ * a lista `DO_22` abaixo. É a mesma linha, escrita.
  */
 
 const fs = require('fs');

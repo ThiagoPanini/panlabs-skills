@@ -46,6 +46,8 @@
  */
 
 const crypto = require('crypto');
+const path = require('path');
+const { esc, conferirXml, limparGremlins } = require(path.join(__dirname, '..', 'motor', 'emitir.cjs'));
 
 const sha = s => 'sha256:' + crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 
@@ -265,6 +267,49 @@ function impressaoDeAparencia(celulas) {
   return sha(canonicalizar(comOrdem.map(({ c, i }) => fatiaDeAparencia(c, i))));
 }
 
+/**
+ * REESCREVER O SELO DE TODA PAGINA — um lugar so, porque sao duas operacoes com
+ * a mesma mecanica e o mesmo invariante.
+ *
+ * `gravar.selar` troca a celula que o motor emitiu pelo selo da sessao;
+ * `publicar.publicar` troca o selo da sessao pelo selo podado. As duas andam
+ * pelas mesmas ocorrencias, contam as mesmas paginas e cobram a mesma igualdade
+ * no fim. Tinham a mesma regex escrita tres vezes, ao lado de um `ID_SELO`
+ * importado e nao usado: renomear a constante deixaria as duas casando com nada
+ * e a poda vira no-op silencioso ate estourar na contagem.
+ *
+ * Aqui a regex NASCE do `ID_SELO`, entao renomear quebra alto.
+ *
+ * @param {string} xml
+ * @param {(pagina, i) => object} faz  atributos do selo daquela pagina
+ * @returns {string}
+ */
+function reescreverSelos(xml, faz) {
+  const { paginas } = lerPaginas(xml);
+  if (!paginas.length) throw new Error('XML sem pagina nenhuma');
+  const re = new RegExp(`[ \\t]*<object id="${ID_SELO}"[\\s\\S]*?</object>\\n?`, 'g');
+  let i = 0;
+  const saida = xml.replace(re, () => {
+    const p = paginas[i] || paginas[paginas.length - 1];
+    const attrs = Object.entries(faz(p, i))
+      .filter(([, v]) => v !== undefined && v !== null)
+      .map(([k, v]) => `${k}="${esc(limparGremlins(v))}"`).join(' ');
+    i += 1;
+    return `        <object id="${ID_SELO}" label="" ${attrs}>\n` +
+      `          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">\n` +
+      `            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>\n` +
+      `          </mxCell>\n` +
+      `        </object>\n`;
+  });
+  if (i === 0) throw new Error(`o XML nao trouxe nenhuma celula ${ID_SELO} para trocar`);
+  if (i !== paginas.length)
+    throw new Error(`o XML tem ${paginas.length} pagina(s) mas ${i} celula(s) ${ID_SELO} — ` +
+      'alguma pagina ficou sem selo');
+  const erros = conferirXml(saida);
+  if (erros.length) { const e = new Error('a reescrita do selo produziu XML mal formado'); e.erros = erros; throw e; }
+  return { xml: saida, paginas };
+}
+
 /** A impressao que a aprovacao pendura: o recorte do acordo, canonizado. */
 const impressaoDoAcordo = recorte => sha(canonicalizar(recorte));
 
@@ -331,5 +376,5 @@ module.exports = {
   sha, canonicalizar, varrer, acharTodos, lerPaginas, desescapar,
   impressaoSemantica, impressaoDeAparencia, impressaoDoAcordo,
   fatiaSemantica, fatiaDeAparencia, diferenca, classificar, chavesDeStyle,
-  ID_SELO, PREFIXO,
+  ID_SELO, PREFIXO, reescreverSelos,
 };

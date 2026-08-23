@@ -26,8 +26,9 @@ const { execFileSync } = require('child_process');
 
 const { varrer, acharTodos } = require('../sessao/impressao.cjs');
 
-const DRAWIO = process.argv[2] || path.join(process.env.HOME, '.local/opt/drawio/squashfs-root/AppRun');
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'q14-hosp-'));
+const { binario } = require(path.join(__dirname, 'drawio.cjs'));
+const DRAWIO = binario(process.argv[2]);
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'hospedeiro-'));
 
 // Payload com as armadilhas que o #2 §7 nomeia: quebra de linha, tab, aspas,
 // `&`, `<` — tudo que a normalizacao de atributo do XML costuma comer.

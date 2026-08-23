@@ -60,7 +60,7 @@ for (const c of semFechar) falhas.push(`objeto sem additionalProperties:false em
 // 3. os modelos de exemplo
 //
 // O diretório é argumento pelo mesmo motivo que o do `check-determinismo`:
-// outro protótipo aponta os SEUS modelos para esta mesma régua. A fronteira é
+// outro corpus aponta os SEUS modelos para esta mesma régua. A fronteira é
 // propriedade do formato, não de um conjunto de exemplos — e quando o #22
 // acrescentou `camada` ao esquema, quem tinha de dizer que ela não é geometria
 // era esta checagem rodando contra os modelos que a usam.

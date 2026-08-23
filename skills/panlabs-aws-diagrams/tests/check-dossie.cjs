@@ -21,9 +21,11 @@ const RAIZ = path.join(__dirname, '..');
 const { aprovar } = require(path.join(RAIZ, 'sessao', 'acordo.cjs'));
 const { elaborar } = require(path.join(RAIZ, 'sessao', 'elaborar.cjs'));
 const { desenhar } = require(path.join(RAIZ, 'sessao', 'desenhar.cjs'));
-const { publicar, podar, avisoDeDossie } = require(path.join(RAIZ, 'sessao', 'publicar.cjs'));
+const { publicar, podar, avisoDeDossie, contarDeliberacao, DELIBERACAO } =
+  require(path.join(RAIZ, 'sessao', 'publicar.cjs'));
 const { abrir } = require(path.join(RAIZ, 'sessao', 'abrir.cjs'));
-const { lerPaginas } = require(path.join(RAIZ, 'sessao', 'impressao.cjs'));
+const { lerPaginas, impressaoSemantica, impressaoDeAparencia } =
+  require(path.join(RAIZ, 'sessao', 'impressao.cjs'));
 
 let falhas = 0;
 const ok = (cond, titulo, detalhe) => {
@@ -32,18 +34,19 @@ const ok = (cond, titulo, detalhe) => {
 };
 
 /**
- * As frases plantadas. Cada uma é a marca de UM campo, e nenhuma delas se parece
- * com texto que o motor produziria sozinho — se aparecer no XML, veio do dossiê.
+ * As frases plantadas SAEM DA PRÓPRIA RÉGUA — uma por campo que `DELIBERACAO`
+ * manda embora, mais uma por item que ela apaga inteiro.
+ *
+ * Escrevê-las à mão foi o erro da primeira versão, e a revisão pegou: a lista
+ * cobria 6 dos 12 campos, e `compra`, `paga`, `escolhaSe`, `erradaSe`,
+ * `difereEm` e `acordo.recorte` nunca eram plantados — exatamente a fresta por
+ * onde o contador e a poda tinham divergido. Derivando da régua, um campo novo
+ * na poda nasce com marca plantada no mesmo commit.
+ *
+ * Nenhuma marca se parece com texto que o motor produziria: se aparecer no XML,
+ * veio do dossiê.
  */
-const MARCAS = {
-  'candidata descartada (porque)': 'MARCA-CANDIDATA-DESCARTADA-PORQUE',
-  'candidata descartada (nome)': 'MARCA-CANDIDATA-DESCARTADA-NOME',
-  'candidata escolhida (porque)': 'MARCA-CANDIDATA-ESCOLHIDA-PORQUE',
-  'motivo da recusa de um achado': 'MARCA-ACHADO-RECUSADO-NOTA',
-  'estacionamento (fala da reuniao)': 'MARCA-ESTACIONAMENTO-FALA',
-  'procedencia de um fato (citacao)': 'MARCA-FATO-DE',
-  'quem aprovou': 'MARCA-ACORDO-POR',
-};
+const marcaDe = (onde, campo) => `MARCA-${onde}-${campo}`.toUpperCase();
 
 /** O que TEM de sobreviver — senão a poda virou censura e o arquivo não serve para nada. */
 const FICAM = {
@@ -59,24 +62,42 @@ async function main() {
   // ---------------------------------------------------------------- 1 · planta
   const semeado = JSON.parse(JSON.stringify(logico));
   const d = semeado.dossie;
-  const descartada = d.candidatas.find(c => c.estado === 'descartada');
   const escolhida = d.candidatas.find(c => c.estado === 'escolhida');
-  descartada.porque = MARCAS['candidata descartada (porque)'];
-  descartada.nome = MARCAS['candidata descartada (nome)'];
-  escolhida.porque = MARCAS['candidata escolhida (porque)'];
   escolhida.nome = FICAM['o nome da candidata escolhida'];
-  const recusado = d.achados.find(a => a.estado === 'recusado');
-  recusado.nota = MARCAS['motivo da recusa de um achado'];
   d.fatos[0].procedencia = 'inferido';
-  d.fatos[0].de = MARCAS['procedencia de um fato (citacao)'];
   d.fatos[0].fato = FICAM['o fato em si'];
   semeado.nos[0].rotulo = FICAM['o rotulo de um no do desenho'];
+  // `acordo` é escrito por `aprovar`, então a marca de quem aprovou entra por lá
+  const POR = marcaDe('acordo', 'por');
 
-  const tecnico = elaborar(aprovar(semeado, { em: '2026-08-21', por: MARCAS['quem aprovou'] }), elab);
-  // O estacionamento é plantado DEPOIS de `elaborar`: é ele quem reescreve a
-  // nota de cada entrada ao devolvê-la na fase técnica (#15 §5), e plantar antes
-  // mediria o texto do elaborador, não o do dossiê.
-  tecnico.dossie.estacionamento[0].nota = MARCAS['estacionamento (fala da reuniao)'];
+  const tecnico = elaborar(aprovar(semeado, { em: '2026-08-21', por: POR }), elab);
+
+  /**
+   * A plantação, derivada da régua. Roda DEPOIS de `elaborar` porque é ele quem
+   * reescreve a nota de cada entrada do estacionamento ao devolvê-la na fase
+   * técnica (#15 §5) — plantar antes mediria o texto do elaborador.
+   */
+  const MARCAS = {};
+  const lista = (dd, onde) => (Array.isArray(dd[onde]) ? dd[onde] : dd[onde] ? [dd[onde]] : []);
+  for (const r of DELIBERACAO) {
+    for (const it of lista(tecnico.dossie, r.onde)) {
+      for (const c of r.campos) {
+        // só planta onde o valor é texto: `recorte` e `difereEm` são estrutura,
+        // e trocá-los por string quebraria o esquema. Para esses, a marca vai
+        // DENTRO — uma chave que não existe em lugar nenhum.
+        const m = marcaDe(r.onde, c);
+        if (c === 'recorte') { if (it[c]) { it[c][m] = m; MARCAS[`${r.onde}.${c}`] = m; } continue; }
+        if (c === 'difereEm') { if (Array.isArray(it[c])) { /* enum fechado — não plantável */ } continue; }
+        it[c] = m;
+        MARCAS[`${r.onde}.${c}`] = m;
+      }
+    }
+  }
+  MARCAS['acordo.por'] = POR;
+  // e o item que some INTEIRO: uma candidata descartada, marcada no nome
+  const descartada = tecnico.dossie.candidatas.find(c => c.estado === 'descartada');
+  descartada.nome = marcaDe('candidatas', 'nome-da-descartada');
+  MARCAS['candidatas[descartada].nome'] = descartada.nome;
 
   const trabalho = (await desenhar(tecnico, 'tecnica')).xml;
   const copia = publicar(trabalho);
@@ -86,9 +107,15 @@ async function main() {
   // Antes de afirmar que a cópia não tem as marcas, prove que o arquivo de
   // trabalho TEM. Uma busca que não acha nada nos dois arquivos não distingue
   // "podou" de "a busca está quebrada".
-  console.log('\n1 · controle: o arquivo de TRABALHO carrega tudo (é para isso que ele existe)\n');
+  console.log(`\n1 · controle: o arquivo de TRABALHO carrega tudo — ${Object.keys(MARCAS).length} campos da régua\n`);
   for (const [nome, marca] of Object.entries(MARCAS))
     ok(trabalho.includes(marca), `${nome} está no arquivo de trabalho`);
+  // e a régua tem de estar coberta: um campo novo em DELIBERACAO sem marca aqui
+  // é a fresta que a revisão do #23 achou
+  const previstos = DELIBERACAO.flatMap(r => r.campos.filter(c => c !== 'difereEm').map(c => `${r.onde}.${c}`));
+  const semMarca = previstos.filter(k => !(k in MARCAS));
+  ok(semMarca.length === 0, 'todo campo da régua tem marca plantada',
+    semMarca.length ? `sem marca: ${semMarca.join(', ')}` : `${previstos.length} campos`);
 
   // ------------------------------------------------------------- 3 · a poda
   console.log('\n2 · a cópia publicada: a deliberação não sai da casa\n');
@@ -108,6 +135,21 @@ async function main() {
   ok(pubs.every(p => p.selo.panlabsRetomavel === 'nao'),
     'toda página da cópia se declara não-retomável');
 
+  /**
+   * E O DESENHO É O MESMO DESENHO — célula por célula, nas duas impressões.
+   *
+   * É a afirmação que a decisão inteira depende de e que seria a mais fácil de
+   * quebrar sem perceber: a cópia que circula tem de ser o MESMO diagrama, não
+   * um diagrama parecido. Se a poda tocasse uma coordenada ou um rótulo, o
+   * usuário mandaria para fora algo que ele nunca viu na tela.
+   */
+  const trab = lerPaginas(trabalho).paginas;
+  const mesmoDesenho = trab.length === pubs.length && trab.every((p, i) =>
+    impressaoSemantica(p.celulas) === impressaoSemantica(pubs[i].celulas) &&
+    impressaoDeAparencia(p.celulas) === impressaoDeAparencia(pubs[i].celulas));
+  ok(mesmoDesenho, 'e o desenho é célula por célula o mesmo — a poda só mexe no selo',
+    `${trab.length} páginas, semântica e aparência idênticas`);
+
   // ------------------------------------------------------- 4 · a cópia se anuncia
   console.log('\n4 · a cópia se declara, em vez de parecer um arquivo de trabalho quebrado\n');
   const a = abrir(copia);
@@ -126,6 +168,30 @@ async function main() {
   ok(!!aviso && /deliberacao/i.test(aviso), 'a sessão com deliberação gera aviso', (aviso || '').slice(0, 62) + '…');
   ok(avisoDeDossie(podar(tecnico)) === null,
     'e a sessão já podada NÃO gera aviso — o aviso mede, não decora');
+  /**
+   * O CONTADOR NÃO PODE CONTAR EM DOBRO nem deixar campo de fora — os dois
+   * defeitos que a revisão achou, um em cada direção.
+   */
+  const soUmCampo = (onde, campo, valor) => {
+    const t = podar(JSON.parse(JSON.stringify(tecnico)));
+    const alvo = lista(t.dossie, onde)[0];
+    if (!alvo) return null;
+    alvo[campo] = valor;
+    return contarDeliberacao(t);
+  };
+  for (const r of DELIBERACAO)
+    for (const c of r.campos) {
+      if (c === 'difereEm' || c === 'recorte') continue;
+      const n = soUmCampo(r.onde, c, 'x');
+      if (n === null) continue;
+      ok(n === 1, `um único "${r.onde}.${c}" conta exatamente 1`, `contou ${n}`);
+    }
+  const dupla = podar(JSON.parse(JSON.stringify(tecnico)));
+  dupla.dossie.candidatas.push({ id: 'z', nome: 'Z', tupla: ['a', 'b', 'c', 'd', 'e'],
+    estado: 'descartada', porque: 'x', paga: 'y' });
+  ok(contarDeliberacao(dupla) === 1,
+    'uma candidata descartada COM `porque` e `paga` conta 1, não 3',
+    `contou ${contarDeliberacao(dupla)}`);
   const r = await desenhar(tecnico, 'logica');
   ok(r.relatorio.avisos.some(x => /Editar diagrama/.test(x)),
     'e ele chega ao relatório de quem desenhou');

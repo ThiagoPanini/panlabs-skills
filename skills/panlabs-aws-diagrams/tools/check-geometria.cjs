@@ -42,7 +42,7 @@ async function main() {
   let gerar;
   try { ({ gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'))); }
   catch (erro) {
-    console.error(`não consegui carregar o motor do #11 em ${RAIZ}: ${erro.message}`);
+    console.error(`não consegui carregar o motor em ${RAIZ}: ${erro.message}`);
     process.exit(2);
   }
 

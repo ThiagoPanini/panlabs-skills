@@ -16,9 +16,14 @@ genealogia: `q13/motor` não é o motor mais novo, é um **fork do motor do #11
 tirado em `daf4bc4`**, antes de o #12 existir. O que ele tem a mais é a camada de
 tema; o que ele não tem é multi-conta inteiro.
 
-`tools/medir-antes-depois.cjs` e o script de medição rodaram a **união dos checks
-dos quatro protótipos** (25 checagens do #11, #12, #14 e #18) contra os dois
-candidatos, cada um posto no lugar do outro:
+**A medição roda** — `tools/medir-candidatos.sh` materializa os dois candidatos a
+partir do git, põe cada um no lugar do outro e roda a **união dos checks dos
+quatro protótipos** (25 checagens do #11, #12, #14 e #18) contra os dois. Não é
+prosa: é um comando.
+
+> ⚠️ Ela é ferramenta e não camada da suíte, de propósito: é arqueologia, depende
+> de `prototypes/` existir. Quando eles saírem da árvore, o script avisa e sai
+> limpo — a pergunta já terá sido respondida, e a resposta é este documento.
 
 | candidato | vermelhos | onde |
 |---|---|---|
@@ -28,17 +33,22 @@ candidatos, cada um posto no lugar do outro:
 E o tamanho dos dois deltas a partir do ancestral comum (`q11/motor@daf4bc4`)
 confirma a direção do enxerto:
 
-| arquivo | delta do **tema** (#13) | delta do **multi-conta** (#12) |
+| arquivo | delta do **tema** (#13) | delta do **tronco** (#12 + #22) |
 |---|---|---|
-| `derivar.cjs` | 0 | 296 |
-| `dispor.cjs` | 109 | 600 |
+| `alinhar.cjs` | 0 | 0 |
+| `derivar.cjs` | 0 | 381 |
+| `dispor.cjs` | 109 | 695 |
 | `emitir.cjs` | 0 | 49 |
-| `gerar.cjs` | 62 | 102 |
+| `gerar.cjs` | 62 | 136 |
 | `planejar.cjs` | 156 | 555 |
 | `resolver.cjs` | 78 | 0 |
 | `validar.cjs` | 14 | 16 |
-| `esquema.json` | 1 | 13 |
-| **total** | **420** | **1631** |
+| `esquema.json` | 1 | 21 |
+| **total** | **420** | **1853** |
+
+(A coluna do tronco é `q11/motor` **hoje**, isto é, o #12 mais o #22. O #12
+sozinho eram 1 631 linhas; a diferença é a camada de rede do #22, que chegou
+pelo PR #27 e é o blocker deste ticket.)
 
 > **Decisão.** O motor do #11/#12/#22 é o **tronco**; a camada de tema do #13 foi
 > **enxertada** nele. Não é "escolher um e jogar o outro fora" — é enxertar o
@@ -54,8 +64,14 @@ confirma a direção do enxerto:
 
 ## 2. O que a união achou — e não teria achado separada
 
-Sete achados. Nenhum deles é acusável a uma das metades: **todos só aparecem
-quando as duas rodam juntas**.
+Sete achados, e nenhum deles é acusável a uma das metades: **todos só aparecem
+quando as duas rodam juntas**. Três são defeitos que já estavam VIVOS em produção,
+não em teste — `selar` morrendo, o barramento invisível no deck escuro, o arquivo
+intocado lendo como editado. O custo de não ter rodado a união não foi um vermelho
+tarde demais; foi três defeitos calados.
+
+O sétimo abre a lista que a revisão desta própria consolidação achou, e o padrão
+lá é o mesmo um nível acima: **checagem que não sabe falhar**.
 
 ### 2.1 `selar` morria com 1+N páginas — e derrubava a sessão inteira
 
@@ -147,13 +163,34 @@ deck escuro inverte.
 > "alterar a cor do ícone". A AWS publica dois decks e o draw.io entrega uma
 > variante só; a checagem foi escrita sem esse caso. Resolver é decisão do #8.
 
-### 2.7 A bisseção não sabia ficar vermelha
+### 2.7 A bisseção não sabia ficar vermelha (e mais seis que a revisão achou)
 
 `bissecar-modelo.cjs` saía 0 sempre — era ferramenta de diagnóstico lida à mão.
 Dentro de uma suíte é um verde que não afirma nada, e o `render.sh` que ela chama
 nem estava na árvore, então **todos** os recortes "falhavam" e a suíte seguia.
 Agora sai 1 quando acha, e distingue "o motor recusou" de "render pulado por não
 haver draw.io".
+
+E ela não estava sozinha. A revisão da própria consolidação achou mais seis do
+mesmo tipo — **checagem que não sabe falhar** —, e vale listar porque o padrão é
+o mesmo do ticket inteiro, um nível acima:
+
+| onde | o que não sabia falhar |
+|---|---|
+| `motor/gerar.cjs` | o enxerto do portão chamava `portao(p, {nivel:'nenhum'})` dentro de um `try` e reimplementava a barreira fora. Com isso engolia a garantia central do #18 — *"um laudo incompleto nunca passa, em nenhum nível"* — e uma família de checagem quebrada saía como **portão verde**. Provado com uma família stubada; hoje há controle em processo filho. |
+| `check-tokens-do-12.cjs` | a seção 2 imprimia os tokens e não afirmava nada; a 3 calculava o contraste do literal do #12 e nunca o comparava. |
+| `check-esquema-unico.cjs` | a seção 4 fazia `continue` sem contar quando o git não tinha o ancestral — no dia em que `prototypes/` sair, sairia verde afirmando "nada se perdeu" sem comparar nada. |
+| `check-travessia.cjs` | a regra estreitada do `E8` casava `shape=…gateway`, que nunca aparece numa aresta: alternativa morta, sem controle. |
+| `check-sem-prototipo.cjs` | a espia de `readFileSync` não conferia ter observado nada, e o comentário nomeava dois arquivos que ela não vê. |
+| `tests/rodar.sh` | a camada 7 passava o binário para 2 dos 4 checks; os outros caíam num default **diferente** (`AppRun` × `drawio`) e podiam pular em silêncio. O caminho tem um dono agora (`tools/drawio.cjs`). |
+
+Mais dois defeitos de contagem em `sessao/publicar.cjs`, e os dois eram o mesmo
+erro — **a régua escrita duas vezes**: o contador somava a mesma candidata
+descartada duas vezes, e não olhava para `compra`/`difereEm`, que a poda tirava.
+Uma sessão cuja única deliberação fosse `compra` era podada enquanto o CLI dizia
+*"nada — o arquivo já não trazia deliberação"*. Hoje a régua é uma lista de dados
+(`DELIBERACAO`) e as três coisas que precisam concordar — a poda, o contador e as
+frases que a checagem planta — saem dela.
 
 ---
 
@@ -192,7 +229,37 @@ E a **tese** do #14 sobrevive intacta, agora testada de verdade: servir as duas
 vistas continua sendo problema de projeção e não de motor — `check-projecao.cjs`
 passa 12/12 contra um motor que cresceu com o #12, o #13 e o #22.
 
-### 3.3 ✅ O que **sobreviveu** à recertificação
+### 3.3 ⚠️ O gatilho de "reabrir" do #14 DISPAROU — e o motivo não é o que ele previa
+
+O #14 registrou a ressalva junto com a decisão: *"o selo é 58% do arquivo — se o
+dossiê crescer, reabrir"*. Medido hoje, no `varejo` de três contas:
+
+| | |
+|---|---|
+| arquivo de trabalho | 151 762 bytes, **5 páginas** |
+| cópias do dossiê | 5 × 19 618 = 98 090 bytes — **65%** |
+| se fosse uma cópia só | 73 290 bytes (52% menor) |
+| cópia publicada | 118 117 bytes, 54% |
+
+**O dossiê não cresceu; o número de PÁGINAS cresceu.** A ressalva foi escrita
+para o eixo errado, e o eixo certo é pior: a fração escala com N, e um inventário
+de 6 contas são 7 páginas.
+
+**Mesmo assim a decisão do #14 fica**, e a recertificação a reforça em vez de
+enfraquecê-la: a razão da cópia por página era *"apagar uma página é a operação
+mais banal do mundo, e com uma cópia só ela apaga a sessão inteira"*. Com 1+N
+páginas a razão vale MAIS, não menos — a página que o usuário mais provavelmente
+apaga é uma vista de detalhe, e ela não pode levar a sessão junto.
+
+O que fica registrado é o **teto**, não uma correção: se o custo em bytes vier a
+importar, o caminho existe e não é sidecar — o selo das páginas que não são a
+primeira carregaria o HASH da sessão em vez da sessão, e apagar a primeira
+passaria a ser **detectável** ("a sessão sumiu, e este é o hash dela") em vez de
+silencioso. Isso muda a decisão do #14 e precisa de ticket; a medição contra
+arquiteturas reais é do
+[#26](https://github.com/ThiagoPanini/panlabs-skills/issues/26).
+
+### 3.4 ✅ O que **sobreviveu** à recertificação
 
 Vale registrar tanto quanto o que caiu:
 
@@ -207,6 +274,15 @@ Vale registrar tanto quanto o que caiu:
 - **13 de 13 modelos perderam uma falha `A7.1`** — o tema sobrescreve o
   `fontColor` cinza `#AAB7B8` que o catálogo entrega no rótulo do VPC e que o #13
   já tinha condenado por 2,06:1. Confirmado no pixel.
+- **`F1` passa em 8 de 8 modelos com faixa — 21 faixas.** É a recertificação da
+  geometria do #19 e do #21: *"qualquer que seja o eixo, a faixa abraça
+  exatamente seus membros"*. Vale nos dois eixos — `web-multi-az` é `coluna`,
+  `web-fluxo-3-az` é `raia` — sobre a grade que se moveu.
+- **`A3.7` continua acusando em 8 de 15** (*"a união dos objetos não cabe no
+  canvas com a margem exigida"*). É o achado que o #18 registrou no `web-multi-az`
+  (725×842 numa página de 542×904); a página encolheu para 528×877 e o achado
+  **não** sumiu — o caminho da grade continua dimensionando a largura só pela
+  nuvem. Não é semântico e não trava; fica reportado, como estava.
 
 ---
 
@@ -217,7 +293,8 @@ Duas dívidas, com endereço:
 | achado | onde | dono |
 |---|---|---|
 | `A5.5` ×2 em `web-fluxo-3-az` — duas arestas de gravação atravessam o grupo `app-a`, de onde não saem nem para onde vão. **É semântica**, e é **anterior**: idêntica nos dois motores (`falha=9, A5.5×2` nos dois). Ninguém tinha rodado o validador do #18 contra os modelos do #12. | `tests/check-bons.cjs`, quarentena nomeada | [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24) |
-| `A6.1` em `plataforma-3-contas` — duas arestas saem de `ecs` a 0° uma da outra. Não é semântica. Entrou com a escala nova. | reportado, não trava | [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24) |
+| `A6.1` em `plataforma-3-contas` — duas arestas saem de `ecs` a 0° uma da outra (piso 15°). Não é semântica. **Entrou com a escala nova**: é o único achado que a grade base 8 acrescentou, e é da mesma família do de cima — duas arestas que a grade antiga separava por acidente. | reportado, não trava | [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24) |
+| `A3.7` — o canvas não comporta a união dos objetos, em 8 de 15 modelos. Anterior, e nomeado pelo #18. | reportado, não trava | o caminho da grade dimensiona pela nuvem — [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24) |
 
 A quarentena é **exata**: o modelo tem de acusar precisamente `A5.5×2`. Uma falha
 semântica nova quebra a suíte igual, e quando o #24 consertar a suíte quebra
@@ -266,8 +343,9 @@ nomeia a saída — sempre que a sessão selada carregar deliberação.
 ```bash
 cd skills/panlabs-aws-diagrams
 ./tests/rodar.sh                       # a união, 8 camadas
+./tools/medir-candidatos.sh            # a medição que escolheu o motor
 node tools/medir-antes-depois.cjs      # o mesmo modelo nos dois motores
-node motor/gerar.cjs modelo/web-multi-az.json --saida saida/x.drawio
+node motor/gerar.cjs modelo/web-multi-az.json --saida saida/x.drawio --portao veracidade
 node sessao/publicar.cjs saida/varejo.drawio
 ```
 

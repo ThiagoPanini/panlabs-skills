@@ -28,7 +28,8 @@ const { canonicalizar } = require('../sessao/impressao.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const ARQ = path.join(RAIZ, 'saida', 'varejo.drawio');
-const DRAWIO = process.argv[2] || path.join(process.env.HOME, '.local/opt/drawio/squashfs-root/AppRun');
+const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
+const DRAWIO = binario(process.argv[2]);
 
 if (!fs.existsSync(ARQ)) { console.error('  rode sessao1.cjs e sessao2.cjs antes.'); process.exit(1); }
 
@@ -54,7 +55,7 @@ if (!fs.existsSync(DRAWIO)) {
 }
 
 console.log('\n  Pelo codec do proprio app (-x -f xml)\n');
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'q14-rt-'));
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'sessao-rt-'));
 const saida = path.join(TMP, 'volta.drawio');
 
 /**

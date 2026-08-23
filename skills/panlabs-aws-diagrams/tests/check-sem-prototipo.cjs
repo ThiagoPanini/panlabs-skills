@@ -59,8 +59,15 @@ async function main() {
 
   // ------------------------------------------------ e os DADOS, não só o código
   //
-  // `require.cache` só vê `require`. Catálogo, esquema, tema e limiares entram por
-  // `readFileSync`, e um deles apontando para o protótipo passaria despercebido.
+  // `require.cache` só vê `require`. Catálogo, correções e arquivo de tema entram
+  // por `readFileSync`, e um deles apontando para o protótipo passaria
+  // despercebido pela primeira asserção.
+  //
+  // ⚠️ O `esquema.json` e o `limiares.json` NÃO aparecem nesta lista, e não é
+  // buraco: os dois são lidos no topo do módulo, na CARGA — então já foram lidos
+  // quando a espia entra, e a primeira asserção (`require.cache`) é quem cobre o
+  // caminho deles. Um comentário anterior os citava aqui; era falso, e a revisão
+  // do #23 pegou instrumentando a espia.
   const lidos = [];
   const realFs = fs.readFileSync;
   fs.readFileSync = function (p, ...resto) { lidos.push(String(p)); return realFs.call(fs, p, ...resto); };
@@ -70,6 +77,10 @@ async function main() {
     await gerar(JSON.parse(realFs.call(fs, path.join(RAIZ, 'modelo', 'web-multi-az.json'), 'utf8')),
       { tema: 'corporativo' });
   } finally { fs.readFileSync = realFs; }
+  // e a espia tem de ter visto ALGUMA coisa — uma espia que não observa nada
+  // torna a asserção seguinte vacuamente verdadeira
+  ok(lidos.length > 0, 'a espia de `readFileSync` observou leituras',
+    `${new Set(lidos).size} arquivo(s) distintos`);
 
   const dadosDoProto = lidos.filter(p => p.startsWith(PROTOTIPOS + path.sep));
   ok(dadosDoProto.length === 0, 'nenhum ARQUIVO DE DADOS veio de prototypes/',

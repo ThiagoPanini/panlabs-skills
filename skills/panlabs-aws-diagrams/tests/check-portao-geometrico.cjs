@@ -7,16 +7,19 @@
  * antes de `emitir`" estava só na prosa: nada no código exercitava o enxerto, e
  * uma decisão de arquitetura que ninguém executa é uma intenção.
  *
- * Este teste executa. Ele monta o pipeline do #11 na mão até `planejar`, chama
- * o portão exatamente onde ele iria, e confere as duas metades:
+ * Este teste executa. Ele monta o pipeline na mão até `planejar`, chama o portão
+ * exatamente onde ele mora, e confere as duas metades:
  *
  *   · num plano que mente, o portão LANÇA, e a mensagem diz o que quebrou;
  *   · num plano correto, ele DEIXA PASSAR e o `emitir` roda em seguida,
  *     produzindo o XML — que é a prova de que o portão cabe no meio do
  *     pipeline sem quebrá-lo.
  *
- * O enxerto não fica aplicado no q11 de propósito: o motor é protótipo de outro
- * ticket. O que se prova aqui é que ele é aplicável em duas linhas.
+ * ✅ E o enxerto ESTÁ aplicado desde a consolidação do #23 — quando este teste foi
+ * escrito ele não estava, porque o motor era protótipo de outro ticket, e o que
+ * se provava aqui era que ele CABIA. Continua provando, e agora prova o mais
+ * forte: o portão que a suíte exercita à mão é o mesmo que `motor/gerar.cjs`
+ * chama. A ponta a ponta pelo motor está em `tests/rodar.sh`, camada 5.
  */
 
 const fs = require('fs');
@@ -98,6 +101,47 @@ const anota = (ok, o_que, detalhe) => {
       '`emitir` roda depois do portão e produz XML bem formado',
       `${xml.length} bytes`);
     anota(xml === r.xml, 'o XML é byte a byte o mesmo — o portão é puro, não tocou no plano');
+
+    /**
+     * ⚠️ O CONTROLE MAIS IMPORTANTE DESTE ARQUIVO — e o único que precisa de um
+     * processo filho.
+     *
+     * O #18 garante que *"um laudo incompleto nunca passa, EM NENHUM NÍVEL"*: se
+     * uma família de checagem parou de rodar, o verde não quer dizer nada. É a
+     * garantia mais fácil de perder no enxerto, e ela FOI perdida na primeira
+     * versão do #23 — `gerar.cjs` chamava `portao` dentro de um `try` e pulava a
+     * página quando ele lançava, então uma família quebrada saía como portão
+     * verde sobre um laudo que não mediu nada.
+     *
+     * Para exercitar isso é preciso quebrar uma família ANTES de `portao.cjs`
+     * ser carregado — ele destrutura `validarGeometria` na carga, então trocar a
+     * propriedade depois não alcança a referência que ele guardou. Daí o filho.
+     */
+    const { execFileSync } = require('child_process');
+    const roteiro = `
+      const path = require('path');
+      const RAIZ = ${JSON.stringify(RAIZ)};
+      const alvo = require.resolve(path.join(RAIZ, 'validador', 'validar-geometria.cjs'));
+      const real = require(alvo);
+      // um laudo que se declara INCOMPLETO, e nada mais
+      require.cache[alvo].exports = {
+        ...real,
+        validarGeometria: (plano, opts) => {
+          const l = real.validarGeometria(plano, opts);
+          return { ...l, cobertura: { ...l.cobertura, naoRodaram: ['A9.9'] } };
+        },
+      };
+      const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
+      const fs = require('fs');
+      const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'web-multi-az.json'), 'utf8'));
+      gerar(m, { portao: 'nenhum' })
+        .then(() => { console.log('PASSOU'); })
+        .catch(e => { console.log('BARROU:' + e.message); });
+    `;
+    const saidaFilho = execFileSync(process.execPath, ['-e', roteiro], { encoding: 'utf8' }).trim();
+    anota(saidaFilho.startsWith('BARROU:'),
+      'laudo INCOMPLETO não passa nem no nível "nenhum" (a garantia do #18)',
+      saidaFilho.slice(0, 110));
 
     console.log(falhas
       ? `\n  ✗ ${falhas} verificação(ões) falharam`

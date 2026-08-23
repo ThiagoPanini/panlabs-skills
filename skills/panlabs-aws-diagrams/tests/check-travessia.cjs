@@ -179,9 +179,23 @@ async function main() {
    * passou a reprovar uma coisa que o `E8` não proíbe. Estreitar a checagem para
    * o que o `E8` diz é a correção; afrouxar o token seria obedecer ao teste.
    */
+  const CERIMONIA = /startArrow=diamond|endArrow=diamond|startArrow=oval|endArrow=oval/;
   ok('nenhuma cerimônia na borda da conta (E8)',
-    desenhadas.every(c => !/startArrow=diamond|endArrow=diamond|shape=mxgraph\.[^;]*gateway/.test(c.style)),
-    'sem porta, losango ou marcador de travessia na fronteira');
+    desenhadas.every(c => !CERIMONIA.test(c.style)),
+    'sem losango nem marcador de travessia na ponta');
+  /**
+   * CONTROLE, nos dois sentidos. Sem ele, trocar a regex por `/$^/` deixaria a
+   * linha acima verde para sempre — e foi assim que a versão anterior ficou:
+   * ela também casava `shape=…gateway`, que NUNCA aparece numa aresta, e a
+   * alternativa morta passou despercebida porque nada exercitava a regra.
+   */
+  const COM_LOSANGO = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=diamond;endFill=1;';
+  const LIMPA = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=blockThin;endFill=1;jumpStyle=arc;';
+  ok('e a regra ACUSA um losango na ponta (controle)', CERIMONIA.test(COM_LOSANGO),
+    'a mesma regra, sobre um estilo com losango, reprova');
+  ok('e NÃO acusa `jumpStyle`, que é salto entre ARESTAS e não marcador de borda',
+    !CERIMONIA.test(LIMPA),
+    'o E8 do #6 fala de porta/losango na fronteira da conta, não de cruzamento de linha');
 
   // e o anti-espaguete: a linha não pode atravessar o INTERIOR de uma conta que
   // não é a dela. É a checagem que separa "desenhei a aresta" de "desenhei bem".

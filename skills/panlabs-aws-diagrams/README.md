@@ -51,11 +51,11 @@ do Node).
 | `motor/` | O pipeline. `gerar` › `validar` › `resolver` › `derivar` › `dispor` › `planejar` › `emitir` › `conferir`, mais o portão de contraste |
 | `validador/` | As 62 checagens da rubrica viradas código — 60 no validador obrigatório, 2 no render. É **portão**, não otimizador |
 | `tema/` | O vocabulário FECHADO de estilo e os quatro temas. `esquema.json` aqui é `tema@1` |
-| `sessao/` | Vista lógica → vista técnica, o `.drawio` como formato de persistência, e a cópia publicável. `esquema.json` aqui é `sessao@1` |
+| `sessao/` | Vista lógica → vista técnica, o `.drawio` como formato de persistência, e a cópia publicável. `esquema.json` aqui é `sessao@1`. `lacunas.cjs` é o vizinho de fora da regra: ele come `modelo@1`, não `sessao@1` — mora aqui porque a revisão de lacunas é passo do arco, e quem a chama é a camada de sessão |
 | `catalog/` | 403 service icons + 606 resource icons do draw.io 31.3.1, com o delta de correções escrito à mão |
 | `modelo/` | O corpus. `modelo/recusa/` para o que o motor **deve** recusar, `modelo/sessao/` para `sessao@1` |
 | `tests/` | A união das suítes, em 8 camadas |
-| `agents/` | O empacotamento multi-harness. `openai.yaml` é a forma que as outras skills da casa usam |
+| `agents/` | O empacotamento multi-harness. `openai.yaml` copia a forma das outras 25 skills instaladas em `~/.claude/skills/*/agents/` — `interface.display_name` + `interface.short_description`, e nada mais. É **metadado de vitrine**, não instrução: um harness não-Claude aprende o NOME da skill por aqui e o resto por `SKILL.md`. Se algum harness precisar de mais, é aqui que cresce |
 | `tools/` | Bisseção, render, instalação, as medições, as sessões de demonstração. `drawio.cjs` é o único lugar que sabe onde o binário mora |
 | `saida/` | O que o motor produziu, e o render como prova |
 | `docs/` | O registro de engenharia: o que a recertificação mediu, o que o roteamento consertou |

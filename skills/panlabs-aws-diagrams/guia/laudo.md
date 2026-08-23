@@ -115,17 +115,19 @@ alavancas.
 
 ## O piso do corpus — o que NÃO tentar consertar
 
-Medido nos 15 modelos. Estas acusam em quase todos, e o motivo é dívida
-registrada, não defeito do seu modelo:
+Medido nas **35 páginas** dos 20 modelos — em páginas e não em modelos, porque o
+multi-conta sai em 1+N e o piso é por página. Estas acusam em quase todas, e o
+motivo é dívida registrada, não defeito do seu modelo:
 
 | | | por quê |
 |---|---|---|
-| `A1.2` `A1.3` | ✗ 15/15 | **nenhum diagrama emite legenda.** O vocabulário fechado do tema não contrai essa dívida — e não a contrai de propósito: legenda é a dívida de quem inventa notação, e o tema não deixa inventar |
-| `A1.11` | ⚠ 15/15 | pede `data`, `versao`, `autor`; `modelo@1` é `additionalProperties: false` e não tem esses campos |
-| `A7.2` | ✗ 15/15 | o quadrado do ícone de serviço fica em **2,71:1** contra o tingimento de subnet. O portão de contraste do tema **avisa** (trata como área); este validador **reprova** (trata como traço). As duas leituras convivem — ver `../docs/recertificacao.md` §4 |
-| `A7.4` `A3.9` | ⚠ 15/15 | ambas `calibravel` — o limiar é default de engenharia |
-| `A4.5` | ⚠ 14/15 | padding de grupo uniforme |
-| `A3.7` | ✗ 8/15 | o caminho da grade dimensiona a largura só pela nuvem, e o desenho estoura o canvas |
+| `A1.2` `A1.3` | ✗ 35/35 | **nenhum diagrama emite legenda.** O vocabulário fechado do tema não contrai essa dívida — e não a contrai de propósito: legenda é a dívida de quem inventa notação, e o tema não deixa inventar |
+| `A1.11` | ⚠ 35/35 | pede `data`, `versao`, `autor`; `modelo@1` é `additionalProperties: false` e não tem esses campos |
+| `A3.9` | ⚠ 35/35 | `calibravel` — o limiar é default de engenharia |
+| `A4.5` | ⚠ 33/35 | padding de grupo uniforme |
+| `A7.4` | ⚠ 32/35 | `calibravel`, idem |
+| `A7.2` | ✗ 21/35 | o quadrado do ícone de serviço fica em **2,71:1** contra o tingimento de subnet. O portão de contraste do tema **avisa** (trata como área); este validador **reprova** (trata como traço). As duas leituras convivem — ver `../docs/recertificacao.md` §4 |
+| `A3.7` | ✗ 8/20 modelos | o caminho da grade dimensiona a largura só pela nuvem, e o desenho estoura o canvas. Contado em modelos porque é o CAMINHO que decide, e o caminho é do modelo |
 | `A1.5` `A1.12` | ✗ sempre que houver **nota com `sobre`** | ver abaixo |
 
 ### A nota presa a nó derruba `A1.5` e `A1.12`

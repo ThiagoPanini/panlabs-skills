@@ -25,12 +25,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { revisar } = require(path.join(__dirname, '..', 'sessao', 'lacunas.cjs'));
+const { revisar, NOMES, arquivosDoCorpus } =
+  require(path.join(__dirname, '..', 'sessao', 'lacunas.cjs'));
 
 const RAIZ = path.join(__dirname, '..');
-
-const REGRAS = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publica',
-  'cross-account-sem-confianca', 'assincrono-sem-dlq'];
 
 /**
  * ⚠️ EXCEÇÕES NOMEADAS AO L4 — nenhuma, e a lista vazia é resultado, não descuido.
@@ -61,13 +59,9 @@ const anota = (ok, o_que, detalhe) => {
 
 // ------------------------------------------------------------- roda o corpus
 
-const arqs = [];
-for (const d of ['modelo', 'modelo/recusa']) {
-  const dir = path.join(RAIZ, d);
-  if (!fs.existsSync(dir)) continue;
-  for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json')).sort())
-    arqs.push(path.join(d, f));
-}
+// A MESMA varredura que a CLI usa — se fossem duas, `L2`/`L3` poderiam ficar
+// verdes contra metade do corpus.
+const arqs = arquivosDoCorpus(RAIZ);
 
 const disparou = new Map(), calou = new Map();
 const estouram = [];
@@ -101,7 +95,7 @@ console.log(`\n1 · o corpus rodado: ${arqs.length} modelos, ${totalNos} nós, $
 
 // L2 e L3
 console.log('\n2 · o guarda dos dois lados: toda regra sabe dizer sim E sabe dizer não\n');
-for (const r of REGRAS) {
+for (const r of NOMES) {
   const d = disparou.get(r) || 0, c = calou.get(r) || 0;
   anota(d >= 1, `L2 · "${r}" dispara em ≥1 modelo`, `disparou em ${d}`);
   anota(c >= 1, `L3 · "${r}" cala em ≥1 modelo`, `calou em ${c}`);

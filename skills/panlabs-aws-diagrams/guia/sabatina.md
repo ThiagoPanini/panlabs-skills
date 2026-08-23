@@ -125,8 +125,9 @@ node tools/check-geometria.cjs /tmp/proj.json
 
 ### O piso — as checagens que fato nenhum fecha
 
-Medido nos 15 modelos do corpus: `A1.2`, `A1.3` e `A1.11` acusam em **15 de 15**,
-e não porque falta informação.
+Medido nas **35 páginas** que os 20 modelos do corpus produzem — em páginas e não
+em modelos, porque o multi-conta sai em 1+N: `A1.2`, `A1.3` e `A1.11` acusam em
+**35 de 35**, e não porque falta informação.
 
 | | o que pede | por que não fecha |
 |---|---|---|
@@ -260,7 +261,7 @@ Sem esse elo a recusa fica só no dossiê e o diagrama volta a enganar calado.
 ### A calibração, e o que ela consertou
 
 O protótipo do #15 fazia **4 achados num modelo de 3 nós** — 1,33 por nó. Contra
-o corpus de 22 modelos e 247 nós, estas regras fazem **0,134 por nó**: dez vezes
+o corpus de 22 modelos e 247 nós, estas regras fazem **0,101 por nó**: treze vezes
 menos.
 
 E o que consertou não foi apertar número, foi mudar a forma. Três das quatro
@@ -271,23 +272,28 @@ pequeno, porque modelo pequeno é quase todo ausência.
 > **Um achado só nasce sobre um fato que o modelo AFIRMA, nunca sobre um fato que
 > ele não menciona.**
 
-Dois limiares dentro das regras foram medidos contra o corpus, não escolhidos, e
-cada um matou um falso positivo concreto:
+**Três** limiares dentro das regras foram medidos contra o corpus, não escolhidos,
+e cada um matou um falso positivo concreto:
 
 | | e o que ele matou |
 |---|---|
 | `spof` orfana **≥2** | num encadeamento `A→B→C`, dizer que B é o ponto único de falha de C é só dizer que **C tem um vizinho** — afirmação sobre C, não sobre caminho compartilhado. Sem a cláusula, o `pedidos-serverless` acusava o VPC endpoint por "separar" o DynamoDB |
 | egresso conta **ligado**, não só contido | no `hub-tgw-3-contas` o Transit Gateway **é** a saída controlada e mora fora das VPCs que serve. A regra reprovava as duas spokes pelo motivo que as torna certas |
+| `spof` **só os maximais** | numa cadeia toda ligação é ponto de articulação, com os órfãos encaixados. A `frota-preditiva` acusava **seis** num modelo de 11 nós — pior que o protótipo que motivou esta calibração inteira |
 
 A régua está em `tests/check-lacunas.cjs`, e ela cobra dos **dois lados**: toda
 regra tem de disparar em ≥1 modelo do corpus **e** calar em ≥1. Regra que dispara
 em todos não está medindo nada — está afirmando uma constante.
 
-**Uma exceção nomeada ao teto:** `plataforma-3-contas` faz 6 achados com teto 5.
-Os seis foram conferidos um a um e se sustentam; o que falha é o **denominador**
-— achado escala com superfície de arquitetura (contas, VPCs, pontos de entrada),
-não com contagem de nós. Fica como refino conhecido, e o teste fica vermelho no
-dia em que deixar de estourar. Ver [`../docs/corpus.md`](../docs/corpus.md).
+**Nenhum modelo do corpus estoura o teto** de ⌈nós÷4⌉ — 22 de 22. Houve uma
+exceção nomeada, o `plataforma-3-contas` a 6 achados contra teto 5, e ela
+**expirou sozinha** quando a cláusula dos maximais entrou: o teste ficou vermelho
+com a mensagem que ele mesmo tinha preparado, e a entrada foi apagada.
+
+Fica registrado o que aquela exceção mediu, porque continua verdadeiro e não tem
+mais quem prove: o **denominador do teto está errado** — achado escala com
+superfície de arquitetura (contas, VPCs, pontos de entrada), não com contagem de
+nós. Ver [`../docs/corpus.md`](../docs/corpus.md) §13.
 
 **`retencao-sem-regra` não virou regra**, e é bom dizer por quê: ele aparece no
 dossiê do corpus de sessão, mas retenção é fato de política de dado que o

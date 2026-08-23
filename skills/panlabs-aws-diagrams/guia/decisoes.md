@@ -158,14 +158,28 @@ um laço de correção seria um segundo otimizador competindo com o ELK sem grad
 nem função objetivo.
 
 **Achado contra a rubrica: ela modela uma árvore de contenção só, e o motor
-desenha duas coisas.** Daí `F1`, fora das 62 de propósito — o índice é o contrato
-com a rubrica, e uma checagem a mais o quebraria. A distinção que a sustenta está
-em [`modelo.md`](modelo.md) e [`laudo.md`](laudo.md).
+desenha duas coisas.** Daí `F1` e `F2`, fora das 62 de propósito — o índice é o
+contrato com a rubrica, e uma checagem a mais o quebraria. A distinção que a
+sustenta está em [`modelo.md`](modelo.md) e [`laudo.md`](laudo.md).
+
+| | pergunta da faixa | espelho de |
+|---|---|---|
+| `F1` | ela abraça exatamente os membros que declara? | `A4.2` |
+| `F2` | alguma aresta atravessa a caixa de uma que não é dela? | `A5.5` |
+
+**`F2` nasceu no #26, e a razão é que a checagem não existia.** A decisão do #18
+tirou a faixa das 62, mas só a pergunta de *contenção* chegou a ser escrita; a de
+*travessia* ficou sem dono, e o motor era **estruturalmente cego** ao defeito que
+o fallback do #21 existe para evitar. Ela entra **armada e calada**: medida em
+malha completa de 3 a 6 zonas, `F2` = 0 nas quatro. O que ela compra é a
+regressão.
 
 **Decisão de contraste: o fundo efetivo é a pilha de grupos em ordem z, não a
 página.** A primeira versão errava o corte de z e lia 1,00:1 como 13,57:1.
 
-*Reabre se:* `F1` virar produção — aí promova a `A4.8` e atualize o índice.
+*Reabre se:* `F1` ou `F2` virarem produção — aí promova a `A4.8` e `A5.10` e
+atualize o índice. Ou se `F2` acusar em qualquer modelo: aí a densidade passou do
+que o roteamento do #24 sustenta, e a supressão da travessia de zona volta à mesa.
 
 ## O motor
 
@@ -343,13 +357,45 @@ decidido contra render real, que provou que as duas molduras são geometricament
 idênticas. Logo não era decisão de layout, era de **vocabulário e audiência**.
 
 > ⚠️ **Correção medida, e o protocolo original não a tinha:** *"pare quando `A1`
-> passar"* é inalcançável. `A1.2`, `A1.3` e `A1.11` acusam em **15 de 15** modelos
+> passar"* é inalcançável. `A1.2`, `A1.3` e `A1.11` acusam em **35 de 35 páginas**
 > por dívida de motor e de esquema. O critério certo é **`A1` no piso**, e o piso
 > tem nome. Um agente que siga a letra original pergunta para sempre.
 
 *Reabre se:* a dívida de legenda for paga, ou `modelo@1` ganhar `data`/`versao`/
 `autor` — aí o piso encolhe e o critério tem de ser reescrito. Protocolo em
 [`sabatina.md`](sabatina.md).
+
+### A revisão de lacunas
+
+**Calibrada no #26: 1,33 achado por nó virou 0,101.** E o que consertou não foi
+apertar número — foi a **forma**. Três das quatro regras do protótipo disparavam
+sobre **ausência** (*"nenhum componente declara redundância"*), e regra que
+dispara sobre ausência dispara em todo modelo pequeno, porque modelo pequeno é
+quase todo ausência.
+
+> **Um achado só nasce sobre um fato que o modelo AFIRMA, nunca sobre um fato que
+> ele não menciona.**
+
+Toda regra declara a estrutura de que precisa; onde o modelo não afirma, ela sai
+**muda, com o motivo** — o *quem cala não vota* do #22 aplicado ao consultor, e o
+que impede *"não acusou"* de se confundir com *"não rodou"*.
+
+Os três limiares saíram de **falso positivo medido**, não de escolha:
+
+| limiar | o que ele matou |
+|---|---|
+| `spof` orfana **≥2** | `A→B→C`: dizer que B é o SPOF de C é só dizer que C tem um vizinho |
+| egresso conta **ligado** | no hub-and-spoke o Transit Gateway **é** a saída e mora fora das VPCs que serve |
+| `spof` **só os maximais** | numa cadeia toda ligação é ponto de articulação — seis achados num modelo de 11 nós |
+
+**Nenhuma lista inventada**: *"guarda estado"* é a tabela de categoria do #22, e
+*fila morta é derivada* — o que recebe o refugo de uma fila é outra fila do mesmo
+serviço.
+
+*Reabre se:* uma regra passar a disparar em **todos** os modelos ou em **nenhum** —
+`check-lacunas.cjs` cobra os dois lados e fica vermelho. Ou se o teto ⌈nós÷4⌉
+voltar a estourar por **superfície** (contas, VPCs) em vez de por regra ansiosa:
+o denominador é a parte do critério que o #26 mediu estar errada e não trocou.
 
 ### O context pack
 
@@ -384,13 +430,29 @@ guarda de veracidade do conteúdo.
 
 ## Névoa nomeada — o que ainda não é especificável
 
-- **O custo em bytes do selo por página.** 65% num arquivo de 5 páginas, e escala
-  com N. Falta saber se chega a importar, e isso depende de arquitetura real.
-- **O ciclo de refino pós-execução** — como o feedback das primeiras execuções
-  reais volta para a rubrica (premissa 12). Depende de existir execução real.
-- **O gatilho da vista de zona de referência** e a **calibração dos gatilhos da
-  revisão de lacunas** — os dois limiares dependem de densidade real, que só um
-  corpus de arquiteturas verdadeiras dá.
+- ~~**O custo em bytes do selo por página.**~~ **Medido no #26, e não importa
+  ainda:** 65% num arquivo de 5 páginas, 57% num de 2, 44% na cópia publicada —
+  mas os arquivos absolutos são de 47 a 152 KB, ruído para o draw.io. O eixo certo
+  não era a fração, era o tamanho absoluto. *Reabre* se um arquivo de sessão
+  passar da ordem de megabytes.
+- ~~**O gatilho da vista de zona de referência**~~ e ~~**a calibração da revisão
+  de lacunas**~~ — **os dois fechados no #26**, e o primeiro fechou pelo lado
+  negativo: a checagem passou a existir (`F2`), o limiar é zero, e **o fallback
+  não foi construído** porque a precondição é falsa em toda densidade medida.
+- **O limiar de LEGIBILIDADE para suprimir travessia de zona.** O que cresce com a
+  densidade não é a mentira, é a colisão de rótulo — `A3.2` de 2 a 25 entre 3 e 6
+  zonas. Se um dia se quiser suprimir a aresta cross-zone, o gatilho mora nesse
+  eixo, e nenhum limiar dele foi calibrado contra desenho profissional. O #6 já
+  dizia isso do lado das contas: a AWS suprime por **espaguete**, não por mentira.
+- **O ciclo de refino pós-execução** — a primeira volta aconteceu no #26 e produziu
+  o §13 de [`../docs/corpus.md`](../docs/corpus.md). O que ainda não existe é o
+  **ciclo**: quem lê aquele §13, quando, e o que faz um item sair de lá. Depende de
+  execução contra arquitetura de cliente, não sintética.
+- **O denominador do teto de achados.** Achado escala com **superfície** de
+  arquitetura (contas, VPCs, pontos de entrada), não com contagem de nós —
+  `web-fluxo-3-az` tem 20 nós e 0 achados. O #26 mediu isso e **não trocou** o
+  denominador, porque o critério dele proibia ajustar a régua depois de ver o
+  número.
 
 ## Dívida com endereço nesta skill
 
@@ -420,7 +482,12 @@ guarda de veracidade do conteúdo.
   técnica, então é a superfície não validada de maior uso. A forma está em
   [`modelo.md`](modelo.md); o conserto é um quarto `esquema.json`.
 - **O context pack é contrato, não código.** Ver [`context-pack.md`](context-pack.md).
-- **`A3.7` acusa em 8 de 15**: o caminho da grade dimensiona a largura só pela
-  nuvem.
+- **`A3.7` acusa em 8 de 20**: o caminho da grade dimensiona a largura só pela
+  nuvem. (Era 8 de 15 antes do corpus do #26 crescer — os cinco modelos novos não
+  passam pela grade, então o numerador não se moveu.)
+- **`A6.3` em cadeia longa.** Um fluxo de sete passos sai em 5:1 e não cabe em
+  16:9 — medido no `frota-preditiva` e no `logica-atendimento`. É aviso, e é
+  honesto: a arquitetura **é** uma cadeia. O que falta é a sabatina saber subtrair
+  sobre cadeia (*"o que sai do diagrama?"*), e não só sobre saturação.
 - **A grade de AZ não desenha conta como container raiz** — a vista de detalhe
   recusa alto em vez de desenhar a conta fora do lugar.

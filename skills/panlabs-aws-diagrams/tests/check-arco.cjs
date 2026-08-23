@@ -24,6 +24,15 @@
  *
  *   varejo   3 contas · caminho `porContas` · 1+N páginas · fronteira = conta
  *   frota    1 conta  · caminho `porElk`    · 1 página    · fronteira = grupo
+ *
+ * ⚠️ ELE COMEÇA NO PASSO 2, e isso é limite declarado e não esquecimento.
+ *
+ * A perna *necessidade vaga → sabatina* não tem código: a sabatina é um protocolo
+ * que um AGENTE conduz com um humano, e não há função a chamar entre *"quero
+ * saber que um caminhão vai quebrar antes de quebrar na estrada"* e o primeiro
+ * fato confirmado. O que este arquivo faz com essa perna é conferir o PRODUTO
+ * dela — todo fato confirmado, todo inferido dizendo de onde saiu, candidatas que
+ * não colapsam. Do passo 4 em diante tudo roda de verdade.
  */
 
 const fs = require('fs');

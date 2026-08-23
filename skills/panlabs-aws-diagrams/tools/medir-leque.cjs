@@ -20,7 +20,9 @@
  *   F2 medido           o predicado de `A5.5` — polilinha cruzando uma caixa com
  *                       a qual a aresta não tem relação — aplicado à classe
  *                       `faixa`, que é justamente a que `A5.5` não vê (as faixas
- *                       ficaram fora das 62 por decisão do #18).
+ *                       ficaram fora das 62 por decisão do #18). Vem LIDO do
+ *                       laudo (`validador/familias/extras.cjs`), nunca
+ *                       recalculado aqui — ver `medirF2`.
  *
  * A distância entre as duas colunas é o achado: depois do roteamento do #24 a
  * aresta longa não vai reto — ela desce até a borda externa das faixas e corre
@@ -29,7 +31,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const g = require(path.join(__dirname, '..', 'validador', 'geometria.cjs'));
 const { gerar } = require(path.join(__dirname, '..', 'motor', 'gerar.cjs'));
 const { derivar } = require(path.join(__dirname, '..', 'motor', 'derivar.cjs'));
 
@@ -83,19 +84,27 @@ function pisoDaVarredura(modelo) {
   return { zonas: zonas.length, cruzam: cruzam.length, piso, perms: todas.length };
 }
 
-/** O predicado de A5.5 aplicado às faixas — é o que `f2.cjs` reporta no validador. */
+/**
+ * O `F2` **do validador**, lido do laudo — não uma segunda implementação dele.
+ *
+ * ⚠️ A primeira versão desta função reimplementava o predicado aqui, e a revisão
+ * pegou: ela testava só a pertinência DIRETA (`membros.has(a.de)`), enquanto o
+ * `F2` que embarca aceita também descendente de membro (`cena.ehDescendente`).
+ * São predicados diferentes — e a evidência *"F2 = 0 nas quatro densidades"*
+ * teria sido produzida por um `F2` que não é o que roda.
+ *
+ * Medir com uma cópia da regra é a armadilha que o #23 chamou de **suíte verde
+ * por metade**: as duas estavam verdes, cada uma contra a sua própria versão.
+ * Aqui a régua e o produto passam a ser o mesmo código, por construção.
+ */
 function medirF2(r) {
-  let faixas = 0, casos = [];
+  let faixas = 0;
+  const casos = [];
   for (const { laudo } of r.relatorio.geometria) {
-    const cena = laudo.cena;
-    if (!cena) continue;
-    faixas += cena.faixas.length;
-    for (const a of cena.arestas.filter(x => x.completa))
-      for (const faixa of cena.faixas) {
-        const membros = new Set(faixa.membros || []);
-        if (!membros.size || membros.has(a.de) || membros.has(a.para)) continue;
-        if (g.polilinhaCruzaRetangulo(a.pontos, faixa.caixa)) casos.push(`${a.de}→${a.para} × ${faixa.id}`);
-      }
+    if (laudo.cena) faixas += laudo.cena.faixas.length;
+    const f2 = (laudo.extras || []).find(x => x.id === 'F2');
+    if (!f2) continue;
+    for (const o of f2.ocorrencias) casos.push(o.ids ? o.ids.join(' × ') : o.o_que);
   }
   return { faixas, casos };
 }

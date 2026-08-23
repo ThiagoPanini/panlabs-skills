@@ -307,6 +307,27 @@ tinha medido que *"o validador do #8 é cego a esta pergunta, que nunca foi sobr
 diagrama mentir"*; o #26 mede que, depois do #24, ela também **não é mais sobre a
 aresta cruzar**.
 
+### 10.5 · O placar honesto contra o §4.1
+
+Duas das quatro condições que eu mesmo escrevi **não** foram cumpridas, e o
+registro vale mais que a nota:
+
+| | condição | veredito |
+|---|---|---|
+| `Z1` | a checagem já é calculada pelo validador | ✗ **relaxado** — `F2` é nova. A justificativa está em 10.1: ela estava *faltando*, não *não-escolhida*, e a métrica é a de `A5.5` |
+| `Z2` | limiar derivado, não escolhido | ✓ zero, a tolerância da família semântica |
+| `Z3` | um caso do corpus dispara, outro não | ✗ **não cumprido** — `F2` = 0 em **todos**, e o único caso que dispara é **plantado** |
+| `Z4` | quando dispara, a supressão é dita | — inaplicável: não há supressão, porque o fallback não foi construído |
+
+`Z3` não cumprido é exatamente a cláusula de *"não ter respondido"* do §4.1: um
+gatilho que nunca dispara no corpus é infalsificável, e o honesto é registrá-lo
+como névoa nomeada em vez de embarcá-lo como calibrado. **É o que foi feito.**
+
+O que a `AC 4` do ticket pede literalmente — *"checagem e limiar nomeados"* —
+está entregue: `F2` e zero. O que ela pede implicitamente — um gatilho calibrado
+**contra o corpus** — não está, porque o corpus não consegue produzi-lo. Essa
+metade é respondida pela `AC 7`, no §13.
+
 Então:
 
 - **`F2` entra armada e calada.** O que ela compra é a regressão: no dia em que
@@ -400,6 +421,16 @@ Os sete passos fecham na condição escrita de cada um, com **dois controles na
 outra ponta**: mexer num rótulo aprovado tem de **quebrar** o acordo, e o arquivo
 de trabalho tem de **carregar** a deliberação que a cópia publicada não carrega.
 Sem os controles, as duas checagens passariam medindo nada.
+
+> ⚠️ **Onde o arco executa e onde ele apenas confere.** `check-arco.cjs` começa no
+> **passo 2**. A perna *necessidade vaga → sabatina* não é executada, e não é
+> esquecimento: a sabatina é um protocolo que um **agente** conduz com um humano,
+> não código — não há função a chamar entre *"quero saber que um caminhão vai
+> quebrar antes"* e o primeiro fato confirmado. O que o arco faz com essa perna é
+> **conferir o produto dela**: que todo fato está confirmado, que todo fato
+> inferido diz de onde saiu, e que as candidatas não colapsam. Do passo 4 em
+> diante tudo é executado de verdade — inclusive a revisão de lacunas, que roda o
+> código e é conferida contra as decisões do dossiê.
 
 `E3` é a prova do #14 e ela é **visível**: `pontuar-risco` foi aprovado dentro de
 `analise` e a fase técnica o empurra dois níveis abaixo, para dentro de uma subnet

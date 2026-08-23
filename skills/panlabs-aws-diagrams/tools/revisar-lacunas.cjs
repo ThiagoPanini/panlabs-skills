@@ -13,7 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { revisar } = require(path.join(__dirname, '..', 'sessao', 'lacunas.cjs'));
+const { revisar, NOMES, arquivosDoCorpus } = require(path.join(__dirname, '..', 'sessao', 'lacunas.cjs'));
 
 const RAIZ = path.join(__dirname, '..');
 
@@ -35,14 +35,7 @@ function umModelo(arq, json) {
 }
 
 function corpus() {
-  const arqs = [];
-  for (const d of ['modelo', 'modelo/recusa']) {
-    const dir = path.join(RAIZ, d);
-    if (!fs.existsSync(dir)) continue;
-    for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json')).sort())
-      arqs.push(path.join(d, f));
-  }
-
+  const arqs = arquivosDoCorpus(RAIZ);
   const linhas = [];
   const disparou = new Map(), calou = new Map();
   for (const rel of arqs) {
@@ -65,11 +58,9 @@ function corpus() {
     console.log(`  ${l.nome.padEnd(w)}  ${String(l.nos).padStart(3)}  ${String(l.n).padStart(3)}  ` +
       `${String(l.teto).padStart(4)} ${l.ok ? ' ' : '⛔'}   ${l.regras}`);
 
-  const REGRAS = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publica',
-    'cross-account-sem-confianca', 'assincrono-sem-dlq'];
   console.log('\n  L2/L3 — toda regra tem de disparar em ≥1 modelo E calar em ≥1:');
   let vermelho = 0;
-  for (const r of REGRAS) {
+  for (const r of NOMES) {
     const d = disparou.get(r) || 0, c = calou.get(r) || 0;
     const ok = d >= 1 && c >= 1;
     if (!ok) vermelho++;

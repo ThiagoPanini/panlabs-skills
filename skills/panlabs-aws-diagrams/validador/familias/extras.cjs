@@ -63,6 +63,24 @@ const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometria.cjs'));
 const { semTags, arredonda, nome } = require(path.join(__dirname, 'comum.cjs'));
 
+/**
+ * O descritor de um achado da família `F`, num lugar só.
+ *
+ * ⚠️ `conforme()` de `comum.cjs` faria isto para as 62 — e NÃO serve aqui, por
+ * construção: ele decide a severidade lendo `porId(id).severidade` do índice, e
+ * `porId('F1')` e `porId('F2')` são `undefined` justamente porque a família `F`
+ * fica **fora** do índice de propósito. Usar `conforme` aqui quebraria no acesso,
+ * ou obrigaria a inflar o índice — que é o que a decisão do #18 recusa.
+ *
+ * Então o descritor é escrito à mão, mas **uma vez** por checagem em vez de duas
+ * (o ramo `inaplicavel` e o ramo com veredito repetiam os sete campos).
+ */
+const achadoDeFaixa = (id, nomeDaChecagem) => (estado, mensagem, medida, ocorrencias = []) => ({
+  id, nome: nomeDaChecagem, familia: 'F', insumo: 'geometria',
+  severidadeMaxima: 'fail', semantica: true, calibravel: false,
+  estado, mensagem, medida, ocorrencias,
+});
+
 
 /**
  * F2 — a aresta corta a caixa de uma faixa que não é dela.
@@ -77,17 +95,14 @@ const { semTags, arredonda, nome } = require(path.join(__dirname, 'comum.cjs'));
  * desenha como `render: rotulo` e cuja "caixa" é âncora de rótulo, não região.
  */
 function f2(cena) {
+  const achado = achadoDeFaixa('F2', 'Aresta atravessando faixa alheia');
   const comMembros = cena.faixas.filter(f => Array.isArray(f.membros) && f.membros.length);
   const arestas = cena.arestas.filter(a => a.completa);
 
   if (!comMembros.length || !arestas.length)
-    return {
-      id: 'F2', nome: 'Aresta atravessando faixa alheia', familia: 'F', insumo: 'geometria',
-      severidadeMaxima: 'fail', semantica: true, calibravel: false,
-      estado: 'inaplicavel',
-      mensagem: !arestas.length ? 'o diagrama não tem arestas' : 'o diagrama não tem faixa com membros declarados',
-      medida: { faixas: comMembros.length, arestas: arestas.length }, ocorrencias: [],
-    };
+    return achado('inaplicavel',
+      !arestas.length ? 'o diagrama não tem arestas' : 'o diagrama não tem faixa com membros declarados',
+      { faixas: comMembros.length, arestas: arestas.length });
 
   const dela = (ponta, f) => f.membros.some(m => m === ponta || cena.ehDescendente(ponta, m));
 
@@ -104,32 +119,25 @@ function f2(cena) {
       });
     }
 
-  return {
-    id: 'F2', nome: 'Aresta atravessando faixa alheia', familia: 'F', insumo: 'geometria',
-    severidadeMaxima: 'fail', semantica: true, calibravel: false,
-    estado: casos.length ? 'falha' : 'ok',
-    mensagem: casos.length
+  return achado(casos.length ? 'falha' : 'ok',
+    casos.length
       ? `${casos.length} travessia(s) de faixa alheia — tolerância é zero, como em A5.5`
       : `${arestas.length} aresta(s) contra ${comMembros.length} faixa(s): nenhuma corta faixa que não é dela`,
-    medida: { faixas: comMembros.length, arestas: arestas.length, travessias_de_faixa: casos.length },
-    ocorrencias: casos,
-  };
+    { faixas: comMembros.length, arestas: arestas.length, travessias_de_faixa: casos.length },
+    casos);
 }
 
 module.exports = function extras(cena) {
   const saida = [];
   const { faixas, nos } = cena;
+  const achado = achadoDeFaixa('F1', 'Faixa abraça exatamente seus membros');
 
   // ---------------------------------------------------------------- F1
   const conferiveis = faixas.filter(f => Array.isArray(f.membros));
   if (!conferiveis.length) {
-    saida.push({
-      id: 'F1', nome: 'Faixa abraça exatamente seus membros', familia: 'F', insumo: 'geometria',
-      severidadeMaxima: 'fail', semantica: true, calibravel: false,
-      estado: 'inaplicavel',
-      mensagem: faixas.length ? 'as faixas do plano não declaram membros' : 'o diagrama não tem faixas',
-      medida: { faixas: faixas.length }, ocorrencias: [],
-    });
+    saida.push(achado('inaplicavel',
+      faixas.length ? 'as faixas do plano não declaram membros' : 'o diagrama não tem faixas',
+      { faixas: faixas.length }));
     saida.push(f2(cena));
     return saida;
   }
@@ -161,16 +169,12 @@ module.exports = function extras(cena) {
     }
   }
 
-  saida.push({
-    id: 'F1', nome: 'Faixa abraça exatamente seus membros', familia: 'F', insumo: 'geometria',
-    severidadeMaxima: 'fail', semantica: true, calibravel: false,
-    estado: casos.length ? 'falha' : 'ok',
-    mensagem: casos.length
+  saida.push(achado(casos.length ? 'falha' : 'ok',
+    casos.length
       ? `${casos.length} divergência(s) entre o que a faixa desenha e o que ela declara`
       : `${conferiveis.length} faixa(s) abraçam exatamente seus membros`,
-    medida: { faixas: conferiveis.length, divergencias: casos.length },
-    ocorrencias: casos,
-  });
+    { faixas: conferiveis.length, divergencias: casos.length },
+    casos));
 
   // ---------------------------------------------------------------- F2
   saida.push(f2(cena));

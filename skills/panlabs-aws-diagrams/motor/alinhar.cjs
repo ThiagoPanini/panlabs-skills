@@ -90,10 +90,10 @@ function temSobreposicao(saida, paddings) {
     const p = nos.get(paiId);
     const pad = paddings.get(paiId) || { top: 0, left: 0, bottom: 0, right: 0 };
     for (const c of irmaos) {
-      if (c.y + c.h > p.y + p.h - (pad.bottom || 0) + 0.5) return `${c.id} estoura ${paiId}`;
-      if (c.x + c.w > p.x + p.w - (pad.right || 0) + 0.5) return `${c.id} estoura ${paiId} (x)`;
-      if (c.y < p.y + (pad.top || 0) - 0.5) return `${c.id} sai pelo topo de ${paiId}`;
-      if (c.x < p.x + (pad.left || 0) - 0.5) return `${c.id} sai pela esquerda de ${paiId}`;
+      if (c.y + c.h > p.y + p.h - pad.bottom + 0.5) return `${c.id} estoura ${paiId}`;
+      if (c.x + c.w > p.x + p.w - pad.right + 0.5) return `${c.id} estoura ${paiId} (x)`;
+      if (c.y < p.y + pad.top - 0.5) return `${c.id} sai pelo topo de ${paiId}`;
+      if (c.x < p.x + pad.left - 0.5) return `${c.id} sai pela esquerda de ${paiId}`;
     }
   }
   return null;

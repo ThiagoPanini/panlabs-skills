@@ -383,6 +383,37 @@ function regraDlq(modelo, ctx) {
 const REGRAS = [regraSpof, regraSingleAz, regraEgresso, regraDadoPublico, regraConfianca, regraDlq];
 
 /**
+ * Os nomes, numa lista só — porque a régua e a CLI precisam da MESMA lista.
+ *
+ * Estavam escritos à mão nos dois consumidores, e uma sétima regra exigiria três
+ * edições em três arquivos, com a chance de a régua passar a cobrar cinco
+ * enquanto o módulo entrega seis. Uma lista, um lugar.
+ */
+const NOMES = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publica',
+  'cross-account-sem-confianca', 'assincrono-sem-dlq'];
+
+/**
+ * Os modelos do corpus, na ordem — e ele mora aqui, junto das regras, por uma
+ * razão de correção e não de arrumação: o `L2`/`L3` do critério (*toda regra
+ * dispara em ≥1 e cala em ≥1*) só quer dizer alguma coisa se a régua e a CLI
+ * varrerem **o mesmo corpus**. Duas listas de diretório é a porta para a régua
+ * ficar verde contra metade dele.
+ */
+const DIRS_DO_CORPUS = ['modelo', 'modelo/recusa'];
+
+function arquivosDoCorpus(raiz) {
+  const fs = require('fs');
+  const saida = [];
+  for (const d of DIRS_DO_CORPUS) {
+    const dir = path.join(raiz, d);
+    if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json')).sort())
+      saida.push(path.join(d, f));
+  }
+  return saida;
+}
+
+/**
  * Roda as seis contra um `modelo@1`. Função pura.
  *
  * @returns {{achados: Array, mudas: Array, teto: number, dentroDoTeto: boolean}}
@@ -404,4 +435,7 @@ function revisar(modelo, opts = {}) {
   return { achados, mudas, teto, dentroDoTeto: achados.length <= teto };
 }
 
-module.exports = { revisar, REGRAS, ehStateful, ehEgresso, ehAssincrono, ehComputacao };
+module.exports = {
+  revisar, REGRAS, NOMES, arquivosDoCorpus, DIRS_DO_CORPUS,
+  ehStateful, ehEgresso, ehAssincrono, ehComputacao,
+};

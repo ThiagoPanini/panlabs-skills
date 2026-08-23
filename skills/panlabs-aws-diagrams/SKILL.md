@@ -54,7 +54,7 @@ node tools/check-geometria.cjs <modelo-em-construcao.json>
 ```
 
 **Fecha quando** `A1` chega ao **piso** — e o piso tem nome: `A1.2`, `A1.3` e
-`A1.11` sempre (dívida de motor e de esquema, medida em 15 de 15 modelos do
+`A1.11` sempre (dívida de motor e de esquema, medida em 35 de 35 páginas do
 corpus), mais `A1.5` e `A1.12` assim que qualquer nota tiver `sobre`. Toda outra
 entrada de `A1` que aparecer é uma pergunta a fazer.
 

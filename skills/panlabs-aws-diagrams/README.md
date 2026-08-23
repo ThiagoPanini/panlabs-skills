@@ -10,10 +10,36 @@ multi-conta por motor determinístico `IR → layout → mxGraph XML`.
 ```bash
 node motor/gerar.cjs modelo/web-multi-az.json --saida saida/x.drawio
 node tools/check-geometria.cjs modelo/web-multi-az.json    # o laudo das 62
+node tools/revisar-lacunas.cjs modelo/web-multi-az.json    # a revisão de lacunas
 node tools/sessao2.cjs saida/varejo.drawio                 # retomar uma sessão
 ./tests/rodar.sh                                           # a régua inteira
+./tools/instalar.sh                                        # expor nos dois harnesses
 ./tools/medir-candidatos.sh                                # a medição que escolheu o motor
 ```
+
+## Instalar
+
+```bash
+./tools/instalar.sh              # instala (ou reaponta) os dois links
+./tools/instalar.sh --conferir   # só confere
+```
+
+Instalar é **apontar, não copiar** — a skill instalada é sempre a que está no
+repositório, em vez de uma fotografia dela que envelhece em silêncio.
+
+```
+~/.agents/skills/panlabs-aws-diagrams   → o repositório (link absoluto)
+~/.claude/skills/panlabs-aws-diagrams   → ../../.agents/skills/panlabs-aws-diagrams
+```
+
+O script **recusa apontar para um worktree**: `.claude/worktrees/` é apagado
+junto com a sessão que o criou, e um link para lá funciona hoje e some amanhã sem
+avisar. Rodando de dentro de um, ele resolve o checkout principal pelo
+`--git-common-dir` e diz em voz alta que fez isso.
+
+E ele não acredita em si mesmo: no fim, roda um comando da skill **a partir de
+cada caminho instalado**, que é o que prova a premissa 7 (auto-contida, nada além
+do Node).
 
 ## A árvore
 
@@ -29,7 +55,8 @@ node tools/sessao2.cjs saida/varejo.drawio                 # retomar uma sessão
 | `catalog/` | 403 service icons + 606 resource icons do draw.io 31.3.1, com o delta de correções escrito à mão |
 | `modelo/` | O corpus. `modelo/recusa/` para o que o motor **deve** recusar, `modelo/sessao/` para `sessao@1` |
 | `tests/` | A união das suítes, em 8 camadas |
-| `tools/` | Bisseção, render, as duas medições, as sessões de demonstração. `drawio.cjs` é o único lugar que sabe onde o binário mora |
+| `agents/` | O empacotamento multi-harness. `openai.yaml` é a forma que as outras skills da casa usam |
+| `tools/` | Bisseção, render, instalação, as medições, as sessões de demonstração. `drawio.cjs` é o único lugar que sabe onde o binário mora |
 | `saida/` | O que o motor produziu, e o render como prova |
 | `docs/` | O registro de engenharia: o que a recertificação mediu, o que o roteamento consertou |
 | `prototypes/` | **Fonte primária, não produção.** Um diretório por pergunta respondida. Nada da árvore de produção alcança daqui — e há checagem disso |

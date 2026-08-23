@@ -158,8 +158,9 @@ um laço de correção seria um segundo otimizador competindo com o ELK sem grad
 nem função objetivo.
 
 **Achado contra a rubrica: ela modela uma árvore de contenção só, e o motor
-desenha duas coisas.** Grupo afirma contenção; faixa afirma atributo compartilhado.
-Daí `F1`, fora das 62 de propósito — o índice é o contrato com a rubrica.
+desenha duas coisas.** Daí `F1`, fora das 62 de propósito — o índice é o contrato
+com a rubrica, e uma checagem a mais o quebraria. A distinção que a sustenta está
+em [`modelo.md`](modelo.md) e [`laudo.md`](laudo.md).
 
 **Decisão de contraste: o fundo efetivo é a pilha de grupos em ordem z, não a
 página.** A primeira versão errava o corte de z e lia 1,00:1 como 13,57:1.
@@ -209,9 +210,9 @@ didáticas, e na SRA real há **zero** caixas de AZ.
 
 ### Multi-conta
 
-**A conta é container; a OU é dimensão.** `AWS account` está na lista fechada de
-group icons; `Organizational unit` não está — a OU vira par ícone+rótulo sem
-caixa, e o agrupamento sai do **contraste de gap 1:4** medido no SRA.
+**A conta é container; a OU é dimensão** — pelo fato bruto de `AWS account` estar
+na lista fechada de group icons e `Organizational unit` não estar. A mecânica que
+daí decorre está em [`modelo.md`](modelo.md).
 
 **O diagrama multi-conta carro-chefe da AWS tem ZERO conectores.** A AWS resolve o
 espaguete **não desenhando a aresta**. Dois modos derivados do modelo, nunca

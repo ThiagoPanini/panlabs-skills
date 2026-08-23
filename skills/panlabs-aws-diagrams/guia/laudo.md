@@ -154,8 +154,8 @@ Não "conserte" `A5.7` invertendo `dados`. Ver `../docs/roteamento.md` §6.
 
 ## Quando algo acusa de verdade
 
-1. **Rode `--explicar`.** Ele dá as três trilhas: como cada nome caiu no catálogo,
-   de onde saiu a camada de rede de cada subnet, e o laudo página a página.
+1. **Rode `--explicar`** — as três trilhas de auditoria, descritas no
+   [`SKILL.md`](../SKILL.md).
 2. **Falha semântica → o fato está errado no modelo**, não a geometria. `A4.2`
    costuma ser `dentro` apontando para o lugar errado; `A5.5`, uma travessia que o
    modelo não declara.
@@ -178,9 +178,20 @@ Não "conserte" `A5.7` invertendo `dados`. Ver `../docs/roteamento.md` §6.
 
 ## O que a evidência não sustenta
 
-A rubrica traz nove regras populares que a literatura **não** confirma. Antes de
-aceitar uma "boa prática de diagrama" que não está nas 62, procure-a em
-[`../../../docs/research/architecture-diagram-quality-rubric.md`](../../../docs/research/architecture-diagram-quality-rubric.md).
+Regra popular de diagrama que **não** está nas 62 provavelmente foi medida e
+reprovada. As que mais aparecem:
+
+- **"no máximo 7±2 caixas"** é folclore aplicado a diagrama. Miller e Cowan
+  mediram **memória de trabalho**, não leitura de diagrama — o diagrama fica na
+  tela, é memória externa. Os cortes que a pesquisa empírica realmente encontra
+  são **20 / 50 / 200 nós**, e os próprios autores do survey chamam o limiar de
+  *"intuição de especialista, não pesquisa empírica"*.
+- **O único limite numérico rigorosamente derivado é sobre VOCABULÁRIO, não sobre
+  contagem de caixas**: ≤6 entradas de legenda, do *span of absolute judgement*.
+  É o `A2.1`, e é o que não se negocia. `A8.1` (>20 avisa, >50 reprova) é
+  convenção calibrada, e está rotulado como tal.
+- **O remédio para diagrama grande é decompor, não encolher** — medido em mais de
+  50% de ganho de compreensão.
 
 Duas nuances que o folclore perde e que estão nas 62:
 

@@ -1,0 +1,176 @@
+#!/usr/bin/env node
+'use strict';
+/**
+ * Os diagramas bons do corpus, laudados — a outra metade do critério de aceite.
+ *
+ * O ticket pede que o validador "separe os dois": os quebrados de propósito e o
+ * diagrama bom. `check-quebrados.cjs` cobre o primeiro lado. Aqui está o
+ * segundo, e ele NÃO é "tudo verde".
+ *
+ * A distinção que a suíte trava é entre duas coisas que um relatório único
+ * embaralha:
+ *
+ *   o desenho está INCOMPLETO — falta legenda, faltam metadados de frescor, o
+ *   título de um grupo tem contraste de 3,06:1. São defeitos reais, do motor do
+ *   #11, e o protótipo os reporta em vez de escondê-los. Não travam a suíte:
+ *   travar aqui seria transformar achado do #18 em regressão do #11.
+ *
+ *   o desenho está MENTINDO — um nó desenhado numa VPC de que não é membro,
+ *   uma aresta cortando uma rede alheia, uma faixa afirmando um atributo que o
+ *   modelo nega. É o que o índice marca como `semantica`, e é tolerância zero.
+ *   ISSO trava a suíte, porque se aparecer num exemplo do #11 é porque o motor
+ *   regrediu ou o validador está errado, e as duas coisas precisam de olho.
+ *
+ * A contagem por estado fica impressa a cada rodada de propósito: é o número
+ * que se compara entre uma sessão e a seguinte para saber se melhorou.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const RAIZ = path.join(__dirname, '..');
+const { validarGeometria } = require(path.join(__dirname, '..', 'validador', 'validar-geometria.cjs'));
+const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
+
+/**
+ * ⚠️ QUARENTENA NOMEADA — não é tolerância, é dívida com endereço.
+ *
+ * A recertificação do #23 rodou o validador do #18 sobre o corpus do #12 pela
+ * primeira vez (antes disso o `check-bons` só via os dois modelos do #11), e o
+ * `web-fluxo-3-az` acusa `A5.5` ×2: no caminho da grade transposta, duas arestas
+ * de gravação saem de EC2 em raias diferentes e atravessam o grupo "app-a", de
+ * onde não saem nem para onde vão.
+ *
+ * É defeito REAL e é SEMÂNTICO — o desenho afirma um caminho de rede que o modelo
+ * nega. E é ANTERIOR a esta árvore: `tools/medir-antes-depois.cjs` gera o mesmo
+ * modelo com o motor de antes do enxerto de tema e com o de produção, e o laudo é
+ * idêntico nos dois (falha=9, A5.5×2). Não veio da consolidação; veio de nunca
+ * ninguém ter rodado o validador do #18 contra os modelos do #12.
+ *
+ * Consertar é ROTEAMENTO DE ARESTA na vista técnica, que é o ticket #24 — aberto,
+ * e escrito exatamente para isto. Fazer aqui seria puxar o escopo dele para
+ * dentro do #23.
+ *
+ * A quarentena é EXATA de propósito: o modelo tem de acusar precisamente estas
+ * ocorrências. Uma falha semântica nova nele quebra a suíte igual; e quando o #24
+ * consertar, a suíte quebra também — dizendo que esta entrada saiu de validade e
+ * tem de ser apagada. Quarentena que não sabe expirar vira desculpa permanente.
+ */
+const QUARENTENA = {
+  'web-fluxo-3-az': {
+    ticket: '#24',
+    esperado: ['A5.5×2'],
+    porque: 'roteamento da grade transposta atravessa o grupo "app-a" — anterior à consolidação, medido em tools/medir-antes-depois.cjs',
+  },
+};
+
+async function main() {
+  const modelos = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).sort();
+  let falhou = 0;
+
+  for (const arquivo of modelos) {
+    const nome = path.basename(arquivo, '.json');
+    let r;
+    try {
+      r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', arquivo), 'utf8')));
+    } catch (e) {
+      console.log(`  ✗ ${nome}: o motor do #11 não gerou — ${e.message}`);
+      falhou = 1;
+      continue;
+    }
+
+    const laudo = validarGeometria(r.plano);
+    const s = laudo.resumo;
+
+    // 1. tolerância zero no que é semântico — salvo quarentena nomeada, e ela
+    //    cobra igualdade EXATA, não "menos ou igual"
+    const mentiras = laudo.semanticas;
+    const assinatura = mentiras.map(m => `${m.id}×${m.ocorrencias.length}`).sort();
+    const q = QUARENTENA[nome];
+    const emQuarentena = q && JSON.stringify(assinatura) === JSON.stringify([...q.esperado].sort());
+
+    if (emQuarentena) {
+      console.log(`  ⚠ ${nome}: ${assinatura.join(', ')} — QUARENTENA ${q.ticket} (${q.porque})`);
+    } else {
+      console.log(`  ${mentiras.length ? '✗' : '✓'} ${nome}: ${mentiras.length ? `${mentiras.length} FALHA(S) SEMÂNTICA(S)` : 'nenhuma falha semântica'}`);
+      for (const m of mentiras) {
+        falhou = 1;
+        console.log(`      ${m.id} ${m.nome}: ${m.mensagem}`);
+        for (const o of m.ocorrencias.slice(0, 3)) console.log(`        · ${o.o_que}`);
+      }
+      if (q) {
+        falhou = 1;
+        console.log(`      ✗ a quarentena ${q.ticket} para "${nome}" esperava ${q.esperado.join(', ')} e veio ` +
+          `${assinatura.length ? assinatura.join(', ') : 'nada'} — ` +
+          (assinatura.length ? 'a dívida mudou de forma' : 'a dívida foi PAGA: apague a entrada de QUARENTENA'));
+      }
+    }
+
+    // 2. o laudo tem de ser completo — uma checagem muda não pode passar por verde
+    if (laudo.cobertura.naoRodaram.length) {
+      falhou = 1;
+      console.log(`      ✗ não rodaram: ${laudo.cobertura.naoRodaram.join(', ')}`);
+    }
+    const erros = laudo.resultados.filter(x => x.estado === 'erro');
+    for (const e of erros) { falhou = 1; console.log(`      ✗ ${e.mensagem}`); }
+
+    // 3. o retrato, que é o que se compara entre sessões
+    console.log(`      ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ${s.inaplicavel} inaplicável · ${s.pulada} do render`);
+    if (laudo.falhas.length)
+      console.log(`      achados (não travam a suíte): ${laudo.falhas.map(f => f.id).join(', ')}`);
+  }
+
+  // ---------------------------------------------------- a separação, explícita
+  //
+  // O critério de aceite do ticket é "mostrar que separa os dois". Vale dizer
+  // em que EIXO a separação acontece, porque no eixo do relatório inteiro ela
+  // não acontece — e esconder isso seria vender a ferramenta melhor do que ela é.
+  //
+  // Os exemplos do #11 acumulam 6 falhas cada um: sem legenda, sem metadados,
+  // contraste do catálogo abaixo da WCAG. São defeitos REAIS. Então "tem falha"
+  // não distingue um diagrama bom de um quebrado — os dois têm.
+  //
+  // O que distingue é a VERACIDADE: o desenho afirma alguma coisa que o modelo
+  // nega? Aí a separação é limpa, e é ela que o portão usa como nível default.
+  const { portao } = require(path.join(__dirname, '..', 'validador', 'portao.cjs'));
+  const { CASOS } = require(path.join(__dirname, 'casos', 'quebrados.cjs'));
+
+  console.log('\n  a separação, no eixo da veracidade:\n');
+  const mentirosos = CASOS.filter(c => ['A4.2', 'A4.4', 'A5.5', 'F1'].some(id => c.espera.includes(id)));
+  let barrados = 0;
+  for (const c of mentirosos) {
+    let barrou = false;
+    try { portao(c.plano, { modelo: c.modelo, nivel: 'veracidade' }); } catch { barrou = true; }
+    if (barrou) barrados++;
+    else { falhou = 1; console.log(`  ✗ "${c.nome}" passou o portão de veracidade`); }
+  }
+  console.log(`  ${barrados === mentirosos.length ? '✓' : '✗'} ${barrados}/${mentirosos.length} diagramas que mentem foram barrados`);
+
+  let passaram = 0, emQuarentenaNoPortao = 0;
+  for (const arquivo of modelos) {
+    const nome = path.basename(arquivo, '.json');
+    const r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', arquivo), 'utf8')));
+    try { portao(r.plano, { nivel: 'veracidade' }); passaram++; }
+    catch (e) {
+      // o portão barra o que mente, e a quarentena não o desliga: ele CONTINUA
+      // barrando o `web-fluxo-3-az`, que é o comportamento certo. O que a
+      // quarentena faz é não chamar de regressão uma dívida já nomeada.
+      if (QUARENTENA[nome]) { emQuarentenaNoPortao++; console.log(`  ⚠ ${arquivo} barrado pelo portão — quarentena ${QUARENTENA[nome].ticket}`); }
+      else { falhou = 1; console.log(`  ✗ ${arquivo} foi barrado: ${e.erros.join(' | ')}`); }
+    }
+  }
+  const esperados = modelos.length - Object.keys(QUARENTENA).length;
+  console.log(`  ${passaram === esperados ? '✓' : '✗'} ${passaram}/${esperados} diagramas do corpus passaram` +
+    (emQuarentenaNoPortao ? `  (+${emQuarentenaNoPortao} em quarentena nomeada)` : ''));
+  if (passaram !== esperados) falhou = 1;
+  console.log('      (no eixo do relatório inteiro NÃO há separação, e é honesto: os');
+  console.log('       diagramas do corpus têm 6 a 9 falhas reais cada um. "Tem falha"');
+  console.log('       não distingue bom de quebrado; "mente" distingue.)');
+
+  console.log(falhou
+    ? '\n  ✗ há falha semântica fora de quarentena, ou laudo incompleto, no corpus'
+    : '\n  ✓ o corpus tem defeitos reportados, e nenhum fora de quarentena é o desenho mentindo.');
+  process.exit(falhou ? 1 : 0);
+}
+
+main().catch(e => { console.error(e); process.exit(1); });

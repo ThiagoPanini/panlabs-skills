@@ -1,0 +1,313 @@
+{
+  "_leia": [
+    "Os limiares do validador geométrico, separados pela única coisa que muda o que",
+    "se pode fazer com eles: se existe medição por trás.",
+    "",
+    "`normativos` saem de norma ou de experimento publicado — WCAG 2.2, os percentis",
+    "de especialista da Tabela 2 de Mooney et al. (GD 2025), o checklist do C4. Mexer",
+    "num deles não é configurar, é discordar da fonte; então a fonte vai escrita ao",
+    "lado, e quem mexer tem de trocar a citação junto.",
+    "",
+    "`calibraveis` são os que a rubrica (#8) marcou in loco como 'default de",
+    "engenharia': números plausíveis que ninguém mediu. O #18 decide que estes viram",
+    "config — não porque configurar seja bom, mas porque um número sem medição",
+    "hard-coded no meio de um `if` é indistinguível de um número medido, e a diferença",
+    "é justamente o que a rubrica se deu ao trabalho de registrar. Ao virar chave",
+    "nomeada, o número passa a carregar `porque: null` — o campo vazio é o pedido de",
+    "medição, visível para quem for calibrar."
+  ],
+  "normativos": {
+    "contrasteTextoPequeno": {
+      "valor": 4.5,
+      "unidade": "razão",
+      "fonte": "WCAG 2.2 SC 1.4.3 (AA), fórmula em G18"
+    },
+    "contrasteTextoGrande": {
+      "valor": 3.0,
+      "unidade": "razão",
+      "fonte": "WCAG 2.2 SC 1.4.3 — ≥18pt (24px) ou ≥14pt bold (18,5px)"
+    },
+    "contrasteNaoTextual": {
+      "valor": 3.0,
+      "unidade": "razão",
+      "fonte": "WCAG 2.2 SC 1.4.11"
+    },
+    "textoGrandePx": {
+      "valor": 24,
+      "unidade": "px",
+      "fonte": "WCAG 2.2 SC 1.4.3 — fronteira de 18pt"
+    },
+    "textoGrandeNegritoPx": {
+      "valor": 18.5,
+      "unidade": "px",
+      "fonte": "WCAG 2.2 SC 1.4.3 — fronteira de 14pt bold"
+    },
+    "resolucaoDeNoQ1": {
+      "valor": 0.067,
+      "unidade": "NR",
+      "fonte": "Mooney et al., GD 2025, eq. (9) + Tabela 2 (Q1 de especialistas)"
+    },
+    "resolucaoDeNoMediana": {
+      "valor": 0.127,
+      "unidade": "NR",
+      "fonte": "Mooney et al., GD 2025, Tabela 2 (mediana)"
+    },
+    "cruzamentosQ1": {
+      "valor": 0.966,
+      "unidade": "EC",
+      "fonte": "Mooney et al., GD 2025, eq. (3) + Tabela 2"
+    },
+    "anguloDeCruzamentoQ1": {
+      "valor": 0.762,
+      "unidade": "CA",
+      "fonte": "Mooney et al., GD 2025, eq. (2) + Tabela 2"
+    },
+    "anguloDeCruzamentoIdeal": {
+      "valor": 70,
+      "unidade": "graus",
+      "fonte": "Huang, Eades, Hong & Lin (JVLC 2014); adotado por Dunne et al. 2015 e greadability.js"
+    },
+    "anguloDeCruzamentoMinimo": {
+      "valor": 30,
+      "unidade": "graus",
+      "fonte": "Mooney et al., GD 2025 — abaixo disso o cruzamento deixa de ser legível"
+    },
+    "anguloIncidenteMinimo": {
+      "valor": 15,
+      "unidade": "graus",
+      "fonte": "A6.1 da rubrica — abaixo disso duas arestas incidentes são indistinguíveis a olho"
+    },
+    "resolucaoAngularQ1": {
+      "valor": 0.352,
+      "unidade": "AR",
+      "fonte": "Mooney et al., GD 2025, eq. (1) + Tabela 2"
+    },
+    "uniformidadeDeNosQ1": {
+      "valor": 0.5,
+      "unidade": "NU",
+      "fonte": "Mooney et al., GD 2025, eq. (10) + Tabela 2"
+    },
+    "razaoDeAspectoQ1": {
+      "valor": 0.499,
+      "unidade": "Asp",
+      "fonte": "Mooney et al., GD 2025 + Tabela 2"
+    },
+    "uniformidadeDeComprimentoQ1": {
+      "valor": 0.647,
+      "unidade": "ELD",
+      "fonte": "Mooney et al., GD 2025, eq. (4) + Tabela 2"
+    },
+    "ortogonalidadeAlvo": {
+      "valor": 0.9,
+      "unidade": "EO",
+      "fonte": "Mooney et al., GD 2025, eqs. (5)–(6)"
+    },
+    "ortogonalidadeQ1": {
+      "valor": 0.486,
+      "unidade": "EO",
+      "fonte": "Mooney et al., GD 2025, Tabela 2 — abaixo disso é mistura desordenada de ângulos"
+    },
+    "preservacaoDeVizinhancaQ1": {
+      "valor": 0.341,
+      "unidade": "NP",
+      "fonte": "Mooney et al., GD 2025, eq. (7)"
+    },
+    "stressQ1": {
+      "valor": 0.618,
+      "unidade": "KSM",
+      "fonte": "Mooney et al., GD 2025, eq. (8)"
+    },
+    "complexidadeGraficaAlvo": {
+      "valor": 6,
+      "unidade": "entradas de legenda",
+      "fonte": "Moody, Physics of Notations — span of absolute judgement ≈ 6 categorias"
+    },
+    "complexidadeGraficaFalha": {
+      "valor": 8,
+      "unidade": "entradas de legenda",
+      "fonte": "Moody, Physics of Notations — 7–8 é warn, acima é fail"
+    },
+    "elementosAlvo": {
+      "valor": 20,
+      "unidade": "nós",
+      "fonte": "Ghoniem/Fekete/Castagliola; Yoghourdjian et al. (arXiv:1809.00270) — corte em 20"
+    },
+    "elementosFalha": {
+      "valor": 50,
+      "unidade": "nós",
+      "fonte": "Yoghourdjian et al. — corte em 50"
+    },
+    "densidadeMaxima": {
+      "valor": 0.1,
+      "unidade": "|E|/C(|V|,2)",
+      "fonte": "Yoghourdjian et al. — 78% dos estudos usam densidade <10%"
+    }
+  },
+  "calibraveis": {
+    "fonteMinimaRotuloDeAresta": {
+      "valor": 12,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "A3.9 — 'piso prático abaixo do qual o texto deixa de ser legível em impressão/slide'; a rubrica avisa que NÃO é regra WCAG (WCAG normatiza contraste, não tamanho)"
+    },
+    "fonteMinimaNomeDeElemento": {
+      "valor": 14,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "A3.9 — mesma origem"
+    },
+    "proximidadeMaxima": {
+      "valor": 0.6,
+      "unidade": "ρ",
+      "porque": null,
+      "rubrica": "A4.7 — 'Valor do limiar é default de engenharia, não medido'"
+    },
+    "dobrasAlvo": {
+      "valor": 1,
+      "unidade": "dobras por aresta",
+      "porque": null,
+      "rubrica": "A5.3 — 'O valor 2 é default de engenharia'; 1 é o alvo declarado"
+    },
+    "dobrasAviso": {
+      "valor": 2,
+      "unidade": "dobras por aresta",
+      "porque": null,
+      "rubrica": "A5.3 — o número que a rubrica marcou"
+    },
+    "dobrasFalha": {
+      "valor": 4,
+      "unidade": "dobras por aresta",
+      "porque": null,
+      "rubrica": "A5.3 — 'fail em > 4'"
+    },
+    "anguloDeDobraAlvo": {
+      "valor": 90,
+      "unidade": "graus",
+      "porque": null,
+      "rubrica": "A5.4 — derivado de Gestalt/continuação, sem experimento próprio"
+    },
+    "anguloDeDobraFalha": {
+      "valor": 60,
+      "unidade": "graus",
+      "porque": null,
+      "rubrica": "A5.4 — 'fail abaixo de 60°'"
+    },
+    "fluxoConsistenteMinimo": {
+      "valor": 0.9,
+      "unidade": "fração de arestas",
+      "porque": null,
+      "rubrica": "A5.7 — 'O valor 0,90 é default de engenharia'"
+    },
+    "alinhamentoMinimo": {
+      "valor": 0.7,
+      "unidade": "fração de nós",
+      "porque": null,
+      "rubrica": "A6.4 — 'O valor 70% é default de engenharia'"
+    },
+    "passoDaGrade": {
+      "valor": 8,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "A6.4 — o passo de grade é exemplo na rubrica ('ex.: 8 px')"
+    },
+    "deltaE00Minimo": {
+      "valor": 10,
+      "unidade": "ΔE00",
+      "porque": null,
+      "rubrica": "A7.4 — 'operacionalização de engenharia (o W3C não prescreve ΔE). Marque como default calibrável'"
+    },
+    "folgaEntreCaixas": {
+      "valor": 8,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "A3.1 — 'gap ≥ 8 px (ou ≥ 0.25 × altura do ícone)'; a rubrica dá duas formas do mesmo número e não escolhe"
+    },
+    "paddingDeGrupo": {
+      "valor": 8,
+      "unidade": "px",
+      "porque": "CALIBRADO NA RECERTIFICAÇÃO DO #23, e o 12 era um espelho. O #18 herdou o número do `PAD = 12` que o motor do #11 usava, e nesse regime a checagem media o motor contra ele mesmo. Com a camada de tema (#13) o motor passou a derivar a folga de uma grade base 8 — e a medição fica sem margem para interpretação: com limiar 12, A4.1 acusa 77 ocorrências em 14 dos 15 modelos do corpus, e TODAS reportam exatamente 8 px; com limiar 8, acusa zero. Nenhuma delas é contenção defeituosa, todas são a escala nova. E 8 não é um número escolhido para o teste passar: `passoDaGrade` e `folgaEntreCaixas` já valiam 8 nesta mesma tabela, e a base 8 do tema sai dos ícones normativos da AWS (48 e 40 px, A9/A6 do #5) e do piso N7 de 0,05\" ≈ 4,8 px, cujo degrau seguinte é 8. Os três números passam a concordar em vez de um contradizer os outros dois. O que A4.1 protege — filho DENTRO do pai, sem encostar — continua protegido; quem guarda pertencimento é o A4.2, intocado.",
+      "rubrica": "A4.1 — padding interno mínimo em todos os quatro lados"
+    },
+    "desvioDePaddingMaximo": {
+      "valor": 4,
+      "unidade": "px (σ)",
+      "porque": null,
+      "rubrica": "A4.5 — 'σ ≤ 4 px intra-grupo'"
+    },
+    "margemDoCanvas": {
+      "valor": 16,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "A3.7 — 'margem ≥ 16 px'"
+    },
+    "separacaoDeArestasParalelas": {
+      "valor": 6,
+      "unidade": "px (Hausdorff)",
+      "porque": null,
+      "rubrica": "A5.8 — 'distância de Hausdorff < 6 px'"
+    },
+    "toleranciaDeAncoragem": {
+      "valor": 2,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "A3.6 — '±2 px' sobre o perímetro"
+    },
+    "paddingDeRotulo": {
+      "valor": 2,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "A3.2 — 'padding de 2 px' na interseção de bounding boxes de texto"
+    },
+    "toleranciaDeRazaoDeAspecto": {
+      "valor": 0.2,
+      "unidade": "fração",
+      "porque": null,
+      "rubrica": "A6.3 — 'difere da razão do canvas em mais de 20%'"
+    },
+    "fanOutMaximo": {
+      "valor": 8,
+      "unidade": "grau",
+      "porque": null,
+      "rubrica": "A8.3 — o U8 da rubrica lista deg ≤ 8 entre os \"default de engenharia\"; a derivação de A6.1 é raciocínio, não medição"
+    },
+    "coberturaDeTinta": {
+      "valor": [
+        0.15,
+        0.6
+      ],
+      "unidade": "fração do canvas",
+      "porque": null,
+      "rubrica": "A8.4 — o U8 lista a faixa de cobertura entre os \"default de engenharia\"; a própria rubrica a chama de sinal diagnóstico, não reprovação"
+    },
+    "larguraMediaDeCaractere": {
+      "valor": 6.6,
+      "unidade": "px por caractere a 12px",
+      "porque": null,
+      "rubrica": "nenhuma — é do validador. Avanco medio de glifo em Helvetica 12px (~0,55em). O motor calibrou 6,7 por conta propria (resolver.cjs); a concordancia e esperada, e o valor da checagem nao esta na constante e sim em compor as caixas de rotulo e cruza-las, que o motor nunca faz"
+    },
+    "alturaDeLinha": {
+      "valor": 17,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "nenhuma — e do validador. Entrelinha do rotulo de folha a 12px"
+    },
+    "alturaMinimaDeRotulo": {
+      "valor": 23,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "nenhuma — e do validador. Piso da faixa de rotulo de uma linha"
+    },
+    "larguraMaximaDeRotulo": {
+      "valor": 120,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "nenhuma — e do validador. Largura em que o rotulo do service icon quebra"
+    },
+    "alturaDaFaixaDeTitulo": {
+      "valor": 34,
+      "unidade": "px",
+      "porque": null,
+      "rubrica": "nenhuma — e do validador. Faixa de titulo reservada no topo de um container"
+    }
+  }
+}

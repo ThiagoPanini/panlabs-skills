@@ -1,0 +1,27 @@
+{
+  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "id": "app-dados",
+  "titulo": "App · Data — a linha que o alfabeto acertava por acaso",
+  "subtitulo": "Linha 1 da tabela do #22. Ninguém declarou camada: o motor leu ECS (containers) e RDS (database).",
+  "vista": "tecnica",
+  "genero": "T1",
+
+  "nos": [
+    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "dentro": "nuvem" },
+
+    { "id": "app-a", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "app-b", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+    { "id": "dado-a", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
+    { "id": "dado-b", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+
+    { "id": "ecs-a", "tipo": "servico", "servico": "ecs", "rotulo": "Serviço de pedidos", "dentro": "app-a" },
+    { "id": "ecs-b", "tipo": "servico", "servico": "ecs", "rotulo": "Serviço de pedidos", "dentro": "app-b" },
+    { "id": "rds-a", "tipo": "servico", "servico": "rds", "rotulo": "RDS primária", "dentro": "dado-a" },
+    { "id": "rds-b", "tipo": "servico", "servico": "rds", "rotulo": "RDS standby", "dentro": "dado-b" }
+  ],
+
+  "notas": [
+    { "texto": "A ordem das linhas não está no modelo. O motor leu a camada de rede de cada subnet pelo que ela guarda — ECS é 'containers' (aplicação), RDS é 'database' (dados) — e empilhou. O alfabeto acertaria este caso sozinho; é o único dos três que acertaria.", "origem": "legenda" }
+  ]
+}

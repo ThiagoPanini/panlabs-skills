@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "panlabs-aws-diagrams/tema@1",
+  "title": "Tema — o vocabulário FECHADO da camada de estilo",
+  "description": "A camada normativa da AWS (#5) não é defendida por regra de runtime, e sim por AUSÊNCIA DE PALAVRA: não existe token que nomeie cor de grupo, cor de categoria, traço de grupo ou tamanho de ícone. Mesmo truque do esquema do modelo em #11 — o que não se pode escrever não se perde na terceira sessão.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["esquema", "id", "rotulo", "fundo"],
+  "properties": {
+    "esquema": { "const": "panlabs-aws-diagrams/tema@1" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "rotulo": { "type": "string", "minLength": 1 },
+    "porque": { "type": "string" },
+    "herda": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+
+    "fundo": {
+      "description": "O INTERRUPTOR NORMATIVO. A AWS publica dois decks (#5 F2/F3) e o escuro muda exatamente duas coisas: a borda/ícone do AWS Cloud inverte e os callouts invertem. Medindo a paleta contra a WCAG chega-se à mesma lista — ver tools/medir-regua.cjs. Não há token para 'cor do AWS Cloud' porque quem decide isso é o deck, não o tema.",
+      "enum": ["claro", "escuro"]
+    },
+
+    "pagina": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "cor": { "$ref": "#/definitions/cor" },
+        "margem": { "type": "integer", "minimum": 0, "maximum": 200 }
+      }
+    },
+
+    "grupo": {
+      "description": "O ÚNICO token que fala de grupo, e ele foi aberto no retorno do #13 — a primeira volta tratava qualquer preenchimento de grupo como indizível. Estava errado, e a pesquisa do #5 já dizia: a ressalva honesta do A2 registra que diagramas oficiais reais tingem subnet, e que `<a:noFill/>` é padrão de fábrica, não proibição. Note o que este token NÃO deixa dizer: não há hex. QUAIS grupos são tingidos continua sendo fato do catálogo (o draw.io tinge duas subnets e mais nada), e o VALOR é derivado da própria cor normativa daquele grupo. Medido: 10% de #00A4A6 sobre branco dá #E6F6F6 contra o #E6F6F7 que o draw.io entrega, e 10% de #7AA116 dá #F2F6E8 exato — ou seja, o tingimento do produto JÁ É essa derivação. Por isso ele reforça a legenda por cor em vez de inventar canal novo, e por isso pode ser dito.",
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "tingimento": {
+          "description": "`derivado` mistura 10% da cor normativa do grupo com o fundo da página — reproduz o draw.io no tema claro e resolve sozinho no escuro, onde um azul-claro fixo viraria bloco luminoso e engoliria o rótulo branco. `nenhum` obedece o preset do deck ao pé da letra.",
+          "enum": ["derivado", "nenhum"]
+        }
+      }
+    },
+
+    "tinta": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "forte": { "$ref": "#/definitions/cor" },
+        "fraca": { "$ref": "#/definitions/cor" },
+        "halo": { "$ref": "#/definitions/cor" }
+      }
+    },
+
+    "texto": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "familia": {
+          "description": "TRÊS valores, e o corte foi medido, não escolhido. N11 do #5 manda 12 pt ARIAL em todo rótulo de diagrama; a lista `Menus.defaultFonts` do draw.io (#4 §4.1) não inclui Arial, mas o default do mxGraph é literalmente 'Arial,Helvetica'. O que fecha a lista em três é `tools/check-particao.cjs`: a métrica de texto do motor é uma largura média por caractere, e trocar para Verdana ou Georgia NÃO movia uma coordenada — ou seja, a faixa de rótulo continuaria dimensionada para Helvetica e o texto vazaria. Arial e Helvetica são intercambiáveis nessa conta (Arial foi desenhada sobre as larguras da Helvetica); qualquer outra exigiria uma tabela de largura por família que o motor não tem. Enquanto não tiver, a família é PINTURA — e a lista é essa.",
+          "enum": ["Arial", "Arial,Helvetica", "Helvetica"]
+        },
+        "rotulo": { "$ref": "#/definitions/pt" },
+        "grupo": { "$ref": "#/definitions/pt" },
+        "aresta": { "$ref": "#/definitions/pt" },
+        "titulo": { "$ref": "#/definitions/pt" },
+        "subtitulo": { "$ref": "#/definitions/pt" },
+        "qualificador": {
+          "description": "O21 do #5, forte em 4 corpora: qualificador em itálico sob o nome do serviço, dizendo o que ele faz ALI. Custa uma segunda linha de rótulo, e o layout paga (ver a partição métrica/pintura).",
+          "type": "boolean"
+        }
+      }
+    },
+
+    "aresta": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "cor": { "$ref": "#/definitions/cor" },
+        "espessura": { "type": "number", "minimum": 0.5, "maximum": 4 },
+        "ponta": { "enum": ["open", "blockThin", "block", "classic"] },
+        "cantos": { "type": "integer", "minimum": 0, "maximum": 24 },
+        "saltos": { "enum": ["none", "arc", "gap", "sharp", "line"] },
+        "fluxo": { "enum": ["solido", "tracejado", "animado"] }
+      }
+    },
+
+    "folga": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "base": {
+          "description": "Grade base. 8 não é gosto: o ícone de serviço é 48 px e o de grupo 40 px (A9/A6 do #5, travados no preset), ambos múltiplos de 8, e a folga mínima entre grupos aninhados (N7, 0.05\") é 4,8 px — o degrau de grade imediatamente acima é 8.",
+          "enum": [4, 8]
+        },
+        "densidade": {
+          "description": "Multiplica só as FOLGAS, nunca as CALHAS. Folga é respiro (vão entre nós, padding de container); calha é reserva de rótulo, derivada de métrica de fonte e do `spacingTop` do próprio estilo (#11 achado 6). Encolher calha não aperta o desenho: derruba texto em cima de borda.",
+          "type": "number", "minimum": 0.6, "maximum": 2.0
+        }
+      }
+    },
+
+    "nota": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "fundo": { "$ref": "#/definitions/cor" },
+        "borda": { "$ref": "#/definitions/cor" },
+        "tinta": { "$ref": "#/definitions/cor" }
+      }
+    },
+
+    "bloco": {
+      "description": "Vista LÓGICA (premissa 2 do mapa): pré-serviços, portanto fora do alcance da convenção AWS. É o único lugar onde a casa escolhe cor de caixa sem contrariar ninguém.",
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "fundo": { "$ref": "#/definitions/cor" },
+        "borda": { "$ref": "#/definitions/cor" },
+        "cantos": { "type": "integer", "minimum": 0, "maximum": 24 }
+      }
+    },
+
+    "cartao": {
+      "description": "NÃO existe token de legenda aqui, e a ausência é a resposta, não um esquecimento. O7/O20 do #5: 21 de 24 diagramas oficiais não têm legenda, e os 3 que têm são exatamente os 3 que codificaram significado na cor da linha — legenda é a dívida de quem inventa notação. Como este vocabulário não deixa inventar notação (não há token de cor por serviço, por grupo nem por aresta individual), a dívida nunca é contraída e `legenda: auto` teria um único valor alcançável. Knob de um valor só é pior que knob nenhum: sugere uma escolha que não existe. Se um dia o vocabulário abrir um canal de significado, o token da legenda nasce junto — e obrigatório.",
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "revisao": {
+          "description": "O24 do #5: 12 de 12 Reference Architecture PDFs trazem 'Reviewed for technical accuracy <data>'. `null` some com a linha.",
+          "type": ["string", "null"]
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "cor": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+    "pt": { "type": "integer", "minimum": 6, "maximum": 48 }
+  }
+}

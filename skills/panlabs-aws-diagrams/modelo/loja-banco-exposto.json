@@ -1,0 +1,52 @@
+{
+  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "id": "loja-banco-exposto",
+  "titulo": "Loja online · banco na sub-rede pública",
+  "subtitulo": "Vista técnica T1 · a arquitetura que o consultor tem de saber apontar — desenhada como ela é, não como deveria ser",
+  "vista": "tecnica",
+
+  "genero": "T1",
+
+  "nos": [
+    { "id": "cliente", "tipo": "ator", "servico": "users", "rotulo": "Compradores" },
+
+    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC da loja · 10.1.0.0/16", "cidr": "10.1.0.0/16", "dentro": "nuvem" },
+
+    { "id": "sub-pub", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "cidr": "10.1.0.0/24", "dentro": "vpc" },
+    { "id": "alb", "tipo": "servico", "servico": "application load balancer", "rotulo": "ALB", "dentro": "sub-pub",
+      "qualificador": "porta 443, único" },
+    { "id": "nat", "tipo": "servico", "servico": "nat gateway", "rotulo": "NAT gateway", "dentro": "sub-pub",
+      "qualificador": "saída da sub-rede privada" },
+    { "id": "rds", "tipo": "servico", "servico": "rds", "rotulo": "Catálogo e pedidos", "dentro": "sub-pub",
+      "qualificador": "Postgres — herdado da migração de 2019" },
+
+    { "id": "sub-priv", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "cidr": "10.1.1.0/24", "dentro": "vpc" },
+    { "id": "ec2", "tipo": "servico", "servico": "ec2", "rotulo": "Aplicação", "dentro": "sub-priv",
+      "qualificador": "instância única" }
+  ],
+
+  "arestas": [
+    { "de": "cliente", "para": "alb", "rotulo": "compra", "protocolo": "https" },
+    { "de": "alb", "para": "ec2", "rotulo": "encaminha" },
+    { "de": "ec2", "para": "rds", "rotulo": "consulta e grava", "protocolo": "sql" },
+    { "de": "ec2", "para": "nat", "rotulo": "atualizações e APIs externas" }
+  ],
+
+  "notas": [
+    { "id": "nota-como-e",
+      "texto": "O banco está na sub-rede PÚBLICA, e o desenho mostra isso. Consertar calado produziria um diagrama bonito de uma arquitetura que não existe — e como não há diferença contra IaC neste escopo, nada a jusante pegaria a diferença.",
+      "origem": "premissa" }
+  ],
+
+  "dossie": {
+    "_comentario": "O caso do corpus do #26 para a regra `dado-em-subnet-publica`. O critério (docs/corpus.md §4.2, L2) exige que TODA regra dispare em pelo menos um modelo — regra que nunca dispara nunca foi testada. Antes deste modelo, essa era a única das seis sem sujeito no corpus inteiro. Existe também para lembrar o que a skill é: um consultor desenha a arquitetura QUE EXISTE e aponta o problema, em vez de desenhar a que gostaria de ter visto.",
+    "eixos": {
+      "E1": "instâncias próprias",
+      "E2": "síncrono request/response",
+      "E3": "relacional gerenciado",
+      "E4": "borda pública, e mais coisa na borda do que deveria",
+      "E5": "fronteira única: a loja"
+    }
+  }
+}

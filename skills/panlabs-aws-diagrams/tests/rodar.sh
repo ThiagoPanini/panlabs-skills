@@ -74,6 +74,7 @@ passo "determinismo (3 frentes, com reordenação)"  node "$AQUI/check-determini
 passo "camada de rede: a ordem sai do conteúdo"    node "$AQUI/check-camada.cjs"
 passo "e é ela que o arquivo mostra"               node "$AQUI/check-no-arquivo.cjs"
 passo "a candidata rival (distância da borda)"     node "$AQUI/check-saltos.cjs"
+passo "revisão de lacunas: dispara E cala (#15)"   node "$AQUI/check-lacunas.cjs"
 passo "gatilhos de multi-conta (OU, modo, nível)"  node "$AQUI/check-gatilhos.cjs"
 passo "travessia: as decisões, no arquivo"         node "$AQUI/check-travessia.cjs"
 passo "bissecção (a ferramenta que isola)"         node "$RAIZ/tools/bissecar-modelo.cjs" "$RAIZ/modelo/hub-tgw-3-contas.json"

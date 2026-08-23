@@ -212,8 +212,29 @@ Roda **depois** do modelo montado e **antes** do layout, porque estas não são
 respostas a perguntas — são **propriedades emergentes do grafo**. Não dá para
 perguntar *"tem SPOF?"*.
 
-SPOF · single-AZ · egress sem controle · dado em subnet pública · cross-account
-sem caminho de confiança · assíncrono sem DLQ.
+```bash
+node tools/revisar-lacunas.cjs <modelo.json>       # o laudo
+node tools/revisar-lacunas.cjs --corpus            # a régua contra o corpus
+```
+
+São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura que o
+modelo precisa afirmar para a regra ter o que dizer. Onde o modelo não afirma, a
+regra fica **muda** — e muda aparece no laudo com o motivo, porque *"não acusou"*
+não pode se confundir com *"não rodou"*.
+
+| regra | dispara quando | e é muda quando |
+|---|---|---|
+| `spof` | nó sem par, único caminho de um ator até **≥2** outros | não há ator, ou não há aresta |
+| `single-az` | o que guarda estado mora num papel de subnet que existe em **1** zona | nenhuma subnet declara `az` |
+| `egress-sem-controle` | VPC com subnet privada ocupada, sem NAT/endpoint/gateway **dentro nem ligado** | não há subnet privada com conteúdo |
+| `dado-em-subnet-publica` | o que guarda estado está numa subnet `publica` | não há subnet pública |
+| `cross-account-sem-confianca` | travessia entre contas sem `habilita` em nenhuma ponta | <2 contas, ou nenhuma travessia |
+| `assincrono-sem-dlq` | consumidor de fila que não escreve em nenhuma **outra fila** | nada sai de fila, tópico ou barramento |
+
+**"Estado" e "fila" não são listas novas** — saem da mesma tabela de categoria
+AWS do [#22](https://github.com/ThiagoPanini/panlabs-skills/issues/22) que decide
+o andar da subnet. Se ela estiver errada, está errada nos dois lugares e
+conserta-se num só.
 
 > **Relata, propõe, e conserta apenas o que o usuário mandar consertar.**
 
@@ -236,9 +257,42 @@ nota     n-spof · origem achado-recusado
 
 Sem esse elo a recusa fica só no dossiê e o diagrama volta a enganar calado.
 
-> ⚠️ **Calibração pendente.** As regras dispararam **4 achados num modelo de 3
-> nós** no protótipo — ansiosas demais. É ajuste de limiar contra arquitetura
-> real, e não muda a decisão de bloquear.
+### A calibração, e o que ela consertou
+
+O protótipo do #15 fazia **4 achados num modelo de 3 nós** — 1,33 por nó. Contra
+o corpus de 22 modelos e 247 nós, estas regras fazem **0,134 por nó**: dez vezes
+menos.
+
+E o que consertou não foi apertar número, foi mudar a forma. Três das quatro
+regras do protótipo disparavam sobre **ausência** (*"nenhum componente declara
+redundância"*), e regra que dispara sobre ausência dispara em todo modelo
+pequeno, porque modelo pequeno é quase todo ausência.
+
+> **Um achado só nasce sobre um fato que o modelo AFIRMA, nunca sobre um fato que
+> ele não menciona.**
+
+Dois limiares dentro das regras foram medidos contra o corpus, não escolhidos, e
+cada um matou um falso positivo concreto:
+
+| | e o que ele matou |
+|---|---|
+| `spof` orfana **≥2** | num encadeamento `A→B→C`, dizer que B é o ponto único de falha de C é só dizer que **C tem um vizinho** — afirmação sobre C, não sobre caminho compartilhado. Sem a cláusula, o `pedidos-serverless` acusava o VPC endpoint por "separar" o DynamoDB |
+| egresso conta **ligado**, não só contido | no `hub-tgw-3-contas` o Transit Gateway **é** a saída controlada e mora fora das VPCs que serve. A regra reprovava as duas spokes pelo motivo que as torna certas |
+
+A régua está em `tests/check-lacunas.cjs`, e ela cobra dos **dois lados**: toda
+regra tem de disparar em ≥1 modelo do corpus **e** calar em ≥1. Regra que dispara
+em todos não está medindo nada — está afirmando uma constante.
+
+**Uma exceção nomeada ao teto:** `plataforma-3-contas` faz 6 achados com teto 5.
+Os seis foram conferidos um a um e se sustentam; o que falha é o **denominador**
+— achado escala com superfície de arquitetura (contas, VPCs, pontos de entrada),
+não com contagem de nós. Fica como refino conhecido, e o teste fica vermelho no
+dia em que deixar de estourar. Ver [`../docs/corpus.md`](../docs/corpus.md).
+
+**`retencao-sem-regra` não virou regra**, e é bom dizer por quê: ele aparece no
+dossiê do corpus de sessão, mas retenção é fato de política de dado que o
+`modelo@1` não tem onde afirmar. Sai da sabatina, não do grafo — e este módulo só
+lê o grafo.
 
 ## Fase 6 · O acordo e a transição
 

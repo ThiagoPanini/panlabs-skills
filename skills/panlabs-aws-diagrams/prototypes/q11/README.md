@@ -14,6 +14,9 @@ Protótipo do ticket
 > |---|---|
 > | **Terceiro caminho de layout** (`porContas`), para multi-conta | `q12/README.md` §1–3 |
 > | O IR ganhou `ou` (dimensão da conta) e `habilita` (habilitador de permissão) | `q12/README.md` §1, §4 |
+> | **A ordem das linhas deixou de ter desempate alfabético** — quem ordena é a camada de rede, lida do conteúdo | `q22/README.md` |
+> | O IR ganhou `camada` (escape semântico da subnet) e o motor ganhou `camadas.cjs` | `q22/README.md` §2–3 |
+> | O ELK passou a desenhar **container vazio** (decidia container por contagem de filhos) | `q22/README.md` "O que descobriu" §1 |
 > | O `.drawio` passou a ter **N páginas** — consolidada + 1 por conta | `q12/README.md` §5 |
 > | **A grade de AZ agora tem dois eixos**, escolhidos por regra do #21 | `q12/README.md` "A dívida herdada" |
 > | A grade passou a **desenhar arestas** (o parágrafo abaixo que diz o contrário é de antes) | idem |
@@ -52,7 +55,8 @@ node motor/gerar.cjs modelo/pedidos-serverless.json --explicar   # trilha do cat
 | `motor/esquema.json` | **O IR.** JSON Schema draft-07, tudo `additionalProperties:false`. |
 | `motor/validar.cjs` | Três camadas: esquema › referências › domínio. Validador de subconjunto escrito à mão — sem `ajv`. |
 | `motor/resolver.cjs` | Nó do modelo → style do catálogo (#17). Único lugar que decide tamanho. |
-| `motor/derivar.cjs` | O que o motor descobre sozinho: árvore, gatilho de AZ (#19), faixas derivadas, pai da aresta. |
+| `motor/derivar.cjs` | O que o motor descobre sozinho: árvore, gatilho de AZ (#19), faixas derivadas, pai da aresta, camada das subnets (#22). |
+| `motor/camadas.cjs` | **A camada de rede da subnet, lida do que ela guarda** (#22). Categoria do catálogo → andar; mistura vence o mais fundo; e onde a falta do fato muda o desenho. |
 | `motor/dispor.cjs` | Layout. Dois caminhos: `elkjs` puro, ou grade de AZ com o `elkjs` dentro da célula. |
 | `motor/alinhar.cjs` | O passe que tira o "quase" — encaixa faixas quase alinhadas, e desfaz se sobrepuser. |
 | `motor/planejar.cjs` | Layout bruto → **plano** de células. A costura do motor. |
@@ -183,6 +187,10 @@ passou intacto). Importa porque quem escreve o modelo é um agente, e nenhum LLM
 emite a mesma lista na mesma ordem duas vezes; sem ordem derivada, regerar o
 mesmo diagrama produz um diff inteiro. Agora a ordem cai de exposição + rótulo.
 
+> **Atualizado pelo #22:** o desempate por rótulo era placeholder e virou
+> **camada de rede**, lida do conteúdo da subnet. O alfabeto ficou como último
+> critério, e só para fechar a ordem total.
+
 **3 · Rótulo de aresta tem de ir para o ELK.** Sem entregar o texto, o ELK
 aproxima os nós até o vão ficar menor que o rótulo, e ele cai em cima do ícone
 vizinho — `A3.2` da rubrica (#8), a falha que ela prevê para gerador
@@ -206,10 +214,13 @@ formato de persistência**; não há um segundo arquivo para dessincronizar.
 
 ## O que ficou aberto, de propósito
 
-- **Ordem das camadas privadas.** O desempate é alfabético e isso é
-  *placeholder*: acerta "App subnet" antes de "Data subnet" por coincidência, e
-  erraria "Web subnet" depois de "Data subnet". Ordenar camadas privadas por
-  significado exige um fato que o IR ainda não tem — é decisão, não bug.
+- ~~**Ordem das camadas privadas.**~~ **Fechado pelo
+  [#22](https://github.com/ThiagoPanini/panlabs-skills/issues/22):** o
+  desempate deixou de ser alfabético. Quem ordena é a **camada de rede**, lida
+  da categoria AWS do que a subnet guarda (o catálogo do #17 já sabia), com
+  `camada` no IR como escape para o que o conteúdo não diz. O alfabeto continua
+  como último desempate, mas sem significado — só fecha a ordem total que o
+  determinismo exige. Ver `../q22/README.md`.
 - **O rótulo do VPC sai cinza `#AAB7B8`.** É uma das 5 divergências de
   `fontColor` que o #17 deixou de propósito para a camada de estilo (#13). O
   motor é fiel ao catálogo; o render mostra o custo, que é o insumo que o #13

@@ -23,6 +23,7 @@ const path = require('path');
 const { validar } = require('./validar.cjs');
 const resolverMod = require('./resolver.cjs');
 const { derivar } = require('./derivar.cjs');
+const camadasMod = require('./camadas.cjs');
 const dispor = require('./dispor.cjs');
 const planejar = require('./planejar.cjs');
 const { emitir, conferirXml } = require('./emitir.cjs');
@@ -83,7 +84,7 @@ async function paginasDeDetalhe(modelo, d, res, opts, relatorio) {
     try {
       const v = validar(sub, ESQUEMA);
       if (!v.ok) throw Object.assign(new Error(`submodelo inválido (${v.fase})`), { erros: v.erros });
-      const ds = derivar(sub);
+      const ds = derivar(sub, { cat: res.cat });
       if (ds.az.desenhar) {
         // a grade de AZ ainda não desenha a caixa de conta como raiz — ver o
         // README. Recusar alto é melhor que desenhar a conta fora do lugar.
@@ -111,8 +112,17 @@ async function gerar(modelo, opts = {}) {
   marco('validar', { nos: modelo.nos.length, arestas: (modelo.arestas || []).length });
 
   const res = resolverMod.criar(opts.catalogo);
-  const d = derivar(modelo);
+  const d = derivar(modelo, { cat: res.cat });
   marco('derivar', { faixasAz: d.az.desenhar, porque: d.az.porque, azs: d.az.azs });
+
+  // A camada de rede que o motor leu do conteúdo (#22). O agente não escreveu
+  // nenhuma delas, salvo onde declarou o escape — e é justamente por isso que
+  // vale contar: a ordem das linhas passou a depender desta leitura.
+  for (const [id, c] of d.camadas)
+    if (c.diverge)
+      relatorio.avisos.push(`subnet "${id}": declarada como camada "${c.camada}", ` +
+        `mas o que ela guarda é "${c.diverge}" (${c.evidencia.map(e => e.servico).join(', ')}). ` +
+        `O motor obedece à declaração.`);
 
   let plano, caminho;
   const paginas = [];
@@ -160,6 +170,20 @@ async function gerar(modelo, opts = {}) {
     relatorio.avisos.push(`eixo da grade "${g.eixo}": ${g.porqueEixo}`);
   } else {
     caminho = 'elk';
+    /**
+     * Aqui a camada que falta AVISA, não recusa — e a assimetria com a grade é
+     * a decisão do #22, não descuido.
+     *
+     * O motor exige o fato onde o fato É o desenho, e avisa onde ele é só
+     * desempate. Na grade a chave de papel manda sozinha na ordem das linhas;
+     * no ELK ela só decide entre irmãos que nenhuma aresta ordena, e o ELK tem
+     * o grafo inteiro para mandar nele. Recusar aqui bloquearia o caso comum
+     * por uma ambiguidade que quase nunca chega ao desenho.
+     */
+    if (d.lacunas.length)
+      relatorio.avisos.push('camada de rede ausente onde a ordem dos irmãos depende dela — ' +
+        'o ELK decide pelo grafo, o alfabeto desempata o resto:\n      ' +
+        camadasMod.textoDaLacuna(d.lacunas).join('\n      '));
     const layout = await dispor.porElk(modelo, d, res);
     plano = planejar.planoDeElk(modelo, d, res, layout, opts);
     marco('dispor', { passadas: layout.passadas });
@@ -240,6 +264,16 @@ async function main() {
     for (const u of r.resolucoes.filter(u => !vistos.has(u.id) && vistos.add(u.id)))
       console.log(`    ${String(u.id).padEnd(20)} "${u.pediu}" → ${u.virou}  [${u.via}]` +
         (u.correcoes && u.correcoes.length ? `  correções: ${u.correcoes.join(', ')}` : ''));
+
+    // A camada de rede é derivada mas invisível no desenho — só a ORDEM a
+    // denuncia. Sem uma trilha, "por que a Data subnet ficou embaixo?" só se
+    // responde relendo o código.
+    if (r.derivado.camadas.size) {
+      console.log('\n  camada de rede das subnets (#22):');
+      for (const [id, c] of r.derivado.camadas)
+        console.log(`    ${String(id).padEnd(20)} ${String(c.camada || '—').padEnd(11)} [${c.via || 'sem evidência'}]` +
+          (c.evidencia.length ? `  ← ${c.evidencia.map(e => `${e.servico}(${e.categoria})`).join(', ')}` : ''));
+    }
     return;
   }
 

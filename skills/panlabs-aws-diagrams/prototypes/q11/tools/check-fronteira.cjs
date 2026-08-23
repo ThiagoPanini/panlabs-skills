@@ -58,7 +58,13 @@ for (const p of props) {
 for (const c of semFechar) falhas.push(`objeto sem additionalProperties:false em ${c} — dá para contrabandear chave`);
 
 // 3. os modelos de exemplo
-const dirModelos = path.join(RAIZ, 'modelo');
+//
+// O diretório é argumento pelo mesmo motivo que o do `check-determinismo`:
+// outro protótipo aponta os SEUS modelos para esta mesma régua. A fronteira é
+// propriedade do formato, não de um conjunto de exemplos — e quando o #22
+// acrescentou `camada` ao esquema, quem tinha de dizer que ela não é geometria
+// era esta checagem rodando contra os modelos que a usam.
+const dirModelos = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'modelo');
 const modelos = fs.existsSync(dirModelos) ? fs.readdirSync(dirModelos).filter(f => f.endsWith('.json')) : [];
 for (const arq of modelos) {
   const bruto = JSON.parse(fs.readFileSync(path.join(dirModelos, arq), 'utf8'));

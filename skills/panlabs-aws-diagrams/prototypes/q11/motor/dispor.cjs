@@ -19,6 +19,8 @@
 
 const ELK = require('./vendor/elk.bundled.js');
 const { alinhar } = require('./alinhar.cjs');
+const camadasMod = require('./camadas.cjs');
+const { CONTEINERES, FOLHAS } = require('./validar.cjs');
 
 // ---- as quatro calhas do #19 -------------------------------------------------
 const AZ_LANE = 36;    // linha de rótulo das colunas de AZ
@@ -38,6 +40,38 @@ const HEAD = 34;       // faixa de título de qualquer container — recursiva (
  * da árvore, então ninguém reserva espaço para o rótulo dela a não ser o motor.
  */
 const OU_LANE = 62;
+
+/**
+ * A caixa de um container VAZIO — e ela existe porque o #22 tropeçou nela.
+ *
+ * Container é quem o ESQUEMA diz que é container, não quem tem filho. Os dois
+ * caminhos do ELK decidiam por `kids.length`, e uma subnet sem nada dentro caía
+ * no ramo de folha: o motor morria em `res.folha()` com "nó sem chave de
+ * serviço" — mensagem que fala de serviço para quem escreveu uma subnet. O
+ * caminho da grade nunca teve o problema, porque lá o container vazio já
+ * ganhava caixa mínima (200×90); era só o ELK.
+ *
+ * Subnet vazia não é erro de modelo: é o range reservado para o que ainda não
+ * existe, e um diagrama de rede a desenha.
+ */
+const VAZIO_LARG = 200;
+const VAZIO_ALT = 56;
+
+/**
+ * Caixa de um container sem filho — uma definição só, para os dois `paraElk`.
+ *
+ * A largura já sai com o título medido, porque a passada de `deficitDeTitulo`
+ * compra folga via `padding.right`, e padding não alarga um nó que não tem
+ * conteúdo para empurrar contra a borda.
+ */
+function caixaVazia(no, c, res) {
+  const precisaTitulo = res.larguraDoTexto(no.rotulo || '') + (c.recuoTitulo || 8) + 16;
+  return {
+    id: no.id,
+    width: Math.max(VAZIO_LARG, Math.ceil(precisaTitulo)),
+    height: c.tituloH + VAZIO_ALT,
+  };
+}
 
 /**
  * E a sexta: a faixa de rótulo de uma RAIA de zona.
@@ -160,7 +194,9 @@ function montarElk(modelo, d, res, medir) {
   // pré-resolve as folhas para saber de quanto rótulo o layout precisa fugir
   let rotuloMax = 0, transbordo = 0;
   for (const no of modelo.nos) {
-    if (d.t.filhos.get(no.id).length) continue;
+    // FOLHA é o tipo, não "quem não tem filho" — ver `caixaVazia`. O teste por
+    // contagem de filhos mandava toda subnet vazia para `res.folha()`.
+    if (!FOLHAS.has(no.tipo)) continue;
     const f = res.folha(no);
     rotuloMax = Math.max(rotuloMax, f.rotuloH);
     // quanto o texto passa de cada lado do ícone — é isso que precisa caber no
@@ -181,9 +217,10 @@ function montarElk(modelo, d, res, medir) {
 
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
-    if (kids.length) {
+    if (CONTEINERES.has(no.tipo)) {
       const c = res.container(no);
       caixas.set(no.id, { container: true, ...c });
+      if (!kids.length) return caixaVazia(no, c, res);
       // o rótulo da folha transborda a caixa dela para baixo e para os lados;
       // se o container não reservar isso, o texto vaza pela borda
       const temFolha = kids.some(k => !d.t.filhos.get(k.id).length);
@@ -400,6 +437,26 @@ async function porGrade(modelo, d, res) {
     intra.set(s.id, { w: r.width, h: r.height, filhos: r.children });
   }
 
+  /**
+   * A grade RECUSA quando a ordem depende de um fato que o modelo não tem (#22).
+   *
+   * Aqui a ordem das linhas é o desenho: a chave de papel manda, sem aresta e
+   * sem ELK para desempatar. Uma subnet sem camada de rede, num grupo com mais
+   * de um papel para empilhar, é ordem inventada — e ordem inventada põe a
+   * camada de dados em cima, que é a leitura que a convenção de rede não quer.
+   *
+   * Mesma política do resto do caminho da grade: falha com a LISTA, em vez de
+   * omitir em silêncio (o A4.2 da rubrica). E a recusa é precisa — só dispara
+   * onde a falta muda o desenho, nunca por subnet vazia que não disputa linha
+   * com ninguém. O agente lê a mensagem e conserta o modelo; o humano não é
+   * chamado, e a premissa 11 continua de pé.
+   */
+  if (d.lacunas && d.lacunas.length) {
+    const e = new Error('a grade não sabe empilhar estas linhas — falta a camada de rede das subnets');
+    e.erros = camadasMod.textoDaLacuna(d.lacunas);
+    throw e;
+  }
+
   const papel = s => `${(d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id}|${s.acesso || '?'}|${s.rotulo || ''}`;
   const vpcDe = s => (d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
 
@@ -423,18 +480,25 @@ async function porGrade(modelo, d, res) {
    * ordem derivada, regerar o mesmo diagrama produz um diff inteiro.
    *
    * Critério: exposição primeiro (pública antes, que é o sentido de leitura do
-   * deck), rótulo como desempate.
+   * deck), CAMADA DE REDE depois, rótulo como último desempate.
    *
-   * ⚠️ O desempate alfabético é PLACEHOLDER. Ele acerta "App subnet" antes de
-   * "Data subnet" por coincidência do alfabeto, e erraria "Web subnet" depois
-   * de "Data subnet". Ordenar camadas privadas por significado exige um fato
-   * que o IR ainda não tem — é decisão, não bug. Anotado para o mapa.
+   * O #22 fechou o placeholder que ficou aberto aqui. O desempate do meio era
+   * alfabético e acertava `App · Data` por coincidência; agora quem manda é a
+   * camada que o papel ocupa, lida do que as subnets dele guardam
+   * (`camadas.cjs`). O alfabeto continua no fim e mudou de função: não carrega
+   * mais significado, só fecha a ordem total que o determinismo exige.
+   *
+   * Nenhum papel chega aqui sem camada — a recusa lá em cima já barrou.
    */
   const ordemAcesso = { publica: 0, privada: 1, '?': 2 };
+  const camadaDoPapel = new Map(
+    [...camadasMod.papeisDeSubnet(modelo, d.t, d.camadas).values()].map(p => [p.chave, p.camada]));
   for (const lista of papeisPorVpc.values())
     lista.sort((a, b) => {
       const [, aa, ra] = a.split('|'), [, ab, rb] = b.split('|');
-      return (ordemAcesso[aa] ?? 9) - (ordemAcesso[ab] ?? 9) || ra.localeCompare(rb, 'pt');
+      return (ordemAcesso[aa] ?? 9) - (ordemAcesso[ab] ?? 9) ||
+        camadasMod.ordemDeCamada(camadaDoPapel.get(a)) - camadasMod.ordemDeCamada(camadaDoPapel.get(b)) ||
+        ra.localeCompare(rb, 'pt');
     });
 
   // 2. a extensão TRANSVERSAL de cada zona: largura com AZ em coluna, altura
@@ -735,9 +799,10 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
 
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
-    if (kids.length) {
+    if (CONTEINERES.has(no.tipo)) {
       const c = res.container(no);
       caixas.set(no.id, { container: true, ...c });
+      if (!kids.length) return caixaVazia(no, c, res);
       const temFolha = kids.some(k => !d.t.filhos.get(k.id).length);
       const folga = temFolha ? Math.ceil(metrica.transbordo) : 0;
       return {
@@ -793,7 +858,7 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
 function metricaDeRotulo(modelo, d, res) {
   let rotuloMax = 0, transbordo = 0;
   for (const no of modelo.nos) {
-    if (d.t.filhos.get(no.id).length) continue;
+    if (!FOLHAS.has(no.tipo)) continue;              // ver `caixaVazia`
     const f = res.folha(no);
     rotuloMax = Math.max(rotuloMax, f.rotuloH);
     transbordo = Math.max(transbordo, Math.max(0, ((f.rotuloW || 0) - f.formaW) / 2));

@@ -2,7 +2,8 @@
 
 O esquema é a fonte da verdade e carrega a razão de cada campo na própria
 `description` — **leia [`../esquema.json`](../esquema.json)**, não uma cópia dele.
-Este arquivo é só o que o esquema não consegue dizer sobre si mesmo.
+Este arquivo é só o que o esquema não consegue dizer sobre si mesmo. Comando aqui
+roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
 ## A fronteira, e por que ela se sustenta
 

@@ -1,6 +1,7 @@
 # A camada visual
 
-Tema, fundo, fluxo, e a cópia que sai de casa.
+Tema, fundo, fluxo, e a cópia que sai de casa. Comando aqui roda da raiz da skill,
+como no [`SKILL.md`](../SKILL.md).
 
 ## O tema é um vocabulário FECHADO
 

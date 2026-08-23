@@ -1,7 +1,7 @@
 # O laudo e o portão
 
 O laudo sai **sempre**, em `relatorio.geometria` e no `--explicar`. Bloquear é que
-é opcional.
+é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
 ```bash
 node tools/check-geometria.cjs <modelo.json>          # o laudo, legível

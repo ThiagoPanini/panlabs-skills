@@ -1,7 +1,9 @@
 # A sabatina
 
-O protocolo que leva de *"quero um sistema que faz X"* a um modelo completo. É o
-que separa esta skill de um gerador de diagrama, e a razão é estrutural:
+O protocolo que leva de *"quero um sistema que faz X"* a um modelo completo.
+Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
+
+É o que separa esta skill de um gerador de diagrama, e a razão é estrutural:
 
 > **Nenhuma checagem geométrica sabe se a arquitetura desenhada existe.**
 

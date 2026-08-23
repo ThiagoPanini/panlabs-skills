@@ -40,22 +40,34 @@ const anota = (ok, o_que, detalhe) => {
 
 // ------------------------------------------------- 1. o portão barra a mentira
 
+/**
+ * ⚠️ UMA FAMÍLIA SEMÂNTICA DE CADA VEZ, e não só a primeira que a lista achar.
+ *
+ * A versão anterior exercitava só `A4.2`. A revisão do #24 apontou o buraco: se
+ * o portão passasse a barrar `A4.2` e a deixar passar `A5.5`, este arquivo
+ * continuaria verde — e `A5.5` é justamente a família que o #24 zerou no motor,
+ * o que significa que nenhum modelo do corpus a produz mais para cobrar em
+ * outro lugar. Um portão que perde a checagem mais grave do validador não pode
+ * depender de um defeito existir no corpus para ser pego.
+ *
+ * As quatro famílias de tolerância zero, cada uma com o seu caso plantado.
+ */
 {
-  const mentiroso = CASOS.find(c => c.espera.includes('A4.2'));
-  let lancou = null;
-  try {
-    portao(mentiroso.plano, { modelo: mentiroso.modelo, nivel: 'veracidade' });
-  } catch (e) { lancou = e; }
+  for (const id of ['A4.2', 'A4.4', 'A5.5', 'F1']) {
+    const mentiroso = CASOS.find(c => c.espera.includes(id));
+    if (!mentiroso) { anota(false, `há um caso plantado para ${id}`); continue; }
+    let lancou = null;
+    try {
+      portao(mentiroso.plano, { modelo: mentiroso.modelo, nivel: 'veracidade' });
+    } catch (e) { lancou = e; }
 
-  anota(!!lancou, 'nível "veracidade" barra um plano que mente sobre a fronteira',
-    lancou ? `→ ${lancou.message}` : 'passou, e não devia');
-  if (lancou) {
+    anota(!!lancou, `nível "veracidade" barra o plano que mente por ${id} ("${mentiroso.nome}")`,
+      lancou ? `→ ${lancou.erros[0]}` : 'passou, e não devia');
+    if (!lancou) continue;
     anota(Array.isArray(lancou.erros) && lancou.erros.length > 0,
-      'o erro traz linhas legíveis em `.erros`, como o resto do motor',
-      lancou.erros && lancou.erros[0]);
-    anota(!!lancou.laudo, 'o erro carrega o laudo inteiro para quem quiser detalhar');
-    anota(lancou.erros.some(l => l.includes('A4.2')),
-      'a mensagem nomeia a checagem que barrou');
+      `${id}: o erro traz linhas legíveis em \`.erros\`, como o resto do motor`);
+    anota(!!lancou.laudo, `${id}: o erro carrega o laudo inteiro para quem quiser detalhar`);
+    anota(lancou.erros.some(l => l.includes(id)), `${id}: a mensagem nomeia a checagem que barrou`);
   }
 }
 

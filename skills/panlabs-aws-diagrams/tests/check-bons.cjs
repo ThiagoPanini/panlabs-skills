@@ -33,36 +33,25 @@ const { validarGeometria } = require(path.join(__dirname, '..', 'validador', 'va
 const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
 
 /**
- * ⚠️ QUARENTENA NOMEADA — não é tolerância, é dívida com endereço.
+ * ⚠️ QUARENTENA NOMEADA — hoje VAZIA, e a lista vazia é o registro.
  *
  * A recertificação do #23 rodou o validador do #18 sobre o corpus do #12 pela
- * primeira vez (antes disso o `check-bons` só via os dois modelos do #11), e o
- * `web-fluxo-3-az` acusa `A5.5` ×2: no caminho da grade transposta, duas arestas
- * de gravação saem de EC2 em raias diferentes e atravessam o grupo "app-a", de
- * onde não saem nem para onde vão.
+ * primeira vez e achou uma dívida real e SEMÂNTICA: o `web-fluxo-3-az` acusava
+ * `A5.5` ×2 — duas gravações de EC2 em raias diferentes atravessando o grupo
+ * "app-a", de onde não saíam nem para onde iam. Ela entrou aqui com ticket
+ * (#24), com o porquê e com a contagem EXATA, e com a regra de que quando fosse
+ * paga a suíte quebraria pedindo a remoção da entrada.
  *
- * É defeito REAL e é SEMÂNTICO — o desenho afirma um caminho de rede que o modelo
- * nega. E é ANTERIOR a esta árvore: `tools/medir-antes-depois.cjs` gera o mesmo
- * modelo com o motor de antes do enxerto de tema e com o de produção, e o laudo é
- * idêntico nos dois (falha=9, A5.5×2). Não veio da consolidação; veio de nunca
- * ninguém ter rodado o validador do #18 contra os modelos do #12.
+ * **Foi paga.** O #24 achou a causa em `dispor`/`planejar` — o desvio da grade
+ * calculava a perna perpendicular como ponto médio entre os ÍCONES, e num grid
+ * 3×3 esse ponto cai dentro da coluna do meio. `corredorLivre` passou a
+ * procurar um VÃO, e a suíte cobrou a remoção desta entrada exatamente como
+ * prometido. O registro fica: quarentena que sabe expirar expirou.
  *
- * Consertar é ROTEAMENTO DE ARESTA na vista técnica, que é o ticket #24 — aberto,
- * e escrito exatamente para isto. Fazer aqui seria puxar o escopo dele para
- * dentro do #23.
- *
- * A quarentena é EXATA de propósito: o modelo tem de acusar precisamente estas
- * ocorrências. Uma falha semântica nova nele quebra a suíte igual; e quando o #24
- * consertar, a suíte quebra também — dizendo que esta entrada saiu de validade e
- * tem de ser apagada. Quarentena que não sabe expirar vira desculpa permanente.
+ * O objeto continua aqui, vazio, porque a mecânica que o lê é a que cobra
+ * igualdade exata — e a próxima dívida nomeada entra por ela.
  */
-const QUARENTENA = {
-  'web-fluxo-3-az': {
-    ticket: '#24',
-    esperado: ['A5.5×2'],
-    porque: 'roteamento da grade transposta atravessa o grupo "app-a" — anterior à consolidação, medido em tools/medir-antes-depois.cjs',
-  },
-};
+const QUARENTENA = {};
 
 async function main() {
   const modelos = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).sort();

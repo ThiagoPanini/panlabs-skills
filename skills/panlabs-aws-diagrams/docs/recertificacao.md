@@ -292,14 +292,16 @@ Duas dívidas, com endereço:
 
 | achado | onde | dono |
 |---|---|---|
-| `A5.5` ×2 em `web-fluxo-3-az` — duas arestas de gravação atravessam o grupo `app-a`, de onde não saem nem para onde vão. **É semântica**, e é **anterior**: idêntica nos dois motores (`falha=9, A5.5×2` nos dois). Ninguém tinha rodado o validador do #18 contra os modelos do #12. | `tests/check-bons.cjs`, quarentena nomeada | [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24) |
+| ✅ ~~`A5.5` ×2 em `web-fluxo-3-az`~~ — **PAGA pelo #24.** A causa era o desvio da grade calcular a perna perpendicular como ponto médio entre os ÍCONES; num grid 3×3 esse ponto cai dentro da coluna do meio. Ver [`docs/roteamento.md`](roteamento.md). | quarentena expirada e apagada | resolvido |
 | `A6.1` em `plataforma-3-contas` — duas arestas saem de `ecs` a 0° uma da outra (piso 15°). Não é semântica. **Entrou com a escala nova**: é o único achado que a grade base 8 acrescentou, e é da mesma família do de cima — duas arestas que a grade antiga separava por acidente. | reportado, não trava | [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24) |
 | `A3.7` — o canvas não comporta a união dos objetos, em 8 de 15 modelos. Anterior, e nomeado pelo #18. | reportado, não trava | o caminho da grade dimensiona pela nuvem — [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24) |
 
-A quarentena é **exata**: o modelo tem de acusar precisamente `A5.5×2`. Uma falha
-semântica nova quebra a suíte igual, e quando o #24 consertar a suíte quebra
-também — dizendo que a entrada saiu de validade. Quarentena que não sabe expirar
-vira desculpa permanente.
+A quarentena era **exata**: o modelo tinha de acusar precisamente `A5.5×2`. Uma
+falha semântica nova quebraria a suíte igual, e quando o #24 consertasse a suíte
+quebraria também — dizendo que a entrada saiu de validade. **Foi exatamente o que
+aconteceu**: o #24 consertou, o `check-bons.cjs` ficou vermelho com a mensagem
+*"a dívida foi PAGA: apague a entrada de QUARENTENA"*, e a entrada foi apagada.
+Quarentena que não sabe expirar vira desculpa permanente; esta soube.
 
 E uma divergência que fica **registrada, não resolvida**: o portão de contraste
 (`motor/contraste.cjs`) separa **traço** (reprova) de **área** (avisa) desde o

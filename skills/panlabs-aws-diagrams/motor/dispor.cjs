@@ -201,6 +201,237 @@ function textoDaAresta(a) {
   return base ? `${a.ordem}. ${base}` : String(a.ordem);
 }
 
+/**
+ * O SENTIDO QUE O LAYOUT LÊ — o dado, não a seta.
+ *
+ * `de` no esquema é *quem inicia a conversa*, e isso é decisão de modelagem
+ * (B3 da rubrica: o diagrama tem de responder quem chama quem). O `dados`
+ * existe justamente para os casos em que quem inicia não é de onde o dado sai:
+ * polling é `de: consumidor` com `dados: "volta"`.
+ *
+ * O LAYOUT quer a outra pergunta. O `O1` do #5 mediu 17 de 24 diagramas
+ * oficiais com o fluxo primário em esquerda→direita, e o `X5` do #6 repete a
+ * regra para a fileira de contas. Quem tem de andar para a direita é o DADO.
+ *
+ * O #14 deixou isso escrito como dívida e o #24 é o ticket dela: *"`dados:
+ * volta` é semântico, mas o layout ordena pela seta"*. Aqui a dívida é paga —
+ * o layout passa a ordenar pelo dado, e a SETA continua desenhada como o
+ * modelo mandou. São duas perguntas diferentes, e agora cada uma é respondida
+ * pelo campo que a responde.
+ *
+ * ⚠️ `ambos` NÃO reverte: dois sentidos não elegem um, e reverter na moeda
+ * seria layout que muda por gosto do gerador.
+ */
+function sentidoDeLeitura(a) {
+  return a.dados === 'volta'
+    ? { de: a.para, para: a.de, revertida: true }
+    : { de: a.de, para: a.para, revertida: false };
+}
+
+/**
+ * E a volta: o ELK devolve a aresta no sentido em que a recebeu.
+ *
+ * Reverter na entrada e esquecer de desreverter na saída seria trocar um
+ * defeito por outro pior — a seta apontaria para o lado errado, que é `A2.x`
+ * inteira e é o desenho mentindo sobre quem chama quem. Então a reversão é um
+ * par fechado: entra aqui, sai aqui, e nada entre `porElk` e `planejar`
+ * precisa saber que ela existiu.
+ *
+ * Desreverter é trocar as pontas e virar a lista de dobras. O traçado é o
+ * mesmo — uma polilinha não tem sentido, só a leitura dela tem.
+ */
+function desreverter(saida, revertidas) {
+  if (!revertidas || !revertidas.size) return saida;
+  for (const e of saida.edges || []) {
+    if (!revertidas.has(e.id)) continue;
+    [e.sources, e.targets] = [e.targets, e.sources];
+    for (const sec of e.sections || []) {
+      [sec.startPoint, sec.endPoint] = [sec.endPoint, sec.startPoint];
+      if (sec.bendPoints) sec.bendPoints.reverse();
+      // `incomingShape`/`outgoingShape` são o par simétrico do ELK; trocar um
+      // sem o outro deixa a seção descrevendo uma aresta que não existe.
+      if ('incomingShape' in sec || 'outgoingShape' in sec)
+        [sec.incomingShape, sec.outgoingShape] = [sec.outgoingShape, sec.incomingShape];
+    }
+  }
+  return saida;
+}
+
+/**
+ * O CORREDOR LIVRE — onde a perna perpendicular de um desvio pode passar.
+ *
+ * Todo desvio ortogonal deste motor tem a mesma forma: sai da origem por um
+ * eixo, ANDA UM PEDAÇO NO OUTRO, e entra no destino pelo primeiro de novo. O
+ * pedaço do meio é uma perna que atravessa uma faixa inteira do desenho, e é
+ * ela que corta o que não devia.
+ *
+ * O #21 já tinha a regra — *"aresta que pula etapa desvia pela margem mais
+ * próxima da origem; desviar pelo lado errado atravessa exatamente as faixas
+ * que o desvio existia para evitar"* — e o motor a implementava com uma conta
+ * que não conhecia obstáculo nenhum:
+ *
+ *     const meio = (o.x + o.w + dst.x) / 2;     // ← entre os ÍCONES
+ *
+ * `o` e `dst` são as caixas do ÍCONE, não as do container. Num grid 3×3 o
+ * ponto médio entre dois ícones de colunas vizinhas cai DENTRO de uma das
+ * colunas, e a perna desce por dentro da subnet da linha do meio. Foi assim
+ * que o `web-fluxo-3-az` acumulou `A5.5` ×2: duas gravações de EC2 em raias
+ * diferentes descendo por dentro do grupo "app-a", de onde não saem nem para
+ * onde vão. Medido, não deduzido — a perna estava em x=538 e "app-a" ia até
+ * x=539.
+ *
+ * A conta certa não é uma média: é procurar um VÃO. Os obstáculos que a perna
+ * atravessaria são os que se sobrepõem à faixa dela; o que sobra entre eles são
+ * os corredores; e entre os corredores ganha o mais perto do lado da origem,
+ * que é a regra do #21 escrita em geometria em vez de em prosa.
+ *
+ * ⚠️ ELA SEMPRE ACHA, e isso não é otimismo — é geometria: os obstáculos são
+ * um conjunto FINITO de caixas, então as duas margens externas (`primeiro −
+ * margem` e `último + margem`) estão livres por construção. Uma primeira versão
+ * devolvia `{ onde, livre }` para o chamador propagar a falha; `livre: false`
+ * era inalcançável, nenhum chamador lia o campo, e o aviso no cabeçalho
+ * descrevia um comportamento que não existia. Um contrato que ninguém executa é
+ * uma intenção — o campo saiu.
+ *
+ * O que ela NÃO promete é que o corredor fique ENTRE as duas pontas: quando
+ * tudo entre elas está ocupado, a perna sai por fora. É o preço de não mentir
+ * sobre o caminho, e é a escolha do #21 (desviar pela margem) levada a sério.
+ *
+ * @param {[number,number]} faixa    o trecho do OUTRO eixo que a perna cruza
+ * @param {Array<{ini,fim,lo,hi}>} obstaculos  caixas: `ini..fim` no eixo da perna,
+ *                                             `lo..hi` no eixo da faixa
+ * @param {number} perto             a coordenada que a perna gostaria de ter
+ * @param {number} [margem]          quanto respirar ao sair para fora de tudo
+ * @returns {number} a coordenada da perna
+ */
+function corredorLivre(faixa, obstaculos, perto, margem = 24) {
+  const lo = Math.min(faixa[0], faixa[1]);
+  const hi = Math.max(faixa[0], faixa[1]);
+
+  const barram = obstaculos
+    .filter(b => b.lo < hi && b.hi > lo)         // só quem a perna de fato atravessaria
+    .map(b => [Math.min(b.ini, b.fim), Math.max(b.ini, b.fim)])
+    .sort((a, b) => a[0] - b[0]);
+
+  const unidos = [];
+  for (const [i, f] of barram) {
+    const u = unidos[unidos.length - 1];
+    if (u && i <= u[1]) u[1] = Math.max(u[1], f);
+    else unidos.push([i, f]);
+  }
+  // encostar na borda não é atravessar: a perna que corre RENTE à caixa não
+  // entra nela, e é exatamente isso que uma calha é
+  const dentro = c => unidos.some(([i, f]) => c > i && c < f);
+  if (!dentro(perto)) return perto;
+
+  // Os candidatos: as duas margens externas e o meio de cada vão. Como os
+  // bloqueios já vêm unidos, dois vizinhos nunca se tocam — todo meio de vão é
+  // estritamente livre, e por isso a busca sempre termina com resposta.
+  const vaos = [unidos[0][0] - margem];
+  for (let k = 0; k + 1 < unidos.length; k++) vaos.push((unidos[k][1] + unidos[k + 1][0]) / 2);
+  vaos.push(unidos[unidos.length - 1][1] + margem);
+
+  return vaos.reduce((a, b) => (Math.abs(b - perto) < Math.abs(a - perto) ? b : a));
+}
+
+/**
+ * A CAIXA DA FOLHA VAI PARA O ELK COM O RÓTULO DECLARADO, E ELE FICA FORA.
+ *
+ * O rótulo de uma folha é desenhado por FORA da caixa dela — centrado abaixo do
+ * ícone. O cabeçalho de `montarElk` explica por que a caixa não pode ser
+ * inflada para caber o texto: o ELK roteia até o CENTRO, e um centro deslocado
+ * faz a seta sair de dentro das letras.
+ *
+ * Até o #24 a saída era o motor COMPRAR o espaço por fora: `spacing.nodeNode`
+ * ganhava `rotuloMax` e o `padding.bottom` do container também. Isso separa
+ * VIZINHOS e não faz mais nada — o roteador de aresta do ELK continuava sem
+ * saber que existe texto ali, e passava por cima dele. Era `A3.4` (aresta sobre
+ * rótulo) e metade do `A3.2` (rótulo sobre rótulo): na vista técnica do #14, a
+ * aresta "dispara" cortando o rótulo do VPC endpoint, nas duas páginas em que
+ * ele aparece.
+ *
+ * `elk.nodeLabels.placement = [H_CENTER,V_BOTTOM,OUTSIDE]` é a alavanca certa e
+ * ela sempre esteve ali: o ELK reserva o rótulo FORA da caixa, então o centro
+ * continua sendo o do ícone (a âncora não se mexe) e o roteador passa a desviar
+ * do texto.
+ *
+ * ⚠️ E A RESERVA MANUAL SAIU JUNTO — as duas juntas pagariam o mesmo espaço
+ * duas vezes. Medido: com as duas, a `landing-zone` sai 1903×997; só com o ELK,
+ * 1903×861 — 136 px mais baixa que com as duas, e 41 mais baixa que os 1864×902
+ * de antes de tudo (39 mais larga, porque o rótulo passou a entrar na conta da
+ * largura em vez de vazar). O ganho não é só de altura:
+ * `A4.5` (padding de grupo uniforme) melhora em seis páginas, porque quem
+ * calcula o padding passou a ser quem sabe de que tamanho é o conteúdo.
+ *
+ * O que NÃO saiu: `rotuloMax` continua sendo somado no rodapé da faixa e na
+ * altura da página em `planejar`, e continua certo — a caixa que a faixa abraça
+ * é a do ÍCONE, então o texto dos membros ainda precisa caber embaixo dela.
+ */
+function folhaComRotulo(id, f) {
+  return {
+    id, width: f.caixaW || f.formaW, height: f.formaH,
+    labels: [{ id: `${id}-rot`, text: f.rotulo || '', width: f.rotuloW || 0, height: f.rotuloH || 0 }],
+    layoutOptions: { 'elk.nodeLabels.placement': '[H_CENTER,V_BOTTOM,OUTSIDE]' },
+  };
+}
+
+/**
+ * A NOTA PRESA A UM NÓ É UM NÓ DO LAYOUT — e antes do #24 ela não era nada.
+ *
+ * O motor a desenhava DEPOIS de tudo, num offset fixo à direita do sujeito:
+ *
+ *     geo: { x: a.x + a.w + 14, y: a.y, w: 190, h: 46 }     // ← chute
+ *
+ * Ninguém tinha reservado aquele espaço, então a caixa caía em cima do que
+ * estivesse ali. Na vista técnica do #14 a conta foi: `A4.2` ×3 e `A4.4` ×1 —
+ * as duas SEMÂNTICAS, a nota afirmando pertencer a uma conta e a uma nuvem de
+ * que ela não é membro —, mais `A3.5`, `A3.4` e `A3.2` porque a aresta que
+ * ninguém avisou passava por dentro dela. O #14 já tinha visto o sintoma a olho
+ * nu: *"nota presa a nó encosta em borda de container (visível nos dois PNGs)"*.
+ *
+ * A correção é a mesma frase que o #18 usa para tudo: quem corrige é o passo que
+ * tem as alavancas. Entregando a nota ao ELK como um nó de verdade, as cinco
+ * checagens caem por CONSTRUÇÃO e não por conserto — o ELK não sobrepõe nós, não
+ * tira filho de dentro do pai, e roteia desviando do que ele conhece. Nenhuma
+ * delas precisou ser mirada.
+ *
+ * O pai é o pai do SUJEITO, e isso é a parte semântica: uma nota sobre a zona
+ * curada mora dentro da conta em que a zona curada mora. Aí o que o desenho
+ * afirma e o que o modelo declara passam a ser a mesma coisa, que é literalmente
+ * o enunciado de `A4.4`.
+ */
+const NOTA_LARG = 190;
+const NOTA_ALT_MIN = 46;
+
+/**
+ * O id de uma nota tem UM dono, e a razão é dura: `planejar.notasPresas` decide
+ * se desenha pelo `abs.has(id)`. Se os dois lados derivassem o id por conta
+ * própria e discordassem num caractere, a nota sairia DUAS VEZES no mesmo
+ * desenho — uma pelo layout e outra pelo offset de resgate —, e o sintoma seria
+ * uma caixa amarela sobre outra, que nenhuma das 62 chama de erro.
+ */
+function idDaNota(n, i) { return n.id || `nota-${i}`; }
+
+function notasPorPai(modelo, d, res, caixas) {
+  const porPai = new Map();
+  for (const [i, n] of (modelo.notas || []).entries()) {
+    if (n.sobre === undefined) continue;
+    const alvo = d.t.porId.get(n.sobre);
+    if (!alvo) continue;                        // nota órfã — `validar.cjs` já reclama dela
+    const id = idDaNota(n, i);
+    const linhas = res.linhasDoRotulo(n.texto, NOTA_LARG - 16);
+    const caixa = {
+      container: false, nota: true, rotulo: n.texto, style: res.tema.nota(),
+      formaW: NOTA_LARG, formaH: Math.max(NOTA_ALT_MIN, 12 + linhas * 16),
+    };
+    caixas.set(id, caixa);
+    const pai = alvo.dentro || null;
+    if (!porPai.has(pai)) porPai.set(pai, []);
+    porPai.get(pai).push({ id, width: caixa.formaW, height: caixa.formaH });
+  }
+  return porPai;
+}
+
 /** O `$H` do GWT vaza no JSON e muda a cada execução sem mover uma coordenada (#7). */
 function limpar(o) {
   if (Array.isArray(o)) return o.map(limpar);
@@ -251,28 +482,31 @@ function montarElk(modelo, d, res, medir) {
   // em cada container — ver o aviso acima de OPCOES_RAIZ.
   const espacamento = {
     ...espacamentoDe(FOLGA),
-    // vizinho de cima/baixo tem de caber o rótulo do de cima, que é desenhado
-    // fora da caixa
-    'elk.spacing.nodeNode': String(FOLGA.ROW_GAP + rotuloMax),
+    // o vão entre vizinhos é só respiro: o rótulo é reservado pelo ELK, que
+    // agora o conhece (`folhaComRotulo`). Somar `rotuloMax` aqui pagaria duas
+    // vezes pelo mesmo espaço.
+    'elk.spacing.nodeNode': String(FOLGA.ROW_GAP),
     // e o vizinho de lado tem de caber o transbordo do texto pelos dois lados
     'elk.layered.spacing.nodeNodeBetweenLayers': String(FOLGA.PAD + Math.ceil(2 * transbordo)),
   };
 
+  const notas = notasPorPai(modelo, d, res, caixas);
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
+    // a nota presa a um filho deste container é filha DELE — ver `notasPorPai`
+    const minhasNotas = notas.get(no.id) || [];
     if (CONTEINERES.has(no.tipo)) {
       const c = res.container(no);
       caixas.set(no.id, { container: true, ...c });
-      if (!kids.length) return caixaVazia(no, c, res);
-      // o rótulo da folha transborda a caixa dela para baixo e para os lados;
-      // se o container não reservar isso, o texto vaza pela borda
-      // "tem folha" é sobre TIPO, igual a `caixaVazia` — um container vazio não é
-      // folha, e reservar faixa de rótulo para ele seria o mesmo erro de novo.
+      if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
+      // o rótulo da folha transborda a caixa dela PARA OS LADOS, e o container
+      // tem de reservar isso — a reserva de BAIXO passou a ser do ELK
+      // (`folhaComRotulo`). "tem folha" é sobre TIPO, igual a `caixaVazia`.
       const temFolha = kids.some(k => FOLHAS.has(k.tipo));
       const folga = temFolha ? Math.ceil(transbordo) : 0;
       const pad = {
         top: c.tituloH + FOLGA.PAD, left: FOLGA.PAD + folga,
-        bottom: FOLGA.PAD + (temFolha ? rotuloMax : 0), right: FOLGA.PAD + folga + (medir.get(no.id) || 0),
+        bottom: FOLGA.PAD, right: FOLGA.PAD + folga + (medir.get(no.id) || 0),
       };
       paddings.set(no.id, pad);
       return {
@@ -281,31 +515,37 @@ function montarElk(modelo, d, res, medir) {
           'elk.padding': `[top=${pad.top},left=${pad.left},bottom=${pad.bottom},right=${pad.right}]`,
           ...espacamento,          // sem isto, o container usa os defaults do ELK — ver o aviso acima
         },
-        children: kids.map(paraElk),
+        children: [...kids.map(paraElk), ...minhasNotas],
       };
     }
     const f = res.folha(no);
     caixas.set(no.id, { container: false, ...f });
-    return { id: no.id, width: f.caixaW || f.formaW, height: f.formaH };
+    return folhaComRotulo(no.id, f);
   };
 
+  const revertidas = new Set();
   const grafo = {
     id: 'root',
     layoutOptions: { ...OPCOES_RAIZ, ...espacamento },
-    children: d.t.raizes.map(paraElk),
+    children: [...d.t.raizes.map(paraElk), ...(notas.get(null) || [])],
     // O rótulo da aresta vai JUNTO. Sem ele o ELK aproxima os nós até o vão
     // ficar menor que o texto, e o texto cai em cima do ícone vizinho — que é
     // `A3.2` da rubrica (#8), a falha que ela prevê para gerador automático.
     // Entregando o rótulo, o vão passa a ser calculado para caber nele.
     edges: d.arestas.map(a => {
       const txt = textoDaAresta(a);
+      // o LAYOUT lê o dado (`sentidoDeLeitura`); a SETA continua a do modelo,
+      // e `desreverter` devolve a aresta ao sentido dela antes de qualquer
+      // consumidor a ver
+      const s = sentidoDeLeitura(a);
+      if (s.revertida) revertidas.add(a.id);
       return {
-        id: a.id, sources: [a.de], targets: [a.para],
+        id: a.id, sources: [s.de], targets: [s.para],
         ...(txt ? { labels: [{ id: a.id + '-rot', text: txt, width: res.larguraDaAresta(txt) + 8, height: 14 }] } : {}),
       };
     }),
   };
-  return { grafo, caixas, paddings, rotuloMax, transbordo };
+  return { grafo, caixas, paddings, rotuloMax, transbordo, revertidas };
 }
 
 /**
@@ -329,8 +569,8 @@ async function porElk(modelo, d, res) {
   let saida = null;
 
   for (let passada = 0; passada < 2; passada++) {
-    const { grafo, caixas, paddings, rotuloMax } = montarElk(modelo, d, res, medir);
-    saida = limpar(await elk.layout(structuredClone(grafo)));
+    const { grafo, caixas, paddings, rotuloMax, revertidas } = montarElk(modelo, d, res, medir);
+    saida = desreverter(limpar(await elk.layout(structuredClone(grafo))), revertidas);
     if (passada === 1) return { saida, caixas, rotuloMax, passadas: 2, encaixe: alinhar(saida, paddings) };
 
     const proximo = new Map();
@@ -801,7 +1041,14 @@ function ordemDeContas(contas, cruz, modo) {
     const pos = new Map(perm.map((c, i) => [c.id, i]));
     let pulo = 0, contramao = 0;
     for (const a of cruz) {
-      const i = pos.get(a.contaDe), j = pos.get(a.contaPara);
+      // A CONTRAMÃO É DO DADO, NÃO DA SETA — `sentidoDeLeitura`. `X5` fala do
+      // fluxo primário, e numa travessia de polling quem flui é a resposta:
+      // `de` é só quem abriu a conversa. Medindo pela seta, a fileira do varejo
+      // saía `analytics | dados | lojas` — o desenho inteiro lido de trás para
+      // frente porque duas consultas apontam para a origem do dado.
+      const rev = a.dados === 'volta';
+      const i = pos.get(rev ? a.contaPara : a.contaDe);
+      const j = pos.get(rev ? a.contaDe : a.contaPara);
       if (i === undefined || j === undefined) continue;
       if (Math.abs(i - j) > 1) pulo += Math.abs(i - j) - 1;
       if (j < i) contramao++;
@@ -850,35 +1097,36 @@ function ordemDeContas(contas, cruz, modo) {
  * então nada precisa ser esticado depois (que é o contorno que o #7 propõe e
  * que pode encostar num irmão).
  */
-async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Map()) {
+async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Map(), notas = new Map()) {
   const FOLGA = folgas(res.tema);
   const espacamento = {
     ...espacamentoDe(FOLGA),
-    'elk.spacing.nodeNode': String(FOLGA.ROW_GAP + metrica.rotuloMax),
+    'elk.spacing.nodeNode': String(FOLGA.ROW_GAP),
     'elk.layered.spacing.nodeNodeBetweenLayers': String(FOLGA.PAD + Math.ceil(2 * metrica.transbordo)),
   };
 
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
+    const minhasNotas = notas.get(no.id) || [];              // ver `notasPorPai`
     if (CONTEINERES.has(no.tipo)) {
       const c = res.container(no);
       caixas.set(no.id, { container: true, ...c });
-      if (!kids.length) return caixaVazia(no, c, res);
+      if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
       const temFolha = kids.some(k => FOLHAS.has(k.tipo));   // por TIPO — ver `caixaVazia`
       const folga = temFolha ? Math.ceil(metrica.transbordo) : 0;
       return {
         id: no.id,
         layoutOptions: {
           'elk.padding': `[top=${c.tituloH + FOLGA.PAD},left=${FOLGA.PAD + folga},` +
-            `bottom=${FOLGA.PAD + (temFolha ? metrica.rotuloMax : 0)},right=${FOLGA.PAD + folga + (medir.get(no.id) || 0)}]`,
+            `bottom=${FOLGA.PAD},right=${FOLGA.PAD + folga + (medir.get(no.id) || 0)}]`,
           ...espacamento,
         },
-        children: kids.map(paraElk),
+        children: [...kids.map(paraElk), ...minhasNotas],
       };
     }
     const f = res.folha(no);
     caixas.set(no.id, { container: false, ...f });
-    return { id: no.id, width: f.caixaW || f.formaW, height: f.formaH };
+    return folhaComRotulo(no.id, f);
   };
 
   const cC = res.container(conta);
@@ -890,6 +1138,7 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
   const dentro = new Set();
   (function marcar(id) { dentro.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(conta.id);
   const internas = d.arestas.filter(a => dentro.has(a.de) && dentro.has(a.para));
+  const revertidas = new Set();
 
   const grafo = {
     id: conta.id,
@@ -900,19 +1149,21 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
       // dentro: o rótulo da folha é desenhado centrado sob o ícone e mais largo
       // que ele, então sem isto "IAM Identity Center" encosta na borda magenta
       'elk.padding': `[top=${cC.tituloH + FOLGA.PAD},left=${FOLGA.PAD + folgaConta},` +
-        `bottom=${FOLGA.PAD + metrica.rotuloMax},right=${FOLGA.PAD + folgaConta + (medir.get(conta.id) || 0)}]`,
+        `bottom=${FOLGA.PAD},right=${FOLGA.PAD + folgaConta + (medir.get(conta.id) || 0)}]`,
       ...espacamento,
     },
-    children: d.t.filhos.get(conta.id).map(paraElk),
+    children: [...d.t.filhos.get(conta.id).map(paraElk), ...(notas.get(conta.id) || [])],
     edges: internas.map(a => {
       const txt = textoDaAresta(a);
+      const s = sentidoDeLeitura(a);                       // o dado manda no layout
+      if (s.revertida) revertidas.add(a.id);
       return {
-        id: a.id, sources: [a.de], targets: [a.para],
+        id: a.id, sources: [s.de], targets: [s.para],
         ...(txt ? { labels: [{ id: a.id + '-rot', text: txt, width: res.larguraDaAresta(txt) + 8, height: 14 }] } : {}),
       };
     }),
   };
-  return limpar(await elk.layout(grafo));
+  return desreverter(limpar(await elk.layout(grafo)), revertidas);
 }
 
 /** As duas medidas de rótulo que todo caminho precisa antes de montar grafo nenhum. */
@@ -931,6 +1182,10 @@ async function porContas(modelo, d, res) {
   const elk = new ELK();
   const caixas = new Map();
   const metrica = metricaDeRotulo(modelo, d, res);
+  // a nota presa a um nó entra no ELK da CONTA dele — ver `notasPorPai`. A que
+  // fala de um nó fora de conta nenhuma não tem ELK onde entrar (a fileira de
+  // contas é grade do motor), e `planejar` a coloca no offset de sempre.
+  const notas = notasPorPai(modelo, d, res, caixas);
   const contas = modelo.nos.filter(n => n.tipo === 'conta');
   const modo = d.modo.modo;
 
@@ -939,7 +1194,7 @@ async function porContas(modelo, d, res) {
   for (const c of contas) {
     let medir = new Map(), r = null;
     for (let passada = 0; passada < 2; passada++) {
-      r = await layoutDaConta(elk, c, d, res, caixas, metrica, medir);
+      r = await layoutDaConta(elk, c, d, res, caixas, metrica, medir, notas);
       const proximo = new Map();
       const def = deficitDeTitulo(c, caixas.get(c.id), r.width, res);
       if (def > 0) proximo.set(c.id, def);
@@ -1035,6 +1290,7 @@ async function porContas(modelo, d, res) {
 module.exports = {
   porElk, porGrade, porContas, ordemDeContas, ordemDeRaias, eixoDaGrade, calhaDaLinha,
   rankOu, metricaDeRotulo,
-  textoDaAresta, calhaDaFaixa, OPCOES_RAIZ,
+  textoDaAresta, calhaDaFaixa, OPCOES_RAIZ, corredorLivre, sentidoDeLeitura,
+  notasPorPai, idDaNota, NOTA_LARG, NOTA_ALT_MIN,
   AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, GAP_IRMA, GAP_OU, CALHA, OU_LANE, limpar, folgas,
 };

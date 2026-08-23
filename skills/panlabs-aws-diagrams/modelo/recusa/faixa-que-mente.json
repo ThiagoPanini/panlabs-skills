@@ -1,0 +1,30 @@
+{
+  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "id": "faixa-que-mente",
+  "titulo": "A faixa que mente — o corpo de prova do portão de veracidade",
+  "subtitulo": "Este modelo GERA, e o desenho que sai afirma um atributo que o modelo nega. Existe para provar, ponta a ponta, que --portao veracidade recusa.",
+  "vista": "tecnica",
+
+  "nos": [
+    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
+    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "dentro": "nuvem" },
+    { "id": "sub", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
+
+    { "id": "n1", "tipo": "servico", "servico": "ec2", "rotulo": "Nó que escala", "dentro": "sub" },
+    { "id": "n2", "tipo": "servico", "servico": "rds", "rotulo": "Base que NÃO escala", "dentro": "sub" },
+    { "id": "n3", "tipo": "servico", "servico": "ec2", "rotulo": "Outro nó que escala", "dentro": "sub" }
+  ],
+
+  "arestas": [
+    { "id": "e12", "de": "n1", "para": "n2", "rotulo": "grava" },
+    { "id": "e23", "de": "n2", "para": "n3", "rotulo": "replica" }
+  ],
+
+  "faixas": [
+    { "id": "escala", "tipo": "generico", "rotulo": "Escala junto", "membros": ["n1", "n3"] }
+  ],
+
+  "notas": [
+    { "id": "n-porque", "origem": "premissa", "texto": "A faixa declara DOIS membros e o layout põe um terceiro entre eles. Como a caixa da faixa é a UNIÃO dos membros (o agente diz QUEM, o motor calcula ONDE), o não-membro cai dentro dela — e o desenho passa a afirmar dele um atributo que o modelo não declara. É F1, tolerância zero." }
+  ]
+}

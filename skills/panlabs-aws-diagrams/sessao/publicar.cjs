@@ -200,7 +200,12 @@ function main() {
     console.error('--saida precisa de um caminho');
     process.exit(2);
   }
-  const entrada = args.find((a, i) => !a.startsWith('--') && i !== iSaida + 1);
+  // ⚠️ `i !== iSaida + 1` pula o valor de `--saida` — mas com `iSaida = -1` ele
+  // pulava o ÍNDICE 0, que é justamente o argumento posicional da forma sem
+  // `--saida`. `node sessao/publicar.cjs saida/varejo.drawio` respondia com o
+  // texto de uso, o que faz a linha do README parecer errada quando quem está
+  // errado é a guarda. Achado no #24, ao regerar a cópia publicada.
+  const entrada = args.find((a, i) => !a.startsWith('--') && !(iSaida >= 0 && i === iSaida + 1));
   if (!entrada) {
     console.error('uso: node sessao/publicar.cjs <trabalho.drawio> [--saida <copia>.drawio]');
     console.error('  Produz a copia que CIRCULA: sem candidatas descartadas, sem o motivo das');

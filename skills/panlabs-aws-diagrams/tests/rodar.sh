@@ -17,8 +17,8 @@
 #   3  O MOTOR       validação, determinismo, camada de rede, gatilhos, travessia.
 #   4  O TEMA        vocabulário fechado, partição pintura×métrica, o portão de
 #                    contraste, e os quatro estilos do #12 saindo de token.
-#   5  A GEOMETRIA   o portão do #18 sobre o corpus inteiro, com a quarentena
-#                    nomeada do #24.
+#   5  A GEOMETRIA   o portão do #18 sobre o corpus inteiro, e o orçamento de
+#                    roteamento do #24 (A5.5=0, A3.4=0, A3.5=0, A5.1 no teto).
 #   6  A SESSÃO      projeção, manifesto, impressão, e a privacidade do dossiê.
 #   7  O APP         round-trip pelo codec do próprio draw.io e render. DEPENDÊNCIA
 #                    DE DESENVOLVIMENTO (premissa 8): sem o binário, avisa e segue.
@@ -99,11 +99,29 @@ passo "o portão reprova o tema errado"             bash -c '
 echo
 echo "════ camada 5 · a geometria do corpus ════"
 passo "o portão barra o que mente e cabe no meio"  node "$AQUI/check-portao-geometrico.cjs"
-passo "o corpus laudado (com quarentena nomeada)"  node "$AQUI/check-bons.cjs"
+passo "o corpus laudado (sem quarentena aberta)"   node "$AQUI/check-bons.cjs"
+passo "o orçamento de roteamento do #24"           node "$AQUI/check-roteamento.cjs"
+# ⚠️ O CORPO DE PROVA MUDOU NO #24, e o motivo é o ticket ter dado certo.
+#
+# Até aqui o portão era exercitado contra `web-fluxo-3-az`, que mentia (`A5.5`
+# ×2, a quarentena do #24). Ele parou de mentir — e um teste cujo sujeito é um
+# defeito morre no dia em que o defeito é consertado. O sujeito passa a ser
+# `modelo/recusa/faixa-que-mente.json`, feito PARA mentir e escolhido por não
+# ter conserto de roteamento: a caixa da faixa é a UNIÃO dos membros, então um
+# não-membro layoutado no meio cai dentro dela por definição, e nenhuma escolha
+# de traçado desfaz isso. Corpo de prova que não se conserta por acidente.
+#
+# ⚠️ E `F1` está FORA das 62 de propósito (#18), então este passo sozinho não
+# provaria que uma família DA RUBRICA barra. Quem prova isso é o passo acima:
+# desde o #24 o `check-portao-geometrico.cjs` roda `A4.2`, `A4.4`, `A5.5` e `F1`
+# — as quatro de tolerância zero —, cada uma contra o seu caso plantado, e exige
+# que a mensagem nomeie a checagem. A divisão é: LÁ o portão prova que barra cada
+# família; AQUI o motor prova que chama o portão e obedece ao nível. Não há
+# modelo que faça `A5.5` ponta a ponta porque o motor não produz mais nenhum.
 passo "e o portão está ENXERTADO no motor"         bash -c '
   G="'"$RAIZ"'/motor/gerar.cjs"
-  # o modelo em quarentena do #24 mente, e com --portao veracidade o motor recusa
-  if node "$G" "'"$RAIZ"'/modelo/web-fluxo-3-az.json" --portao veracidade --saida /dev/null > /dev/null 2>&1; then
+  M="'"$RAIZ"'/modelo/recusa/faixa-que-mente.json"
+  if node "$G" "$M" --portao veracidade --saida /dev/null > /dev/null 2>&1; then
     echo "   ✗ o motor DESENHOU um plano que mente, com o portão pedido"; exit 1
   fi
   echo "   ✓ --portao veracidade recusa o desenho que mente"
@@ -112,7 +130,7 @@ passo "e o portão está ENXERTADO no motor"         bash -c '
     && echo "   ✓ e deixa passar o que não mente" \
     || { echo "   ✗ recusou um desenho que não mente"; exit 1; }
   # sem portão, o motor desenha — mas AVISA
-  node "$G" "'"$RAIZ"'/modelo/web-fluxo-3-az.json" --saida /dev/null 2>&1 | grep -q "⛔ A5.5" \
+  node "$G" "$M" --saida /dev/null 2>&1 | grep -q "⛔ F1" \
     && echo "   ✓ e sem portão desenha, mas avisa da falha semântica" \
     || { echo "   ✗ desenhou em silêncio um plano que mente"; exit 1; }'
 

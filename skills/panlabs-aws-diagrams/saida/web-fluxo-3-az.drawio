@@ -96,16 +96,16 @@
         <mxCell id="e-ec2-b-rds-a3" value="&lt;b&gt;4.&lt;/b&gt; grava" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="ec2-b" target="rds-a">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="506" y="230"/>
-              <mxPoint x="506" y="429"/>
+              <mxPoint x="585" y="306"/>
+              <mxPoint x="585" y="505"/>
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="e-ec2-c-rds-a4" value="&lt;b&gt;5.&lt;/b&gt; grava" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="ec2-c" target="rds-a">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="506" y="628"/>
-              <mxPoint x="506" y="429"/>
+              <mxPoint x="585" y="704"/>
+              <mxPoint x="585" y="505"/>
             </Array>
           </mxGeometry>
         </mxCell>

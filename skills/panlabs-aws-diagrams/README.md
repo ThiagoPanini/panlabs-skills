@@ -108,9 +108,16 @@ da suíte precisa dele e, sem o binário, avisa e segue.
 
 ## A dívida, com endereço
 
-- `A5.5` ×2 em `web-fluxo-3-az` — roteamento da grade transposta atravessa um
-  grupo alheio. **Semântica**, e anterior à consolidação. Em quarentena nomeada
-  no `check-bons.cjs`, dona: [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24).
+- ~~`A5.5` ×2 em `web-fluxo-3-az`~~ — **paga** pelo
+  [#24](https://github.com/ThiagoPanini/panlabs-skills/issues/24). O corpus
+  inteiro está em `A5.5` = 0, e a quarentena do `check-bons.cjs` expirou
+  sozinha, como tinha sido escrita para fazer.
+- `A5.7` (direção de fluxo) passou a AVISAR em três páginas, e é a conta que o
+  #24 pagou de propósito: `dados: "volta"` virou dica de reversão para o
+  layout, então o eixo passou a seguir o DADO e a seta de uma consulta aponta
+  para trás — que é o que ela é. Antes a seta ficava bonita e a fileira de
+  contas saía `analytics | dados | lojas`, lida de trás para frente. Ver
+  `docs/recertificacao.md` §6.
 - Nenhum diagrama emite **legenda** (`A1.2`/`A1.3` acusam em todo o corpus). O
   #13 registrou que o vocabulário fechado do tema não contrai essa dívida.
 - O quadrado do ícone de serviço fica em 2,71:1 contra o tingimento de subnet.

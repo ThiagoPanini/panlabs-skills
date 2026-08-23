@@ -10,7 +10,8 @@
  * A ordem da lista é a ordem z: quem vem antes fica atrás.
  */
 
-const { AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, calhaDaFaixa, folgas } = require('./dispor.cjs');
+const dispor = require('./dispor.cjs');
+const { AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, calhaDaFaixa, folgas } = dispor;
 
 /**
  * A altura de uma linha do bloco de título, em função do corpo dela.
@@ -166,6 +167,55 @@ function celulaDoModelo(modelo, res) {
   };
 }
 
+/**
+ * Da coordenada de um layout para a da PÁGINA.
+ *
+ * Três lugares deste arquivo faziam a mesma soma com nomes diferentes (`desl`
+ * duas vezes, `paraPagina` uma). É sempre a mesma pergunta — a célula de aresta
+ * é filha da camada (`pai: '1'`), e ali o waypoint é de página — e ter três
+ * cópias foi exatamente o que deixou a do caminho da grade sem ser feita até o
+ * #24 (ver `arestasNaGrade`).
+ */
+const paraPagina = (base) => (pt) => ({ x: pt.x + base.x, y: pt.y + base.y });
+
+/**
+ * Uma caixa vira obstáculo de `dispor.corredorLivre`: `ini..fim` no eixo da
+ * perna, `lo..hi` no eixo que ela atravessa. Duas leituras da mesma caixa,
+ * porque a perna pode ser vertical ou horizontal.
+ */
+const caixaEmX = b => ({ ini: b.x, fim: b.x + b.w, lo: b.y, hi: b.y + b.h });
+const caixaEmY = b => ({ ini: b.y, fim: b.y + b.h, lo: b.x, hi: b.x + b.w });
+
+/**
+ * As notas presas a um nó que o LAYOUT não colocou.
+ *
+ * Desde o #24 a nota é um nó do ELK (`dispor.notasPorPai`): ela sai do layout
+ * com caixa própria, dentro do container do sujeito, sem sobrepor ninguém — e
+ * a andada que monta as células já a emitiu, porque ela está em `caixas` como
+ * qualquer outra folha.
+ *
+ * Sobra um caso, e ele é do caminho C: nota sobre um nó que não mora em conta
+ * nenhuma. A fileira de contas é grade do MOTOR, não do ELK, então não existe
+ * grafo onde essa nota pudesse ter entrado. Aí volta o offset fixo de antes —
+ * que é chute, e é por isso que ele é a exceção e não a regra. Sumir com ela
+ * seria pior: omissão calada é `A4.2` pelo outro lado.
+ */
+function notasPresas(plano, modelo, abs, p) {
+  for (const [i, n] of (modelo.notas || []).entries()) {
+    if (n.sobre === undefined) continue;
+    // o id vem de `dispor.idDaNota` — os dois lados TÊM de concordar, senão o
+    // `abs.has(id)` abaixo falha e a nota sai duas vezes
+    const id = dispor.idDaNota(n, i);
+    if (abs.has(id)) continue;                 // o layout já a colocou
+    const a = abs.get(n.sobre);
+    if (!a) continue;
+    plano.celulas.push({
+      tipo: 'vertice', id, pai: '1', rotulo: n.texto, style: p.nota,
+      geo: { x: a.x + a.w + 14, y: a.y, w: dispor.NOTA_LARG, h: dispor.NOTA_ALT_MIN },
+    });
+  }
+}
+
 function rodape(plano, modelo, larguraUtil, res, y) {
   const p = pintura(res);
   const mo = moldura(res);
@@ -241,7 +291,7 @@ function planoDeElk(modelo, d, res, layout, opts = {}) {
     const a = d.arestas.find(x => x.id === e.id);
     const sec = (e.sections || [])[0];
     if (!sec) continue;
-    const desl = p => ({ x: p.x + mo.x, y: p.y + mo.topo });
+    const desl = paraPagina({ x: mo.x, y: mo.topo });
     const anc = {
       saida: ancora(abs.get(a.de), sec.startPoint),
       entrada: ancora(abs.get(a.para), sec.endPoint),
@@ -253,16 +303,7 @@ function planoDeElk(modelo, d, res, layout, opts = {}) {
     });
   }
 
-  // notas presas a um nó
-  for (const [i, n] of (modelo.notas || []).entries()) {
-    if (n.sobre === undefined) continue;
-    const a = abs.get(n.sobre);
-    if (!a) continue;
-    plano.celulas.push({
-      tipo: 'vertice', id: n.id || `nota-${i}`, pai: '1', rotulo: n.texto, style: p.nota,
-      geo: { x: a.x + a.w + 14, y: a.y, w: 190, h: 46 },
-    });
-  }
+  notasPresas(plano, modelo, abs, p);
 
   const largura = Math.max(saida.width + 2 * mo.x, 900);
   const fim = rodape(plano, modelo, largura - 2 * mo.x, res, saida.height + mo.topo + (layout.rotuloMax || 0));
@@ -406,6 +447,23 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
 function arestasNaGrade(plano, modelo, d, res, g, opts) {
   if (!d.arestas.length) return;
 
+  /**
+   * ⚠️ `g.pos` É RELATIVO À NUVEM, e a célula de aresta é filha da CAMADA.
+   *
+   * As caixas da grade saem em coordenada da nuvem — é assim que a faixa de AZ
+   * e a caixa de VPC são emitidas, com `pai: idNuvem`. A aresta não: ela vai
+   * para `pai: '1'`, e ali o waypoint é página, não nuvem. Até o #24 a conta
+   * não era feita, e o desvio saía deslocado (`mo.x`, `mo.topo`) das pontas que
+   * o próprio motor tinha ancorado — o que transforma um traçado ortogonal por
+   * construção numa DIAGONAL.
+   *
+   * Não era invisível: `A5.4` reportava "dobra de 44,4°, abaixo do piso de 60°"
+   * e `A5.6` "há segmentos fora dos eixos num roteamento que se diz ortogonal".
+   * Duas checagens apontando para o mesmo `+32,+76` que ninguém tinha somado.
+   */
+  const mo = moldura(res);
+  const daGradeParaPagina = paraPagina({ x: mo.x, y: mo.topo });
+
   const abs = new Map();
   for (const s of modelo.nos.filter(n => n.tipo === 'subnet')) {
     const p = g.pos.get(s.id);
@@ -417,11 +475,28 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
     }
   }
 
-  const raiaDe = id => {
+  const subnetDe = id => {
     const n = d.t.porId.get(id);
     if (!n) return null;
     const s = n.tipo === 'subnet' ? n : d.t.ancestrais(n).find(a => a.tipo === 'subnet');
-    return s ? s.az : null;
+    return s ? s.id : null;
+  };
+  const raiaDe = id => {
+    const s = subnetDe(id);
+    const n = s && d.t.porId.get(s);
+    return n ? n.az : null;
+  };
+
+  /**
+   * Os grupos que a perna do desvio NÃO pode atravessar: toda subnet que não é
+   * a da origem nem a do destino. Sair de dentro da própria subnet e entrar na
+   * do destino é o caminho; passar por dentro de uma terceira é `A5.5` — o
+   * desenho afirmando um caminho de rede que o modelo nega.
+   */
+  const subnets = modelo.nos.filter(n => n.tipo === 'subnet').map(n => n.id);
+  const barreiras = a => {
+    const minhas = new Set([subnetDe(a.de), subnetDe(a.para)]);
+    return subnets.filter(id => !minhas.has(id)).map(id => abs.get(id)).filter(Boolean);
   };
 
   for (const a of d.arestas) {
@@ -435,22 +510,26 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
       const y0 = o.y + o.h / 2, y1 = dst.y + dst.h / 2;
       anc = { saida: { x: adiante ? 1 : 0, y: 0.5 }, entrada: { x: adiante ? 0 : 1, y: 0.5 } };
       if (!mesma) {
-        // desvia pela margem mais próxima da ORIGEM (#21)
-        const meio = adiante ? (o.x + o.w + dst.x) / 2 : (dst.x + dst.w + o.x) / 2;
-        pontos = [{ x: meio, y: y0 }, { x: meio, y: y1 }];
+        // desvia pela margem mais próxima da ORIGEM (#21) — mas por um VÃO, e
+        // não pelo ponto médio entre os ícones. Ver `corredorLivre`.
+        const perto = adiante ? (o.x + o.w + dst.x) / 2 : (dst.x + dst.w + o.x) / 2;
+        const onde = dispor.corredorLivre([y0, y1], barreiras(a).map(caixaEmX), perto);
+        pontos = [{ x: onde, y: y0 }, { x: onde, y: y1 }];
       }
     } else {
       const x0 = o.x + o.w / 2, x1 = dst.x + dst.w / 2;
       anc = { saida: { x: 0.5, y: adiante ? 1 : 0 }, entrada: { x: 0.5, y: adiante ? 0 : 1 } };
       if (!mesma) {
-        const meio = adiante ? (o.y + o.h + dst.y) / 2 : (dst.y + dst.h + o.y) / 2;
-        pontos = [{ x: x0, y: meio }, { x: x1, y: meio }];
+        const perto = adiante ? (o.y + o.h + dst.y) / 2 : (dst.y + dst.h + o.y) / 2;
+        const onde = dispor.corredorLivre([x0, x1], barreiras(a).map(caixaEmY), perto);
+        pontos = [{ x: x0, y: onde }, { x: x1, y: onde }];
       }
     }
 
     plano.celulas.push({
       tipo: 'aresta', id: a.id, pai: '1', de: a.de, para: a.para,
-      rotulo: rotuloDaAresta(a), style: estiloAresta(a, anc, res.tema), pontos,
+      rotulo: rotuloDaAresta(a), style: estiloAresta(a, anc, res.tema),
+      pontos: pontos.map(daGradeParaPagina),
     });
   }
 }
@@ -633,7 +712,7 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
       const a = d.arestas.find(x => x.id === e.id);
       const sec = (e.sections || [])[0];
       if (!a || !sec) continue;
-      const desl = pt => ({ x: ax + pt.x, y: ay + pt.y });
+      const desl = paraPagina({ x: ax, y: ay });
       const anc = {
         saida: ancora(abs.get(a.de), desl(sec.startPoint)),
         entrada: ancora(abs.get(a.para), desl(sec.endPoint)),
@@ -661,15 +740,7 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
   }
 
   // 7. notas presas a um nó
-  for (const [i, n] of (modelo.notas || []).entries()) {
-    if (n.sobre === undefined) continue;
-    const a = abs.get(n.sobre);
-    if (!a) continue;
-    plano.celulas.push({
-      tipo: 'vertice', id: n.id || `nota-${i}`, pai: '1', rotulo: n.texto, style: p.nota,
-      geo: { x: a.x + a.w + 14, y: a.y, w: 190, h: 46 },
-    });
-  }
+  notasPresas(plano, modelo, abs, p);
 
   const fundo = mo.topo + (nuvem ? alturaNuvem : g.altura + reservaFundo) + f.PAD;
   const largura = Math.max(baseX + g.largura + mo.x, 900);
@@ -678,6 +749,30 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
   plano.alt = fim + mo.rodape;
   plano.celulas.push(celulaDoModelo(modelo, res));
   return plano;
+}
+
+/**
+ * A PARENTELA DE UM NÓ: ele, seus ancestrais e seus descendentes.
+ *
+ * É o conjunto que NUNCA conta como obstáculo para uma aresta que sai dele.
+ * Atravessar a própria VPC para sair dela não é atravessar fronteira alheia —
+ * é o único jeito de sair —, e `A5.5` diz isso na definição: espúria é a
+ * fronteira de que a aresta não sai nem para onde vai.
+ *
+ * Estava escrita três vezes com nomes diferentes até o #24 juntar. A terceira
+ * cópia (a de `arestasDeFora`) excluía SÓ as duas pontas, e por isso teria
+ * empurrado para fora da nuvem uma aresta cujo destino mora dentro dela.
+ */
+function parentela(d, ids) {
+  const meu = new Set();
+  for (const id of ids) {
+    const no = d.t.porId.get(id);
+    if (!no) continue;
+    meu.add(id);
+    for (const a of d.t.ancestrais(no)) meu.add(a.id);
+    (function desc(x) { for (const k of d.t.filhos.get(x)) { meu.add(k.id); desc(k.id); } })(id);
+  }
+  return meu;
 }
 
 /**
@@ -695,9 +790,7 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
  * está sujo. Preferir o lado que aponta para o destino, mas só se estiver limpo.
  */
 function ladoLivre(no, alvoAbs, contaAbs, abs, d, idNo) {
-  const meu = new Set([idNo]);
-  for (const a of d.t.ancestrais(d.t.porId.get(idNo))) meu.add(a.id);
-  (function desc(id) { for (const k of d.t.filhos.get(id)) { meu.add(k.id); desc(k.id); } })(idNo);
+  const meu = parentela(d, [idNo]);
 
   const cruza = (x1, x2) => {
     for (const [id, b] of abs) {
@@ -714,11 +807,41 @@ function ladoLivre(no, alvoAbs, contaAbs, abs, d, idNo) {
   const direitaLimpa = !cruza(no.x + no.w, contaAbs.x + contaAbs.w);
   const prefereEsquerda = alvoAbs && alvoAbs.x + alvoAbs.w / 2 < no.x;
 
-  if (prefereEsquerda && esquerdaLimpa) return 'esquerda';
-  if (!prefereEsquerda && direitaLimpa) return 'direita';
-  if (esquerdaLimpa) return 'esquerda';
-  if (direitaLimpa) return 'direita';
-  return prefereEsquerda ? 'esquerda' : 'direita';   // nenhum limpo: o mal menor é o curto
+  if (prefereEsquerda && esquerdaLimpa) return { lado: 'esquerda', limpo: true };
+  if (!prefereEsquerda && direitaLimpa) return { lado: 'direita', limpo: true };
+  if (esquerdaLimpa) return { lado: 'esquerda', limpo: true };
+  if (direitaLimpa) return { lado: 'direita', limpo: true };
+  /**
+   * NENHUM LADO LIMPO — e até o #24 isto voltava calado.
+   *
+   * A versão anterior devolvia "o mal menor é o curto" e seguia, então a
+   * travessia saía cortando um irmão sem que nada no motor soubesse. Foi assim
+   * que `a-confia` (Lambda → papel cross-account) saiu por dentro do VPC
+   * endpoint: os dois lados estavam ocupados, o roteador escolheu o esquerdo, e
+   * `A3.5` cobrou. Agora ele DIZ que sujou, e quem chama tem a chance de sair
+   * pelo outro eixo — que é o que a canaleta do `X3` sempre soube fazer.
+   */
+  return { lado: prefereEsquerda ? 'esquerda' : 'direita', limpo: false };
+}
+
+/**
+ * A perna VERTICAL de saída: do nó até a canaleta, sem furar irmão.
+ *
+ * É a alternativa quando `ladoLivre` volta sujo dos dois lados. O #12 escreveu
+ * que "sair pela vertical era o caminho curto e era o errado" — e estava certo
+ * como REGRA, não como lei: descer é errado quando há irmão embaixo, e é o
+ * único caminho limpo quando os dois lados estão ocupados e o vão de baixo não
+ * está. Quem decide é a medida, não a preferência.
+ */
+function verticalLimpa(no, y, abs, d, idNo) {
+  const meu = parentela(d, [idNo]);
+  const lo = Math.min(y, no.y + no.h / 2), hi = Math.max(y, no.y + no.h / 2);
+  const cx = no.x + no.w / 2;
+  for (const [id, b] of abs) {
+    if (meu.has(id)) continue;
+    if (b.x < cx && b.x + b.w > cx && b.y < hi && b.y + b.h > lo) return false;
+  }
+  return true;
 }
 
 /**
@@ -858,18 +981,45 @@ function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
     const cB = { ...caixa(t.contaPara), id: t.contaPara };
     const ladoO = ladoLivre(o, dst, cA, abs, d, t.de);
     const ladoD = ladoLivre(dst, o, cB, abs, d, t.para);
-    const xo = ladoO === 'esquerda' ? cA.x - g.CALHA / 2 : cA.x + cA.w + g.CALHA / 2;
-    const xd = ladoD === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
-    const yo = o.y + o.h / 2, yd = dst.y + dst.h / 2;
+    // quando os dois lados estão sujos, descer direto para a canaleta é o
+    // caminho limpo — ver `verticalLimpa`
+    const desceO = !ladoO.limpo && verticalLimpa(o, yCanal, abs, d, t.de);
+    const desceD = !ladoD.limpo && verticalLimpa(dst, yCanal, abs, d, t.para);
+    const xo = desceO ? o.x + o.w / 2
+      : ladoO.lado === 'esquerda' ? cA.x - g.CALHA / 2 : cA.x + cA.w + g.CALHA / 2;
+    const xd = desceD ? dst.x + dst.w / 2
+      : ladoD.lado === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
+    const yo = desceO ? (o.y + o.h) : o.y + o.h / 2;
+    const yd = desceD ? (dst.y + dst.h) : dst.y + dst.h / 2;
+    /**
+     * QUANDO AS DUAS PONTAS ESCOLHEM A MESMA CALHA, A CANALETA NÃO EXISTE.
+     *
+     * Entre duas contas vizinhas com `CALHA` de largura, sair pela direita de
+     * uma e pela esquerda da outra dá exatamente o mesmo `x` — e a rota
+     * `desce até a canaleta, anda zero, sobe de volta` desenha um pedaço de
+     * linha para baixo e o REDESENHA para cima por cima de si mesmo. No render
+     * do #24 isso apareceu como um toco pendurado abaixo do "8. varre o
+     * prefixo curado", com o rótulo boiando no meio dele: o rótulo vai no meio
+     * da polilinha, e metade da polilinha não levava a lugar nenhum.
+     *
+     * Nenhuma checagem pegava — a linha não cruza nada, não sobrepõe nada, e
+     * mede certo em todas as 62. Foi o OLHO. É a metade do #17 que a suíte não
+     * substitui, e o motivo de o #14 ter reprovado numa inspeção humana com a
+     * suíte verde.
+     */
+    const mesmaCalha = Math.abs(xo - xd) < 0.5 && !desceO && !desceD;
     plano.celulas.push({
       tipo: 'aresta', id: t.id, pai: '1', de: t.de, para: t.para,
       rotulo: rotuloDaAresta(t),
       style: estiloAresta(t, {
-        saida: { x: ladoO === 'esquerda' ? 0 : 1, y: 0.5 },
-        entrada: { x: ladoD === 'esquerda' ? 0 : 1, y: 0.5 },
+        saida: desceO ? { x: 0.5, y: 1 } : { x: ladoO.lado === 'esquerda' ? 0 : 1, y: 0.5 },
+        entrada: desceD ? { x: 0.5, y: 1 } : { x: ladoD.lado === 'esquerda' ? 0 : 1, y: 0.5 },
       }, res.tema),
-      pontos: [{ x: xo, y: yo }, { x: xo, y: yCanal }, { x: xd, y: yCanal }, { x: xd, y: yd }],
+      pontos: mesmaCalha
+        ? [{ x: xo, y: yo }, { x: xo, y: yd }]
+        : [{ x: xo, y: yo }, { x: xo, y: yCanal }, { x: xd, y: yCanal }, { x: xd, y: yd }],
     });
+    if (mesmaCalha) faixaCanaleta -= 1;   // a faixa reservada não foi usada
   }
   if (faixaCanaleta) g.canaletaAlt = 40 + faixaCanaleta * 34;
 }
@@ -929,15 +1079,57 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
     const yCanal = topoDaFileira - 26 - (faixaTopo - 1) * 30;
     const cB = { ...abs.get(alvoConta), id: alvoConta };
     const ladoD = ladoLivre(dst, o, cB, abs, d, a.para);
-    const xd = ladoD === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
+    const xd = ladoD.lado === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
+
+    /**
+     * A SUBIDA SAI PELO LADO, E POR UM VÃO — duas coisas, e as duas medidas.
+     *
+     * A versão anterior subia do CENTRO do nó direto para a canaleta de cima. O
+     * centro do nó é justamente onde mora o vizinho quando os atores estão
+     * empilhados: na vista técnica do #14 a "Diretoria" subia por dentro das
+     * "Lojas (300)", `A3.5` e `A3.4` de uma vez. Sair pelo lado é a mesma
+     * inversão que o #12 já tinha feito na canaleta de baixo, e é ela que paga
+     * as duas checagens.
+     *
+     * O `corredorLivre` é a segunda metade, e vale dizer o que ele mede AQUI para
+     * ninguém confundi-lo com o conserto: a preferência é a própria borda do nó,
+     * e no corpus de hoje ela nunca está bloqueada — **ele devolve a preferência
+     * intacta em todas as chamadas deste caminho, e quem pagou `A3.5`/`A3.4` foi
+     * a saída pelo lado.** Ele fica porque a preferência PODE estar bloqueada:
+     * dois atores lado a lado na mesma faixa põem um deles em cima da perna do
+     * outro, e aí o vão é procurado de verdade. Guarda, não fachada — e medir a
+     * diferença entre as duas coisas é o que evita um comentário que promete
+     * mais do que o código faz.
+     *
+     * Tentar a preferência a uma calha de distância da borda foi medido e é
+     * PIOR: empurra a perna para `x=140` e ela passa a cruzar a aresta que entra
+     * na primeira conta — `A5.1` sobe de 1 para 2. Rente à borda não atravessa
+     * ninguém, e é o que a rubrica prefere.
+     */
+    const meu = parentela(d, [a.de, a.para]);
+    const barras = [...abs].filter(([id]) => !meu.has(id)).map(([, b]) => caixaEmX(b));
+    const direita = xd >= o.x + o.w / 2;
+    const xSobe = dispor.corredorLivre([yCanal, y0], barras, direita ? o.x + o.w : o.x, g.CALHA / 2);
+    // o lado de saída sai do corredor ESCOLHIDO, não do desejado: se o vão livre
+    // ficou do outro lado, sair pelo lado desejado faria a perna voltar por
+    // dentro do próprio nó
+    const saiPelaDireita = xSobe >= o.x + o.w / 2;
+    const xSaida = saiPelaDireita ? o.x + o.w : o.x;
+
     plano.celulas.push({
       tipo: 'aresta', id: a.id, pai: '1', de: a.de, para: a.para,
       rotulo: rotuloDaAresta(a),
       style: estiloAresta(a, {
-        saida: { x: 0.5, y: 0 },
-        entrada: { x: ladoD === 'esquerda' ? 0 : 1, y: 0.5 },
+        saida: { x: saiPelaDireita ? 1 : 0, y: 0.5 },
+        entrada: { x: ladoD.lado === 'esquerda' ? 0 : 1, y: 0.5 },
       }, res.tema),
-      pontos: [{ x: o.x + o.w / 2, y: yCanal }, { x: xd, y: yCanal }, { x: xd, y: y1 }],
+      // a dobra em `y0` só existe quando o corredor SAIU de cima da borda: sem
+      // isso ela coincide com a ponta e vira um segmento de comprimento zero,
+      // que conta como dobra em `A5.3` e não desenha nada
+      pontos: [
+        ...(Math.abs(xSobe - xSaida) < 0.5 ? [] : [{ x: xSobe, y: y0 }]),
+        { x: xSobe, y: yCanal }, { x: xd, y: yCanal }, { x: xd, y: y1 },
+      ],
     });
   }
   if (faixaTopo) g.canaletaTopo = 26 + faixaTopo * 30;

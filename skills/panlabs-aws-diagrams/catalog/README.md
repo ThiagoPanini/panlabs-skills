@@ -7,9 +7,11 @@ Resolve o ticket
 [Extrair o catálogo de shapes AWS com as correções de cor e container](https://github.com/ThiagoPanini/panlabs-skills/issues/17).
 A matéria-prima é [`docs/research/drawio-aws-shape-catalog.md`](../../../docs/research/drawio-aws-shape-catalog.md).
 
-> **Onde este diretório vai morar dentro da skill ainda não está decidido.** A
-> estrutura das `references/` é névoa no mapa. Até lá ele vive aqui, e mover é
-> `git mv` — nada aqui depende do caminho.
+> **Decidido: ele mora aqui.** A estrutura da skill deixou de ser névoa — o
+> documento que o agente lê é [`../SKILL.md`](../SKILL.md), com a prosa de
+> operação em [`../guia/`](../guia/), e `catalog/` continua sendo um diretório de
+> código irmão de `motor/`. Quem quiser saber como o motor resolve um nome por
+> aqui: [`../guia/modelo.md`](../guia/modelo.md).
 
 ## Os arquivos
 

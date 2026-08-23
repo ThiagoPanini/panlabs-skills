@@ -1,5 +1,5 @@
 A7.1  texto: #AAB7B8 sobre #F2F3F5 = 1.86:1 (precisa 4.5:1) — 1× [subtitulo]
 A7.2  traço da aresta: #AAB7B8 sobre #F2F3F5 = 1.86:1 (precisa 3.0:1) — 5× [e-cliente-apigw0, e-apigw-lambda1, e-lambda-rds2, …]
 A7.2  borda do grupo: #00A4A6 sobre #F2F3F5 = 2.76:1 (precisa 3.0:1) — 2× [regiao, sub-priv]
-A7.1  rótulo do ícone: #5A6C86 sobre #DAEBED = 4.35:1 (precisa 4.5:1) — 2× [lambda, rds]
-A7.1  rótulo do grupo: #5A6C86 sobre #DAEBED = 4.35:1 (precisa 4.5:1) — 1× [vpce]
+A7.1  rótulo do grupo: #5A6C86 sobre #DAEBED = 4.35:1 (precisa 4.5:1) — 1× [sub-priv]
+A7.1  rótulo do ícone: #5A6C86 sobre #DAEBED = 4.35:1 (precisa 4.5:1) — 3× [lambda, vpce, rds]

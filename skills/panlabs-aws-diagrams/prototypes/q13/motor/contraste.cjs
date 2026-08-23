@@ -137,8 +137,29 @@ function paresDe(cel, porId, fundoPagina) {
     // EM CIMA DELE. Esse efeito já é medido: entra como `fundo efetivo` dos
     // filhos. Num ícone monocromático é o contrário: `fillColor` É o traço.
     if (fill && !grupo) pares.push({ regra: 'A7.2', o_que: 'traço do ícone monocromático', frente: fill, fundo: atras.cor, alvo: 3.0 });
-    if (rotulo) pares.push({ regra: 'A7.1', o_que: 'rótulo do grupo', frente: cor(chave(st, 'fontColor')) || '#000000',
-      fundo: cor(chave(st, 'labelBackgroundColor')) || atras.cor, alvo: limiarDeTexto(st) });
+    /**
+     * ⚠️ O CORTE DE Z DO RÓTULO DE GRUPO É OUTRO, e errar aqui é falso negativo.
+     *
+     * A borda mede contra o que está FORA (por isso `atras`, que pula o próprio
+     * fill): ela é a fronteira, e o que importa é achá-la na página. O RÓTULO mede
+     * contra o que está DENTRO — ele é desenhado no topo, por cima do próprio
+     * preenchimento do grupo. Medi-lo contra o ancestral dá texto escuro sobre
+     * grupo escuro passando com folga.
+     *
+     * O #18 encontrou exatamente este defeito no validador geométrico e registrou
+     * no mapa: 1,00:1 na tela, 13,57:1 no relatório. Aqui ele ficou dormente
+     * enquanto os 20 grupos eram `fillColor=none`; voltou a importar no instante
+     * em que o tingimento de subnet voltou.
+     */
+    // ...e o corte vale SÓ para grupo. Num ícone monocromático, `fillColor` é o
+    // GLIFO e o rótulo é desenhado abaixo da caixa (`verticalLabelPosition=bottom`),
+    // sobre o pai — medi-lo contra o próprio fill dá 1,00:1 sempre, porque tinta e
+    // glifo são a mesma cor do tema. A primeira versão desta correção não fez a
+    // distinção e reprovou os três temas de uma vez; a suite pegou.
+    const sob = grupo ? fundoEfetivo(cel, porId, fundoPagina, false) : atras;
+    if (rotulo) pares.push({ regra: 'A7.1', o_que: grupo ? 'rótulo do grupo' : 'rótulo do ícone',
+      frente: cor(chave(st, 'fontColor')) || '#000000',
+      fundo: cor(chave(st, 'labelBackgroundColor')) || sob.cor, alvo: limiarDeTexto(st) });
     return pares;
   }
 

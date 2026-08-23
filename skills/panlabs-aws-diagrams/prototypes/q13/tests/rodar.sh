@@ -5,6 +5,8 @@
 #
 # Sete camadas, na ordem em que uma falha invalida as seguintes:
 #
+#   0. PORTÃO        o portão de contraste sabe falhar — controle sobre ele mesmo,
+#                    porque portão que aprova por engano produz um verde falso.
 #   1. VOCABULÁRIO   a camada normativa da AWS é indizível — com experimento de
 #                    controle, porque checagem que não sabe falhar não prova nada.
 #   2. PARTIÇÃO      pintura não move coordenada; métrica move. É o que sustenta
@@ -22,6 +24,10 @@ DRAWIO="${1:-$HOME/.local/opt/drawio/squashfs-root/drawio}"
 MODELO="$Q13/modelo/pedidos-serverless.json"
 falhou=0
 
+echo "== 0. o portão sabe falhar (controle sobre o portão) =="
+node "$Q13/tools/check-portao.cjs" || falhou=1
+
+echo
 echo "== 1. vocabulário fechado (com controle) =="
 node "$Q13/tools/check-vocabulario.cjs" || falhou=1
 

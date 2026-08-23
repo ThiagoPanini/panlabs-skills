@@ -47,13 +47,14 @@ pode **mostrar ou esconder** — o texto em si é fato da arquitetura, não esco
 | `modelo/logica-pedidos.json` | A mesma arquitetura na **vista lógica** (premissa 2). Existe porque é o único lugar onde a casa escolhe cor de caixa — sem ele os tokens `bloco.*` não têm o que pintar. |
 | `tools/medir-regua.cjs` | **A régua do fundo.** Até onde a paleta AWS aguenta a página mudar de cor. |
 | `motor/contraste.cjs` | O portão: `A7.1`/`A7.2`/`A7.3` da rubrica do [#8](https://github.com/ThiagoPanini/panlabs-skills/issues/8), rodando sobre o **plano**. Mora em `motor/` porque **é estágio de pipeline**, não checagem de fora. |
+| `tools/check-portao.cjs` | **O portão sabe falhar** — controle sobre o próprio portão, com cinco planos sabidamente ruins e um bom. |
 | `tools/check-vocabulario.cjs` | A camada normativa é indizível — com experimento de controle. |
 | `tools/check-particao.cjs` | Pintura × métrica, provado perturbando um token por vez e regerando. |
 | `tools/gerar-armadilha.cjs` | As duas armadilhas, desenhadas. |
 | `tools/verificar-tema.py` | Confere **no pixel** que o tema chegou no render. |
 | `tools/check-roundtrip-tema.cjs` | O tema viaja **resolvido** dentro do `.drawio` e volta intacto pelo codec do próprio app. |
 | `tools/renderizar.sh` | Render, com a pegadinha de concorrência do Electron anotada. |
-| `tests/rodar.sh` | A régua inteira, sete camadas — **verde**. |
+| `tests/rodar.sh` | A régua inteira, oito camadas — **verde**. |
 
 ## Os desenhos
 
@@ -344,10 +345,39 @@ O ponto estrutural: **o tema não pode ser validado sozinho.** Contraste depende
 efetivo resolvido pela pilha de z-order (#8 §5) — o tema é hipótese, o plano é onde ela vira
 número. Daí o portão morar em `conferir`.
 
-E um achado de brinde dessa arrumação: com a convenção AWS, o fundo efetivo **é** o fundo da
-página em todo lugar, porque box de grupo é transparente (`A2`). A pilha de z-order que a
-rubrica avisa só passa a importar quando alguém tinge um grupo — e o vocabulário fechado não
-tem palavra para isso. **A conta é exata por construção, não por sorte.**
+E aqui mora uma correção que o retorno forçou. A primeira volta afirmava que, com a convenção
+AWS, o fundo efetivo **era** o fundo da página em todo lugar — porque box de grupo é
+transparente (`A2`) — e concluía que a pilha de z-order da rubrica era decorativa neste
+desenho. **Com o tingimento de volta, ela deixou de ser.** Duas subnets têm preenchimento, e
+tudo que cai dentro delas mede contra o tingimento, não contra a página.
+
+Pior: o portão tinha o **defeito exato** que o [#18](https://github.com/ThiagoPanini/panlabs-skills/issues/18)
+registrou no mapa — media o **rótulo do grupo** contra o ancestral em vez de contra o
+preenchimento do próprio grupo. Lá isso entregou "13,57:1" para um texto que na tela dava
+1,00:1. Aqui ficou **dormente** enquanto os 20 grupos eram `fillColor=none`, e acordou no
+instante em que o tingimento voltou.
+
+O corte de z é diferente para cada par, e agora está escrito:
+
+| o que | mede contra | por quê |
+|---|---|---|
+| **borda** do grupo | o que está **fora** | ela é a fronteira; o que importa é achá-la na página |
+| **rótulo** do grupo | o preenchimento do **próprio** grupo | ele é desenhado no topo, por cima do fill |
+| **rótulo** da folha | o **pai** | `verticalLabelPosition=bottom` desenha fora da caixa do ícone |
+| **rótulo** do ícone monocromático | o **pai** | ali `fillColor` é o *glifo*, não uma superfície |
+| **glifo** do ícone de serviço | o **próprio quadrado** | não depende do fundo da página |
+
+`tools/check-portao.cjs` guarda os cinco com seis planos sabidamente ruins — e um bom, porque
+portão que só sabe dizer não não é portão. Ele se pagou duas vezes na mesma tarde:
+
+- **a primeira versão dos fixtures não pegou dois casos**, e o motivo foi instrutivo: as células
+  de teste não tinham rótulo, então não exercitavam nada. Controle que não exercita é controle
+  que mente;
+- **a primeira versão da correção foi longe demais.** Apliquei o corte novo ao ramo `aws4`
+  inteiro, e ele cobre três caminhos, não dois: grupo, ícone de serviço e ícone **monocromático**
+  — onde `fillColor` é o glifo. Resultado: `#232F3E` sobre `#232F3E`, 1,00:1, reprovando os três
+  temas de uma vez. A suite pegou na execução seguinte, e o caminho que faltava virou o sexto
+  caso do controle.
 
 ---
 
@@ -418,6 +448,10 @@ categoria não tem token.
   **layout**, não estilo: o halo (`labelBackgroundColor`) mascara a aresta *dona* do rótulo,
   nunca uma terceira. Consertar aqui contradiria a própria tese do ticket — a partição diz que
   pintura não move coordenada, e mover coordenada é do #18. Registrado, não silenciado.
+- **Todo portão precisa de controle, inclusive o que julga os outros.** Cada checagem deste
+  protótipo ganhou experimento de controle; o portão de contraste era o único sem — e era o que
+  mais tinha a perder, porque portão que aprova por engano produz um **verde**. Quando o
+  controle foi escrito, ele achou na hora o defeito de corte de z que o #18 já tinha registrado.
 - **Afirmação de pixel que não sabe falhar não vale mais que checagem que não sabe falhar.** A
   verificação afirmava que o tingimento *fixo* do draw.io (`#E6F6F7`) estava ausente de todo
   render — e a afirmação é **indecidível no tema claro**, porque o valor derivado é `#E6F6F6`,

@@ -458,6 +458,11 @@ categoria não tem token.
   um degrau de azul de distância. Nenhuma tolerância separa os dois: eles são a mesma cor. A
   afirmação foi para onde ela decide, que é o tema escuro. Mesmo defeito que a checagem de
   partição tinha, uma camada acima.
+- **O SVG animado não é byte-estável, e não é culpa do motor.** O `getSvg` do draw.io batiza o
+  `@keyframes` com um `guid()`, então o id muda a cada export e o arquivo aparece sujo no git
+  depois de toda rodada da suite. Por isso a camada de render confere a **presença** da
+  animação, nunca a igualdade do arquivo — e o determinismo que o #11 garante continua valendo
+  para tudo o mais.
 - **Checagem sem controle não prova nada** (a lição do #17, de novo). Os 14 tokens proibidos
   são reinjetados no esquema para confirmar que a checagem acusa; os 17 tokens de pintura são
   conferidos também contra o XML, para pegar o caso "não moveu geometria **nem pintou nada**".

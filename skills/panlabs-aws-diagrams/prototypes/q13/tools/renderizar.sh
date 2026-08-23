@@ -54,8 +54,13 @@ for d in "$Q13"/saida/*.drawio; do
     xvfb-run -a "$DRAWIO" -x -f svg -o "$svg" "$d" \
       --no-sandbox --disable-gpu --disable-update --user-data-dir="$PERFIL" 2>&1 \
       | grep -v 'ERROR:dbus\|NameHasOwner\|Failed to connect to the bus' || true
+    # ⚠️ O SVG animado NÃO é byte-estável: o `Graph.prototype.getSvg` batiza o
+    # `@keyframes` com `Editor.guid()`, então o id muda a cada export e o arquivo
+    # aparece sujo no git depois de toda rodada da suite. Não é não-determinismo do
+    # motor — é do renderizador, e só atinge esta variante. O que se confere é a
+    # PRESENÇA da animação, nunca a igualdade do arquivo.
     if grep -q 'ge-flow-animation' "$svg" 2>/dev/null; then
-      echo "   $(basename "$svg") ok (animação presente)"
+      echo "   $(basename "$svg") ok (animação presente; o id do @keyframes muda a cada export)"
     else
       echo "   $(basename "$svg") SEM ANIMAÇÃO"; falhou=1
     fi

@@ -57,6 +57,7 @@ node ../q11/motor/gerar.cjs modelo/web-dados.json --explicar   # a trilha da cam
 | `recusa/subnet-vazia.json` | O modelo que **não gera**. A suite exige que ele falhe, e confere a mensagem. |
 | `saida/antes-ordem-alfabetica.png` | O **antes**, e não é reconstituição — ver abaixo. |
 | `tools/check-camada.cjs` | A regra isolada do pixel: tabela do ticket, leitura, mistura, escape, lacuna, controle. |
+| `tools/check-no-arquivo.cjs` | A mesma decisão lida do `.drawio` emitido, pelo Y das faixas — o produto, não a intenção. |
 | `tools/check-saltos.cjs` | A candidata "distância da borda", medida no corpus inteiro dos três protótipos. |
 | `tools/gerar-antes.sh` | Materializa o motor de `a83b48a` a partir do git e roda contra o modelo de hoje. |
 | `tools/check-standalone.cjs` | A regra do protótipo substituído (`9b27d6f`), carregada do git e medida contra a que ficou. |
@@ -169,10 +170,35 @@ silêncio: `subnet "app-a": declarada como camada "dados", mas o que ela guarda 
 [#16](https://github.com/ThiagoPanini/panlabs-skills/issues/16) fixou para
 conflito com premissa corporativa — obedece e sinaliza.
 
-**Isto não fere a fronteira do #11.** `camada` nomeia um andar de rede, não uma
-posição: os valores são `borda | aplicacao | dados`, não `1 | 2 | 3` nem
-`topo | meio | fundo`. O `check-fronteira` continua verde, e continua sendo ele
-quem responde — não a minha palavra.
+**Isto não fere a fronteira do #11**, e vale ser exato sobre o que prova o quê.
+
+O `check-fronteira` continua verde com `camada` no esquema, rodando agora também
+contra os modelos deste protótipo. Mas ele prova **menos** do que seria cômodo
+dizer: a lista `GEOMETRIA` dele não tem `ordem` nem `prioridade` — e não pode
+ter, porque `ordem` já é campo legítimo da **aresta** (o número do passo do
+gênero T4). Ou seja, ele ficaria igualmente verde com a quarta candidata do
+ticket. **Ele não arbitra esta distinção.**
+
+Quem arbitra é o formato do campo, e isso é argumento, não máquina: os valores
+são `borda | aplicacao | dados` — nomes de andar, sem ordinal. Não existe
+`camada: 2`, e o enum do esquema é o que impede. Um `ordem: 2` seria o agente
+escolhendo posição; `camada: "dados"` é o agente afirmando um fato de rede, e
+quem transforma o fato em posição continua sendo o motor.
+
+### E a quarta candidata do ticket, respondida
+
+O ticket pergunta: *"Vale ordem explícita como escape? Um `ordem` na subnet
+seria o agente escolhendo posição — perto demais da fronteira do #11 para entrar
+sem discussão."*
+
+**Não vale, e a discussão é curta.** `camada` faz o mesmo trabalho de escape sem
+o custo: cobre a subnet vazia e a que o conteúdo descreveria errado, que são os
+dois casos que motivavam o `ordem`. A diferença é o que sobra escrito no modelo.
+`camada: "dados"` continua verdadeiro se amanhã a VPC ganhar um andar de borda —
+o motor recalcula a pilha. `ordem: 2` vira mentira silenciosa no mesmo dia, e
+pior: não há como saber que virou, porque `2` não afirma nada que se possa
+conferir contra o resto do modelo. Um escape semântico é auditável; um escape
+posicional é um número que ninguém pode contestar.
 
 ---
 
@@ -274,6 +300,10 @@ do q11 e do q12 — escritos antes das duas, por outros tickets:
 | sem camada pela regra de `9b27d6f` | **3** |
 | sem camada pela regra que ficou | **0** |
 
+(As 23 são as subnets dos modelos de rede do q11 e do q12. "Sem camada" é a
+regra não saber nomear a subnet — o que cada motor faz depois disso é o assunto
+do parágrafo abaixo da tabela seguinte.)
+
 As três:
 
 | modelo | subnet | lá | aqui |
@@ -288,9 +318,28 @@ cai pela tabela curta — `Network Firewall` é `security_identity_compliance`, 
 sem essa linha a subnet **mais de borda de todo o corpus** é a que a regra não
 sabe nomear.
 
-E "sem camada" não é neutro: a subnet indefinida vai para o **fim** do grupo de
-exposição dela. Isso é uma posição, e uma posição que ninguém escolheu — é o
-mesmo defeito do alfabeto, com outro nome.
+E "sem camada" não é neutro: a subnet que a regra não sabe nomear vai para o
+**fim** do grupo de exposição dela. Isso é uma posição, e uma posição que
+ninguém escolheu.
+
+**Aqui é preciso ser honesto, porque este motor faz a mesma coisa** — só que num
+caminho, não nos dois. `SEM_CAMADA = 9` existe em `camadas.cjs`, e no caminho do
+ELK ele é exatamente isso: a `Reserved subnet` de `elk-sem-camada` é
+estacionada no fim, com aviso. A diferença não está em nunca estacionar; está em
+**onde a ordem é o desenho**:
+
+| | subnet que a regra não nomeia |
+|---|---|
+| grade — a ordem das linhas É o desenho | **recusa**, com a lista |
+| ELK — a camada só desempata o que a aresta não ordena | estaciona no fim, **com aviso** |
+| regra de `9b27d6f` (emissor único) | estaciona no fim, com aviso |
+
+Então o argumento não é "eu nunca estaciono". É outro, e mais estreito: **as três
+subnets da tabela acima são casos em que a regra anterior estacionava e esta
+nomeia** — `lambda + endpoints + rds` tem uma resposta certa, e a Inspection
+subnet também. Onde as duas regras ficam sem resposta, as duas estacionam
+igual; o ganho está em ficar sem resposta muito menos vezes, e em recusar em vez
+de estacionar no único caminho onde a posição não tem nada que a corrija.
 
 A régua trava o achado: ela **falha** se um dia a regra que ficou deixar de
 nomear mais que a anterior.

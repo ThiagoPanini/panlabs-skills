@@ -223,7 +223,9 @@ function montarElk(modelo, d, res, medir) {
       if (!kids.length) return caixaVazia(no, c, res);
       // o rótulo da folha transborda a caixa dela para baixo e para os lados;
       // se o container não reservar isso, o texto vaza pela borda
-      const temFolha = kids.some(k => !d.t.filhos.get(k.id).length);
+      // "tem folha" é sobre TIPO, igual a `caixaVazia` — um container vazio não é
+      // folha, e reservar faixa de rótulo para ele seria o mesmo erro de novo.
+      const temFolha = kids.some(k => FOLHAS.has(k.tipo));
       const folga = temFolha ? Math.ceil(transbordo) : 0;
       const pad = {
         top: c.tituloH + PAD, left: PAD + folga,
@@ -404,6 +406,27 @@ function calhaDaLinha(faixasDaLinha, zonas) {
 }
 
 async function porGrade(modelo, d, res) {
+  /**
+   * A grade RECUSA quando a ordem depende de um fato que o modelo não tem (#22),
+   * e recusa ANTES de layoutar coisa nenhuma.
+   *
+   * Aqui a ordem das linhas é o desenho: a chave de papel manda, sem aresta e
+   * sem ELK para desempatar. Uma subnet sem camada de rede, num grupo com mais
+   * de um papel para empilhar, é ordem inventada — e ordem inventada põe a
+   * camada de dados em cima, que é a leitura que a convenção de rede não quer.
+   *
+   * Mesma política do resto do caminho da grade: falha com a LISTA, em vez de
+   * omitir em silêncio (o A4.2 da rubrica). E a recusa é precisa — só dispara
+   * onde a falta muda o desenho, nunca por subnet vazia que não disputa linha
+   * com ninguém. O agente lê a mensagem e conserta o modelo; o humano não é
+   * chamado, e a premissa 11 continua de pé.
+   */
+  if (d.lacunas.length) {
+    const e = new Error('a grade não sabe empilhar estas linhas — falta a camada de rede das subnets');
+    e.erros = camadasMod.textoDaLacuna(d.lacunas);
+    throw e;
+  }
+
   const elk = new ELK();
   const caixas = new Map();
   const { eixo, porque: porqueEixo } = eixoDaGrade(modelo);
@@ -437,27 +460,10 @@ async function porGrade(modelo, d, res) {
     intra.set(s.id, { w: r.width, h: r.height, filhos: r.children });
   }
 
-  /**
-   * A grade RECUSA quando a ordem depende de um fato que o modelo não tem (#22).
-   *
-   * Aqui a ordem das linhas é o desenho: a chave de papel manda, sem aresta e
-   * sem ELK para desempatar. Uma subnet sem camada de rede, num grupo com mais
-   * de um papel para empilhar, é ordem inventada — e ordem inventada põe a
-   * camada de dados em cima, que é a leitura que a convenção de rede não quer.
-   *
-   * Mesma política do resto do caminho da grade: falha com a LISTA, em vez de
-   * omitir em silêncio (o A4.2 da rubrica). E a recusa é precisa — só dispara
-   * onde a falta muda o desenho, nunca por subnet vazia que não disputa linha
-   * com ninguém. O agente lê a mensagem e conserta o modelo; o humano não é
-   * chamado, e a premissa 11 continua de pé.
-   */
-  if (d.lacunas && d.lacunas.length) {
-    const e = new Error('a grade não sabe empilhar estas linhas — falta a camada de rede das subnets');
-    e.erros = camadasMod.textoDaLacuna(d.lacunas);
-    throw e;
-  }
-
-  const papel = s => `${(d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id}|${s.acesso || '?'}|${s.rotulo || ''}`;
+  // A chave de papel é UMA — a do `camadas.cjs`. Ela era construída aqui e lá,
+  // com a mesma expressão escrita duas vezes; duas definições de "papel" seriam
+  // duas grades, e a que decide a camada tem de ser a mesma que vira linha.
+  const papel = s => camadasMod.chaveDePapel(s, d.t);
   const vpcDe = s => (d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
 
   const varreduraRaias = ordemDeRaias(modelo, d, subnets);
@@ -490,15 +496,24 @@ async function porGrade(modelo, d, res) {
    *
    * Nenhum papel chega aqui sem camada — a recusa lá em cima já barrou.
    */
-  const ordemAcesso = { publica: 0, privada: 1, '?': 2 };
-  const camadaDoPapel = new Map(
-    [...camadasMod.papeisDeSubnet(modelo, d.t, d.camadas).values()].map(p => [p.chave, p.camada]));
+  /**
+   * O comparador lê CAMPOS, não pedaços da chave.
+   *
+   * A versão anterior fazia `a.split('|')` e pegava a exposição e o rótulo por
+   * posição — o que quebra em silêncio no dia em que um rótulo tiver `|`
+   * dentro: a chave ganha um quarto pedaço e o desempate passa a comparar o
+   * lado errado do texto. O `papeisDeSubnet` já devolve o papel como objeto;
+   * basta consultá-lo.
+   */
+  const porChave = camadasMod.papeisDeSubnet(modelo, d.t, d.camadas);
+  const ordemDe = chave => {
+    const p = porChave.get(chave) || {};
+    return [camadasMod.ordemDeAcesso(p.acesso), camadasMod.ordemDeCamada(p.camada), p.rotulo || ''];
+  };
   for (const lista of papeisPorVpc.values())
     lista.sort((a, b) => {
-      const [, aa, ra] = a.split('|'), [, ab, rb] = b.split('|');
-      return (ordemAcesso[aa] ?? 9) - (ordemAcesso[ab] ?? 9) ||
-        camadasMod.ordemDeCamada(camadaDoPapel.get(a)) - camadasMod.ordemDeCamada(camadaDoPapel.get(b)) ||
-        ra.localeCompare(rb, 'pt');
+      const ka = ordemDe(a), kb = ordemDe(b);
+      return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2], 'pt');
     });
 
   // 2. a extensão TRANSVERSAL de cada zona: largura com AZ em coluna, altura
@@ -803,7 +818,7 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
       const c = res.container(no);
       caixas.set(no.id, { container: true, ...c });
       if (!kids.length) return caixaVazia(no, c, res);
-      const temFolha = kids.some(k => !d.t.filhos.get(k.id).length);
+      const temFolha = kids.some(k => FOLHAS.has(k.tipo));   // por TIPO — ver `caixaVazia`
       const folga = temFolha ? Math.ceil(metrica.transbordo) : 0;
       return {
         id: no.id,
@@ -822,8 +837,8 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
 
   const cC = res.container(conta);
   caixas.set(conta.id, { container: true, ...cC });
-  const folgaConta = d.t.filhos.get(conta.id).some(k => !d.t.filhos.get(k.id).length)
-    ? metrica.transbordo : 0;
+  const folgaConta = d.t.filhos.get(conta.id).some(k => FOLHAS.has(k.tipo))
+    ? metrica.transbordo : 0;                              // por TIPO — ver `caixaVazia`
 
   // só as arestas cujas DUAS pontas moram nesta conta — a travessia é do motor
   const dentro = new Set();

@@ -77,6 +77,22 @@ function ordemDeCamada(c) {
 }
 
 /**
+ * A exposição, que continua sendo a PRIMEIRA chave — pública em cima, que é o
+ * sentido de leitura do deck (#5 `O1`). A camada ordena dentro dela.
+ *
+ * Mora aqui junto com a camada porque as duas são a mesma chave de ordenação
+ * partida em duas metades, e ela estava escrita em três lugares — `derivar`,
+ * `dispor` e as réguas —, com um deles mapeando o ausente para 2 e os outros
+ * para 9. Empatavam na prática (os dois vão depois de `privada`), mas duas
+ * tabelas para uma regra é uma a mais.
+ */
+const ORDEM_ACESSO = { publica: 0, privada: 1 };
+
+function ordemDeAcesso(a) {
+  return ORDEM_ACESSO[a] ?? 9;
+}
+
+/**
  * A camada de um conjunto: a MAIS FUNDA das que ele contém; quem não tem, não
  * vota. É a regra de mistura, e ela vale nos dois níveis em que agregamos —
  * os membros dentro de uma subnet, e as subnets dentro de uma linha da grade.
@@ -181,10 +197,17 @@ function papeisDeSubnet(modelo, t, camadas) {
   const papeis = new Map();
   for (const s of modelo.nos.filter(n => n.tipo === 'subnet')) {
     const chave = chaveDePapel(s, t);
-    if (!papeis.has(chave)) {
-      const [vpc, acesso] = chave.split('|');
-      papeis.set(chave, { chave, vpc, acesso, rotulo: s.rotulo || '', subnets: [], camada: null });
-    }
+    if (!papeis.has(chave))
+      // os campos vêm da SUBNET, não de fatiar a chave de volta: a chave é um
+      // identificador, e ler dado de dentro dela é o que quebra quando um
+      // rótulo tem `|`
+      papeis.set(chave, {
+        chave,
+        vpc: (t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id,
+        acesso: s.acesso || null,
+        rotulo: s.rotulo || '',
+        subnets: [], camada: null,
+      });
     papeis.get(chave).subnets.push(s.id);
   }
   for (const p of papeis.values())
@@ -205,18 +228,17 @@ function lacunasDeCamada(modelo, t, camadas) {
   const grupos = new Map();
   for (const p of papeisDeSubnet(modelo, t, camadas).values()) {
     const chave = `${p.vpc}|${p.acesso}`;
-    if (!grupos.has(chave)) grupos.set(chave, []);
-    grupos.get(chave).push(p);
+    if (!grupos.has(chave)) grupos.set(chave, { vpc: p.vpc, acesso: p.acesso, papeis: [] });
+    grupos.get(chave).papeis.push(p);
   }
 
   const lacunas = [];
-  for (const [chave, papeis] of grupos) {
+  for (const { vpc, acesso, papeis } of grupos.values()) {
     if (papeis.length < 2) continue;                     // nada a ordenar
     const orfaos = papeis.filter(p => !p.camada);
     if (!orfaos.length) continue;
-    const [vpc, acesso] = chave.split('|');
     lacunas.push({
-      vpc, acesso, papeis: papeis.length,
+      vpc, acesso: acesso || 'sem exposição declarada', papeis: papeis.length,
       orfaos: orfaos.map(o => ({
         papel: o.rotulo || `(sem rótulo: ${o.subnets.join(', ')})`,
         subnets: o.subnets,
@@ -246,7 +268,7 @@ function textoDaLacuna(lacunas) {
 }
 
 module.exports = {
-  CATEGORIA_CAMADA, CAMADAS, SEM_CAMADA,
-  ordemDeCamada, camadaDeGrupo, categoriaDoNo, camadaDaSubnet, camadasDeSubnets,
+  CATEGORIA_CAMADA, CAMADAS,
+  ordemDeCamada, ordemDeAcesso, camadaDeGrupo, categoriaDoNo, camadasDeSubnets,
   chaveDePapel, papeisDeSubnet, lacunasDeCamada, textoDaLacuna,
 };

@@ -35,6 +35,12 @@ echo "== 3. a regra de camada, isolada do pixel =="
 node "$Q22/tools/check-camada.cjs" || falhou=1
 
 echo
+echo "== 3b. a mesma decisão, conferida no arquivo emitido =="
+# A régua de cima chama a regra; esta lê o `.drawio`. Sem ela, o dia em que o
+# `dispor.cjs` parasse de consultar a camada teria suite verde e desenho errado.
+node "$Q22/tools/check-no-arquivo.cjs" || falhou=1
+
+echo
 echo "== 4. a candidata rival, medida no corpus inteiro =="
 node "$Q22/tools/check-saltos.cjs" || falhou=1
 

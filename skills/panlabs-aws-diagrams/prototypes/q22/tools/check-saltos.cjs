@@ -128,8 +128,16 @@ console.log(`  onde ela fala, DISCORDA do conteúdo:        ${discorda}`);
 console.log(`  só no corpus HERDADO (q11+q12, escrito antes desta pergunta): ` +
   `fala em ${herdadoFala}, muda em ${herdadoMudo}, discorda em ${herdadoDiscorda}`);
 
+/**
+ * Isto é PORTÃO, não relatório — e por isso sai 1 quando discorda.
+ *
+ * A conclusão do #22 sobre a candidata rival é "ela não carrega informação que
+ * o conteúdo não tenha". Uma discordância derruba essa conclusão, e uma régua
+ * que imprime "reabrir" e sai 0 deixa a suite verde em cima de uma decisão que
+ * acabou de perder o argumento.
+ */
 console.log(discorda
-  ? '\n  ⚠ há discordância — a candidata dos saltos carrega informação que o conteúdo não tem. Reabrir.'
+  ? '\n  ✗ há discordância — a candidata dos saltos carrega informação que o conteúdo não tem. Reabrir a decisão do #22.'
   : '\n  ✓ onde a distância fala, ela repete o que o conteúdo já dizia; onde o conteúdo fala sozinho, ' +
     'ela está muda. Ela não é uma segunda fonte — é a mesma resposta por um caminho que depende de aresta.');
-process.exit(0);
+process.exit(discorda ? 1 : 0);

@@ -10,7 +10,9 @@
  */
 
 const path = require('path');
-const { camadasDeSubnets, lacunasDeCamada, ordemDeCamada } = require('./camadas.cjs');
+const {
+  camadasDeSubnets, lacunasDeCamada, ordemDeCamada, ordemDeAcesso, chaveDePapel,
+} = require('./camadas.cjs');
 
 const CAMINHO_CATALOGO = path.join(__dirname, '..', '..', '..', 'catalog', 'aws-shapes.cjs');
 let _catalogo = null;
@@ -57,13 +59,19 @@ function catalogoPadrao() {
  * PÚBLICA que só hospeda compute continua acima de uma subnet PRIVADA que
  * hospeda um Transit Gateway. Público em cima é o sentido de leitura do deck, e
  * a camada ordena dentro dele.
+ *
+ * ⚠️ Efeito colateral que vale dizer em voz alta: como só subnet tem camada, a
+ * segunda chave vale `SEM_CAMADA` para todo o resto, e isso faz as subnets de
+ * um container virem ANTES dos serviços soltos que dividem o container com
+ * elas. É consequência, não pedido do #22 — mas é boa (numa VPC, ler a rede
+ * antes do avulso), é determinística, e mantém o comparador uma ordem TOTAL.
+ * Pular a chave quando um dos dois não é subnet deixaria o comparador
+ * intransitivo, que é pior que a assimetria.
  */
-const ORDEM_ACESSO = { publica: 0, privada: 1 };
-
 function chaveDeIrmao(n, camadaDe) {
   return [
-    ORDEM_ACESSO[n.acesso] ?? 9,
-    n.tipo === 'subnet' ? ordemDeCamada(camadaDe(n.id)) : ordemDeCamada(null),
+    ordemDeAcesso(n.acesso),
+    ordemDeCamada(camadaDe(n.id)),      // só subnet tem camada; o resto cai no piso
     String(n.rotulo || n.servico || n.id),
     String(n.id),
   ];
@@ -114,22 +122,28 @@ function gatilhoAz(modelo, t) {
   if (azs.length < 2)
     return { desenhar: false, azs, porque: `só ${azs.length} AZ distinta declarada` };
 
-  const vpcDe = s => (t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
+  // a chave de papel é a do `camadas.cjs` — a mesma que vira LINHA da grade.
+  // Ela estava escrita à mão aqui também, e papel é conceito de um dono só.
   const porPapel = new Map();
   for (const s of subnets) {
     if (!s.az) continue;
-    const k = `${vpcDe(s)}|${s.acesso || '?'}|${s.rotulo || ''}`;
-    if (!porPapel.has(k)) porPapel.set(k, new Set());
-    porPapel.get(k).add(s.az);
+    const k = chaveDePapel(s, t);
+    if (!porPapel.has(k))
+      porPapel.set(k, {
+        vpc: (t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id,
+        acesso: s.acesso || '?',
+        zonas: new Set(),
+      });
+    porPapel.get(k).zonas.add(s.az);
   }
-  const redundantes = [...porPapel.entries()].filter(([, zs]) => zs.size >= 2);
+  const redundantes = [...porPapel.values()].filter(p => p.zonas.size >= 2);
   if (!redundantes.length)
     return { desenhar: false, azs, porque: `${azs.length} AZs, mas nenhum papel de subnet se repete entre elas` };
 
   return {
     desenhar: true, azs,
     porque: `${redundantes.length} papel(is) em ≥2 AZs: ` +
-      redundantes.map(([k, zs]) => `${k.split('|')[0]}/${k.split('|')[1]}×${zs.size}`).join(', '),
+      redundantes.map(p => `${p.vpc}/${p.acesso}×${p.zonas.size}`).join(', '),
   };
 }
 
@@ -468,6 +482,5 @@ function derivar(modelo, opts = {}) {
 module.exports = {
   derivar, arvore, gatilhoAz, ancestralComum,
   contaDe, gatilhoOu, travessias, modoDeContas, politicaDeTravessia,
-  chaveDeIrmao, compararIrmaos, catalogoPadrao,
   MAX_CONTAS_INTEGRACAO, MAX_TRAVESSIAS,
 };

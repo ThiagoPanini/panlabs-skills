@@ -1,0 +1,3 @@
+interface:
+  display_name: "AWS Diagrams"
+  short_description: "Sabatina, propõe e desenha arquitetura AWS no draw.io"

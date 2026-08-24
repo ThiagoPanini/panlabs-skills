@@ -137,6 +137,39 @@ const CASOS = [
   },
 
   {
+    nome: 'aresta cruzando a faixa de uma zona que ela não toca',
+    porque: 'é A5.5 pela outra classe de caixa: a linha desenha o caminho DENTRO de uma zona ' +
+      'em que ele não passa. A5.5 nunca pegaria — ela varre `cena.grupos`, e faixa não é grupo. ' +
+      'É o desenho que o fallback do #21 existia para evitar, e o motor de hoje não o produz ' +
+      '(medido em malha completa de 3 a 6 zonas): por isso o corpo de prova é plantado aqui.',
+    espera: ['F2'],
+    ...montar('f2', [
+      v('az-a', '1', 60, 60, 200, 300, faixa()),
+      v('az-b', '1', 300, 60, 200, 300, faixa()),
+      v('az-c', '1', 540, 60, 200, 300, faixa()),
+      v('n-a', '1', 100, 160, 78, 78, icone()),
+      v('n-b', '1', 340, 160, 78, 78, icone()),
+      v('n-c', '1', 580, 160, 78, 78, icone()),
+      // reto de ponta a ponta, por dentro da faixa do meio — o traçado que o
+      // #21 mediu como `A5.5` = 1 no desenho `b-az-linha-fluxo-horizontal`
+      e('replica', 'n-a', 'n-c', 'replica', aresta(), [{ x: 250, y: 199 }, { x: 520, y: 199 }]),
+    ], mod([
+      { id: 'n-a', tipo: 'servico', servico: 'ec2' },
+      { id: 'n-b', tipo: 'servico', servico: 'ec2' },
+      { id: 'n-c', tipo: 'servico', servico: 'ec2' },
+    ], {
+      arestas: [{ de: 'n-a', para: 'n-c', rotulo: 'replica' }],
+      // cada faixa declara exatamente o nó dela e o abraça: F1 fica limpo de
+      // propósito, para que o vermelho deste caso seja SÓ o F2
+      faixas: [
+        { id: 'az-a', membros: ['n-a'], rotulo: 'Availability Zone · us-east-1a' },
+        { id: 'az-b', membros: ['n-b'], rotulo: 'Availability Zone · us-east-1b' },
+        { id: 'az-c', membros: ['n-c'], rotulo: 'Availability Zone · us-east-1c' },
+      ],
+    })),
+  },
+
+  {
     nome: 'dois nós sobrepostos',
     porque: 'node occlusion — um ícone tapa o outro e o leitor não sabe que há dois',
     espera: ['A3.1'],

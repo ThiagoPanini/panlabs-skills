@@ -54,7 +54,7 @@ node tools/check-geometria.cjs <modelo-em-construcao.json>
 ```
 
 **Fecha quando** `A1` chega ao **piso** — e o piso tem nome: `A1.2`, `A1.3` e
-`A1.11` sempre (dívida de motor e de esquema, medida em 15 de 15 modelos do
+`A1.11` sempre (dívida de motor e de esquema, medida em 35 de 35 páginas do
 corpus), mais `A1.5` e `A1.12` assim que qualquer nota tiver `sobre`. Toda outra
 entrada de `A1` que aparecer é uma pergunta a fazer.
 
@@ -78,6 +78,13 @@ responde *"por que não a B?"* seis meses depois.
 SPOF, single-AZ, egress sem controle, dado em subnet pública, cross-account sem
 confiança, assíncrono sem DLQ. Não é pergunta: é **propriedade emergente do grafo
 montado**, e só existe depois que o grafo existe.
+
+```bash
+node tools/revisar-lacunas.cjs <modelo.json>
+```
+
+Cada regra tem pré-condição, e onde o modelo não afirma a estrutura de que ela
+fala ela sai **muda** — com o motivo, porque *"não acusou"* não é *"não rodou"*.
 
 > **Relata, propõe, e conserta apenas o que o usuário mandar consertar.**
 
@@ -207,6 +214,7 @@ tomados**; fica o que é sobre a arquitetura desenhada.
 |---|---|
 | `node motor/gerar.cjs <m.json> --saida x.drawio` | desenha. `--tema claro\|escuro\|corporativo` · `--fluxo solido\|tracejado\|animado` · `--portao nenhum\|veracidade\|falha\|estrito` · `--explicar` |
 | `node tools/check-geometria.cjs <m.json>` | o laudo das 62 checagens. `--exemplos` roda o corpus, `--json` para ler no código |
+| `node tools/revisar-lacunas.cjs <m.json>` | a revisão de lacunas do passo 4. `--corpus` roda a régua inteira |
 | `node catalog/aws-shapes.cjs <nome>...` | resolve nome → shape, com as correções aplicadas |
 | `node tools/sessao2.cjs <arq.drawio>` | retoma: reconhece o arquivo, classifica as páginas e imprime o briefing. A elaboração dele é a do corpus — para outro caso, use o driver do passo 6 |
 | `node sessao/publicar.cjs <arq.drawio>` | a cópia que sai de casa |

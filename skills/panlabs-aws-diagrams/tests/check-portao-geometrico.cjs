@@ -50,10 +50,14 @@ const anota = (ok, o_que, detalhe) => {
  * outro lugar. Um portão que perde a checagem mais grave do validador não pode
  * depender de um defeito existir no corpus para ser pego.
  *
- * As quatro famílias de tolerância zero, cada uma com o seu caso plantado.
+ * As CINCO famílias de tolerância zero, cada uma com o seu caso plantado — `F2`
+ * entrou no #26, e entrou pelo mesmo argumento que o #24 usou para `A5.5`: ela é
+ * a checagem que NENHUM modelo do corpus produz (medido em malha completa de 3 a
+ * 6 zonas, F2 = 0 nas quatro), então se ela não for cobrada aqui, não é cobrada
+ * em lugar nenhum.
  */
 {
-  for (const id of ['A4.2', 'A4.4', 'A5.5', 'F1']) {
+  for (const id of ['A4.2', 'A4.4', 'A5.5', 'F1', 'F2']) {
     const mentiroso = CASOS.find(c => c.espera.includes(id));
     if (!mentiroso) { anota(false, `há um caso plantado para ${id}`); continue; }
     let lancou = null;

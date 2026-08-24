@@ -11,7 +11,8 @@ multi-conta por motor determinístico `IR → layout → mxGraph XML`.
 node motor/gerar.cjs modelo/web-multi-az.json --saida saida/x.drawio
 node tools/check-geometria.cjs modelo/web-multi-az.json    # o laudo das 62
 node tools/revisar-lacunas.cjs modelo/web-multi-az.json    # a revisão de lacunas
-node tools/retomar.cjs saida/varejo.drawio                 # retomar uma sessão
+node tools/aprovar.cjs modelo/sessao/varejo-logica.json    # passo 5: aprovar a lógica
+node tools/retomar.cjs saida/varejo.drawio --delta modelo/sessao/varejo-elaboracao.json
 ./tests/rodar.sh                                           # a régua inteira
 ./tools/instalar.sh                                        # expor nos dois harnesses
 ./tools/medir-candidatos.sh                                # a medição que escolheu o motor
@@ -56,14 +57,29 @@ do Node).
 | `modelo/` | O corpus. `modelo/recusa/` para o que o motor **deve** recusar, `modelo/sessao/` para `sessao@1` |
 | `tests/` | A união das suítes, em 8 camadas |
 | `agents/` | O empacotamento multi-harness. `openai.yaml` copia a forma das outras 25 skills instaladas em `~/.claude/skills/*/agents/` — `interface.display_name` + `interface.short_description`, e nada mais. É **metadado de vitrine**, não instrução: um harness não-Claude aprende o NOME da skill por aqui e o resto por `SKILL.md`. Se algum harness precisar de mais, é aqui que cresce |
-| `tools/` | Bisseção, render, instalação, as medições, as sessões de demonstração. `drawio.cjs` é o único lugar que sabe onde o binário mora |
-| `saida/` | O que o motor produziu, e o render como prova |
-| `docs/` | O registro de engenharia: o que a recertificação mediu, o que o roteamento consertou |
-| `prototypes/` | **Fonte primária, não produção.** Um diretório por pergunta respondida. Nada da árvore de produção alcança daqui — e há checagem disso |
+| `tools/` | Os comandos do arco (`aprovar`, `retomar`, `check-geometria`, `revisar-lacunas`, `instalar`) e as ferramentas de bancada — bisseção, render, as medições. `drawio.cjs` é o único lugar que sabe onde o binário mora |
+| `saida/` | **Rascunho, e ignorado pelo git.** É onde `tests/rodar.sh` escreve o corpus gerado e o render |
+| `docs/` | O registro de engenharia: o critério do corpus e o que ele disse, o que a recertificação mediu, o que o roteamento consertou |
 
 `guia/` é o que o agente lê para **operar** a skill; `docs/` é o que se lê para
 saber **o que foi medido**. Um ponteiro leva de um ao outro onde a medição é a
 resposta.
+
+### O que NÃO está aqui, e por quê
+
+O que sai da skill é o que **quem instala não usa** — e o teto não é estético: o
+limite de upload de uma skill é **30 MB descomprimidos**, o empacotador oficial
+leva o diretório inteiro (menos `__pycache__`, `node_modules`, `*.pyc`,
+`.DS_Store` e um `evals/` de raiz), e esta árvore chegou a **29 MB**. Estava a
+1 MB de não poder ser publicada.
+
+| foi para | o que é |
+|---|---|
+| [`docs/aws-diagrams/prototipos/`](../../docs/aws-diagrams/prototipos/) | 18 MB, 252 arquivos, um diretório por pergunta respondida — **fonte primária, não produção**. Três cópias do `elk.bundled.js` sozinhas davam 4,8 MB. `tests/check-sem-prototipo.cjs` sempre provou que a produção não alcançava daqui; agora nem no disco |
+| [`docs/aws-diagrams/corpus/`](../../docs/aws-diagrams/corpus/) | 6,7 MB do corpus renderizado. Resultado de eval mora **fora** do pacote que o usuário instala — e a régua o reconstrói byte a byte, medido |
+
+Sobraram **4,2 MB**, dos quais 1,6 MB é o `elkjs` embarcado que é a razão de a
+skill não precisar de `npm install`.
 
 ## Os contratos
 

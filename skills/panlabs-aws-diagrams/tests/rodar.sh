@@ -166,6 +166,18 @@ else
       "'"$RAIZ"'/tools/render.sh" "$d" "${d%.drawio}.png" || falhou=1
     done
     exit $falhou'
+  # ⚠️ REGENERADAS AQUI, e nao lidas de arquivo versionado.
+  #
+  # Ate o #29 `saida/temas/*.drawio` estava commitado, e a camada 7 rendia o que
+  # achasse la. Isso punha 6,7 MB de saida gerada dentro do pacote que o usuario
+  # instala — e a convencao oficial de autoria e a oposta: resultado de eval mora
+  # em workspace irmao. `saida/` virou rascunho ignorado, e quem constroi as
+  # variantes e quem sempre soube construi-las. Medido: a regeneracao sai byte a
+  # byte igual ao que estava commitado.
+  passo "as variantes de tema, reconstruidas"        bash -c '
+    node "'"$RAIZ"'/tools/gerar-temas.cjs" > /dev/null && node "'"$RAIZ"'/tools/gerar-armadilha.cjs" > /dev/null
+    n=$(ls "'"$RAIZ"'"/saida/temas/*.drawio | wc -l)
+    [ "$n" -ge 7 ] && echo "   ✓ $n variante(s)" || { echo "   ✗ so $n variante(s)"; exit 1; }'
   passo "render das variantes de tema" bash -c '
     "'"$RAIZ"'/tools/limpar-render.sh" > /dev/null 2>&1 || true
     falhou=0

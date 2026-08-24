@@ -12,3 +12,11 @@
 # ⚠️ Só `worktrees/`, não `.claude/` inteiro: configuração de projeto (settings,
 # skills, agentes) mora ali e é para ser versionada.
 .claude/worktrees/
+
+# `saida/` da skill de diagramas e RASCUNHO: e onde `tests/rodar.sh` escreve o
+# corpus gerado e o render. Determinista — `node tools/gerar-temas.cjs` e o
+# proprio `rodar.sh` reconstroem byte a byte. A evidencia renderizada que vale a
+# pena olhar esta versionada em `docs/aws-diagrams/corpus/`, FORA da skill:
+# resultado de eval mora em workspace irmao, nunca dentro do pacote que o
+# usuario instala.
+skills/panlabs-aws-diagrams/saida/

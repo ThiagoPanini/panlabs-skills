@@ -18,7 +18,7 @@ antes/depois, sem checagem trocada por outra em silêncio.**
 
 A vista técnica do `varejo · 300 lojas` — página consolidada, o desenho que
 reprovou no #14. O primeiro `.drawio` é reproduzível a partir de qualquer commit
-anterior a este; o segundo sai de `node tools/sessao1.cjs && node tools/sessao2.cjs`.
+anterior a este; o segundo sai de `node tools/aprovar.cjs && node tools/retomar.cjs`.
 
 **Antes** — a fileira lida de trás para frente (`analytics | dados | lojas`), a
 nota da retenção largada em cima do Transfer Family e da borda da conta, "8.

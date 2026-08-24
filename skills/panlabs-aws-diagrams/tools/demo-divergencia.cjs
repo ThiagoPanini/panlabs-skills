@@ -92,7 +92,7 @@ async function relatar(rotulo, arquivo) {
 }
 
 async function main() {
-  if (!fs.existsSync(ARQ)) { console.error('  rode sessao1.cjs e sessao2.cjs antes.'); process.exit(1); }
+  if (!fs.existsSync(ARQ)) { console.error('  rode tools/aprovar.cjs e tools/retomar.cjs antes.'); process.exit(1); }
   const base = fs.readFileSync(ARQ, 'utf8');
 
   const a = path.join(RAIZ, 'saida', 'varejo-so-remanejado.drawio');

@@ -31,7 +31,7 @@ julgamento, o critério está escrito como comando.
 | entrada | o que rodar |
 |---|---|
 | necessidade em prosa, ata de reunião, foto de quadro branco | nada — siga para o passo 2 |
-| um `.drawio` de sessão anterior | `node tools/sessao2.cjs <arquivo>` |
+| um `.drawio` de sessão anterior | `node tools/retomar.cjs <arquivo>` |
 | um modelo já escrito (`modelo@1`) | `node motor/gerar.cjs <modelo.json> --saida x.drawio` — e pare aqui, o arco acabou |
 
 **Fecha quando** a porta certa foi acionada: na segunda, o **briefing** já está
@@ -100,35 +100,16 @@ e aceito"* sobreviver até o desenho.
 A aprovação não é um booleano. `aprovar()` guarda o **recorte** da projeção
 lógica aprovada; `conferir()` reprojeta o modelo de hoje e compara.
 
-A camada de sessão **não tem CLI** — grave o driver abaixo como `aprovar.cjs` na
-raiz da skill e rode `node aprovar.cjs`. É o passo do arco em que você escreve
-código; `tools/sessao1.cjs` é o mesmo driver com os valores fixos, e a suíte o
-mantém verde.
-
-```js
-const fs = require('fs');
-const { validar } = require('./sessao/validar.cjs');
-const { aprovar, conferir } = require('./sessao/acordo.cjs');
-const { desenhar } = require('./sessao/desenhar.cjs');
-
-(async () => {
-  const sessao = JSON.parse(fs.readFileSync('modelo/sessao/<caso>-logica.json', 'utf8'));
-
-  const v = validar(sessao);
-  v.avisos.forEach(a => console.log('⚠', a));
-  if (!v.ok) { v.erros.forEach(e => console.error('·', e)); process.exit(1); }
-
-  const aprovado = aprovar(sessao, { em: '<AAAA-MM-DD>', por: '<quem>', candidata: '<id>' });
-  if (!conferir(aprovado).ok) { console.error('· o acordo não confere'); process.exit(1); }
-
-  const r = await desenhar(aprovado, 'logica');   // projetar › gerar › selar
-  r.relatorio.avisos.forEach(a => console.log('⚠', a));
-  fs.writeFileSync('saida/<caso>.drawio', r.xml);
-  console.log(`→ saida/<caso>.drawio (${r.xml.length} bytes, caminho "${r.caminho}")`);
-})();
+```bash
+node tools/aprovar.cjs <caso>-logica.json --por <quem> --saida saida/<caso>.drawio
 ```
 
-**Fecha quando** `conferir(aprovado).ok` é verdadeiro e o `.drawio` está gravado.
+`--candidata` sai do próprio dossiê: a sabatina marcou a vencedora com
+`estado: "escolhida"` no passo 3, e o comando lê de lá em vez de pedir de volta o
+que já recebeu. Passe `--candidata <id>` só quando nenhuma estiver marcada.
+
+**Fecha quando** o comando imprime `conferir  ✓ o acordo confere` e o `.drawio`
+está gravado.
 O arquivo carrega o modelo, o dossiê, o acordo e as duas impressões do desenho —
 **nada do que foi decidido depende de você lembrar**.
 
@@ -150,40 +131,17 @@ Resolva todo nome pelo catálogo **antes** de escrevê-lo no delta:
 node catalog/aws-shapes.cjs "kinesis data firehose" opensearch "availability zone"
 ```
 
-Grave como `elaborar.cjs` na raiz da skill.
-`tools/sessao2.cjs` é este mesmo driver com o delta fixo, e a suíte o mantém verde.
+É o **mesmo comando do passo 1**, agora com o delta — porque é a mesma leitura:
+reconhecer o arquivo e devolver o briefing é o passo 1, aplicar o delta por cima
+do que ele leu é o passo 6. Separá-los leria o arquivo duas vezes, e a segunda
+leitura poderia discordar da primeira.
 
-```js
-const fs = require('fs');
-const { abrir } = require('./sessao/abrir.cjs');
-const { elaborar } = require('./sessao/elaborar.cjs');
-const { validar } = require('./sessao/validar.cjs');
-const { conferir } = require('./sessao/acordo.cjs');
-const { desenhar } = require('./sessao/desenhar.cjs');
-const { costurar } = require('./sessao/gravar.cjs');
-
-(async () => {
-  const aberto = abrir(fs.readFileSync('saida/<caso>.drawio', 'utf8'));
-  if (!aberto.nosso) { console.error('·', aberto.porque); process.exit(1); }
-
-  const delta = JSON.parse(fs.readFileSync('modelo/sessao/<caso>-elaboracao.json', 'utf8'));
-  const tecnico = elaborar(aberto.sessao, delta);
-
-  const v = validar(tecnico);
-  if (!v.ok) { v.erros.forEach(e => console.error('·', e)); process.exit(1); }
-
-  const d = conferir(tecnico);
-  if (!d.ok) {                     // mudou o que foi aprovado: exige aprovação nova
-    d.diferencas.forEach(x => console.error('·', x.texto));
-    process.exit(2);
-  }
-
-  const rl = await desenhar(tecnico, 'logica');
-  const rt = await desenhar(tecnico, 'tecnica');
-  rt.relatorio.avisos.forEach(a => console.log('⚠', a));
-  fs.writeFileSync('saida/<caso>.drawio', costurar([rl.xml, rt.xml]));
-})();
+```bash
+node tools/retomar.cjs saida/<caso>.drawio --delta <caso>-elaboracao.json
 ```
+
+Ele sai com **2** quando a elaboração mudou o que foi aprovado — que é o caso em
+que a resposta certa é aprovação nova, não desenho novo.
 
 **Fecha quando** as duas condições valem:
 
@@ -216,7 +174,8 @@ tomados**; fica o que é sobre a arquitetura desenhada.
 | `node tools/check-geometria.cjs <m.json>` | o laudo das 62 checagens. `--exemplos` roda o corpus, `--json` para ler no código |
 | `node tools/revisar-lacunas.cjs <m.json>` | a revisão de lacunas do passo 4. `--corpus` roda a régua inteira |
 | `node catalog/aws-shapes.cjs <nome>...` | resolve nome → shape, com as correções aplicadas |
-| `node tools/sessao2.cjs <arq.drawio>` | retoma: reconhece o arquivo, classifica as páginas e imprime o briefing. A elaboração dele é a do corpus — para outro caso, use o driver do passo 6 |
+| `node tools/aprovar.cjs <sessao.json>` | passo 5: aprova a vista lógica e grava o `.drawio` que retoma. `--por` · `--candidata` · `--em` · `--saida` |
+| `node tools/retomar.cjs <arq.drawio>` | passos 1 e 6: reconhece o arquivo, classifica as páginas e imprime o briefing. Com `--delta <d.json>`, elabora a vista técnica e grava as duas |
 | `node sessao/publicar.cjs <arq.drawio>` | a cópia que sai de casa |
 | `./tests/rodar.sh` | a régua inteira, em 8 camadas |
 

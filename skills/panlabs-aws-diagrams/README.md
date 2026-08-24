@@ -11,7 +11,7 @@ multi-conta por motor determinístico `IR → layout → mxGraph XML`.
 node motor/gerar.cjs modelo/web-multi-az.json --saida saida/x.drawio
 node tools/check-geometria.cjs modelo/web-multi-az.json    # o laudo das 62
 node tools/revisar-lacunas.cjs modelo/web-multi-az.json    # a revisão de lacunas
-node tools/sessao2.cjs saida/varejo.drawio                 # retomar uma sessão
+node tools/retomar.cjs saida/varejo.drawio                 # retomar uma sessão
 ./tests/rodar.sh                                           # a régua inteira
 ./tools/instalar.sh                                        # expor nos dois harnesses
 ./tools/medir-candidatos.sh                                # a medição que escolheu o motor

@@ -31,7 +31,7 @@ const ARQ = path.join(RAIZ, 'saida', 'varejo.drawio');
 const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
 const DRAWIO = binario(process.argv[2]);
 
-if (!fs.existsSync(ARQ)) { console.error('  rode sessao1.cjs e sessao2.cjs antes.'); process.exit(1); }
+if (!fs.existsSync(ARQ)) { console.error('  rode tools/aprovar.cjs e tools/retomar.cjs antes.'); process.exit(1); }
 
 const antes = abrir(fs.readFileSync(ARQ, 'utf8'));
 let falhas = 0;

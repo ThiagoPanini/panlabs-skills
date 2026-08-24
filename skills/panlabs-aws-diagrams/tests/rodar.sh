@@ -139,8 +139,8 @@ echo
 echo "════ camada 6 · a sessão ════"
 passo "o manifesto do motor de produção"           node "$AQUI/check-motor-intocado.cjs"
 passo "a projeção, com 12 mutações de controle"    node "$AQUI/check-projecao.cjs"
-passo "sessão 1 — vista lógica aprovada"           node "$RAIZ/tools/sessao1.cjs"
-passo "sessão 2 — retomada e elaboração técnica"   node "$RAIZ/tools/sessao2.cjs"
+passo "passo 5 — a vista lógica, aprovada"        node "$RAIZ/tools/aprovar.cjs" "$RAIZ/modelo/sessao/varejo-logica.json" --em 2026-08-21 --saida "$RAIZ/saida/varejo.drawio"
+passo "passos 1 e 6 — retomada e vista técnica"   node "$RAIZ/tools/retomar.cjs" "$RAIZ/saida/varejo.drawio" --delta "$RAIZ/modelo/sessao/varejo-elaboracao.json"
 passo "o arco ponta a ponta, num caso novo (#26)"  node "$AQUI/check-arco.cjs"
 passo "a privacidade do dossiê"                    node "$AQUI/check-dossie.cjs"
 

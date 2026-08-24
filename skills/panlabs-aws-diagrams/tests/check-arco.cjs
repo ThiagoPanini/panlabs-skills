@@ -15,7 +15,7 @@
  *
  * Por isso o caso é `frota-preditiva` e não `varejo-300-lojas`. O varejo já era
  * fixture quando o #14 e o #23 rodaram; ele prova que a camada de sessão não
- * regrediu, e é o que `tools/sessao1.cjs` e `tools/sessao2.cjs` guardam. Este
+ * regrediu, e é o que `tools/aprovar.cjs` e `tools/retomar.cjs` guardam. Este
  * arquivo prova outra coisa: que o arco fecha num caso que nasceu depois das
  * regras.
  *

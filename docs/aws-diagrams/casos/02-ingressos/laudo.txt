@@ -1,0 +1,150 @@
+════ passo 2 · completude semântica (A1) e o laudo das 62 ════
+
+========================================================================
+modelo  (caminho "grade", 30 células)
+========================================================================
+
+  ✗ A3.2  Sobreposição rótulo–rótulo
+        4 colisão(ões) de rótulo
+        · os rótulos de venda-a ("ECS · reserva de assento") e fraude-a ("Lambda · antifraude") se cruzam em 816 px²
+        · os rótulos de pedido-a ("Aurora · pedido e pagamento") e assento-a ("DynamoDB · mapa de assentos") se cruzam em 816 px²
+        · os rótulos de nuvem ("AWS Cloud · sa-east-1") e vpc ("VPC venda · 10.40.0.0/16") se cruzam em 265 px²
+        · os rótulos de p2 ("2. reserva o assento") e p4 ("4. fecha o pedido") se cruzam em 776 px²
+  ✗ A3.3  Rótulo transbordando sua caixa
+        · o rótulo de fila-a ("ALB · fila virtual") transborda do grupo "sub-pub-a"
+        · o rótulo de fila-b ("ALB · fila virtual") transborda do grupo "sub-pub-b"
+        · o rótulo de venda-a ("ECS · reserva de assento") transborda do grupo "sub-app-a"
+        · o rótulo de fraude-a ("Lambda · antifraude") transborda do grupo "sub-app-a"
+        · o rótulo de venda-b ("ECS · reserva de assento") transborda do grupo "sub-app-b"
+        · … e mais 3
+  ✗ A3.4  Sobreposição rótulo–aresta
+        · a aresta "p5" passa por cima do rótulo de pedido-a ("Aurora · pedido e pagamento")
+        · a aresta "p5" passa por cima do rótulo de sub-dado-b ("Private subnet · estoque")
+  ✗ A3.5  Aresta atravessando nó
+        · a aresta "p2" (venda-a→assento-a) atravessa fraude-a ("Lambda · antifraude")
+        · a aresta "p2" (venda-a→assento-a) atravessa pedido-a ("Aurora · pedido e pagamento")
+        · a aresta "p4" (venda-a→pedido-a) atravessa fraude-a ("Lambda · antifraude")
+  ⚠ A3.9  Tamanho mínimo de fonte
+        · fila-a ("ALB · fila virtual") rotula com 12 px (nome de elemento pede 14)
+        · fila-b ("ALB · fila virtual") rotula com 12 px (nome de elemento pede 14)
+        · venda-a ("ECS · reserva de assento") rotula com 12 px (nome de elemento pede 14)
+        · fraude-a ("Lambda · antifraude") rotula com 12 px (nome de elemento pede 14)
+        · venda-b ("ECS · reserva de assento") rotula com 12 px (nome de elemento pede 14)
+        · … e mais 18
+
+  ⚠ A4.5  Padding de grupo uniforme
+        · "nuvem" tem paddings 8/32/8 (σ = 11.31 > 4)
+        · "sub-pub-a" tem paddings 14/108/48 (σ = 38.86 > 4)
+        · "sub-pub-b" tem paddings 14/108/48 (σ = 38.86 > 4)
+        · "sub-app-a" tem paddings 14/14/48 (σ = 16.03 > 4)
+        · "sub-app-b" tem paddings 14/112/48 (σ = 40.63 > 4)
+        · … e mais 3
+
+  ✗ A1.2  Legenda presente
+        não há legenda — o C4 pede uma em todo diagrama
+        · o motor do #11 ainda não emite legenda; toda semântica de cor e de traço fica sem chave
+  ✗ A1.3  Legenda completa (cobertura de canal visual)
+        26 valor(es) de canal visual sem entrada na legenda
+        · o canal "preenchimento" usa "#8C4FFF" em 2 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#ED7100" em 3 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#C925D1" em 3 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#F2F6E8" em 2 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#E6F6F6" em 4 objeto(s) e a legenda não explica
+        · … e mais 21
+  ⚠ A1.9  Siglas expandidas
+        · a sigla "ALB" aparece 2× e não é nome oficial nem está expandida
+  ⚠ A1.11 Metadados de frescor
+        sem data, versao, autor — não dá para saber se o diagrama está velho
+        · o modelo não declara "data"
+        · o modelo não declara "versao"
+        · o modelo não declara "autor"
+
+  ✗ A7.2  Contraste não-textual
+        · venda-a ("ECS · reserva de assento"): #ED7100 sobre #e6f6f6 dá 2.71:1 (piso 3:1)
+        · fraude-a ("Lambda · antifraude"): #ED7100 sobre #e6f6f6 dá 2.71:1 (piso 3:1)
+        · venda-b ("ECS · reserva de assento"): #ED7100 sobre #e6f6f6 dá 2.71:1 (piso 3:1)
+  ⚠ A7.4  Distinguibilidade sob deficiência de cor
+        10 par(es) de cores indistinguíveis sob alguma deficiência
+        · #8C4FFF e #C925D1 ficam a ΔE00 = 6.81 sob protanopia (mínimo 10) — servico/vpc vs servico
+        · #8C4FFF e #C925D1 ficam a ΔE00 = 8.47 sob deuteranopia (mínimo 10) — servico/vpc vs servico
+        · #ffffff e #F2F6E8 ficam a ΔE00 = 6.82 sob protanopia (mínimo 10) — servico vs subnet
+        · #ffffff e #F2F6E8 ficam a ΔE00 = 6.5 sob deuteranopia (mínimo 10) — servico vs subnet
+        · #ffffff e #F2F6E8 ficam a ΔE00 = 2.22 sob tritanopia (mínimo 10) — servico vs subnet
+        · … e mais 5
+
+  ✗ A2.1  Complexidade gráfica ≤ 6
+        10 tipos de símbolo — acima do limite de 8 (span of absolute judgement)
+        · a legenda precisaria de 10 entradas; Moody põe o teto efetivo em 6
+  ✗ A2.7  Estilo de linha semanticamente consistente
+        · o traço "solido" carrega 2 significados: https, sql
+
+  ✗ A6.1  Resolução angular (AR)
+        2 par(es) de arestas incidentes indistinguíveis
+        · duas arestas saem de "venda-a" a 0° uma da outra (piso 15°)
+        · duas arestas saem de "assento-a" a 0° uma da outra (piso 15°)
+  ⚠ A6.2  Uniformidade de nós (NU)
+        NU = 0.429 < 0.5 (Q1) — há aglomerado e vazio
+        · 4 célula(s) da grade estão vazias
+  ⚠ A6.3  Razão de aspecto (Asp)
+        a razão do desenho difere da do canvas em 25% (tolerância 20%): sobram faixas vazias
+        · a razão do desenho difere da do canvas em 25% (tolerância 20%): sobram faixas vazias
+
+  ✗ F1    Faixa abraça exatamente seus membros  ← falha semântica
+        1 divergência(s) entre o que a faixa desenha e o que ela declara
+        · a faixa "asg-venda" contém fraude-a ("Lambda · antifraude"), que não é membro dela — o desenho afirma dele um atributo (Auto Scaling group · reserva) que o modelo não declara
+
+  62 checagens: 41 ok · 7 aviso · 10 falha · 2 inaplicável · 2 do render
+  ✗ 1 falha(s) SEMÂNTICA(s) — o desenho afirma o que o modelo nega
+
+✗ 1/1 diagrama(s) com falha
+
+════ passo 4 · a revisão de lacunas ════
+
+  Marketplace de ingressos · a abertura de vendas  (16 nós, teto 4)
+    nenhum achado
+
+    mudas (a regra não tem sujeito neste modelo — não é o mesmo que passar):
+      · spof                         nenhum ator: o modelo não afirma ninguém de fora, e sem fora não há caminho de entrada
+      · cross-account-sem-confianca  0 conta(s): não há travessia possível
+      · assincrono-sem-dlq           nenhuma aresta sai de fila, tópico ou barramento: não há caminho assíncrono
+
+    0 achado(s) · teto ⌈16÷4⌉ = 4 · dentro
+
+════ passo 6 · o portão de veracidade ════
+
+✗ a página "ingressos-abertura": geometria reprovada no portão "veracidade"
+    · F1 Faixa abraça exatamente seus membros (o desenho afirma o que o modelo nega): 1 divergência(s) entre o que a faixa desenha e o que ela declara
+    ·     · a faixa "asg-venda" contém fraude-a ("Lambda · antifraude"), que não é membro dela — o desenho afirma dele um atributo (Auto Scaling group · reserva) que o modelo não declara
+    · A3.2 Sobreposição rótulo–rótulo: 4 colisão(ões) de rótulo
+    ·     · os rótulos de venda-a ("ECS · reserva de assento") e fraude-a ("Lambda · antifraude") se cruzam em 816 px²
+    ·     · os rótulos de pedido-a ("Aurora · pedido e pagamento") e assento-a ("DynamoDB · mapa de assentos") se cruzam em 816 px²
+    ·     · os rótulos de nuvem ("AWS Cloud · sa-east-1") e vpc ("VPC venda · 10.40.0.0/16") se cruzam em 265 px²
+    · A3.3 Rótulo transbordando sua caixa: 
+    ·     · o rótulo de fila-a ("ALB · fila virtual") transborda do grupo "sub-pub-a"
+    ·     · o rótulo de fila-b ("ALB · fila virtual") transborda do grupo "sub-pub-b"
+    ·     · o rótulo de venda-a ("ECS · reserva de assento") transborda do grupo "sub-app-a"
+    · A3.4 Sobreposição rótulo–aresta: 
+    ·     · a aresta "p5" passa por cima do rótulo de pedido-a ("Aurora · pedido e pagamento")
+    ·     · a aresta "p5" passa por cima do rótulo de sub-dado-b ("Private subnet · estoque")
+    · A3.5 Aresta atravessando nó: 
+    ·     · a aresta "p2" (venda-a→assento-a) atravessa fraude-a ("Lambda · antifraude")
+    ·     · a aresta "p2" (venda-a→assento-a) atravessa pedido-a ("Aurora · pedido e pagamento")
+    ·     · a aresta "p4" (venda-a→pedido-a) atravessa fraude-a ("Lambda · antifraude")
+    · A1.2 Legenda presente: não há legenda — o C4 pede uma em todo diagrama
+    ·     · o motor do #11 ainda não emite legenda; toda semântica de cor e de traço fica sem chave
+    · A1.3 Legenda completa (cobertura de canal visual): 26 valor(es) de canal visual sem entrada na legenda
+    ·     · o canal "preenchimento" usa "#8C4FFF" em 2 objeto(s) e a legenda não explica
+    ·     · o canal "preenchimento" usa "#ED7100" em 3 objeto(s) e a legenda não explica
+    ·     · o canal "preenchimento" usa "#C925D1" em 3 objeto(s) e a legenda não explica
+    · A7.2 Contraste não-textual: 
+    ·     · venda-a ("ECS · reserva de assento"): #ED7100 sobre #e6f6f6 dá 2.71:1 (piso 3:1)
+    ·     · fraude-a ("Lambda · antifraude"): #ED7100 sobre #e6f6f6 dá 2.71:1 (piso 3:1)
+    ·     · venda-b ("ECS · reserva de assento"): #ED7100 sobre #e6f6f6 dá 2.71:1 (piso 3:1)
+    · A2.1 Complexidade gráfica ≤ 6: 10 tipos de símbolo — acima do limite de 8 (span of absolute judgement)
+    ·     · a legenda precisaria de 10 entradas; Moody põe o teto efetivo em 6
+    · A2.7 Estilo de linha semanticamente consistente: 
+    ·     · o traço "solido" carrega 2 significados: https, sql
+    · A6.1 Resolução angular (AR): 2 par(es) de arestas incidentes indistinguíveis
+    ·     · duas arestas saem de "venda-a" a 0° uma da outra (piso 15°)
+    ·     · duas arestas saem de "assento-a" a 0° uma da outra (piso 15°)
+(código de saída acima)

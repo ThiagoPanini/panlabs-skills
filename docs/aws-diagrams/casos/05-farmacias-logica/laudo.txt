@@ -1,0 +1,105 @@
+════ passo 2 · completude semântica (A1) e o laudo das 62 ════
+
+========================================================================
+modelo  (caminho "elk", 31 células)
+========================================================================
+
+  ⚠ A3.8  Resolução de nó (NR)
+        NR = 0.04 < 0.067 (Q1 de especialistas); alvo 0.127
+  ⚠ A3.9  Tamanho mínimo de fonte
+        · cliente ("Cliente") rotula com 12 px (nome de elemento pede 14)
+        · convenio ("Convênio e PBM") rotula com 12 px (nome de elemento pede 14)
+        · estoque ("Estoque por loja") rotula com 12 px (nome de elemento pede 14)
+        · rastreio ("Rastreio da entrega") rotula com 12 px (nome de elemento pede 14)
+        · roteirizacao ("Roteirização") rotula com 12 px (nome de elemento pede 14)
+        · … e mais 22
+
+  ✗ A1.2  Legenda presente
+        não há legenda — o C4 pede uma em todo diagrama
+        · o motor do #11 ainda não emite legenda; toda semântica de cor e de traço fica sem chave
+  ✗ A1.3  Legenda completa (cobertura de canal visual)
+        18 valor(es) de canal visual sem entrada na legenda
+        · o canal "preenchimento" usa "#232F3D" em 3 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#FFFFFF" em 9 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#FFF8E1" em 1 objeto(s) e a legenda não explica
+        · o canal "estilo_de_traco" usa "solido" em 24 objeto(s) e a legenda não explica
+        · o canal "estilo_de_traco" usa "tracejado" em 3 objeto(s) e a legenda não explica
+        · … e mais 13
+  ✗ A1.5  Todo elemento tipado
+        · n-controlado ("Medicamento controlado não sai do canal digital sem receita retida (Portaria 344). A capacidade existe desde a v1, não é fase 2.") não tem tipo declarado no modelo
+  ⚠ A1.9  Siglas expandidas
+        · a sigla "PBM" aparece 1× e não é nome oficial nem está expandida
+  ⚠ A1.11 Metadados de frescor
+        sem data, versao, autor — não dá para saber se o diagrama está velho
+        · o modelo não declara "data"
+        · o modelo não declara "versao"
+        · o modelo não declara "autor"
+  ✗ A1.12 Nenhum shape órfão
+        · n-controlado desenha como nó e não existe no modelo
+
+  ⚠ A5.3  Número de dobras por aresta
+        1 aresta(s) acima de 2 dobras
+        · "a-ve" tem 4 dobras (alvo ≤ 1)
+  ⚠ A5.9  Uniformidade de comprimento de aresta (ELD)
+        · arestas inter-grupo: ELD = 0.611 < 0.647 (Q1)
+
+  ✗ A7.2  Contraste não-textual
+        · estoque ("Estoque por loja"): #FFFFFF sobre #FFFFFF dá 1:1 (piso 3:1)
+        · rastreio ("Rastreio da entrega"): #FFFFFF sobre #FFFFFF dá 1:1 (piso 3:1)
+        · roteirizacao ("Roteirização"): #FFFFFF sobre #FFFFFF dá 1:1 (piso 3:1)
+        · receita ("Guarda da receita"): #FFFFFF sobre #FFFFFF dá 1:1 (piso 3:1)
+        · trilha ("Trilha regulatória"): #FFFFFF sobre #FFFFFF dá 1:1 (piso 3:1)
+        · … e mais 6
+  ⚠ A7.4  Distinguibilidade sob deficiência de cor
+        3 par(es) de cores indistinguíveis sob alguma deficiência
+        · #232F3D e #232F3E ficam a ΔE00 = 0.5 sob protanopia (mínimo 10) — ator vs bloco
+        · #232F3D e #232F3E ficam a ΔE00 = 0.48 sob deuteranopia (mínimo 10) — ator vs bloco
+        · #232F3D e #232F3E ficam a ΔE00 = 0 sob tritanopia (mínimo 10) — ator vs bloco
+
+  ⚠ A6.1  Resolução angular (AR)
+        3 par(es) de arestas parecem sair juntas, mas as pontas foram reconstruídas — o renderizador desencosta as duas (jettySize=auto). Declare a âncora para que isto vire medição
+        · duas arestas saem de "carrinho" a 0° uma da outra (piso 15°) — ângulo reconstruído, sem âncora declarada
+        · duas arestas saem de "cliente" a 0° uma da outra (piso 15°) — ângulo reconstruído, sem âncora declarada
+        · duas arestas saem de "validacao" a 5.2° uma da outra (piso 15°) — ângulo reconstruído, sem âncora declarada
+  ⚠ A6.3  Razão de aspecto (Asp)
+        Asp = 0.299 < 0.499 (Q1): o desenho é uma faixa muito alongada; a razão do desenho difere da do canvas em 31% (tolerância 20%): sobram faixas vazias
+        · Asp = 0.299 < 0.499 (Q1): o desenho é uma faixa muito alongada
+        · a razão do desenho difere da do canvas em 31% (tolerância 20%): sobram faixas vazias
+  ⚠ A6.5  Preservação de vizinhança (NP) / Stress (KSM)
+        NP = 0.319 < 0.341 (Q1) — mas ver a ressalva: aqui a posição vem dos grupos, não do grafo
+        · NP = 0.319 < 0.341 (Q1)
+
+  62 checagens: 42 ok · 10 aviso · 5 falha · 3 inaplicável · 2 do render
+
+✗ 1/1 diagrama(s) com falha
+
+════ passo 4 · a revisão de lacunas ════
+
+  Rede de farmácias · novo canal digital  (15 nós, teto 4)
+    ⚠ spof                         carrinho               sem par, e é o único caminho de "cliente" até 2 outros componentes
+    ⚠ spof                         rastreio               sem par, e é o único caminho de "cliente" até 5 outros componentes — e 3 deles também não tem par, atrás deste
+
+    mudas (a regra não tem sujeito neste modelo — não é o mesmo que passar):
+      · single-az                    nenhuma subnet declara `az`: o modelo não fala de zona
+      · egress-sem-controle          nenhuma subnet privada com conteúdo: não há de onde sair
+      · dado-em-subnet-publica       nenhuma subnet pública declarada
+      · cross-account-sem-confianca  0 conta(s): não há travessia possível
+      · assincrono-sem-dlq           nenhuma aresta sai de fila, tópico ou barramento: não há caminho assíncrono
+
+    2 achado(s) · teto ⌈15÷4⌉ = 4 · dentro
+
+════ passo 6 · o portão de veracidade ════
+  validar    nos=15  arestas=11
+  tema       id=claro  fundo=claro  densidade=1  fluxo=solido
+  derivar    faixasAz=false  porque=só 0 AZ distinta declarada  azs=
+  dispor     passadas=1
+  planejar   caminho=elk  celulas=31  pagina=2108×828.3333333333333
+  geometria  paginas=1  falha=5  semanticas=0  portao=veracidade
+  conferir   ok=true  bytes=21430  contraste=passa  piorTexto=5.35  piorTraco=3.64  piorArea=-
+  ⚠ encaixe: "a-desconto" alinhada movendo convenio em -9px
+  ⚠ encaixe: "a-guarda" alinhada movendo trilha em -9px
+  ⚠ encaixe: "a-navega" alinhada movendo carrinho+catalogo em 23px
+  ⚠ encaixe: "a-desconto" alinhada movendo convenio em 23px
+
+  → /dev/null  (21430 bytes, caminho "elk")
+(código de saída acima)

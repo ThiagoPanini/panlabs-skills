@@ -1,0 +1,338 @@
+{
+  "esquema": "panlabs-aws-diagrams/sessao@1",
+  "id": "banco-segregacao",
+  "titulo": "Banco digital · segregação regulatória",
+  "estagio": "logica",
+  "vistas": {
+    "logica": {
+      "genero": "L1",
+      "titulo": "Banco digital · segregação regulatória · vista lógica",
+      "subtitulo": "Capacidades e fronteiras de responsabilidade — a vista que foi ao comitê de risco e ao compliance."
+    },
+    "tecnica": {
+      "genero": "T5",
+      "titulo": "Banco digital · segregação regulatória · vista técnica",
+      "subtitulo": "T5 multi-account · as MESMAS fronteiras aprovadas, agora como contas AWS sob unidade organizacional."
+    }
+  },
+  "nos": [
+    {
+      "id": "correntista",
+      "rotulo": "Correntistas",
+      "logico": {
+        "tipo": "ator",
+        "nota": "410 mil contas ativas"
+      }
+    },
+    {
+      "id": "regulador",
+      "rotulo": "Regulador",
+      "logico": {
+        "tipo": "ator",
+        "nota": "envio diário do CADOC"
+      }
+    },
+    {
+      "id": "f-transacional",
+      "rotulo": "Transacional",
+      "logico": {
+        "tipo": "grupo",
+        "nota": "dono: engenharia de core banking"
+      }
+    },
+    {
+      "id": "f-analitico",
+      "rotulo": "Analítico e regulatório",
+      "logico": {
+        "tipo": "grupo",
+        "nota": "dono: risco e compliance"
+      }
+    },
+    {
+      "id": "f-auditoria",
+      "rotulo": "Auditoria",
+      "logico": {
+        "tipo": "grupo",
+        "nota": "dono: auditoria interna — ninguém de fora escreve aqui"
+      }
+    },
+    {
+      "id": "abrir-conta",
+      "rotulo": "Abertura de conta",
+      "dentro": "f-transacional",
+      "logico": {
+        "tipo": "bloco",
+        "nota": "KYC e prova de vida",
+        "qualificador": "onde o CPF vira cliente"
+      }
+    },
+    {
+      "id": "movimentar",
+      "rotulo": "Movimentação",
+      "dentro": "f-transacional",
+      "logico": {
+        "tipo": "bloco",
+        "nota": "Pix, TED, boleto",
+        "qualificador": "o caminho quente — 2,1 mil TPS no pico"
+      }
+    },
+    {
+      "id": "saldo",
+      "rotulo": "Guarda do saldo",
+      "dentro": "f-transacional",
+      "logico": {
+        "tipo": "bloco",
+        "qualificador": "a verdade contábil; tudo o mais é derivado"
+      }
+    },
+    {
+      "id": "consolidar",
+      "rotulo": "Consolidação regulatória",
+      "dentro": "f-analitico",
+      "logico": {
+        "tipo": "bloco",
+        "qualificador": "monta o CADOC do dia"
+      }
+    },
+    {
+      "id": "risco",
+      "rotulo": "Modelo de risco",
+      "dentro": "f-analitico",
+      "logico": {
+        "tipo": "bloco",
+        "qualificador": "limite de crédito por correntista"
+      }
+    },
+    {
+      "id": "trilha",
+      "rotulo": "Trilha imutável",
+      "dentro": "f-auditoria",
+      "logico": {
+        "tipo": "bloco",
+        "qualificador": "5 anos, sem apagar — nem o administrador"
+      }
+    },
+    {
+      "id": "achado",
+      "rotulo": "Achados de segurança",
+      "dentro": "f-auditoria",
+      "logico": {
+        "tipo": "bloco",
+        "qualificador": "consolida as três fronteiras"
+      }
+    }
+  ],
+  "arestas": [
+    {
+      "id": "a-abre",
+      "de": "correntista",
+      "para": "abrir-conta",
+      "rotulo": "abre a conta"
+    },
+    {
+      "id": "a-move",
+      "de": "correntista",
+      "para": "movimentar",
+      "rotulo": "movimenta"
+    },
+    {
+      "id": "a-debita",
+      "de": "movimentar",
+      "para": "saldo",
+      "rotulo": "debita e credita"
+    },
+    {
+      "id": "a-cria",
+      "de": "abrir-conta",
+      "para": "saldo",
+      "rotulo": "cria o saldo inicial"
+    },
+    {
+      "id": "a-consolida",
+      "de": "consolidar",
+      "para": "saldo",
+      "rotulo": "lê a posição do dia",
+      "dados": "volta"
+    },
+    {
+      "id": "a-risco",
+      "de": "risco",
+      "para": "saldo",
+      "rotulo": "lê o histórico",
+      "dados": "volta"
+    },
+    {
+      "id": "a-envia",
+      "de": "consolidar",
+      "para": "regulador",
+      "rotulo": "envia o CADOC"
+    },
+    {
+      "id": "a-trilha-t",
+      "de": "movimentar",
+      "para": "trilha",
+      "rotulo": "grava a trilha da movimentação"
+    },
+    {
+      "id": "a-trilha-a",
+      "de": "consolidar",
+      "para": "trilha",
+      "rotulo": "grava a trilha do envio"
+    },
+    {
+      "id": "a-achado",
+      "de": "achado",
+      "para": "trilha",
+      "rotulo": "guarda o achado"
+    }
+  ],
+  "notas": [
+    {
+      "id": "n-fronteira",
+      "origem": "premissa",
+      "texto": "As três fronteiras são de RESPONSABILIDADE. Que elas virem três contas AWS é decisão da fase técnica — o comitê de risco aprovou a segregação, não a conta."
+    },
+    {
+      "id": "n-escrita",
+      "origem": "premissa",
+      "sobre": "trilha",
+      "texto": "Ninguém de fora da auditoria escreve na trilha, e a auditoria não lê o transacional. A direção da confiança é requisito do BACEN, não preferência."
+    },
+    {
+      "id": "n-risco",
+      "origem": "achado-recusado",
+      "sobre": "risco",
+      "texto": "Modelo de risco lendo o transacional direto, conhecido e aceito para a v1: a cópia analítica atrasa o limite de crédito em 24 h, e o produto não aceita. Revisar quando o volume dobrar."
+    }
+  ],
+  "dossie": {
+    "fatos": [
+      {
+        "fato": "410 mil contas ativas, pico de 2,1 mil TPS no dia 5 de cada mês",
+        "procedencia": "perguntado",
+        "confirmado": true
+      },
+      {
+        "fato": "o BACEN exige segregação entre quem opera e quem audita",
+        "procedencia": "perguntado",
+        "confirmado": true
+      },
+      {
+        "fato": "CADOC diário, com janela de correção de 24 h",
+        "procedencia": "perguntado",
+        "confirmado": true
+      },
+      {
+        "fato": "trilha retida por 5 anos, imutável",
+        "procedencia": "perguntado",
+        "confirmado": true
+      },
+      {
+        "fato": "o time de risco quer ler o transacional sem esperar cópia",
+        "procedencia": "inferido",
+        "de": "\"a gente não pode dar limite com dado de ontem\"",
+        "confirmado": true
+      },
+      {
+        "fato": "não há apetite para uma quarta fronteira agora",
+        "procedencia": "perguntado",
+        "confirmado": true
+      }
+    ],
+    "candidatas": [
+      {
+        "id": "cand-a",
+        "nome": "Três fronteiras com leitura cruzada explícita",
+        "estado": "escolhida",
+        "tupla": [
+          "gerenciado-sem-compute",
+          "sincrono-em-cadeia",
+          "relacional",
+          "privado",
+          "tres-fronteiras"
+        ],
+        "compra": "a segregação que o regulador cobra, com o limite de crédito em tempo real que o produto exige",
+        "paga": "uma travessia de leitura do analítico para o transacional, que precisa de confiança declarada e auditada",
+        "escolhaSe": "o limite de crédito não pode atrasar 24 h",
+        "erradaSe": "o regulador vetar qualquer leitura cruzada do transacional"
+      },
+      {
+        "id": "cand-b",
+        "nome": "Três fronteiras com cópia analítica",
+        "estado": "descartada",
+        "tupla": [
+          "gerenciado-sem-compute",
+          "lote-agendado",
+          "relacional",
+          "privado",
+          "tres-fronteiras"
+        ],
+        "difereEm": [
+          "E2"
+        ],
+        "compra": "zero leitura cruzada — a fronteira analítica nunca toca o transacional",
+        "paga": "o limite de crédito passa a ser de ontem",
+        "escolhaSe": "a segregação valer mais que a atualidade do limite",
+        "erradaSe": "o produto depender de limite do dia",
+        "porque": "o fato confirmado diz que não dá para dar limite com dado de ontem; esta candidata contradiz o requisito que abriu o projeto"
+      },
+      {
+        "id": "cand-c",
+        "nome": "Duas fronteiras, auditoria dentro do analítico",
+        "estado": "descartada",
+        "tupla": [
+          "gerenciado-sem-compute",
+          "sincrono-em-cadeia",
+          "relacional",
+          "privado",
+          "duas-fronteiras"
+        ],
+        "difereEm": [
+          "E5"
+        ],
+        "compra": "uma conta a menos para operar, e o time de risco já opera as duas",
+        "paga": "quem audita passa a ser subordinado a quem é auditado",
+        "escolhaSe": "não houvesse exigência de segregação",
+        "erradaSe": "o regulador olhar a cadeia de comando",
+        "porque": "é exatamente a segregação que o BACEN cobra; a economia de uma conta não paga o achado de auditoria"
+      }
+    ],
+    "achados": [
+      {
+        "regra": "cross-account-sem-confianca",
+        "alvo": "risco",
+        "estado": "aceito",
+        "em": "2026-08-23",
+        "nota": "consertado antes do desenho: a leitura passa por papel com confiança declarada, e a fase técnica desenha o papel"
+      },
+      {
+        "regra": "leitura-cruzada-do-transacional",
+        "alvo": "risco",
+        "estado": "recusado",
+        "em": "2026-08-23",
+        "viaNota": "n-risco",
+        "nota": "aceito para a v1 por requisito de produto"
+      }
+    ],
+    "estacionamento": [
+      {
+        "nome": "Aurora",
+        "capacidade": "saldo",
+        "estado": "estacionado",
+        "nota": "dito na primeira frase da reunião"
+      },
+      {
+        "nome": "Control Tower",
+        "capacidade": "f-auditoria",
+        "estado": "estacionado",
+        "nota": "\"a gente já tem landing zone\" — confirmar na fase técnica"
+      },
+      {
+        "nome": "Athena",
+        "capacidade": "consolidar",
+        "estado": "estacionado",
+        "nota": "hedge do time de dados"
+      }
+    ]
+  }
+}

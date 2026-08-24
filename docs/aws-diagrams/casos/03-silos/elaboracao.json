@@ -1,0 +1,153 @@
+{
+  "esquema": "panlabs-aws-diagrams/elaboracao@1",
+  "sobre": "silos-telemetria",
+  "_": "O delta da fase técnica. O estacionamento da sabatina volta aqui como sugestão confirmada: IoT Core em receber-leitura, Timestream em guardar-serie, QuickSight em painel-semanal — os três foram ditos cedo demais e ficaram guardados até esta fase.",
+  "nos": [
+    {
+      "id": "nuvem",
+      "camada": "tecnica",
+      "tecnico": {
+        "tipo": "nuvem",
+        "rotulo": "AWS Cloud · sa-east-1"
+      }
+    },
+    {
+      "id": "dlq-alerta",
+      "camada": "tecnica",
+      "dentro": "atendimento",
+      "tecnico": {
+        "tipo": "servico",
+        "servico": "sqs",
+        "rotulo": "SQS · fila morta do alerta",
+        "qualificador": "o ramo que não pode perder evento"
+      }
+    },
+    {
+      "id": "dlq-visita",
+      "camada": "tecnica",
+      "dentro": "atendimento",
+      "tecnico": {
+        "tipo": "servico",
+        "servico": "sqs",
+        "rotulo": "SQS · fila morta da visita"
+      }
+    },
+    {
+      "id": "papel-ingest",
+      "camada": "tecnica",
+      "dentro": "campo",
+      "tecnico": {
+        "tipo": "servico",
+        "servico": "iam",
+        "rotulo": "Política do IoT Core",
+        "qualificador": "só o certificado do silo publica",
+        "habilita": "receber-leitura"
+      }
+    }
+  ],
+  "casacos": {
+    "silo": {
+      "tipo": "ator",
+      "servico": "users",
+      "rotulo": "Silos"
+    },
+    "agronomo": {
+      "tipo": "ator",
+      "servico": "users",
+      "rotulo": "Agrônomos"
+    },
+    "cooperado": {
+      "tipo": "ator",
+      "servico": "users",
+      "rotulo": "Cooperados"
+    },
+    "campo": {
+      "tipo": "grupo",
+      "rotulo": "Campo"
+    },
+    "plataforma": {
+      "tipo": "grupo",
+      "rotulo": "Plataforma"
+    },
+    "atendimento": {
+      "tipo": "grupo",
+      "rotulo": "Atendimento"
+    },
+    "receber-leitura": {
+      "tipo": "servico",
+      "servico": "iot core",
+      "rotulo": "IoT Core",
+      "qualificador": "MQTT, certificado por silo"
+    },
+    "guardar-serie": {
+      "tipo": "servico",
+      "servico": "timestream",
+      "rotulo": "Timestream",
+      "qualificador": "memória 7 dias, magnético 5 safras"
+    },
+    "detectar-risco": {
+      "tipo": "servico",
+      "servico": "lambda",
+      "rotulo": "Lambda · janela e regra"
+    },
+    "publicar-evento": {
+      "tipo": "servico",
+      "servico": "eventbridge",
+      "rotulo": "EventBridge",
+      "qualificador": "um barramento, três regras"
+    },
+    "alertar-tecnico": {
+      "tipo": "servico",
+      "servico": "sns",
+      "rotulo": "SNS · plantão"
+    },
+    "abrir-visita": {
+      "tipo": "servico",
+      "servico": "step functions",
+      "rotulo": "Step Functions · agenda a visita"
+    },
+    "painel-semanal": {
+      "tipo": "servico",
+      "servico": "quicksight",
+      "rotulo": "QuickSight · painel do cooperado"
+    }
+  },
+  "dentro": {
+    "campo": "nuvem",
+    "plataforma": "nuvem",
+    "atendimento": "nuvem"
+  },
+  "arestas": [
+    {
+      "id": "a-dlq-alerta",
+      "de": "alertar-tecnico",
+      "para": "dlq-alerta",
+      "rotulo": "o que falhou 3×"
+    },
+    {
+      "id": "a-dlq-visita",
+      "de": "abrir-visita",
+      "para": "dlq-visita",
+      "rotulo": "o que falhou 3×"
+    }
+  ],
+  "arestasCasaco": {
+    "a-le": {
+      "rotulo": "publica a leitura",
+      "protocolo": "mqtt"
+    },
+    "a-publica": {
+      "rotulo": "publica o evento de risco"
+    },
+    "a-alerta": {
+      "rotulo": "regra: alerta ao plantão"
+    },
+    "a-visita": {
+      "rotulo": "regra: abre a visita"
+    },
+    "a-painel": {
+      "rotulo": "regra: alimenta o painel"
+    }
+  },
+  "_conferir": "A primeira versao deste delta trazia uma `notas` repetindo a recusa da fila morta. O passo 6 recusou com codigo 2: a nota entra na vista LOGICA, e a vista logica ja tinha sido aprovada com a nota `n-dlq` da sessao. Duas notas sobre o mesmo no mudam o desenho aprovado, e `conferir()` mede isso byte a byte. A licao esta no lugar certo: a fase tecnica NAO reescreve o que foi aprovado."
+}

@@ -1,0 +1,58 @@
+════ o arco inteiro — os sete passos ════
+
+── passo 4 · a revisão de lacunas (sobre a projeção lógica) ──
+
+  Cooperativa · telemetria de silos · vista lógica  (13 nós, teto 4)
+    ⚠ spof                         abrir-visita           sem par, e é o único caminho de "agronomo" até 8 outros componentes
+    ⚠ spof                         painel-semanal         sem par, e é o único caminho de "cooperado" até 8 outros componentes
+    ⚠ spof                         receber-leitura        sem par, e é o único caminho de "silo" até 8 outros componentes — e 3 deles também não tem par, atrás deste
+
+    mudas (a regra não tem sujeito neste modelo — não é o mesmo que passar):
+      · single-az                    nenhuma subnet declara `az`: o modelo não fala de zona
+      · egress-sem-controle          nenhuma subnet privada com conteúdo: não há de onde sair
+      · dado-em-subnet-publica       nenhuma subnet pública declarada
+      · cross-account-sem-confianca  0 conta(s): não há travessia possível
+      · assincrono-sem-dlq           nenhuma aresta sai de fila, tópico ou barramento: não há caminho assíncrono
+
+    3 achado(s) · teto ⌈13÷4⌉ = 4 · dentro
+
+── passo 2 · o laudo das 62 sobre a vista lógica ──
+        · duas arestas saem de "abrir-visita" a 6.5° uma da outra (piso 15°) — ângulo reconstruído, sem âncora declarada
+  ⚠ A6.2  Uniformidade de nós (NU)
+        NU = 0.364 < 0.5 (Q1) — há aglomerado e vazio
+        · 7 célula(s) da grade estão vazias
+  ⚠ A6.3  Razão de aspecto (Asp)
+        Asp = 0.234 < 0.499 (Q1): o desenho é uma faixa muito alongada; a razão do desenho difere da do canvas em 42% (tolerância 20%): sobram faixas vazias
+        · Asp = 0.234 < 0.499 (Q1): o desenho é uma faixa muito alongada
+        · a razão do desenho difere da do canvas em 42% (tolerância 20%): sobram faixas vazias
+
+  62 checagens: 41 ok · 10 aviso · 6 falha · 3 inaplicável · 2 do render
+
+✗ 1/1 diagrama(s) com falha
+
+── passo 6 · o laudo das 62 sobre a vista TÉCNICA ──
+        2 par(es) de arestas parecem sair juntas, mas as pontas foram reconstruídas — o renderizador desencosta as duas (jettySize=auto). Declare a âncora para que isto vire medição
+        · duas arestas saem de "publicar-evento" a 4.1° uma da outra (piso 15°) — ângulo reconstruído, sem âncora declarada
+        · duas arestas saem de "abrir-visita" a 8.7° uma da outra (piso 15°) — ângulo reconstruído, sem âncora declarada
+  ⚠ A6.3  Razão de aspecto (Asp)
+        Asp = 0.252 < 0.499 (Q1): o desenho é uma faixa muito alongada; a razão do desenho difere da do canvas em 32% (tolerância 20%): sobram faixas vazias
+        · Asp = 0.252 < 0.499 (Q1): o desenho é uma faixa muito alongada
+        · a razão do desenho difere da do canvas em 32% (tolerância 20%): sobram faixas vazias
+  ⚠ A6.5  Preservação de vizinhança (NP) / Stress (KSM)
+        NP = 0.271 < 0.341 (Q1) — mas ver a ressalva: aqui a posição vem dos grupos, não do grafo
+        · NP = 0.271 < 0.341 (Q1)
+
+  62 checagens: 39 ok · 11 aviso · 7 falha · 3 inaplicável · 2 do render
+
+✗ 1/1 diagrama(s) com falha
+
+── o portão de veracidade sobre a vista técnica ──
+  validar    nos=17  arestas=11
+  tema       id=claro  fundo=claro  densidade=1  fluxo=solido
+  derivar    faixasAz=false  porque=só 0 AZ distinta declarada  azs=
+  dispor     passadas=1
+  planejar   caminho=elk  celulas=33  pagina=2700×898
+  geometria  paginas=1  falha=7  semanticas=0  portao=veracidade
+  conferir   ok=true  bytes=26280  contraste=passa  piorTexto=5.35  piorTraco=3.02  piorArea=3.02
+
+(código de saída: 0)

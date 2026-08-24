@@ -1,0 +1,49 @@
+{
+  "esquema": "panlabs-aws-diagrams/elaboracao@1",
+  "sobre": "banco-segregacao",
+  "_": "O delta da fase técnica. As três fronteiras de RESPONSABILIDADE aprovadas viram três CONTAS AWS sob unidade organizacional — que é a troca de vocabulário que a vista técnica compra, e a razão de o `ou` precisar existir no `sessao@1`. Antes do #29 ele não existia, e uma arquitetura multi-conta construída pelo arco de duas vistas não conseguia declarar OU nenhuma.",
+
+  "casacos": {
+    "correntista": { "tipo": "ator", "servico": "users", "rotulo": "Correntistas" },
+    "regulador": { "tipo": "ator", "servico": "users", "rotulo": "BACEN" },
+
+    "f-transacional": { "tipo": "conta", "conta": "200000000001", "ou": "Workloads", "rotulo": "Transacional", "qualificador": "core banking — o caminho quente" },
+    "f-analitico": { "tipo": "conta", "conta": "200000000002", "ou": "Workloads", "rotulo": "Analítico e regulatório", "qualificador": "risco e CADOC" },
+    "f-auditoria": { "tipo": "conta", "conta": "200000000003", "ou": "Security", "rotulo": "Auditoria", "qualificador": "escrita só de dentro; leitura só pela auditoria" },
+
+    "abrir-conta": { "tipo": "servico", "servico": "step functions", "rotulo": "Step Functions · KYC", "qualificador": "prova de vida e bureau" },
+    "movimentar": { "tipo": "servico", "servico": "ecs", "rotulo": "ECS · motor de movimentação", "qualificador": "2,1 mil TPS no pico do dia 5" },
+    "saldo": { "tipo": "servico", "servico": "aurora", "rotulo": "Aurora PostgreSQL · razão", "qualificador": "a verdade contábil" },
+
+    "consolidar": { "tipo": "servico", "servico": "athena", "rotulo": "Athena · consolidação do CADOC" },
+    "risco": { "tipo": "servico", "servico": "sagemaker", "rotulo": "SageMaker · limite de crédito" },
+
+    "trilha": { "tipo": "servico", "servico": "s3", "rotulo": "S3 · trilha com Object Lock", "qualificador": "5 anos, modo compliance" },
+    "achado": { "tipo": "servico", "servico": "security hub", "rotulo": "Security Hub", "qualificador": "agrega as três contas" }
+  },
+
+  "nos": [
+    { "id": "papel-risco", "camada": "tecnica", "dentro": "f-transacional",
+      "tecnico": { "tipo": "servico", "servico": "iam", "rotulo": "Papel de leitura do risco",
+                   "qualificador": "confiança declarada para a conta analítica, só leitura",
+                   "habilita": "saldo" } },
+    { "id": "papel-trilha", "camada": "tecnica", "dentro": "f-auditoria",
+      "tecnico": { "tipo": "servico", "servico": "iam", "rotulo": "Papel de escrita na trilha",
+                   "qualificador": "as duas contas de workload escrevem; nenhuma apaga",
+                   "habilita": "trilha" } },
+    { "id": "chave-trilha", "camada": "tecnica", "dentro": "f-auditoria",
+      "tecnico": { "tipo": "servico", "servico": "kms", "rotulo": "KMS · chave da auditoria",
+                   "qualificador": "a chave não sai da conta de auditoria" } }
+  ],
+
+  "arestas": [
+    { "id": "a-cifra", "de": "trilha", "para": "chave-trilha", "rotulo": "cifra em repouso" }
+  ],
+
+  "arestasCasaco": {
+    "a-risco": { "rotulo": "assume o papel e lê o histórico", "protocolo": "sts" },
+    "a-consolida": { "rotulo": "lê a posição do dia", "protocolo": "sql" },
+    "a-debita": { "rotulo": "debita e credita", "protocolo": "sql" },
+    "a-envia": { "rotulo": "envia o CADOC", "protocolo": "sftp" }
+  }
+}

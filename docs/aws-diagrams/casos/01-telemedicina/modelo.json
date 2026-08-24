@@ -1,56 +1,43 @@
 {
   "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "telemedicina-prontuario",
-  "titulo": "Telemedicina · prontuário eletrônico multi-AZ",
-  "subtitulo": "T1 referência com consciência de rede — 40 unidades, dado de saúde sob LGPD, nada do prontuário em subnet pública.",
+  "id": "clinica-prontuario",
+  "titulo": "Rede de clínicas · prontuário eletrônico",
+  "subtitulo": "T1 referência com consciência de rede — 40 unidades por Direct Connect, dado de saúde sob LGPD, nada do prontuário em subnet pública.",
   "vista": "tecnica",
   "genero": "T1",
   "nos": [
     { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud · sa-east-1" },
-    { "id": "medico", "tipo": "ator", "rotulo": "Médicos e recepção", "qualificador": "40 unidades, ~900 usuários" },
-    { "id": "paciente", "tipo": "ator", "rotulo": "Pacientes", "qualificador": "app e portal de agendamento" },
-
-    { "id": "cdn", "tipo": "servico", "servico": "cloudfront", "dentro": "nuvem", "rotulo": "CloudFront", "qualificador": "entrega o portal e o app web" },
-    { "id": "waf", "tipo": "servico", "servico": "waf", "dentro": "nuvem", "rotulo": "AWS WAF", "qualificador": "regra gerenciada + limite por IP" },
-
     { "id": "vpc", "tipo": "vpc", "dentro": "nuvem", "rotulo": "VPC clínica · 10.20.0.0/16", "cidr": "10.20.0.0/16" },
 
-    { "id": "sub-pub-a", "tipo": "subnet", "dentro": "vpc", "rotulo": "Public subnet", "acesso": "publica", "az": "sa-east-1a", "cidr": "10.20.1.0/24" },
-    { "id": "sub-pub-b", "tipo": "subnet", "dentro": "vpc", "rotulo": "Public subnet", "acesso": "publica", "az": "sa-east-1b", "cidr": "10.20.2.0/24" },
-    { "id": "sub-app-a", "tipo": "subnet", "dentro": "vpc", "rotulo": "Private subnet · app", "acesso": "privada", "az": "sa-east-1a", "cidr": "10.20.11.0/24" },
-    { "id": "sub-app-b", "tipo": "subnet", "dentro": "vpc", "rotulo": "Private subnet · app", "acesso": "privada", "az": "sa-east-1b", "cidr": "10.20.12.0/24" },
+    { "id": "sub-borda-a", "tipo": "subnet", "dentro": "vpc", "rotulo": "Public subnet", "acesso": "publica", "az": "sa-east-1a", "cidr": "10.20.1.0/24" },
+    { "id": "sub-borda-b", "tipo": "subnet", "dentro": "vpc", "rotulo": "Public subnet", "acesso": "publica", "az": "sa-east-1b", "cidr": "10.20.2.0/24" },
+    { "id": "sub-app-a", "tipo": "subnet", "dentro": "vpc", "rotulo": "Private subnet · aplicação", "acesso": "privada", "az": "sa-east-1a", "cidr": "10.20.11.0/24" },
+    { "id": "sub-app-b", "tipo": "subnet", "dentro": "vpc", "rotulo": "Private subnet · aplicação", "acesso": "privada", "az": "sa-east-1b", "cidr": "10.20.12.0/24" },
     { "id": "sub-dado-a", "tipo": "subnet", "dentro": "vpc", "rotulo": "Private subnet · dados", "acesso": "privada", "az": "sa-east-1a", "cidr": "10.20.21.0/24" },
     { "id": "sub-dado-b", "tipo": "subnet", "dentro": "vpc", "rotulo": "Private subnet · dados", "acesso": "privada", "az": "sa-east-1b", "cidr": "10.20.22.0/24" },
 
-    { "id": "alb-a", "tipo": "servico", "servico": "elastic load balancing", "dentro": "sub-pub-a", "rotulo": "ALB", "qualificador": "TLS termina aqui" },
-    { "id": "alb-b", "tipo": "servico", "servico": "elastic load balancing", "dentro": "sub-pub-b", "rotulo": "ALB" },
-    { "id": "nat-a", "tipo": "servico", "servico": "nat gateway", "dentro": "sub-pub-a", "rotulo": "NAT gateway", "qualificador": "único egress permitido" },
-    { "id": "nat-b", "tipo": "servico", "servico": "nat gateway", "dentro": "sub-pub-b", "rotulo": "NAT gateway" },
+    { "id": "dx-a", "tipo": "servico", "servico": "direct connect", "dentro": "sub-borda-a", "rotulo": "Direct Connect gateway", "qualificador": "as 40 unidades entram por aqui" },
+    { "id": "alb-a", "tipo": "servico", "servico": "elastic load balancing", "dentro": "sub-borda-a", "rotulo": "ALB interno", "qualificador": "TLS termina aqui" },
+    { "id": "alb-b", "tipo": "servico", "servico": "elastic load balancing", "dentro": "sub-borda-b", "rotulo": "ALB interno" },
+    { "id": "nat-a", "tipo": "servico", "servico": "nat gateway", "dentro": "sub-borda-a", "rotulo": "NAT gateway", "qualificador": "único egress permitido" },
 
     { "id": "app-a", "tipo": "servico", "servico": "ecs", "dentro": "sub-app-a", "rotulo": "ECS Fargate · prontuário" },
     { "id": "app-b", "tipo": "servico", "servico": "ecs", "dentro": "sub-app-b", "rotulo": "ECS Fargate · prontuário" },
+    { "id": "laudo-a", "tipo": "servico", "servico": "endpoints", "dentro": "sub-app-a", "rotulo": "VPC endpoint · S3", "qualificador": "laudos e imagens, sem sair para a internet" },
 
     { "id": "banco-a", "tipo": "servico", "servico": "aurora", "dentro": "sub-dado-a", "rotulo": "Aurora PostgreSQL", "qualificador": "escritor — prontuário e agenda" },
     { "id": "banco-b", "tipo": "servico", "servico": "aurora", "dentro": "sub-dado-b", "rotulo": "Aurora PostgreSQL", "qualificador": "réplica de leitura" },
-    { "id": "cache-a", "tipo": "servico", "servico": "elasticache", "dentro": "sub-dado-a", "rotulo": "ElastiCache", "qualificador": "sessão e agenda do dia" },
-
-    { "id": "exames", "tipo": "servico", "servico": "s3", "dentro": "nuvem", "rotulo": "S3 · laudos e imagens", "qualificador": "Object Lock, retenção de 20 anos" },
-    { "id": "chave", "tipo": "servico", "servico": "kms", "dentro": "nuvem", "rotulo": "KMS", "qualificador": "chave própria da clínica" },
-    { "id": "trilha", "tipo": "servico", "servico": "cloudtrail", "dentro": "nuvem", "rotulo": "CloudTrail", "qualificador": "quem leu qual prontuário" }
+    { "id": "cache-a", "tipo": "servico", "servico": "elasticache", "dentro": "sub-dado-a", "rotulo": "ElastiCache", "qualificador": "sessão e agenda do dia" }
   ],
   "arestas": [
-    { "id": "a-med", "de": "medico", "para": "cdn", "rotulo": "abre o prontuário", "protocolo": "https" },
-    { "id": "a-pac", "de": "paciente", "para": "cdn", "rotulo": "agenda consulta", "protocolo": "https" },
-    { "id": "a-waf", "de": "cdn", "para": "waf", "rotulo": "inspeciona" },
-    { "id": "a-alb", "de": "waf", "para": "alb-a", "rotulo": "encaminha", "protocolo": "https" },
+    { "id": "a-entra", "de": "dx-a", "para": "alb-a", "rotulo": "tráfego das unidades", "protocolo": "https" },
     { "id": "a-app-a", "de": "alb-a", "para": "app-a", "rotulo": "balanceia" },
     { "id": "a-app-b", "de": "alb-b", "para": "app-b", "rotulo": "balanceia" },
     { "id": "a-db-a", "de": "app-a", "para": "banco-a", "rotulo": "grava e lê", "protocolo": "sql" },
     { "id": "a-db-b", "de": "app-b", "para": "banco-a", "rotulo": "grava", "protocolo": "sql" },
     { "id": "a-cache", "de": "app-a", "para": "cache-a", "rotulo": "sessão" },
     { "id": "a-rep", "de": "banco-a", "para": "banco-b", "rotulo": "replica" },
-    { "id": "a-s3", "de": "app-a", "para": "exames", "rotulo": "grava o laudo" },
-    { "id": "a-kms", "de": "exames", "para": "chave", "rotulo": "cifra em repouso" },
+    { "id": "a-laudo", "de": "app-a", "para": "laudo-a", "rotulo": "grava o laudo" },
     { "id": "a-egress", "de": "app-a", "para": "nat-a", "rotulo": "integração com o convênio" }
   ],
   "notas": [
@@ -63,7 +50,7 @@
       "id": "n-cache",
       "origem": "achado-recusado",
       "sobre": "cache-a",
-      "texto": "Cache em AZ única, conhecido e aceito: perda de sessão em falha de AZ é relogin, não perda de dado. Revisar na fase 2."
+      "texto": "Cache em AZ única, conhecido e aceito: perder sessão numa falha de AZ é relogin, não perda de dado. Revisar na fase 2."
     }
   ]
 }

@@ -1,0 +1,93 @@
+════ passo 2 · completude semântica (A1) e o laudo das 62 ════
+
+========================================================================
+modelo  (caminho "contas", 32 células)
+========================================================================
+
+  ⚠ A3.9  Tamanho mínimo de fonte
+        · egress ("Egress centralizado") rotula com 12 px (nome de elemento pede 14)
+        · tgw ("Transit Gateway") rotula com 12 px (nome de elemento pede 14)
+        · consulta ("Athena") rotula com 12 px (nome de elemento pede 14)
+        · catalogo ("Glue Data Catalog") rotula com 12 px (nome de elemento pede 14)
+        · lake ("S3 · data lake") rotula com 12 px (nome de elemento pede 14)
+        · … e mais 19
+
+  ⚠ A4.5  Padding de grupo uniforme
+        · "c-rede" tem paddings 50/50/36 (σ = 6.6 > 4)
+        · "c-dados" tem paddings 37/47/36 (σ = 4.97 > 4)
+
+  ✗ A1.2  Legenda presente
+        não há legenda — o C4 pede uma em todo diagrama
+        · o motor do #11 ainda não emite legenda; toda semântica de cor e de traço fica sem chave
+  ✗ A1.3  Legenda completa (cobertura de canal visual)
+        18 valor(es) de canal visual sem entrada na legenda
+        · o canal "preenchimento" usa "#8C4FFF" em 4 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#7AA116" em 2 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#DD344C" em 4 objeto(s) e a legenda não explica
+        · o canal "preenchimento" usa "#ED7100" em 4 objeto(s) e a legenda não explica
+        · o canal "estilo_de_traco" usa "solido" em 24 objeto(s) e a legenda não explica
+        · … e mais 13
+  ⚠ A1.9  Siglas expandidas
+        · a sigla "KMS" aparece 1× e não é nome oficial nem está expandida
+  ⚠ A1.11 Metadados de frescor
+        sem data, versao, autor — não dá para saber se o diagrama está velho
+        · o modelo não declara "data"
+        · o modelo não declara "versao"
+        · o modelo não declara "autor"
+
+  ⚠ A7.4  Distinguibilidade sob deficiência de cor
+        2 par(es) de cores indistinguíveis sob alguma deficiência
+        · #DD344C e #E7157B ficam a ΔE00 = 1.21 sob tritanopia (mínimo 10) — servico vs conta
+        · #ED7100 e #E7157B ficam a ΔE00 = 5.42 sob tritanopia (mínimo 10) — servico vs conta
+
+  ⚠ A2.1  Complexidade gráfica ≤ 6
+        7 tipos de símbolo — acima do alvo de 6, ainda dentro de 8
+        · a legenda precisaria de 7 entradas
+
+  ⚠ A6.3  Razão de aspecto (Asp)
+        Asp = 0.452 < 0.499 (Q1): o desenho é uma faixa muito alongada; a razão do desenho difere da do canvas em 27% (tolerância 20%): sobram faixas vazias
+        · Asp = 0.452 < 0.499 (Q1): o desenho é uma faixa muito alongada
+        · a razão do desenho difere da do canvas em 27% (tolerância 20%): sobram faixas vazias
+  ⚠ A6.5  Preservação de vizinhança (NP) / Stress (KSM)
+        NP = 0.25 < 0.341 (Q1) — mas ver a ressalva: aqui a posição vem dos grupos, não do grafo
+        · NP = 0.25 < 0.341 (Q1)
+
+  62 checagens: 45 ok · 8 aviso · 2 falha · 5 inaplicável · 2 do render
+
+✗ 1/1 diagrama(s) com falha
+
+════ passo 4 · a revisão de lacunas ════
+
+  Secretaria de Educação · inventário das 8 contas  (22 nós, teto 6)
+    ⚠ cross-account-sem-confianca  t-idl                  "c-leste" alcança "c-ident" e nenhum habilitador está desenhado nas pontas
+    ⚠ cross-account-sem-confianca  t-idn                  "c-norte" alcança "c-ident" e nenhum habilitador está desenhado nas pontas
+    ⚠ cross-account-sem-confianca  t-ido                  "c-oeste" alcança "c-ident" e nenhum habilitador está desenhado nas pontas
+    ⚠ cross-account-sem-confianca  t-ids                  "c-sul" alcança "c-ident" e nenhum habilitador está desenhado nas pontas
+    ⚠ cross-account-sem-confianca  t-leste                "c-leste" alcança "c-dados" e nenhum habilitador está desenhado nas pontas
+    ⚠ cross-account-sem-confianca  t-norte                "c-norte" alcança "c-dados" e nenhum habilitador está desenhado nas pontas
+    ⚠ cross-account-sem-confianca  t-oeste                "c-oeste" alcança "c-dados" e nenhum habilitador está desenhado nas pontas
+    ⚠ cross-account-sem-confianca  t-sul                  "c-sul" alcança "c-dados" e nenhum habilitador está desenhado nas pontas
+
+    mudas (a regra não tem sujeito neste modelo — não é o mesmo que passar):
+      · spof                         nenhum ator: o modelo não afirma ninguém de fora, e sem fora não há caminho de entrada
+      · single-az                    nenhuma subnet declara `az`: o modelo não fala de zona
+      · egress-sem-controle          nenhuma subnet privada com conteúdo: não há de onde sair
+      · dado-em-subnet-publica       nenhuma subnet pública declarada
+      · assincrono-sem-dlq           nenhuma aresta sai de fila, tópico ou barramento: não há caminho assíncrono
+
+    8 achado(s) · teto ⌈22÷4⌉ = 6 · ⛔ ESTOURA
+
+════ passo 6 · o portão de veracidade ════
+  validar    nos=22  arestas=10
+  tema       id=claro  fundo=claro  densidade=1  fluxo=solido
+  derivar    faixasAz=false  porque=só 0 AZ distinta declarada  azs=
+  dispor     modo=inventario  contas=8  travessias=8  ordem=c-rede→c-dados→c-ident→c-leste→c-norte→c-oeste→c-sul→c-seg  varredura=canônica
+  planejar   caminho=contas  celulas=32  pagina=1671×962  paginas=9
+  geometria  paginas=9  falha=18  semanticas=0  portao=veracidade
+  conferir   ok=true  bytes=75576  contraste=passa  piorTexto=5.35  piorTraco=3.02  piorArea=3.02
+  ⚠ modo "inventario": 8 contas passam das 4 que a vista de integração comporta (X1)
+  ⚠ travessia nível 1 (suprimir): vista de inventário — E1 suprime toda travessia
+  ⚠ faixas de OU: 2 OU(s) com ≥2 contas: Plataforma×2, Regionais×4
+
+  → /dev/null  (75576 bytes, caminho "contas")
+(código de saída acima)

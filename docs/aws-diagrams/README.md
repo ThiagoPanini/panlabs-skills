@@ -11,6 +11,7 @@ não poder ser publicada. O que quem instala não usa mora aqui.
 | [`prototipos/`](prototipos/) | **Fonte primária, não produção.** Um diretório por pergunta respondida (`q1`…`q22`), 252 arquivos. É onde cada decisão do motor foi medida antes de virar código. Três cópias do `elk.bundled.js` moram aqui, e sozinhas davam 4,8 MB |
 | [`corpus/`](corpus/) | O corpus renderizado — 24 modelos em `.drawio` e PNG, mais as variantes de tema. **Reconstrutível**: `tests/rodar.sh` regenera byte a byte, e a igualdade é medida |
 | [`casos/`](casos/) | Os casos de uso rodados ponta a ponta contra a skill, cada um com a necessidade em prosa, o modelo, o diagrama e o laudo |
+| [`auditoria.md`](auditoria.md) | A auditoria de 2026-08-23: o que foi medido contra a spec de Agent Skills, o que mudou e os cinco defeitos que os casos acharam |
 
 O registro de engenharia em prosa — o critério do corpus, a recertificação do
 motor, o conserto do roteamento — ficou **dentro** da skill, em

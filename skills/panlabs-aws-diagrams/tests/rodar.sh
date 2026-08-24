@@ -7,8 +7,9 @@
 # próprio motor; ninguém rodou a união"*. Este arquivo é a união, e a ordem das
 # camadas é a ordem em que uma falha invalida as seguintes.
 #
-#   0  A ÁRVORE      o contrato é único e nada aqui alcança `prototypes/`. Se isto
-#                    falhar, todo verde abaixo pode estar medindo o protótipo.
+#   0  A ÁRVORE      o contrato é único, nada aqui alcança `prototypes/`, e o
+#                    pacote cabe no teto de 30 MB. Se isto falhar, todo verde
+#                    abaixo pode estar medindo o protótipo — ou não poder subir.
 #   1  A FRONTEIRA   o agente não tem onde escrever coordenada — nem no modelo,
 #                    nem no modelo de sessão. É a invariante que o motor inteiro
 #                    defende; se vazou, o resto está guardando uma regra morta.
@@ -49,6 +50,9 @@ passo() {
 echo "════ camada 0 · a árvore ════"
 passo "contrato único (um \$id, um arquivo)"        node "$AQUI/check-esquema-unico.cjs"
 passo "produção não alcança prototypes/"           node "$AQUI/check-sem-prototipo.cjs"
+# O teto de 30 MB e DURO e so aparece na hora do upload. Medi-lo aqui e o que
+# impede a arvore de voltar a 29 MB sem ninguem perceber — foi onde ela estava.
+passo "o pacote cabe no teto de 30 MB"            "$RAIZ/tools/empacotar.sh" --conferir
 
 echo
 echo "════ camada 1 · a fronteira ════"

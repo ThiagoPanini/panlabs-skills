@@ -108,13 +108,33 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
   const producao = props(JSON.parse(fs.readFileSync(path.join(RAIZ, 'esquema.json'), 'utf8')));
   // as duas versões que a fusão substituiu vêm do PRÓPRIO GIT, não de uma cópia
   // à mão: o que interessa é o que estava na árvore, e uma cópia poderia mentir
-  for (const [rot, alvo] of [['#11', 'prototypes/q11/motor/esquema.json'],
-                             ['#13', 'prototypes/q13/motor/esquema.json']]) {
-    let bruto;
-    try {
-      bruto = execFileSync('git', ['show', `HEAD:skills/panlabs-aws-diagrams/${alvo}`],
-        { cwd: REPO, encoding: 'utf8', maxBuffer: 8 << 20 });
-    } catch (e) {
+  /**
+   * ⚠️ DOIS CAMINHOS, E O SEGUNDO É HISTÓRIA.
+   *
+   * No #29 os protótipos saíram da árvore da skill para `docs/aws-diagrams/`,
+   * porque 18 MB deles dentro de um pacote de teto 30 MB era a diferença entre
+   * publicável e não. O git guarda os dois endereços: o de hoje, e o de antes
+   * do `git mv`. Tentar os dois em ordem é o que mantém esta comparação viva
+   * atravessando a mudança — e ela PRECISA continuar viva, porque é a única
+   * prova de que a fusão dos dois motores não perdeu propriedade de esquema.
+   */
+  const ENDERECOS = {
+    '#11': ['docs/aws-diagrams/prototipos/q11/motor/esquema.json',
+            'skills/panlabs-aws-diagrams/prototypes/q11/motor/esquema.json'],
+    '#13': ['docs/aws-diagrams/prototipos/q13/motor/esquema.json',
+            'skills/panlabs-aws-diagrams/prototypes/q13/motor/esquema.json'],
+  };
+  for (const [rot, alvos] of Object.entries(ENDERECOS)) {
+    let bruto, ultimoErro;
+    for (const alvo of alvos) {
+      try {
+        bruto = execFileSync('git', ['show', `HEAD:${alvo}`],
+          { cwd: REPO, encoding: 'utf8', maxBuffer: 8 << 20 });
+        break;
+      } catch (e) { ultimoErro = e; }
+    }
+    if (!bruto) {
+      const e = ultimoErro;
       /**
        * ⚠️ PULAR NÃO É PASSAR. A primeira versão fazia `continue` sem contar, e
        * então no dia em que `prototypes/` sair da árvore — que é o futuro

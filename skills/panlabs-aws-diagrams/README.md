@@ -15,6 +15,7 @@ node tools/aprovar.cjs modelo/sessao/varejo-logica.json    # passo 5: aprovar a 
 node tools/retomar.cjs saida/varejo.drawio --delta modelo/sessao/varejo-elaboracao.json
 ./tests/rodar.sh                                           # a régua inteira
 ./tools/instalar.sh                                        # expor nos dois harnesses
+./tools/empacotar.sh --conferir                            # o pacote cabe nos 30 MB?
 ./tools/medir-candidatos.sh                                # a medição que escolheu o motor
 ```
 
@@ -78,8 +79,15 @@ leva o diretório inteiro (menos `__pycache__`, `node_modules`, `*.pyc`,
 | [`docs/aws-diagrams/prototipos/`](../../docs/aws-diagrams/prototipos/) | 18 MB, 252 arquivos, um diretório por pergunta respondida — **fonte primária, não produção**. Três cópias do `elk.bundled.js` sozinhas davam 4,8 MB. `tests/check-sem-prototipo.cjs` sempre provou que a produção não alcançava daqui; agora nem no disco |
 | [`docs/aws-diagrams/corpus/`](../../docs/aws-diagrams/corpus/) | 6,7 MB do corpus renderizado. Resultado de eval mora **fora** do pacote que o usuário instala — e a régua o reconstrói byte a byte, medido |
 
-Sobraram **4,2 MB**, dos quais 1,6 MB é o `elkjs` embarcado que é a razão de a
-skill não precisar de `npm install`.
+Sobraram **156 arquivos e 3,8 MB** — 12% do teto, 1,8 MB comprimido —, dos quais
+1,6 MB é o `elkjs` embarcado que é a razão de a skill não precisar de
+`npm install`.
+
+E o teto deixou de ser fé: `tools/empacotar.sh --conferir` mede, e a camada 0 da
+régua o roda. Ele também acusa a armadilha que custou este ticket — **`.gitignore`
+não protege o pacote**. O empacotador oficial varre o diretório e exclui exatamente
+`__pycache__`, `node_modules`, `*.pyc`, `.DS_Store` e um `evals/` de raiz; um
+`saida/` cheio de render sobe junto mesmo o git ignorando.
 
 ## Os contratos
 

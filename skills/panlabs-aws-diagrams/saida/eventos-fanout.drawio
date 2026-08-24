@@ -1,0 +1,135 @@
+<mxfile host="panlabs-aws-diagrams" compressed="false">
+  <diagram id="eventos-fanout" name="Pagamentos · leque de eventos">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="953" pageHeight="1085"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="titulo" value="Pagamentos · leque de eventos" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="28" width="345" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitulo" value="Vista técnica T3 · um evento, três consumidores assíncronos — dois com fila morta, um sem" style="text;html=1;fontSize=12;fontColor=#5A6C86;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="55" width="660" height="17" as="geometry"/>
+        </mxCell>
+        <mxCell id="nuvem" value="AWS Cloud" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="356" y="88" width="553" height="845" as="geometry"/>
+        </mxCell>
+        <mxCell id="regiao" value="us-east-1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=1;fontFamily=Arial,Helvetica;" vertex="1" parent="nuvem">
+          <mxGeometry x="16" y="40" width="529" height="797" as="geometry"/>
+        </mxCell>
+        <mxCell id="barramento" value="Barramento de pagamentos" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="50" y="510" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="pontos" value="Creditar pontos" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="50" y="670" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="baixa-estoque" value="Dar baixa no estoque" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="50" y="139" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="nota-fiscal" value="Emitir nota fiscal" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="50" y="377" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="fila-estoque" value="Fila de estoque" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="401" y="173" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="fila-fidelidade" value="Fila de fidelidade" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="401" y="550" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="fila-fiscal" value="Fila fiscal" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="401" y="428" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="dlq-estoque" value="Fila morta · estoque" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="401" y="40" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="dlq-fiscal" value="Fila morta · fiscal" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="401" y="295" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="ledger" value="Livro de pontos" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fontFamily=Arial,Helvetica;" vertex="1" parent="regiao">
+          <mxGeometry x="401" y="683" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="checkout" value="Checkout" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="44" y="638" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-checkout-barramento0" value="&lt;b&gt;1.&lt;/b&gt; pagamento aprovado" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="checkout" target="barramento">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-barramento-fila-fiscal1" value="&lt;b&gt;2.&lt;/b&gt; regra fiscal" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="barramento" target="fila-fiscal">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="541" y="677"/>
+              <mxPoint x="541" y="608"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-fila-fiscal-nota-fiscal2" value="&lt;b&gt;3.&lt;/b&gt; consome" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="fila-fiscal" target="nota-fiscal">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="712" y="582"/>
+              <mxPoint x="712" y="557"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-nota-fiscal-dlq-fiscal3" value="&lt;b&gt;4.&lt;/b&gt; após 3 tentativas" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="nota-fiscal" target="dlq-fiscal">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="541" y="531"/>
+              <mxPoint x="541" y="462"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-barramento-fila-estoque4" value="&lt;b&gt;5.&lt;/b&gt; regra de estoque" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="barramento" target="fila-estoque">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="531" y="657"/>
+              <mxPoint x="531" y="353"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-fila-estoque-baixa-estoque5" value="&lt;b&gt;6.&lt;/b&gt; consome" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="fila-estoque" target="baixa-estoque">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="712" y="327"/>
+              <mxPoint x="712" y="319"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-baixa-estoque-dlq-estoque6" value="&lt;b&gt;7.&lt;/b&gt; após 3 tentativas" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="baixa-estoque" target="dlq-estoque">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="531" y="293"/>
+              <mxPoint x="531" y="207"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-barramento-fila-fidelidade7" value="&lt;b&gt;8.&lt;/b&gt; regra de fidelidade" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="barramento" target="fila-fidelidade">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="712" y="696"/>
+              <mxPoint x="712" y="704"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-fila-fidelidade-pontos8" value="&lt;b&gt;9.&lt;/b&gt; consome" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="fila-fidelidade" target="pontos">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="531" y="730"/>
+              <mxPoint x="531" y="824"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-pontos-ledger9" value="&lt;b&gt;10.&lt;/b&gt; credita" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="pontos" target="ledger">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="notas" value="Creditar pontos não tem fila morta, e isso é deliberado no modelo: o corpus precisa de um caso em que a regra de assíncrono-sem-DLQ tenha o que dizer, ao lado de dois consumidores em que ela tem de ficar calada." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#B7791F;fontColor=#6B4E00;fontFamily=Arial,Helvetica;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="32" y="999" width="889" height="54" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/modelo@1" panlabsModelo="{&quot;esquema&quot;:&quot;panlabs-aws-diagrams/modelo@1&quot;,&quot;id&quot;:&quot;eventos-fanout&quot;,&quot;titulo&quot;:&quot;Pagamentos · leque de eventos&quot;,&quot;subtitulo&quot;:&quot;Vista técnica T3 · um evento, três consumidores assíncronos — dois com fila morta, um sem&quot;,&quot;vista&quot;:&quot;tecnica&quot;,&quot;genero&quot;:&quot;T3&quot;,&quot;nos&quot;:[{&quot;id&quot;:&quot;checkout&quot;,&quot;tipo&quot;:&quot;ator&quot;,&quot;servico&quot;:&quot;users&quot;,&quot;rotulo&quot;:&quot;Checkout&quot;,&quot;qualificador&quot;:&quot;publica o evento de pagamento aprovado&quot;},{&quot;id&quot;:&quot;nuvem&quot;,&quot;tipo&quot;:&quot;nuvem&quot;,&quot;rotulo&quot;:&quot;AWS Cloud&quot;},{&quot;id&quot;:&quot;regiao&quot;,&quot;tipo&quot;:&quot;regiao&quot;,&quot;rotulo&quot;:&quot;us-east-1&quot;,&quot;dentro&quot;:&quot;nuvem&quot;},{&quot;id&quot;:&quot;barramento&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;eventbridge&quot;,&quot;rotulo&quot;:&quot;Barramento de pagamentos&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;uma regra por consumidor&quot;},{&quot;id&quot;:&quot;fila-fiscal&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;sqs&quot;,&quot;rotulo&quot;:&quot;Fila fiscal&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;amortece o pico da virada&quot;},{&quot;id&quot;:&quot;nota-fiscal&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;lambda&quot;,&quot;rotulo&quot;:&quot;Emitir nota fiscal&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;chama a prefeitura, falha muito&quot;},{&quot;id&quot;:&quot;dlq-fiscal&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;sqs&quot;,&quot;rotulo&quot;:&quot;Fila morta · fiscal&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;guarda o que a prefeitura recusou&quot;},{&quot;id&quot;:&quot;fila-estoque&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;sqs&quot;,&quot;rotulo&quot;:&quot;Fila de estoque&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;ordem por item&quot;},{&quot;id&quot;:&quot;baixa-estoque&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;lambda&quot;,&quot;rotulo&quot;:&quot;Dar baixa no estoque&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;idempotente por id de pedido&quot;},{&quot;id&quot;:&quot;dlq-estoque&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;sqs&quot;,&quot;rotulo&quot;:&quot;Fila morta · estoque&quot;,&quot;dentro&quot;:&quot;regiao&quot;},{&quot;id&quot;:&quot;fila-fidelidade&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;sqs&quot;,&quot;rotulo&quot;:&quot;Fila de fidelidade&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;creditar pontos&quot;},{&quot;id&quot;:&quot;pontos&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;lambda&quot;,&quot;rotulo&quot;:&quot;Creditar pontos&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;sem destino para o que falha&quot;},{&quot;id&quot;:&quot;ledger&quot;,&quot;tipo&quot;:&quot;servico&quot;,&quot;servico&quot;:&quot;dynamodb&quot;,&quot;rotulo&quot;:&quot;Livro de pontos&quot;,&quot;dentro&quot;:&quot;regiao&quot;,&quot;qualificador&quot;:&quot;saldo por cliente&quot;}],&quot;arestas&quot;:[{&quot;de&quot;:&quot;checkout&quot;,&quot;para&quot;:&quot;barramento&quot;,&quot;rotulo&quot;:&quot;pagamento aprovado&quot;,&quot;ordem&quot;:1},{&quot;de&quot;:&quot;barramento&quot;,&quot;para&quot;:&quot;fila-fiscal&quot;,&quot;rotulo&quot;:&quot;regra fiscal&quot;,&quot;ordem&quot;:2},{&quot;de&quot;:&quot;fila-fiscal&quot;,&quot;para&quot;:&quot;nota-fiscal&quot;,&quot;rotulo&quot;:&quot;consome&quot;,&quot;dados&quot;:&quot;volta&quot;,&quot;ordem&quot;:3},{&quot;de&quot;:&quot;nota-fiscal&quot;,&quot;para&quot;:&quot;dlq-fiscal&quot;,&quot;rotulo&quot;:&quot;após 3 tentativas&quot;,&quot;ordem&quot;:4},{&quot;de&quot;:&quot;barramento&quot;,&quot;para&quot;:&quot;fila-estoque&quot;,&quot;rotulo&quot;:&quot;regra de estoque&quot;,&quot;ordem&quot;:5},{&quot;de&quot;:&quot;fila-estoque&quot;,&quot;para&quot;:&quot;baixa-estoque&quot;,&quot;rotulo&quot;:&quot;consome&quot;,&quot;dados&quot;:&quot;volta&quot;,&quot;ordem&quot;:6},{&quot;de&quot;:&quot;baixa-estoque&quot;,&quot;para&quot;:&quot;dlq-estoque&quot;,&quot;rotulo&quot;:&quot;após 3 tentativas&quot;,&quot;ordem&quot;:7},{&quot;de&quot;:&quot;barramento&quot;,&quot;para&quot;:&quot;fila-fidelidade&quot;,&quot;rotulo&quot;:&quot;regra de fidelidade&quot;,&quot;ordem&quot;:8},{&quot;de&quot;:&quot;fila-fidelidade&quot;,&quot;para&quot;:&quot;pontos&quot;,&quot;rotulo&quot;:&quot;consome&quot;,&quot;dados&quot;:&quot;volta&quot;,&quot;ordem&quot;:9},{&quot;de&quot;:&quot;pontos&quot;,&quot;para&quot;:&quot;ledger&quot;,&quot;rotulo&quot;:&quot;credita&quot;,&quot;ordem&quot;:10}],&quot;notas&quot;:[{&quot;id&quot;:&quot;nota-dlq&quot;,&quot;texto&quot;:&quot;Creditar pontos não tem fila morta, e isso é deliberado no modelo: o corpus precisa de um caso em que a regra de assíncrono-sem-DLQ tenha o que dizer, ao lado de dois consumidores em que ela tem de ficar calada.&quot;,&quot;origem&quot;:&quot;legenda&quot;}],&quot;dossie&quot;:{&quot;_comentario&quot;:&quot;T3 do corpus do #26. O leque assíncrono é o que dá à revisão de lacunas um sujeito real: três caminhos por fila, dois com destino de falha declarado e um sem.&quot;,&quot;eixos&quot;:{&quot;E1&quot;:&quot;gerenciado sem compute próprio&quot;,&quot;E2&quot;:&quot;assíncrono por evento&quot;,&quot;E3&quot;:&quot;chave-valor para saldo, fila para trânsito&quot;,&quot;E4&quot;:&quot;sem exposição de rede própria&quot;,&quot;E5&quot;:&quot;fronteira única: pagamentos&quot;}}}" panlabsTema="{&quot;id&quot;:&quot;claro&quot;,&quot;fundo&quot;:&quot;claro&quot;,&quot;tokens&quot;:{&quot;pagina&quot;:{&quot;cor&quot;:&quot;#FFFFFF&quot;,&quot;margem&quot;:32},&quot;grupo&quot;:{&quot;tingimento&quot;:&quot;derivado&quot;},&quot;tinta&quot;:{&quot;forte&quot;:&quot;#232F3E&quot;,&quot;fraca&quot;:&quot;#5A6C86&quot;,&quot;halo&quot;:&quot;#FFFFFF&quot;},&quot;texto&quot;:{&quot;familia&quot;:&quot;Arial,Helvetica&quot;,&quot;rotulo&quot;:12,&quot;grupo&quot;:12,&quot;aresta&quot;:10,&quot;titulo&quot;:19,&quot;subtitulo&quot;:12,&quot;qualificador&quot;:false},&quot;aresta&quot;:{&quot;cor&quot;:&quot;#232F3E&quot;,&quot;espessura&quot;:1.6,&quot;ponta&quot;:&quot;blockThin&quot;,&quot;cantos&quot;:12,&quot;saltos&quot;:&quot;arc&quot;,&quot;fluxo&quot;:&quot;solido&quot;},&quot;folga&quot;:{&quot;base&quot;:8,&quot;densidade&quot;:1},&quot;nota&quot;:{&quot;fundo&quot;:&quot;#FFF8E1&quot;,&quot;borda&quot;:&quot;#B7791F&quot;,&quot;tinta&quot;:&quot;#6B4E00&quot;},&quot;bloco&quot;:{&quot;fundo&quot;:&quot;#FFFFFF&quot;,&quot;borda&quot;:&quot;#232F3E&quot;,&quot;cantos&quot;:12},&quot;cartao&quot;:{&quot;revisao&quot;:null},&quot;fundo&quot;:&quot;claro&quot;}}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -50,7 +50,29 @@ function coluna(nos, alvo) {
   return out;
 }
 
-/** Qualquer par de irmãos se sobrepondo, ou filho estourando o pai. */
+/**
+ * Qualquer par de irmãos se sobrepondo, ou filho estourando o pai.
+ *
+ * ⚠️ AS QUATRO BORDAS, e as duas de cima chegaram no #26 — o corpus achou.
+ *
+ * A versão anterior media só `bottom` e `right`, e a assimetria não era decisão:
+ * o passe nasceu movendo coluna para BAIXO (o `delta` do primeiro caso medido
+ * era positivo), e um filho que desce só pode sair pelo pé do pai. Mas `delta` é
+ * `cy(u) − cy(v)` e é negativo com a mesma frequência — aí a coluna sobe, e
+ * subir sem guarda passa por cima da faixa de título do container.
+ *
+ * O `eventos-fanout` do corpus do #26 faz exatamente isso: três encaixes
+ * seguidos de −13, −27 e −6 px empurram a coluna das filas mortas 46 px acima do
+ * lugar dela, e `dlq-estoque` acaba 7 px ACIMA do topo da própria região. O
+ * desenho passa a afirmar que a fila morta não está na região — que é `A4.4`,
+ * falha SEMÂNTICA, o desenho afirmando o que o modelo nega.
+ *
+ * É o padrão que o #23 nomeou uma volta acima: **a checagem que não sabe
+ * falhar**. O cabeçalho deste arquivo promete "se o resultado sobrepõe qualquer
+ * coisa, DESFAZ", e a promessa era cega em dois dos quatro lados. `refitar` não
+ * cobre a diferença nem por acidente: ele só CRESCE o container (`Math.max`), e
+ * crescer resolve quem passa do pé, nunca quem sai pelo topo.
+ */
 function temSobreposicao(saida, paddings) {
   const nos = indexar(saida);
   const porPai = new Map();
@@ -66,10 +88,12 @@ function temSobreposicao(saida, paddings) {
       }
     if (paiId === null) continue;
     const p = nos.get(paiId);
-    const pad = paddings.get(paiId) || { bottom: 0, right: 0 };
+    const pad = paddings.get(paiId) || { top: 0, left: 0, bottom: 0, right: 0 };
     for (const c of irmaos) {
       if (c.y + c.h > p.y + p.h - pad.bottom + 0.5) return `${c.id} estoura ${paiId}`;
       if (c.x + c.w > p.x + p.w - pad.right + 0.5) return `${c.id} estoura ${paiId} (x)`;
+      if (c.y < p.y + pad.top - 0.5) return `${c.id} sai pelo topo de ${paiId}`;
+      if (c.x < p.x + pad.left - 0.5) return `${c.id} sai pela esquerda de ${paiId}`;
     }
   }
   return null;

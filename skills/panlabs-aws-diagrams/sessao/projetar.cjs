@@ -36,8 +36,25 @@
 
 const VISTAS = ['logica', 'tecnica'];
 
-/** Campos que o casaco tecnico repassa direto para o no do modelo@1. */
-const CAMPOS_TECNICOS = ['servico', 'az', 'acesso', 'cidr', 'conta', 'nota'];
+/**
+ * Campos que o casaco tecnico repassa direto para o no do modelo@1.
+ *
+ * ⚠️ ESTA LISTA E O `sessao/esquema.json` SAO A MESMA DECISAO ESCRITA DUAS VEZES,
+ * e o dia em que discordarem o campo some sem erro nenhum — foi o que aconteceu
+ * com `qualificador`, `ou` e `habilita` ate o #29: os tres existiam em `modelo@1`
+ * e nao existiam aqui, entao quem passava pelo ARCO DE DUAS VISTAS perdia os tres
+ * enquanto quem escrevia `modelo@1` direto os tinha. `ou` era o mais caro: sem
+ * ele, multi-conta pelo arco nao conseguia expressar unidade organizacional
+ * nenhuma — as duas bandeiras da skill nao se combinavam.
+ *
+ * `tests/check-projecao.cjs` passou a medir a paridade, para a proxima
+ * divergencia sair vermelha em vez de calada.
+ */
+const CAMPOS_TECNICOS = ['servico', 'az', 'acesso', 'cidr', 'conta', 'nota',
+                         'qualificador', 'ou', 'habilita'];
+
+/** O mesmo, do lado logico. `nota` ja vinha; `qualificador` entrou no #29. */
+const CAMPOS_LOGICOS = ['nota', 'qualificador'];
 
 const existeNa = (el, vista) =>
   vista === 'tecnica' ? true : (el.camada || 'ambas') !== 'tecnica';
@@ -93,8 +110,8 @@ function projetar(sessao, vista) {
     // declara o campo, o esquema o documenta, e ele some sem erro nenhum.
     if (vista === 'tecnica') {
       for (const c of CAMPOS_TECNICOS) if (casaco[c] !== undefined) saida[c] = casaco[c];
-    } else if (casaco.nota !== undefined) {
-      saida.nota = casaco.nota;
+    } else {
+      for (const c of CAMPOS_LOGICOS) if (casaco[c] !== undefined) saida[c] = casaco[c];
     }
     nos.push(saida);
   }

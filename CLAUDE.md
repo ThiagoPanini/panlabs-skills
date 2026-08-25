@@ -48,3 +48,9 @@ Single-context — `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agen
 Território, a régua da união, e a aterrissagem na `main`. See `docs/agents/workflow.md`.
 
 _(As três seções acima estão em inglês porque são gabaritos herdados. A prosa deste repo é português — ver `docs/agents/workflow.md`; traduzi-las é dívida conhecida.)_
+
+## Skills — o que se espera antes de você escrever sob `skills/`
+
+O portão mede toda skill deste repositório e não ensina nada antes de reprovar. [`docs/agents/skills.md`](docs/agents/skills.md) é o que vem antes: por que cada família de checagem existe e o estrago concreto que a motivou, e as regras que nenhuma delas consegue medir — a `description` que diz **quando** disparar, divulgação progressiva, escopo, portabilidade do `name`. Leia antes de criar uma skill, de editar um `SKILL.md`, ou de acrescentar uma regra nova.
+
+A lista das regras vigentes não mora em documento nenhum: `scripts/check-skills.sh --list` imprime, `scripts/check-skills.sh` julga. Rode o segundo antes de abrir PR — a esteira roda o mesmo comando.

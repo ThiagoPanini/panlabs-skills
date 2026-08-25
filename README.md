@@ -15,6 +15,7 @@ docs/
   adr/                   decisions, each with the trigger that reopens it
   agents/                doctrine: skills, parallel workflow, tracker, labels
   research/              the primary-source research the rules were built from
+  reference/             source material a skill is measured against, kept outside skills/
 scripts/
   check-skills.sh        the gate
   check-skills.proof.sh  the gate's own proof

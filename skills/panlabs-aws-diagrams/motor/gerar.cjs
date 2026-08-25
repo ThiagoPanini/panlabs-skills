@@ -161,7 +161,15 @@ async function gerar(modelo, opts = {}) {
     });
     relatorio.avisos.push(`modo "${d.modo.modo}": ${d.modo.porque}`);
     relatorio.avisos.push(`travessia nível ${d.politica.nivel} (${d.politica.mecanismo}): ${d.politica.porque}`);
-    if (d.ou.desenhar) relatorio.avisos.push(`faixas de OU: ${d.ou.porque}`);
+    // O gatilho (`d.ou.desenhar`) só sabe da CONTA — não do modo. `planejar.cjs`
+    // (§3) suprime a faixa em integração, e o aviso tinha ficado cego a essa
+    // segunda condição: anunciava a faixa mesmo quando o `.drawio` saía sem
+    // nenhuma. O aviso só afirma o que o desenho de fato tem.
+    if (d.ou.desenhar) {
+      relatorio.avisos.push(d.modo.modo === 'integracao'
+        ? `faixas de OU: ${d.ou.porque}, mas o modo integração não desenha faixa de OU`
+        : `faixas de OU: ${d.ou.porque}`);
+    }
     paginas.push(...await paginasDeDetalhe(modelo, d, res, opts, relatorio));
   } else if (d.az.desenhar) {
     caminho = 'grade';

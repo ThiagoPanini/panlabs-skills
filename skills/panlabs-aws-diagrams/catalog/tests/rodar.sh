@@ -34,7 +34,8 @@ echo
 echo "== 3. render + verificação por pixel =="
 if [ ! -x "$DRAWIO" ]; then
   echo "   draw.io headless não encontrado em $DRAWIO — render pulado."
-  echo "   (dependência de desenvolvimento; ver docs/research/drawio-headless-rendering-wsl2.md)"
+  echo "   (dependência de desenvolvimento: draw.io Desktop AppImage + xvfb;"
+  echo "    tools/drawio.cjs é quem sabe onde o binário mora)"
 else
   xvfb-run -a "$DRAWIO" -x -f png -s 2 --no-sandbox --disable-gpu \
     -o "$AQUI/amostra.png" "$AQUI/amostra.drawio" 2>/dev/null

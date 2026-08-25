@@ -31,10 +31,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const RAIZ = path.join(__dirname, '..');
-const REPO = path.join(RAIZ, '..', '..');
 
 let falhas = 0;
 const ok = (cond, titulo, detalhe) => {
@@ -129,55 +127,62 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
     return out;
   };
   const producao = props(JSON.parse(fs.readFileSync(path.join(RAIZ, 'esquema.json'), 'utf8')));
-  // as duas versões que a fusão substituiu vêm do PRÓPRIO GIT, não de uma cópia
-  // à mão: o que interessa é o que estava na árvore, e uma cópia poderia mentir
   /**
-   * ⚠️ DOIS CAMINHOS, E O SEGUNDO É HISTÓRIA.
+   * ⚠️ LISTA CONGELADA, E ELA SUBSTITUIU UMA LEITURA DO GIT — #62.
    *
-   * No #29 os protótipos saíram da árvore da skill para `docs/aws-diagrams/`,
-   * porque 18 MB deles dentro de um pacote de teto 30 MB era a diferença entre
-   * publicável e não. O git guarda os dois endereços: o de hoje, e o de antes
-   * do `git mv`. Tentar os dois em ordem é o que mantém esta comparação viva
-   * atravessando a mudança — e ela PRECISA continuar viva, porque é a única
-   * prova de que a fusão dos dois motores não perdeu propriedade de esquema.
+   * Até aqui esta seção reconstruía os dois esquemas antigos com `git show`
+   * apontando para os protótipos, que moravam fora da árvore da skill. A versão
+   * anterior deste arquivo já escrevia o que fazer no dia em que eles saíssem:
+   * *"quem tirar substitui a comparação contra o git pela lista congelada de
+   * propriedades — em vez de herdar um verde vazio"*. O #62 os apagou, e isto é
+   * o cumprimento daquela instrução.
+   *
+   * As duas listas abaixo foram EXTRAÍDAS do git, não escritas à mão: o mesmo
+   * `props()` desta seção rodou sobre o conteúdo original. O #62 registra os
+   * dois endereços e o commit de onde reabri-los.
+   *
+   * A troca também tirou daqui a ÚNICA referência da skill a caminho acima da
+   * própria raiz (`REPO`, e o `execFileSync` que a usava) — a direção que o #46
+   * exige é essa: o que está fora pode apontar para dentro, o que está dentro
+   * não aponta para fora.
    */
-  const ENDERECOS = {
-    '#11': ['docs/aws-diagrams/prototipos/q11/motor/esquema.json',
-            'skills/panlabs-aws-diagrams/prototypes/q11/motor/esquema.json'],
-    '#13': ['docs/aws-diagrams/prototipos/q13/motor/esquema.json',
-            'skills/panlabs-aws-diagrams/prototypes/q13/motor/esquema.json'],
+  const ANTIGAS = {
+    '#11': [
+      'aresta.dados', 'aresta.de', 'aresta.id', 'aresta.ordem', 'aresta.para',
+      'aresta.protocolo', 'aresta.rotulo', 'arestas', 'dossie', 'esquema',
+      'faixa.id', 'faixa.membros', 'faixa.rotulo', 'faixa.tipo', 'faixas',
+      'genero', 'id', 'no.acesso', 'no.az', 'no.camada', 'no.cidr', 'no.conta',
+      'no.dentro', 'no.habilita', 'no.id', 'no.nota', 'no.ou', 'no.rotulo',
+      'no.servico', 'no.tipo', 'nos', 'nota.id', 'nota.origem', 'nota.sobre',
+      'nota.texto', 'notas', 'subtitulo', 'titulo', 'vista',
+    ],
+    '#13': [
+      'aresta.dados', 'aresta.de', 'aresta.id', 'aresta.ordem', 'aresta.para',
+      'aresta.protocolo', 'aresta.rotulo', 'arestas', 'dossie', 'esquema',
+      'faixa.id', 'faixa.membros', 'faixa.rotulo', 'faixa.tipo', 'faixas',
+      'genero', 'id', 'no.acesso', 'no.az', 'no.cidr', 'no.conta', 'no.dentro',
+      'no.id', 'no.nota', 'no.qualificador', 'no.rotulo', 'no.servico',
+      'no.tipo', 'nos', 'nota.id', 'nota.origem', 'nota.sobre', 'nota.texto',
+      'notas', 'subtitulo', 'titulo', 'vista',
+    ],
   };
-  for (const [rot, alvos] of Object.entries(ENDERECOS)) {
-    let bruto, ultimoErro;
-    for (const alvo of alvos) {
-      try {
-        bruto = execFileSync('git', ['show', `HEAD:${alvo}`],
-          { cwd: REPO, encoding: 'utf8', maxBuffer: 8 << 20 });
-        break;
-      } catch (e) { ultimoErro = e; }
-    }
-    if (!bruto) {
-      const e = ultimoErro;
-      /**
-       * ⚠️ PULAR NÃO É PASSAR. A primeira versão fazia `continue` sem contar, e
-       * então no dia em que `prototypes/` sair da árvore — que é o futuro
-       * explicitamente planejado em `tools/medir-antes-depois.cjs` — a seção
-       * inteira sairia verde afirmando "nada se perdeu" sem ter comparado nada.
-       *
-       * Aqui o pulo é FALHA, e a saída é deliberada: quando os protótipos
-       * saírem, quem tirar substitui a comparação contra o git pela lista
-       * congelada de propriedades (as quatro checagens logo abaixo já são o
-       * começo dela) — em vez de herdar um verde vazio.
-       */
-      falhas++;
-      console.log(`  ✗ ${rot}: não deu para ler do git (${e.message.split('\n')[0]}) — ` +
-        'a comparação NÃO rodou, e um pulo silencioso aqui seria um verde vazio');
-      continue;
-    }
-    const antigas = props(JSON.parse(bruto));
-    const perdidas = [...antigas].filter(p => !producao.has(p));
+  /**
+   * ⚠️ O PISO EXISTE PORQUE UMA LISTA CONGELADA PODE SER ESVAZIADA.
+   *
+   * A leitura do git tinha um modo de falha óbvio — o arquivo sumir — e a versão
+   * anterior o tratava como FALHA justamente para não herdar um verde vazio. Uma
+   * lista literal tem o modo de falha inverso e mais silencioso: alguém apaga
+   * uma linha para "consertar" a checagem e ela continua verde, afirmando que
+   * nada se perdeu depois de conferir menos. O piso é a contagem medida no dia
+   * da extração; encolher a lista passa a ser vermelho.
+   */
+  const PISO = { '#11': 39, '#13': 37 };
+  for (const [rot, antigas] of Object.entries(ANTIGAS)) {
+    ok(antigas.length >= PISO[rot], `a lista congelada do ${rot} não encolheu`,
+      `${antigas.length} de ${PISO[rot]} propriedades`);
+    const perdidas = antigas.filter(p => !producao.has(p));
     ok(perdidas.length === 0, `nenhuma propriedade do esquema do ${rot} se perdeu`,
-      perdidas.length ? perdidas.join(', ') : `${antigas.size} propriedades conferidas`);
+      perdidas.length ? perdidas.join(', ') : `${antigas.length} propriedades conferidas`);
   }
   for (const nova of ['no.qualificador', 'no.ou', 'no.habilita', 'no.camada'])
     ok(producao.has(nova), `e o esquema único traz "${nova}"`);

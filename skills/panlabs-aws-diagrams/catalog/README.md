@@ -5,7 +5,9 @@ subnet privada" numa style string do mxGraph que renderiza o ícone certo.
 
 Resolve o ticket
 [Extrair o catálogo de shapes AWS com as correções de cor e container](https://github.com/ThiagoPanini/panlabs-skills/issues/17).
-A matéria-prima é [`docs/research/drawio-aws-shape-catalog.md`](../../../docs/research/drawio-aws-shape-catalog.md).
+A matéria-prima foi a pesquisa de shapes do #17. Ela está cristalizada aqui:
+[`aws4.catalog.json`](aws4.catalog.json) é o extrato do `Sidebar-AWS4.js`, e
+[`correcoes.json`](correcoes.json) é o que a pesquisa corrigiu nele.
 
 > **Decidido: ele mora aqui.** A estrutura da skill deixou de ser névoa — o
 > documento que o agente lê é [`../SKILL.md`](../SKILL.md), com a prosa de

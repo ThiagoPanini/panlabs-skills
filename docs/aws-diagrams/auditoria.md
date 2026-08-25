@@ -100,14 +100,53 @@ olhar o PNG"*. As 62 checagens reportam **as mesmas 11 falhas** com o
 
 ## A bateria
 
-Seis arquiteturas novas, nenhuma fixture. Índice, prosa, modelos, `.drawio`, PNG e
-laudo em [`casos/`](casos/).
+Seis arquiteturas novas, nenhuma fixture. O critério é o do [`corpus.md`](corpus.md)
+§5, primeira linha: *validar o arco contra a própria fixture dele não mede nada.*
 
-Cobrem `L1`, `L2`, `T1`, `T3`, `T4` e `T5` nos dois modos, e os três caminhos de
-layout. Dois deles rodam o arco inteiro. **A guarda de aprovação foi testada por
-acidente**: no caso dos silos o delta técnico trazia uma nota que também entra na
-vista lógica, e o passo 6 saiu com código 2 — *"a elaboração técnica mudou o que foi
-aprovado"*. Erro meu, e a skill pegou.
+| | caso | gênero | caminho | entrada | falhas | semânticas | veredito |
+|---|---|---|---|---|---|---|---|
+| 1 | Rede de clínicas · prontuário | `T1` | grade | `modelo@1` | 11 | **0** | desenha, com sobreposição de rótulo |
+| 2 | Marketplace de ingressos | `T4` | grade | `modelo@1` | 10 | **0** | achou defeito, **corrigido**: faixa engolia não-membro ([#31](https://github.com/ThiagoPanini/panlabs-skills/issues/31)) |
+| 3 | Cooperativa · telemetria de silos | `L2`→`T3` | ELK | `sessao@1` · **arco inteiro** | 6 / 7 | **0** | os 7 passos fecham |
+| 4 | Banco digital · segregação | `L1`→`T5` | contas | `sessao@1` · **arco inteiro** | 6 / 14 | **1** ⛔ | **acha defeito**: `A5.5` para ator externo ([#32](https://github.com/ThiagoPanini/panlabs-skills/issues/32)) |
+| 5 | Rede de farmácias · vista lógica | `L1` | ELK | `modelo@1` | 5 | **0** | o mais limpo do lote |
+| 6 | Secretaria · inventário 8 contas | `T5` | contas | `modelo@1` | 2 | **0** | qualidade de publicação |
+
+*Falhas* conta as 62 checagens estáticas; o piso conhecido (`A1.2`, `A1.3`, `A1.11`,
+mais `A1.5`/`A1.12` quando há nota presa a nó, `A7.2`, `A7.4`, `A3.9`, `A4.5`,
+`A3.7`, `A5.7`) responde pela maioria delas em todo caso. *Semânticas* é o que
+importa: são as quatro de tolerância zero, e é o que `--portao veracidade` recusa.
+
+Os sete gêneros e os três caminhos de layout (`grade`, `elk`, `contas`) rodaram.
+Dois casos rodam o arco inteiro. **A guarda de aprovação foi testada por acidente**:
+no caso dos silos o delta técnico trazia uma nota que também entra na vista lógica,
+e o passo 6 saiu com código 2 — *"a elaboração técnica mudou o que foi aprovado"*.
+Erro meu, e a skill pegou.
+
+> **Os artefatos saíram no [#62](https://github.com/ThiagoPanini/panlabs-skills/issues/62); esta tabela é o que sobrou deles, e é de propósito.**
+>
+> `casos/` guardava a prosa, os modelos, os `.drawio`, os PNG e os laudos — 3,2 MB.
+> Medido no dia da remoção: **4 de 4 casos regenerados divergiam** do commitado, o
+> caso 2 inclusive, um dia depois de ter sido regenerado no #31. Nada na régua os
+> comparava, então a divergência não tinha quem a acusasse: eram uma foto vencida
+> se apresentando como evidência.
+>
+> E o valor já tinha sido colhido. Os quatro defeitos viraram ticket, e os repros
+> foram promovidos para dentro da skill — `modelo/ator-externo-3-contas.json` para
+> o #32, `modelo/recusa/faixa-que-mente.json` para a família do #31. É o padrão
+> saudável: o caso acha, o repro mínimo entra na árvore, o artefato fica gasto. O
+> [#47](https://github.com/ThiagoPanini/panlabs-skills/issues/47) fecha o
+> argumento pelo outro lado — ele já classificava `casos/` como contaminação de
+> teste cego, *"um agente cego que os encontre copia deles em vez de raciocinar"*.
+>
+> O que **não** se recupera de lá é o método, e ele está três seções acima: os
+> modelos multi-AZ do corpus são VPC pura, e o ponto cego é exato **porque todos
+> foram escritos já cabendo na restrição**. Fixture escrita por quem escreveu o
+> motor só contém arquitetura que o motor já aceita. Foi isso que fez seis casos
+> novos acharem o que 22 modelos internos nunca achariam — e é a prática, não o
+> estoque, que vale repetir.
+>
+> Para reabrir os artefatos: `git show 1d1702a:docs/aws-diagrams/casos/…`.
 
 ## Onde a skill está no campo
 

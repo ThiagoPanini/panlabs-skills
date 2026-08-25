@@ -72,14 +72,25 @@ leva o diretório inteiro (menos `__pycache__`, `node_modules`, `*.pyc`,
 `.DS_Store` e um `evals/` de raiz), e esta árvore chegou a **29 MB**. Estava a
 1 MB de não poder ser publicada.
 
-| foi para | o que é |
+| o que era | o que aconteceu |
 |---|---|
-| [`docs/aws-diagrams/prototipos/`](../../docs/aws-diagrams/prototipos/) | 18 MB, 252 arquivos, um diretório por pergunta respondida — **fonte primária, não produção**. Três cópias do `elk.bundled.js` sozinhas davam 4,8 MB. `tests/check-sem-prototipo.cjs` sempre provou que a produção não alcançava daqui; agora nem no disco |
-| [`docs/aws-diagrams/corpus/`](../../docs/aws-diagrams/corpus/) | 6,7 MB do corpus renderizado. Resultado de eval mora **fora** do pacote que o usuário instala — e a régua o reconstrói byte a byte, medido |
+| os protótipos | 18 MB, 252 arquivos, um diretório por pergunta respondida. Saíram da árvore no #29 e foram **apagados no #62**: um único commit na vida deles, o próprio `git mv`. `tests/check-sem-prototipo.cjs` sempre provou que a produção não os alcançava; agora nem existem |
+| o corpus renderizado | 6,7 MB de `.drawio` e PNG commitados. Também **apagados no #62**, e a medição que decidiu foi esta: 4 de 4 modelos regenerados divergiam do commitado, e nada na régua os comparava. `tests/rodar.sh` escreve em `saida/` e nunca leu aquele diretório — não era fixture, era foto vencida |
+| os casos de uso | 3,2 MB de prosa, modelo, desenho e laudo. Idem, com a mesma medição. Os defeitos que eles acharam já eram ticket e os repros já tinham sido promovidos para `modelo/`. A tabela de cobertura sobreviveu, na auditoria do registro |
 
-Sobraram **156 arquivos e 3,8 MB** — 12% do teto, 1,8 MB comprimido —, dos quais
-1,6 MB é o `elkjs` embarcado que é a razão de a skill não precisar de
-`npm install`.
+O git guarda os três, e o #62 registra os endereços. **Nada aqui aponta para lá** —
+é a direção que o #46 exige, e a razão de a lista congelada do
+`tests/check-esquema-unico.cjs` ter substituído uma leitura do git que subia dois
+níveis acima da raiz da skill.
+
+Sobraram **156 arquivos e 3,4 MB** — 11% do teto, medido por
+`tools/empacotar.sh --conferir` —, dos quais 1,6 MB é o `elkjs` embarcado que é a
+razão de a skill não precisar de `npm install`.
+
+E o teto deixou de ser a razão de qualquer coisa sair. A 11% ele não aperta mais
+ninguém; o que ainda manda material para fora é a **carga de leitura**, e o
+critério do #45 é o executável: *"o agente lê ou roda isto para executar a
+skill?"*.
 
 E o teto deixou de ser fé: `tools/empacotar.sh --conferir` mede, e a camada 0 da
 régua o roda. Ele também acusa a armadilha que custou este ticket — **`.gitignore`

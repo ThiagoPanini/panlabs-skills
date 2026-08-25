@@ -10,7 +10,7 @@
  * correta é executar o arquivo: aqui num `vm` com stubs mínimos do mxGraph,
  * interceptando `createVertexTemplateEntry`.
  *
- * Referência: docs/research/drawio-aws-shape-catalog.md §4
+ * Referência: §4 da pesquisa de shapes do #17.
  */
 'use strict';
 

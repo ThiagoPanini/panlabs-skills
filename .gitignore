@@ -5,9 +5,18 @@
 # 568 arquivos, 39 MB. Commitá-los duplicaria o repo dentro de si e quebraria em
 # qualquer clone — a ligação de um worktree é metadado local da máquina.
 #
-# Nada se perde ignorando: as branches que eles apontam (`prototipos/q14`,
-# `prototipos/q16`, `prototipos/q18`, `worktree-catalogo-shapes-aws`) já estão
-# no remoto e são alcançáveis a partir da `main`.
+# ⚠️ IGNORAR NÃO É PRESERVAR, e este comentário já mentiu uma vez. Ele nomeava
+# quatro branches (`prototipos/q14`, `prototipos/q16`, `prototipos/q18`,
+# `worktree-catalogo-shapes-aws`) e garantia que "nada se perde" — mas os
+# worktrees foram REAPROVEITADOS para outras branches, e no #62 três deles
+# estavam em `issue-34`, `issue-36` e `issue-37` com 12 commits que não existiam
+# em remoto nenhum. Um `rm -rf` teria levado os doze.
+#
+# Nomear branch aqui envelhece. A garantia é a consulta, e ela mora na doutrina
+# (`docs/agents/workflow.md` § A aterrissagem):
+#
+#     git branch -vv | grep -v '\[origin/'    # commit local sem remoto nenhum
+#     git branch -r --merged origin/main      # o complemento: já pode sair
 #
 # ⚠️ Só `worktrees/`, não `.claude/` inteiro: configuração de projeto (settings,
 # skills, agentes) mora ali e é para ser versionada.
@@ -15,8 +24,12 @@
 
 # `saida/` da skill de diagramas e RASCUNHO: e onde `tests/rodar.sh` escreve o
 # corpus gerado e o render. Determinista — `node tools/gerar-temas.cjs` e o
-# proprio `rodar.sh` reconstroem byte a byte. A evidencia renderizada que vale a
-# pena olhar esta versionada em `docs/aws-diagrams/corpus/`, FORA da skill:
-# resultado de eval mora em workspace irmao, nunca dentro do pacote que o
-# usuario instala.
+# proprio `rodar.sh` reconstroem byte a byte.
+#
+# Nao existe mais copia versionada dele. Ate o #62 este comentario apontava para
+# `docs/aws-diagrams/corpus/` como "a evidencia renderizada que vale a pena
+# olhar"; o #62 mediu e ela nao valia — 4 de 4 modelos regenerados divergiam do
+# commitado, e nada na regua comparava os dois. Render versionado que ninguem
+# compara nao e evidencia, e envelhece em silencio. O que prova o render e a
+# camada 7 da regua, rodando.
 skills/panlabs-aws-diagrams/saida/

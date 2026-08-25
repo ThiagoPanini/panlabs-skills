@@ -3,10 +3,10 @@
 /**
  * As decisões do #12, conferidas NO ARQUIVO — não na prosa.
  *
- * Cada checagem aqui corresponde a uma regra medida em
- * `docs/research/aws-multi-account-diagrams.md`. A diferença entre "decidimos
- * suprimir a aresta cross-account" e "o arquivo não tem aresta cross-account" é
- * a diferença entre uma nota de reunião e um motor.
+ * Cada checagem aqui corresponde a uma regra medida na pesquisa de multi-conta
+ * que originou o #12. A diferença entre "decidimos suprimir a aresta
+ * cross-account" e "o arquivo não tem aresta cross-account" é a diferença entre
+ * uma nota de reunião e um motor.
  *
  *   node tools/check-travessia.cjs
  */

@@ -1,7 +1,0 @@
-{
-  "esquema": "panlabs-aws-diagrams/tema@1",
-  "id": "claro",
-  "rotulo": "Claro (padrão)",
-  "porque": "O default. Branco puro porque a régua não deixa escolher outra coisa: `#ED7100` — a cor de Compute, Containers, Media e das bordas de Auto Scaling, EC2 instance contents, Beanstalk e Spot Fleet — só alcança os 3:1 da WCAG 1.4.11 contra `#FFFFFF`. Tudo o mais é o preset da AWS intocado.",
-  "fundo": "claro"
-}

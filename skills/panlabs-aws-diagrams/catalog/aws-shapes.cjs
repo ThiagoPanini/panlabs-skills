@@ -10,7 +10,8 @@
  *   cat.servico('lambda');   // -> { style, w, h, via: 'servico', ... }
  *   cat.grupo('vpc');        // -> { style, w, h, ... }  (já corrigido)
  *
- * Referência: docs/research/drawio-aws-shape-catalog.md
+ * Referência: a pesquisa de shapes do #17, cristalizada em `aws4.catalog.json`
+ * e `correcoes.json` — que são a única fonte que este arquivo lê.
  */
 'use strict';
 

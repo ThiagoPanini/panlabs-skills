@@ -3,7 +3,7 @@
     "Escrito à mão. NÃO é gerado — reexecutar o extrator não sobrescreve este arquivo.",
     "Separação deliberada: aws4.catalog.json é o que o draw.io ENTREGA; este arquivo é o",
     "delta para o que a AWS PRESCREVE. Toda entrada carrega a evidência que a sustenta.",
-    "Ver docs/research/drawio-aws-shape-catalog.md §3.4, §3.5, §5.4."
+    "Ver §3.4, §3.5 e §5.4 da pesquisa de shapes do #17."
   ],
   "_versao": {
     "deckAws": "Q3 2026 — Icon-package_07312026 (31/07/2026)",
@@ -72,8 +72,8 @@
       "a troca de fundo — no fundo escuro as CINCO cores abaixo reprovam.",
       "#AAB7B8 (VPC) reprova já no fundo claro: 2,06:1 contra branco.",
       "#232F3E do AWS Cloud fica como está: é o squid ink de 403 service icons, e o",
-      "#242F3E do deck é inconsistência do próprio pacote da AWS (ver §Incertezas do",
-      "docs/research/aws-diagramming-conventions.md)."
+      "#242F3E do deck é inconsistência do próprio pacote da AWS (ver §Incertezas",
+      "da pesquisa de convenções de diagrama AWS, #12)."
     ],
     "#248814": {
       "onde": "fontColor de Public subnet",
@@ -608,7 +608,7 @@
       "3. Sem deck e sem irmãos, a ordem da paleta fica e o caso continua marcado",
       "   `revisar: true`. Ambiguidade registrada é honesta; ambiguidade escondida não.",
       "O tema NÃO pode mexer nisto: cor de categoria não tem token. A cor É a legenda",
-      "(§6.4 do docs/research/aws-diagramming-conventions.md)."
+      "(§6.4 da pesquisa de convenções de diagrama AWS, #12)."
     ]
   },
   "bugsUpstream": {

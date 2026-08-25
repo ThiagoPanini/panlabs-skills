@@ -350,15 +350,42 @@ regra é barata mesmo quando não muda nada.
 
 ## O que deliberadamente não é portão
 
-Sem ruleset de branch, sem CI, sem required check. **Nada impede um
-`git push origin main`.** A doutrina inteira acima é de sessão, não de servidor.
+Esta seção dizia *"sem ruleset de branch, sem CI, sem required check"*, e **metade
+disso deixou de valer**. A decisão foi reaberta e está registrada em
+[ADR 0001 — Estrutura de skill vira portão, e o merge continua na
+mão](../adr/0001-estrutura-vira-portao-o-merge-continua-na-mao.md). O corte que ela
+faz é este:
 
-Isso é escolha e não pendência: o produto aqui é skill e artefato de agente, o
-"build" é a suíte de uma skill só, e um ruleset num repo de um mantenedor troca
-alguns merges perdidos por um portão que ninguém pode destravar. Mas a escolha tem
-preço, e o preço é exatamente este — **a única coisa que roda a união é você
-rodar.**
+| a pergunta | portão? |
+| --- | --- |
+| **esta skill está bem construída?** | **sim** — reprova, trava o merge, sem isenção e sem baseline |
+| **esta união mente? esta suíte quebrou?** | **não** — continua sendo você rodando, antes de aterrissar |
 
-**O gatilho para reabrir**, se um dia doer mais do que o portão custaria: dois
-merges verdes que quebraram a árvore no mesmo mês. Aí `check-union.sh` mais a
-suíte da skill viram um workflow de PR, e esta seção vira ADR.
+**Tudo que esta doutrina cobra continua sendo de sessão, e não de servidor.** Nada
+impede um `git push origin main`, ninguém roda a união por você, e a suíte de uma
+skill continua sendo problema da skill. O portão que entrou não mede nada disso: ele
+lê a árvore de `skills/`, uma skill de cada vez, e não sabe que branches existem.
+
+**Por que só metade.** A falha de estrutura nomeia o próprio conserto — *"esta skill
+não tem `SKILL.md`"*, *"este caminho é citado e não existe"* —, então não há
+julgamento a sobrepor e a tranca não custa nada a ninguém. União vermelha e suíte
+vermelha exigem julgamento, e num repo de um mantenedor a tranca bloquearia
+justamente quem teria de julgar: é o portão que ninguém pode destravar, e esse medo
+segue de pé. O argumento inteiro está no ADR, perna por perna — inclusive o registro
+honesto de que **o gatilho abaixo não foi o que reabriu isto**.
+
+**O gatilho para reabrir o portão de merge continua de pé, palavra por palavra, e
+não foi consumido:** dois merges verdes que quebraram a árvore no mesmo mês. Ele
+**não disparou** — o que reabriu a decisão foi deriva de skill, que aterrissa verde e
+por isso nunca chega a este gatilho. Se ele disparar um dia, `check-union.sh` mais a
+suíte da skill viram um workflow de PR; quem o disparar lê antes a nota de estado do
+ADR, porque essa régua saiu da árvore em `db1ff34`.
+
+**E nada disso está ligado ainda.** O harness é a
+[#67](https://github.com/ThiagoPanini/panlabs-skills/issues/67), as famílias de
+checagem são os tickets do mapa
+[#66](https://github.com/ThiagoPanini/panlabs-skills/issues/66), e a esteira que os
+transforma em portão é a
+[#72](https://github.com/ThiagoPanini/panlabs-skills/issues/72) — que esperava por
+este ADR para não ligar antes de a doutrina parar de contradizê-la. Enquanto elas não
+aterrissarem, o que existe aqui é **a decisão, não a tranca**.

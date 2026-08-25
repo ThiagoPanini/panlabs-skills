@@ -157,18 +157,41 @@ Um ticket que **renomeia, move ou apaga caminho rastreado** invalida o territór
 que todo mundo declarou. Ele não é paralelizável, e tratá-lo como se fosse produz a
 colisão 4 em escala.
 
-**Enquanto um movimento de terra está aberto, nenhuma outra branch aterrissa.** Ele
+**Enquanto um movimento de terra está EM VOO, nenhuma outra branch aterrissa.** Ele
 entra primeiro, todo mundo rebaseia, e só então a fila volta a andar. Marque-o para
 a fila enxergar: `gh issue edit <n> --add-label movimento-de-terra`.
 
-Há três abertos e sobrepostos agora — a
+> **Em voo, não apenas aberto** — e a diferença foi medida na primeira vez que esta
+> regra rodou. *Aberto* é o ticket existir; *em voo* é ele estar assinado **e** com
+> branch empurrada. Lidos como sinônimos, os três movimentos de terra ainda por
+> começar ([#44](https://github.com/ThiagoPanini/panlabs-skills/issues/44),
+> [#45](https://github.com/ThiagoPanini/panlabs-skills/issues/45),
+> [#53](https://github.com/ThiagoPanini/panlabs-skills/issues/53)) travariam a fila
+> para sempre — regra que nunca destrava não é fila, é parada. A consulta é:
+>
+> ```bash
+> gh issue list --state open --label movimento-de-terra --json number,assignees
+> git ls-remote --heads origin 'issue-*'
+> ```
+>
+> Movimento de terra com dono e branch: espere. Só com ticket: siga, e **quem for
+> pegá-lo pega a fila inteira rebaseando** — é ele que paga o custo, não os outros.
+
+São quatro sobre a mesma árvore, e eles são uma **fila, não um lote**: a
 [#36](https://github.com/ThiagoPanini/panlabs-skills/issues/36) tira `docs/` da
-árvore da skill, a [#44](https://github.com/ThiagoPanini/panlabs-skills/issues/44)
-tira `tests/` e o corpus, a
+árvore da skill — **já aterrissou**, em `29307b4`, sozinha e primeiro, como a regra
+manda —, a [#44](https://github.com/ThiagoPanini/panlabs-skills/issues/44) tira
+`tests/` e o corpus, a
 [#45](https://github.com/ThiagoPanini/panlabs-skills/issues/45) tira a bancada e as
-ferramentas — e a [#43](https://github.com/ThiagoPanini/panlabs-skills/issues/43)
-reescreve o `SKILL.md` que aponta para os três. **Esses quatro são uma fila, não um
-lote.**
+ferramentas, e a [#53](https://github.com/ThiagoPanini/panlabs-skills/issues/53)
+renomeia a árvore inteira para inglês. Por cima delas, a
+[#43](https://github.com/ThiagoPanini/panlabs-skills/issues/43) reescreve o
+`SKILL.md` que aponta para todas.
+
+A #36 rodando primeiro deixou a medida do custo: quem entrou depois dela **teve de
+rebasear e regenerar o derivado**, e foi barato porque foi um. Se as quatro
+tivessem corrido juntas, seriam quatro renomeações sobre os mesmos diretórios e um
+`SKILL.md` reescrito por baixo delas.
 
 ## Derivado não se mergeia, se regenera
 
@@ -202,12 +225,19 @@ mergeado, e a sessão sai achando que não mergeou.
 `git pull --ff-only`. Se o `--ff-only` recusar, alguém commitou direto na `main`
 local: isso é o defeito, não o pull.
 
-Está assim agora, e a medição é de três minutos: `8b71c7e` e `6c5f29d` estão na
-`main` local e em **remoto nenhum** (`git branch -r --contains main` sai vazio) — e
-o SHA do topo mudou entre duas leituras desta mesma sessão, `759918e` → `8b71c7e`
-com o mesmo assunto. Ou seja, **a `main` local não só recebe commit como está sendo
-reescrita por outra sessão enquanto esta lê.** É o pior lugar possível para guardar
-trabalho, e o histórico já guarda os dois nomes que essa prática deixa:
+**E isto já custou trabalho de verdade.** Quando esta doutrina foi escrita, `8b71c7e`
+e `6c5f29d` estavam na `main` local e em **remoto nenhum** (`git branch -r --contains
+main` saía vazio) — e o SHA do topo mudou entre duas leituras da mesma sessão,
+`759918e` → `8b71c7e` com o mesmo assunto. Ou seja, **a `main` local não só recebia
+commit como estava sendo reescrita por outra sessão enquanto era lida.**
+
+O `6c5f29d` não era redundante: ele trazia `modelo/ator-externo-3-contas.json`, um
+arquivo que **não existia na `origin/main`**. Foi resgatado no
+[#54](https://github.com/ThiagoPanini/panlabs-skills/issues/54), e o resgate é o
+manual da regra do derivado — o cherry-pick conflitou em `motor.manifesto.json`, e a
+resolução saiu de `check-motor-intocado.cjs --gravar`, não de escolher um lado.
+
+O histórico guarda os outros dois nomes que essa prática deixa:
 `a2a08ae Reconcilia com o PR #29, que mergeou a mesma branch na origin` e
 `331b61c Traz para a main os 9 commits do #26 que ficaram na branch`.
 

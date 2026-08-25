@@ -629,8 +629,15 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
 
   // nós que não moram em conta nenhuma (o ator, tipicamente) ficam FORA da
   // nuvem e à esquerda — `O19` do #5: o usuário entra pela esquerda
+  //
+  // A PILHA É ORDENADA PELO CONTEÚDO, não pela posição em `modelo.nos` — a
+  // mesma régua P1 do #11/#21 que ordena contas e raias. Com um forasteiro só
+  // isso não se via; com dois (#32 trouxe o segundo caso real do corpus),
+  // reordenar `nos` no arquivo trocava qual deles ficava em cima, e a
+  // suíte de determinismo (#23) provou.
   const forasteiros = modelo.nos.filter(n =>
-    n.dentro === undefined && n.tipo !== 'nuvem' && n.tipo !== 'conta' && !d.t.filhos.get(n.id).length);
+    n.dentro === undefined && n.tipo !== 'nuvem' && n.tipo !== 'conta' && !d.t.filhos.get(n.id).length)
+    .sort((a, b) => String(a.rotulo || a.id).localeCompare(String(b.rotulo || b.id), 'pt'));
   let margemEsq = 0;
   for (const f of forasteiros) margemEsq = Math.max(margemEsq, res.folha(f).formaW + 60);
 
@@ -1132,9 +1139,34 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
     // linha dentro de caixa que não é dela.
     faixaTopo += 1;
     const yCanal = topoDaFileira - 26 - (faixaTopo - 1) * 30;
-    const cB = { ...abs.get(alvoConta), id: alvoConta };
+
+    /**
+     * A CAIXA DE REFERÊNCIA DA DESCIDA é a de QUEM `dst` REALMENTE É — não
+     * sempre `alvoConta` (#32).
+     *
+     * Quando é a conta que entra em cena por fora (`cliente → ALB` numa conta
+     * que não é a primeira), `dst` mora dentro de `alvoConta`, e as duas
+     * coincidem: descer rente à borda da conta pousa rente ao próprio `dst`.
+     * Mas quando é o ATOR que está do lado de `dst` (uma conta do meio manda
+     * para fora, #32), `alvoConta` é a conta de ORIGEM — `dst` não mora nela,
+     * e ancorar ali mede uma fronteira que não é a dele: a descida para bem
+     * perto da conta de origem e o resto da linha, invisível para este código,
+     * atravessa quem estiver entre ela e o ator. A referência certa é a
+     * própria caixa de `dst` — o forasteiro fica sempre à esquerda de toda a
+     * fileira (#5 O19), então `ladoLivre` rodando sobre a coluna dele mede a
+     * fronteira que de fato importa.
+     */
+    const dstEhForasteiro = !cb;
+    const cB = dstEhForasteiro ? { ...dst, id: a.para } : { ...abs.get(alvoConta), id: alvoConta };
     const ladoD = ladoLivre(dst, o, cB, abs, d, a.para);
-    const xd = ladoD.lado === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
+    // do lado do forasteiro não há conta vizinha para ancorar: o ponto seguro
+    // é o meio do vão até a primeira conta da fileira, não meia calha inteira
+    // fora de `dst` — CALHA mede o vão ENTRE contas, e o vão até a margem do
+    // forasteiro é outro número.
+    const primeiraConta = abs.get(g.ordem[0].id);
+    const xd = ladoD.lado === 'esquerda'
+      ? cB.x - g.CALHA / 2
+      : dstEhForasteiro ? (cB.x + cB.w + primeiraConta.x) / 2 : cB.x + cB.w + g.CALHA / 2;
 
     /**
      * A SUBIDA SAI PELO LADO, E POR UM VÃO — duas coisas, e as duas medidas.

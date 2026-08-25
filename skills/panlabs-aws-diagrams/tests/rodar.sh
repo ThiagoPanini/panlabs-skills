@@ -76,6 +76,7 @@ passo "geração do corpus inteiro"                  bash -c '
   echo "   ✓ $(ls "'"$RAIZ"'"/modelo/*.json | wc -l) modelos gerados"'
 passo "determinismo (3 frentes, com reordenação)"  node "$AQUI/check-determinismo.cjs"
 passo "camada de rede: a ordem sai do conteúdo"    node "$AQUI/check-camada.cjs"
+passo "a caixa da folha mede o rótulo (#33)"        node "$AQUI/check-caixa-de-folha.cjs"
 passo "e é ela que o arquivo mostra"               node "$AQUI/check-no-arquivo.cjs"
 passo "a candidata rival (distância da borda)"     node "$AQUI/check-saltos.cjs"
 passo "revisão de lacunas: dispara E cala (#15)"   node "$AQUI/check-lacunas.cjs"
@@ -106,6 +107,7 @@ echo "════ camada 5 · a geometria do corpus ════"
 passo "o portão barra o que mente e cabe no meio"  node "$AQUI/check-portao-geometrico.cjs"
 passo "o corpus laudado (sem quarentena aberta)"   node "$AQUI/check-bons.cjs"
 passo "o orçamento de roteamento do #24"           node "$AQUI/check-roteamento.cjs"
+passo "check-geometria.cjs aceita --tema (#33)"     node "$AQUI/check-geometria-tema.cjs"
 # ⚠️ O CORPO DE PROVA MUDOU NO #24, e o motivo é o ticket ter dado certo.
 #
 # Até aqui o portão era exercitado contra `web-fluxo-3-az`, que mentia (`A5.5`

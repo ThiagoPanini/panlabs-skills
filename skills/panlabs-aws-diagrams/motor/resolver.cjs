@@ -43,11 +43,6 @@ const ROTULO_MIN = 23;
  * geometria — então essa conta é do tema, e o tema entra no pipeline ANTES do
  * layout. Ver `tools/check-particao.cjs`.
  */
-// O rótulo do service icon quebra nesta largura. Fixá-la é o que permite manter
-// a caixa do layout igual à caixa do ícone: o transbordo passa a ser uma
-// constante conhecida, comprada em `spacing`, e não uma caixa de largura
-// variável que desalinharia a âncora da aresta.
-const ROTULO_W = 120;
 
 /** Quantas linhas o rótulo ocupa se quebrado numa caixa de `larg` px. */
 function linhasDoRotulo(texto, larg, largCar) {
@@ -137,14 +132,24 @@ function criar(tema, dirCatalogo) {
     // estilo deste protótipo que precisou de um campo novo no IR.
     const rotulo = tema.rotuloDeFolha(nome, no.qualificador);
     const formaW = s.w || 78, formaH = s.h || 78;
-    const linhas = linhasDoRotulo(rotulo, ROTULO_W, M.largCar);
+    // #33/#35: a caixa é a largura MEDIDA do rótulo, não uma quebra assumida —
+    // o mxGraph não quebra a linha do jeito que `linhasDoRotulo` supunha (ela
+    // sai inteira, e o "quebrado" vinha só do `<br>` explícito de
+    // `rotuloDeFolha`). Medir cada linha explícita e alargar até a mais larga
+    // é o que faz o transbordo deixar de existir como conceito: o ícone fica
+    // centrado dentro da caixa porque o style do catálogo já traz
+    // `aspect=fixed` — não há offset para calcular aqui.
+    const rotuloW = Math.max(0, ...rotulo.split(/<br\s*\/?>/i)
+      .map(linha => larguraDoTexto(linha.replace(/<[^>]+>/g, ''), M.largCar)));
+    const caixaW = Math.max(formaW, rotuloW);
+    const linhas = linhasDoRotulo(rotulo, caixaW, M.largCar);
     return {
       style: tema.servico(s.style, s),
       rotulo,
       formaW, formaH,
       rotuloH: Math.max(ROTULO_MIN, linhas * M.altLinha),
-      rotuloW: Math.min(ROTULO_W, larguraDoTexto(rotulo.replace(/<[^>]+>/g, ''), M.largCar)),
-      caixaW: formaW,          // a caixa do layout É a caixa do ícone
+      rotuloW,
+      caixaW,
     };
   }
 
@@ -178,4 +183,4 @@ function criar(tema, dirCatalogo) {
   };
 }
 
-module.exports = { criar, linhasDoRotulo, larguraDoTexto, ROTULO_W };
+module.exports = { criar, linhasDoRotulo, larguraDoTexto };

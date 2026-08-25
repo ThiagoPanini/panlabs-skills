@@ -24,9 +24,9 @@
 
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const temaMod = require(path.join(RAIZ, 'theme', 'theme.cjs'));
-const { razao, limiarDeTexto } = require(path.join(RAIZ, 'engine', 'contrast.cjs'));
+const ROOT = path.join(__dirname, '..');
+const temaMod = require(path.join(ROOT, 'theme', 'theme.cjs'));
+const { ratio, textThreshold } = require(path.join(ROOT, 'engine', 'contrast.cjs'));
 
 let falhas = 0;
 const ok = (cond, title, detail) => {
@@ -35,9 +35,9 @@ const ok = (cond, title, detail) => {
 };
 
 /** Os literais como o #12 os escreveu, copiados do `plan.cjs` daquele ticket. */
-const LITERAIS = {
+const LITERALS = {
   ou: 'text;html=1;fontSize=13;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;',
-  barramento: 'endArrow=none;html=1;strokeColor=#232F3E;strokeWidth=1.6;',
+  bus: 'endArrow=none;html=1;strokeColor=#232F3E;strokeWidth=1.6;',
   stub: 'edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#232F3E;strokeWidth=1.6;' +
     'endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;',
   habilitador: 'edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#5A6C86;strokeWidth=1.4;dashed=1;' +
@@ -52,7 +52,7 @@ const LITERAIS = {
  * troca Arial,Helvetica por Arial e todo o resto do desenho acompanha. Deixar
  * estes quatro estilos fora seria a única tipografia da página fora do tema.
  */
-const ACRESCIMOS = { ou: ['fontFamily'], barramento: [], stub: ['fontFamily'], habilitador: [] };
+const ADDITIONS = { ou: ['fontFamily'], bus: [], stub: ['fontFamily'], habilitador: [] };
 
 const chaves = s => Object.fromEntries(
   String(s).split(';').filter(Boolean).map(p => {
@@ -61,12 +61,12 @@ const chaves = s => Object.fromEntries(
   }));
 
 console.log('\n1 · o tema `claro` reconstrói os quatro literais do #12\n');
-const light = temaMod.carregar('light');
-for (const [name, literal] of Object.entries(LITERAIS)) {
+const light = temaMod.load('light');
+for (const [name, literal] of Object.entries(LITERALS)) {
   const a = chaves(literal), b = chaves(light[name]());
   const perdidas = Object.keys(a).filter(k => a[k] !== b[k]);
   const novas = Object.keys(b).filter(k => !(k in a));
-  const inesperadas = novas.filter(k => !ACRESCIMOS[name].includes(k));
+  const inesperadas = novas.filter(k => !ADDITIONS[name].includes(k));
   ok(perdidas.length === 0 && inesperadas.length === 0, `${name}`,
     perdidas.length ? `divergiu em ${perdidas.map(k => `${k}: ${a[k]} → ${b[k]}`).join(', ')}`
       : inesperadas.length ? `chave nova não prevista: ${inesperadas.join(', ')}`
@@ -81,23 +81,23 @@ const t = light.tokens;
  * prova; o que ela precisa afirmar é que **o valor do token é o valor que o #12
  * escreveu à mão**, e isso é uma comparação.
  */
-for (const [token, valor, style, chave] of [
+for (const [token, valor, style, key] of [
   ['tinta.forte', t.ink.strong, 'ou', 'fontColor'],
   ['tinta.fraca', t.ink.weak, 'habilitador', 'strokeColor'],
   ['tinta.halo', t.ink.halo, 'stub', 'labelBackgroundColor'],
-  ['aresta.cor', t.edge.color, 'barramento', 'strokeColor'],
-  ['aresta.espessura', t.edge.thickness, 'barramento', 'strokeWidth'],
+  ['aresta.cor', t.edge.color, 'bus', 'strokeColor'],
+  ['aresta.espessura', t.edge.thickness, 'bus', 'strokeWidth'],
   ['aresta.ponta', t.edge.tip, 'stub', 'endArrow'],
   ['texto.aresta', t.text.edge, 'stub', 'fontSize'],
   ['texto.grupo + 1', t.text.group + 1, 'ou', 'fontSize'],
 ]) {
-  const noLiteral = chaves(LITERAIS[style])[chave];
-  ok(String(valor) === String(noLiteral), `${String(token).padEnd(18)} → S_${style.toUpperCase()}.${chave}`,
+  const noLiteral = chaves(LITERALS[style])[key];
+  ok(String(valor) === String(noLiteral), `${String(token).padEnd(18)} → S_${style.toUpperCase()}.${key}`,
     `token ${valor} · literal do #12 ${noLiteral}`);
 }
 
 console.log('\n3 · e no deck escuro os quatro passam no contraste — o que a troca comprou\n');
-const dark = temaMod.carregar('dark');
+const dark = temaMod.load('dark');
 const background = dark.tokens.page.color;
 /**
  * QUAIS dos quatro o literal do #12 teria QUEBRADO no escuro — e o número está
@@ -108,18 +108,18 @@ const background = dark.tokens.page.color;
  * que ela é; a asserção abaixo cobra os três E cobra que o quarto passe, para
  * que o dia em que a paleta mudar apareça aqui em vez de sumir.
  */
-const QUEBRARIAM = new Set(['ou', 'barramento', 'stub']);
-for (const name of Object.keys(LITERAIS)) {
-  const antes = chaves(LITERAIS[name]).strokeColor || chaves(LITERAIS[name]).fontColor;
+const WOULD_BREAK = new Set(['ou', 'bus', 'stub']);
+for (const name of Object.keys(LITERALS)) {
+  const antes = chaves(LITERALS[name]).strokeColor || chaves(LITERALS[name]).fontColor;
   const depois = (k => k.strokeColor || k.fontColor)(chaves(dark[name]()));
-  const rAntes = razao(antes, background), rDepois = razao(depois, background);
+  const rAntes = ratio(antes, background), rDepois = ratio(depois, background);
   // rótulo é texto (WCAG 1.4.3) e traço é grafismo (1.4.11) — o piso do texto sai
   // de `limiarDeTexto`, que já conhece o corte de 24px/18,5px em negrito
-  const piso = name === 'ou' ? limiarDeTexto(dark.ou()) : 3.0;
-  ok(rDepois >= piso, `${name} no escuro passa por token`,
-    `${depois} = ${rDepois.toFixed(2)}:1 (piso ${piso}:1)`);
-  ok((rAntes < piso) === QUEBRARIAM.has(name),
-    `e o literal do #12 ${QUEBRARIAM.has(name) ? 'QUEBRARIA' : 'passaria'} — como esperado`,
+  const floor = name === 'ou' ? textThreshold(dark.ou()) : 3.0;
+  ok(rDepois >= floor, `${name} no escuro passa por token`,
+    `${depois} = ${rDepois.toFixed(2)}:1 (piso ${floor}:1)`);
+  ok((rAntes < floor) === WOULD_BREAK.has(name),
+    `e o literal do #12 ${WOULD_BREAK.has(name) ? 'QUEBRARIA' : 'passaria'} — como esperado`,
     `${antes} = ${rAntes.toFixed(2)}:1`);
 }
 

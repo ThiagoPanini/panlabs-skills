@@ -31,27 +31,27 @@
 
 const fs = require('fs');
 const path = require('path');
-const { gerar } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
-const { derivar } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
+const { generate } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
+const { derive } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
 
-const LETRAS = 'abcdefghij';
+const LETTERS = 'abcdefghij';
 
 /** Malha completa de brokers, uma zona por subnet — o leque mais denso possível. */
-function malha(nZonas) {
+function mesh(nZonas) {
   const nodes = [
     { id: 'cloud', kind: 'cloud', label: 'AWS Cloud' },
     { id: 'vpc', kind: 'vpc', label: 'VPC · 10.0.0.0/16', cidr: '10.0.0.0/16', inside: 'cloud' },
   ];
   for (let i = 0; i < nZonas; i++) {
-    nodes.push({ id: `app-${LETRAS[i]}`, kind: 'subnet', label: 'App subnet', access: 'private',
-      az: `us-east-1${LETRAS[i]}`, inside: 'vpc' });
-    nodes.push({ id: `broker-${LETRAS[i]}`, kind: 'service', service: 'msk',
-      label: `Broker ${i + 1}`, inside: `app-${LETRAS[i]}` });
+    nodes.push({ id: `app-${LETTERS[i]}`, kind: 'subnet', label: 'App subnet', access: 'private',
+      az: `us-east-1${LETTERS[i]}`, inside: 'vpc' });
+    nodes.push({ id: `broker-${LETTERS[i]}`, kind: 'service', service: 'msk',
+      label: `Broker ${i + 1}`, inside: `app-${LETTERS[i]}` });
   }
   const edges = [];
   for (let i = 0; i < nZonas; i++)
     for (let j = 0; j < nZonas; j++)
-      if (i !== j) edges.push({ from: `broker-${LETRAS[i]}`, to: `broker-${LETRAS[j]}`,
+      if (i !== j) edges.push({ from: `broker-${LETTERS[i]}`, to: `broker-${LETTERS[j]}`,
         label: 'busca réplica', protocol: 'kafka', data: 'back' });
   return {
     schema: 'panlabs-aws-diagrams/model@1',
@@ -61,27 +61,27 @@ function malha(nZonas) {
 }
 
 /** O piso da varredura de raias, recalculado aqui para não depender de log. */
-function pisoDaVarredura(modelo) {
-  const d = derivar(modelo);
-  const subnets = modelo.nodes.filter(n => n.kind === 'subnet');
+function sweepFloor(model) {
+  const d = derive(model);
+  const subnets = model.nodes.filter(n => n.kind === 'subnet');
   const zonas = [...new Set(subnets.map(s => s.az).filter(Boolean))].sort();
   const zonaDo = id => {
-    const n = d.t.porId.get(id);
+    const n = d.t.byId.get(id);
     if (!n) return null;
     const s = n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet');
     return s ? s.az : null;
   };
-  const cruzam = (modelo.edges || []).map(a => [zonaDo(a.from), zonaDo(a.to)])
+  const cruzam = (model.edges || []).map(a => [zonaDo(a.from), zonaDo(a.to)])
     .filter(([x, y]) => x && y && x !== y);
-  if (zonas.length < 3 || !cruzam.length) return { zonas: zonas.length, cruzam: cruzam.length, piso: 0, perms: 0 };
-  const permutar = xs => xs.length <= 1 ? [xs]
-    : xs.flatMap((x, i) => permutar([...xs.slice(0, i), ...xs.slice(i + 1)]).map(r => [x, ...r]));
-  const todas = permutar(zonas);
-  const piso = Math.min(...todas.map(p => {
+  if (zonas.length < 3 || !cruzam.length) return { zonas: zonas.length, cruzam: cruzam.length, floor: 0, perms: 0 };
+  const permute = xs => xs.length <= 1 ? [xs]
+    : xs.flatMap((x, i) => permute([...xs.slice(0, i), ...xs.slice(i + 1)]).map(r => [x, ...r]));
+  const todas = permute(zonas);
+  const floor = Math.min(...todas.map(p => {
     const idx = new Map(p.map((z, i) => [z, i]));
     return cruzam.reduce((s, [x, y]) => s + Math.max(0, Math.abs(idx.get(x) - idx.get(y)) - 1), 0);
   }));
-  return { zonas: zonas.length, cruzam: cruzam.length, piso, perms: todas.length };
+  return { zonas: zonas.length, cruzam: cruzam.length, floor, perms: todas.length };
 }
 
 /**
@@ -97,12 +97,12 @@ function pisoDaVarredura(modelo) {
  * por metade**: as duas estavam verdes, cada uma contra a sua própria versão.
  * Aqui a régua e o produto passam a ser o mesmo código, por construção.
  */
-function medirF2(r) {
+function measureF2(r) {
   let bands = 0;
   const casos = [];
-  for (const { laudo } of r.relatorio.geometry) {
-    if (laudo.cena) bands += laudo.cena.bands.length;
-    const f2 = (laudo.extras || []).find(x => x.id === 'F2');
+  for (const { report } of r.relatorio.geometry) {
+    if (report.scene) bands += report.scene.bands.length;
+    const f2 = (report.extras || []).find(x => x.id === 'F2');
     if (!f2) continue;
     for (const o of f2.occurrences) casos.push(o.ids ? o.ids.join(' × ') : o.o_que);
   }
@@ -111,23 +111,23 @@ function medirF2(r) {
 
 function account(r, id) {
   let n = 0;
-  for (const { laudo } of r.relatorio.geometry) {
-    const x = laudo.resultados.find(y => y.id === id);
+  for (const { report } of r.relatorio.geometry) {
+    const x = report.resultados.find(y => y.id === id);
     if (x) n += x.occurrences.length;
   }
   return n;
 }
 
-async function medir(modelo, label) {
-  const p = pisoDaVarredura(modelo);
+async function measure(model, label) {
+  const p = sweepFloor(model);
   let r;
-  try { r = await gerar(modelo, {}); }
+  try { r = await generate(model, {}); }
   catch (e) { return { label, erro: e.message, ...p }; }
-  const f2 = medirF2(r);
+  const f2 = measureF2(r);
   return {
     label, ...p, bands: f2.bands, f2: f2.casos.length, examples: f2.casos.slice(0, 2),
     a55: account(r, 'A5.5'), a51: account(r, 'A5.1'), a32: account(r, 'A3.2'),
-    semanticas: r.relatorio.geometry.reduce((s, x) => s + x.laudo.semanticas.length, 0),
+    semanticas: r.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0),
   };
 }
 
@@ -136,15 +136,15 @@ async function main() {
   const linhas = [];
   if (args.length) {
     for (const a of args)
-      linhas.push(await medir(JSON.parse(fs.readFileSync(a, 'utf8')), path.basename(a, '.json')));
+      linhas.push(await measure(JSON.parse(fs.readFileSync(a, 'utf8')), path.basename(a, '.json')));
   } else {
-    for (let n = 3; n <= 6; n++) linhas.push(await medir(malha(n), `malha-${n}-az`));
+    for (let n = 3; n <= 6; n++) linhas.push(await measure(mesh(n), `malha-${n}-az`));
   }
 
-  const cab = ['caso', 'zonas', 'cruzam', 'perms', 'piso', 'bands', 'F2', 'A5.5', 'A5.1', 'A3.2', 'sem'];
+  const cab = ['caso', 'zonas', 'cruzam', 'perms', 'floor', 'bands', 'F2', 'A5.5', 'A5.1', 'A3.2', 'sem'];
   const corpo = linhas.map(l => l.erro
-    ? [l.label, String(l.zonas), String(l.cruzam), String(l.perms), String(l.piso), '—', '—', '—', '—', '—', 'ERRO']
-    : [l.label, String(l.zonas), String(l.cruzam), String(l.perms), String(l.piso),
+    ? [l.label, String(l.zonas), String(l.cruzam), String(l.perms), String(l.floor), '—', '—', '—', '—', '—', 'ERRO']
+    : [l.label, String(l.zonas), String(l.cruzam), String(l.perms), String(l.floor),
        String(l.bands), String(l.f2), String(l.a55), String(l.a51), String(l.a32), String(l.semanticas)]);
   const larg = cab.map((_, i) => Math.max(cab[i].length, ...corpo.map(c => c[i].length)));
   console.log('  ' + cab.map((c, i) => c.padEnd(larg[i])).join('  '));
@@ -159,4 +159,4 @@ async function main() {
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });
 
-module.exports = { malha, pisoDaVarredura, medirF2 };
+module.exports = { mesh, sweepFloor, measureF2 };

@@ -24,28 +24,28 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { varrer, acharTodos } = require('../session/fingerprint.cjs');
+const { sweep, acharTodos } = require('../session/fingerprint.cjs');
 
-const { binario } = require(path.join(__dirname, 'drawio.cjs'));
-const DRAWIO = binario(process.argv[2]);
+const { binary } = require(path.join(__dirname, 'drawio.cjs'));
+const DRAWIO = binary(process.argv[2]);
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'hospedeiro-'));
 
 // Payload com as armadilhas que o #2 §7 nomeia: quebra de linha, tab, aspas,
 // `&`, `<` — tudo que a normalizacao de atributo do XML costuma comer.
-const CARGA = 'linha1\nlinha2\ttab "aspas" & <tag> ç ã 100%';
+const LOAD = 'linha1\nlinha2\ttab "aspas" & <tag> ç ã 100%';
 
-const ARQUIVO = `<mxfile host="panlabs-aws-diagrams" compressed="false" mxfileAttr="${escapar(CARGA)}">
-  <diagram id="p1" name="Pagina 1" diagramAttr="${escapar(CARGA)}">
-    <mxGraphModel dx="0" dy="0" grid="0" pageWidth="400" pageHeight="300" modelAttr="${escapar(CARGA)}">
+const FILE_PATH = `<mxfile host="panlabs-aws-diagrams" compressed="false" mxfileAttr="${escape(LOAD)}">
+  <diagram id="p1" name="Pagina 1" diagramAttr="${escape(LOAD)}">
+    <mxGraphModel dx="0" dy="0" grid="0" pageWidth="400" pageHeight="300" modelAttr="${escape(LOAD)}">
       <root>
         <mxCell id="0"/>
-        <object id="1" label="" camadaAttr="${escapar(CARGA)}"><mxCell parent="0"/></object>
-        <object id="oculto" label="" objectAttr="${escapar(CARGA)}">
+        <object id="1" label="" camadaAttr="${escape(LOAD)}"><mxCell parent="0"/></object>
+        <object id="oculto" label="" objectAttr="${escape(LOAD)}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
             <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
           </mxCell>
         </object>
-        <UserObject id="uo" label="" userObjectAttr="${escapar(CARGA)}">
+        <UserObject id="uo" label="" userObjectAttr="${escape(LOAD)}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
             <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
           </mxCell>
@@ -61,7 +61,7 @@ const ARQUIVO = `<mxfile host="panlabs-aws-diagrams" compressed="false" mxfileAt
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <object id="oculto2" label="" segundaPaginaAttr="${escapar(CARGA)}">
+        <object id="oculto2" label="" segundaPaginaAttr="${escape(LOAD)}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
             <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
           </mxCell>
@@ -72,13 +72,13 @@ const ARQUIVO = `<mxfile host="panlabs-aws-diagrams" compressed="false" mxfileAt
 </mxfile>
 `;
 
-function escapar(s) {
+function escape(s) {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
     .replace(/\n/g, '&#xa;').replace(/\t/g, '&#x9;').replace(/\r/g, '&#xd;');
 }
 
 /** Procura o atributo em qualquer elemento da arvore. */
-function achar(raiz, attr) {
+function locate(raiz, attr) {
   const pilha = [raiz];
   while (pilha.length) {
     const n = pilha.pop();
@@ -88,7 +88,7 @@ function achar(raiz, attr) {
   return null;
 }
 
-const HOSPEDEIROS = [
+const HOSTS = [
   ['mxfileAttr', 'atributo no <mxfile>'],
   ['diagramAttr', 'atributo no <diagram>'],
   ['modelAttr', 'atributo no <mxGraphModel>'],
@@ -100,7 +100,7 @@ const HOSPEDEIROS = [
 
 function main() {
   const input = path.join(TMP, 'sonda.drawio');
-  fs.writeFileSync(input, ARQUIVO);
+  fs.writeFileSync(input, FILE_PATH);
 
   if (!fs.existsSync(DRAWIO)) {
     console.log(`  draw.io headless ausente em ${DRAWIO} — esta medicao PRECISA do app e nao roda sem ele.`);
@@ -130,39 +130,39 @@ function main() {
     fs.rmSync(TMP, { recursive: true, force: true });
     return 0;
   }
-  const depois = varrer(bruto);
+  const depois = sweep(bruto);
 
   console.log('\n  Round-trip pelo codec do proprio draw.io (-x -f xml)\n');
   console.log('    hospedeiro                              sobreviveu  intacto');
   console.log('    ' + '─'.repeat(66));
-  const resultado = [];
-  for (const [attr, name] of HOSPEDEIROS) {
-    const finding = achar(depois, attr);
-    const intacto = finding ? finding.valor === CARGA : false;
-    resultado.push({ attr, name, sobreviveu: !!finding, intacto });
+  const outcome = [];
+  for (const [attr, name] of HOSTS) {
+    const finding = locate(depois, attr);
+    const intacto = finding ? finding.valor === LOAD : false;
+    outcome.push({ attr, name, sobreviveu: !!finding, intacto });
     console.log(`    ${name.padEnd(40)} ${(finding ? 'sim' : 'NAO').padEnd(11)} ${finding ? (intacto ? 'sim' : 'ALTERADO') : '—'}`);
   }
 
   const mx = acharTodos(depois, 'mxfile')[0];
-  const paginas = acharTodos(depois, 'diagram');
+  const pages = acharTodos(depois, 'diagram');
   console.log('');
   console.log(`    host= voltou como ................. ${JSON.stringify(mx && mx.attrs.host)}`);
-  console.log(`    paginas depois do round-trip ...... ${paginas.length}`);
+  console.log(`    paginas depois do round-trip ...... ${pages.length}`);
 
-  const vencedores = resultado.filter(r => r.sobreviveu && r.intacto);
-  console.log(`\n  ${vencedores.length}/${HOSPEDEIROS.length} hospedeiros preservam o payload byte a byte.`);
-  for (const r of resultado.filter(r => !r.sobreviveu || !r.intacto))
+  const vencedores = outcome.filter(r => r.sobreviveu && r.intacto);
+  console.log(`\n  ${vencedores.length}/${HOSTS.length} hospedeiros preservam o payload byte a byte.`);
+  for (const r of outcome.filter(r => !r.sobreviveu || !r.intacto))
     console.log(`    ✗ ${r.name}`);
 
   // O selo tem de estar num hospedeiro que sobreviveu; e o que a decisao usa.
-  const escolhido = resultado.find(r => r.attr === 'objectAttr');
-  const segunda = resultado.find(r => r.attr === 'segundaPaginaAttr');
+  const chosen = outcome.find(r => r.attr === 'objectAttr');
+  const segunda = outcome.find(r => r.attr === 'segundaPaginaAttr');
   console.log('');
-  console.log(`  Decisao: o selo vive em ${escolhido.sobreviveu && escolhido.intacto ? '<object> oculto — CONFIRMADO' : '??? — o hospedeiro escolhido NAO sobreviveu'}.`);
+  console.log(`  Decisao: o selo vive em ${chosen.sobreviveu && chosen.intacto ? '<object> oculto — CONFIRMADO' : '??? — o hospedeiro escolhido NAO sobreviveu'}.`);
   console.log(`  Copia por pagina: ${segunda.sobreviveu && segunda.intacto ? 'viavel — a segunda pagina preserva igual' : 'INVIAVEL — so a primeira pagina preserva'}.`);
 
   fs.rmSync(TMP, { recursive: true, force: true });
-  return (escolhido.sobreviveu && escolhido.intacto) ? 0 : 1;
+  return (chosen.sobreviveu && chosen.intacto) ? 0 : 1;
 }
 
 process.exit(main());

@@ -25,11 +25,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const { gate, NIVEIS } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
-const { CASOS, CONTROLE } = require(path.join(__dirname, 'cases', 'broken.cjs'));
-const { emitir, conferirXml } = require(path.join(RAIZ, 'engine', 'emit.cjs'));
-const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
+const ROOT = path.join(__dirname, '..');
+const { gate, LEVELS } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
+const { CASES, CONTROL } = require(path.join(__dirname, 'cases', 'broken.cjs'));
+const { emit, checkXml } = require(path.join(ROOT, 'engine', 'emit.cjs'));
+const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
 let falhas = 0;
 const anota = (ok, o_que, detail) => {
@@ -58,19 +58,19 @@ const anota = (ok, o_que, detail) => {
  */
 {
   for (const id of ['A4.2', 'A4.4', 'A5.5', 'F1', 'F2']) {
-    const mentiroso = CASOS.find(c => c.espera.includes(id));
-    if (!mentiroso) { anota(false, `há um caso plantado para ${id}`); continue; }
+    const lying = CASES.find(c => c.espera.includes(id));
+    if (!lying) { anota(false, `há um caso plantado para ${id}`); continue; }
     let lancou = null;
     try {
-      gate(mentiroso.plano, { modelo: mentiroso.modelo, nivel: 'veracidade' });
+      gate(lying.layoutPlan, { model: lying.model, level: 'truthfulness' });
     } catch (e) { lancou = e; }
 
-    anota(!!lancou, `nível "veracidade" barra o plano que mente por ${id} ("${mentiroso.name}")`,
+    anota(!!lancou, `nível "veracidade" barra o plano que mente por ${id} ("${lying.name}")`,
       lancou ? `→ ${lancou.erros[0]}` : 'passou, e não devia');
     if (!lancou) continue;
     anota(Array.isArray(lancou.erros) && lancou.erros.length > 0,
       `${id}: o erro traz linhas legíveis em \`.erros\`, como o resto do motor`);
-    anota(!!lancou.laudo, `${id}: o erro carrega o laudo inteiro para quem quiser detalhar`);
+    anota(!!lancou.report, `${id}: o erro carrega o laudo inteiro para quem quiser detalhar`);
     anota(lancou.erros.some(l => l.includes(id)), `${id}: a mensagem nomeia a checagem que barrou`);
   }
 }
@@ -80,17 +80,17 @@ const anota = (ok, o_que, detail) => {
 {
   // Um plano correto no nível `nenhum` tem de passar…
   let passou = true;
-  try { gate(CONTROLE.plano, { modelo: CONTROLE.modelo, nivel: 'none' }); }
+  try { gate(CONTROL.layoutPlan, { model: CONTROL.model, level: 'none' }); }
   catch { passou = false; }
   anota(passou, 'nível "nenhum" deixa passar um plano correto');
 
   // …mas nem `nenhum` engole laudo incompleto. Simula-se removendo uma família
   // do índice não dá; o que se confere é que a regra existe e está ligada.
-  const laudo = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'))
-    .validarGeometria(CONTROLE.plano, { modelo: CONTROLE.modelo });
-  anota(laudo.cobertura.naoRodaram.length === 0 && !laudo.resultados.some(r => r.state === 'erro'),
+  const report = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'))
+    .validateGeometry(CONTROL.layoutPlan, { model: CONTROL.model });
+  anota(report.cobertura.naoRodaram.length === 0 && !report.resultados.some(r => r.state === 'erro'),
     'o laudo do controle é completo (nenhuma checagem muda)',
-    `${laudo.cobertura.rodaram}/${laudo.cobertura.esperadas} rodaram`);
+    `${report.cobertura.rodaram}/${report.cobertura.esperadas} rodaram`);
 }
 
 // --------------------------- 3. o enxerto real: planejar › PORTÃO › emitir
@@ -98,22 +98,22 @@ const anota = (ok, o_que, detail) => {
 {
   // O pipeline do #11 até o plano. `gerar` já faz tudo, então usa-se o plano que
   // ele devolve — é o mesmo objeto que existiria entre `planejar` e `emitir`.
-  const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'orders-serverless.json'), 'utf8'));
-  gerar(modelo).then(r => {
-    let laudo = null;
+  const model = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'orders-serverless.json'), 'utf8'));
+  generate(model).then(r => {
+    let report = null;
     let barrou = null;
     try {
       // é ISTO que entra em `generate.cjs`, nas duas linhas documentadas em gate.cjs
-      laudo = gate(r.plano, { nivel: 'veracidade' });
+      report = gate(r.layoutPlan, { level: 'truthfulness' });
     } catch (e) { barrou = e; }
 
     anota(!barrou, 'o diagrama bom do #11 passa o portão de veracidade',
-      barrou ? barrou.erros.join(' | ') : `${laudo.resumo.ok} ok, ${laudo.resumo.falha} falha, 0 semânticas`);
+      barrou ? barrou.erros.join(' | ') : `${report.resumo.ok} ok, ${report.resumo.failure} falha, 0 semânticas`);
 
     // e o pipeline continua: o portão não consumiu nem alterou o plano
-    const xml = emitir(r.plano);
-    const malFormado = conferirXml(xml);
-    anota(malFormado.length === 0 && xml.length > 0,
+    const xml = emit(r.layoutPlan);
+    const malformed = checkXml(xml);
+    anota(malformed.length === 0 && xml.length > 0,
       '`emitir` roda depois do portão e produz XML bem formado',
       `${xml.length} bytes`);
     anota(xml === r.xml, 'o XML é byte a byte o mesmo — o portão é puro, não tocou no plano');
@@ -134,27 +134,27 @@ const anota = (ok, o_que, detail) => {
      * propriedade depois não alcança a referência que ele guardou. Daí o filho.
      */
     const { execFileSync } = require('child_process');
-    const roteiro = `
+    const script = `
       const path = require('path');
-      const RAIZ = ${JSON.stringify(RAIZ)};
-      const alvo = require.resolve(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
-      const real = require(alvo);
+      const ROOT = ${JSON.stringify(ROOT)};
+      const target = require.resolve(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
+      const real = require(target);
       // um laudo que se declara INCOMPLETO, e nada mais
-      require.cache[alvo].exports = {
+      require.cache[target].exports = {
         ...real,
-        validarGeometria: (plano, opts) => {
-          const l = real.validarGeometria(plano, opts);
+        validateGeometry: (layoutPlan, opts) => {
+          const l = real.validateGeometry(layoutPlan, opts);
           return { ...l, cobertura: { ...l.cobertura, naoRodaram: ['A9.9'] } };
         },
       };
-      const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
+      const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
       const fs = require('fs');
-      const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'web-multi-az.json'), 'utf8'));
-      gerar(m, { portao: 'nenhum' })
+      const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'web-multi-az.json'), 'utf8'));
+      generate(m, { gate: 'none' })
         .then(() => { console.log('PASSOU'); })
         .catch(e => { console.log('BARROU:' + e.message); });
     `;
-    const saidaFilho = execFileSync(process.execPath, ['-e', roteiro], { encoding: 'utf8' }).trim();
+    const saidaFilho = execFileSync(process.execPath, ['-e', script], { encoding: 'utf8' }).trim();
     anota(saidaFilho.startsWith('BARROU:'),
       'laudo INCOMPLETO não passa nem no nível "nenhum" (a garantia do #18)',
       saidaFilho.slice(0, 110));
@@ -167,5 +167,5 @@ const anota = (ok, o_que, detail) => {
 }
 
 // sanidade do próprio módulo: os níveis declarados existem
-anota(Object.keys(NIVEIS).length === 4, 'os quatro níveis de portão estão declarados',
-  Object.keys(NIVEIS).join(', '));
+anota(Object.keys(LEVELS).length === 4, 'os quatro níveis de portão estão declarados',
+  Object.keys(LEVELS).join(', '));

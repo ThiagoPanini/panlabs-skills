@@ -22,54 +22,54 @@
  */
 
 const path = require('path');
-const { porId } = require(path.join(__dirname, '..', 'index.cjs'));
+const { byId } = require(path.join(__dirname, '..', 'index.cjs'));
 
 /** Monta o resultado, herdando do índice o que já está declarado lá. */
-function resultado(id, state, extra = {}) {
-  const c = porId(id);
+function outcome(id, state, extra = {}) {
+  const c = byId(id);
   if (!c) throw new Error(`checagem "${id}" não está no índice`);
   return {
     id, name: c.name, family: c.family, input: c.input,
     severidadeMaxima: c.severity, semantica: !!c.semantica, calibravel: !!c.calibravel,
     state,
     mensagem: extra.mensagem || '',
-    medida: extra.medida === undefined ? null : extra.medida,
+    measured: extra.measured === undefined ? null : extra.measured,
     occurrences: extra.occurrences || [],
   };
 }
 
-const ok = (id, extra) => resultado(id, 'ok', extra);
-const aviso = (id, extra) => resultado(id, 'aviso', extra);
-const falha = (id, extra) => resultado(id, 'falha', extra);
-const notApplicable = (id, motivo) => resultado(id, 'notApplicable', { mensagem: motivo });
+const ok = (id, extra) => outcome(id, 'ok', extra);
+const warning = (id, extra) => outcome(id, 'warning', extra);
+const failure = (id, extra) => outcome(id, 'failure', extra);
+const notApplicable = (id, motivo) => outcome(id, 'notApplicable', { mensagem: motivo });
 
 /** Puladas herdam do índice o motivo — não há dois lugares onde ele possa divergir. */
-function pulada(id) {
-  const c = porId(id);
-  return resultado(id, 'pulada', { mensagem: c.porqueRender || 'não é do validador' });
+function skipped(id) {
+  const c = byId(id);
+  return outcome(id, 'skipped', { mensagem: c.porqueRender || 'não é do validador' });
 }
 
 /**
  * Fecha a checagem pelo que foi achado: nada → ok, achados → a severidade que o
  * índice declarou. Escalona quando a checagem tem os dois níveis.
  */
-function conforme(id, occurrences, extra = {}) {
+function matches(id, occurrences, extra = {}) {
   if (!occurrences.length) return ok(id, extra);
-  return resultado(id, porId(id).severity === 'fail' ? 'falha' : 'aviso', { ...extra, occurrences });
+  return outcome(id, byId(id).severity === 'fail' ? 'failure' : 'warning', { ...extra, occurrences });
 }
 
 /** Pares não ordenados de uma lista, sem repetir e sem parear consigo mesmo. */
-function* pares(lista) {
-  for (let i = 0; i < lista.length; i++)
-    for (let j = i + 1; j < lista.length; j++) yield [lista[i], lista[j]];
+function* pairs(list) {
+  for (let i = 0; i < list.length; i++)
+    for (let j = i + 1; j < list.length; j++) yield [list[i], list[j]];
 }
 
-const media = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-const desvio = xs => (xs.length ? Math.sqrt(media(xs.map(x => (x - media(xs)) ** 2))) : 0);
-const arredonda = (x, n = 3) => Number(Number(x).toFixed(n));
+const mean = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+const deviation = xs => (xs.length ? Math.sqrt(mean(xs.map(x => (x - mean(xs)) ** 2))) : 0);
+const roundTo = (x, n = 3) => Number(Number(x).toFixed(n));
 
 /** Texto do rótulo sem a marcação HTML que o motor injeta (`<b>1.</b> ...`). */
-const semTags = s => String(s || '').replace(/<[^>]+>/g, '').trim();
+const withoutTags = s => String(s || '').replace(/<[^>]+>/g, '').trim();
 
 /**
  * Como um elemento é citado numa mensagem: o id, mais o rótulo quando existe.
@@ -78,6 +78,6 @@ const semTags = s => String(s || '').replace(/<[^>]+>/g, '').trim();
  * onde uma delas passa a citar só o id — e aí a ocorrência de A4.2 diz
  * "srv está dentro de vpc-b" em vez de dizer de que serviço se trata.
  */
-const name = e => `${e.id}${semTags(e.label) ? ` ("${semTags(e.label)}")` : ''}`;
+const name = e => `${e.id}${withoutTags(e.label) ? ` ("${withoutTags(e.label)}")` : ''}`;
 
-module.exports = { resultado, ok, aviso, falha, notApplicable, pulada, conforme, pares, media, desvio, arredonda, semTags, name };
+module.exports = { outcome, ok, warning, failure, notApplicable, skipped, matches, pairs, mean, deviation, roundTo, withoutTags, name };

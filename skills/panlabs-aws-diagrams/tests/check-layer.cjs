@@ -18,16 +18,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..');
 
-const { derivar } = require(path.join(RAIZ, 'engine', 'derive.cjs'));
-const camadas = require(path.join(RAIZ, 'engine', 'layers.cjs'));
-const dispor = require(path.join(RAIZ, 'engine', 'layout.cjs'));
-const resolverMod = require(path.join(RAIZ, 'engine', 'resolve.cjs'));
-const { validar } = require(path.join(RAIZ, 'engine', 'validate.cjs'));
-const ESQUEMA = JSON.parse(fs.readFileSync(path.join(RAIZ, 'schema.json'), 'utf8'));
+const { derive } = require(path.join(ROOT, 'engine', 'derive.cjs'));
+const camadas = require(path.join(ROOT, 'engine', 'layers.cjs'));
+const dispor = require(path.join(ROOT, 'engine', 'layout.cjs'));
+const resolverMod = require(path.join(ROOT, 'engine', 'resolve.cjs'));
+const { validate } = require(path.join(ROOT, 'engine', 'validate.cjs'));
+const SCHEMA = JSON.parse(fs.readFileSync(path.join(ROOT, 'schema.json'), 'utf8'));
 
-const res = resolverMod.criar(require(path.join(RAIZ, 'theme', 'theme.cjs')).carregar('light'));
+const res = resolverMod.create(require(path.join(ROOT, 'theme', 'theme.cjs')).load('light'));
 const cat = res.cat;
 
 let falhas = 0;
@@ -36,30 +36,30 @@ const ok = (cond, title, detail) => {
   if (!cond) falhas++;
 };
 
-function carregar(name, dir = 'models') {
-  const m = JSON.parse(fs.readFileSync(path.join(RAIZ, dir, `${name}.json`), 'utf8'));
-  const v = validar(m, ESQUEMA);
+function load(name, dir = 'models') {
+  const m = JSON.parse(fs.readFileSync(path.join(ROOT, dir, `${name}.json`), 'utf8'));
+  const v = validate(m, SCHEMA);
   if (!v.ok) throw new Error(`${name}: modelo inválido (${v.fase}) — ${v.erros[0]}`);
   return m;
 }
 
 /** A ordem dos PAPÉIS privados que a grade empilharia, de cima para baixo. */
-function ordemDeLinhas(modelo) {
-  const d = derivar(modelo, { cat });
-  const papeis = [...camadas.papeisDeSubnet(modelo, d.t, d.camadas).values()];
+function ordemDeLinhas(model) {
+  const d = derive(model, { cat });
+  const papeis = [...camadas.papeisDeSubnet(model, d.t, d.camadas).values()];
   const ordemAcesso = { public: 0, private: 1, '?': 2 };
   return papeis
     .sort((a, b) =>
       (ordemAcesso[a.access] ?? 9) - (ordemAcesso[b.access] ?? 9) ||
-      camadas.ordemDeCamada(a.layer) - camadas.ordemDeCamada(b.layer) ||
+      camadas.layerOrder(a.layer) - camadas.layerOrder(b.layer) ||
       a.label.localeCompare(b.label, 'pt'))
     .map(p => p.label);
 }
 
 /** A ordem que a regra ANTIGA daria: exposição, depois alfabeto. É o "antes". */
-function ordemAlfabetica(modelo) {
-  const d = derivar(modelo, { cat });
-  const papeis = [...camadas.papeisDeSubnet(modelo, d.t, d.camadas).values()];
+function ordemAlfabetica(model) {
+  const d = derive(model, { cat });
+  const papeis = [...camadas.papeisDeSubnet(model, d.t, d.camadas).values()];
   const ordemAcesso = { public: 0, private: 1, '?': 2 };
   return papeis
     .sort((a, b) =>
@@ -72,21 +72,21 @@ function ordemAlfabetica(modelo) {
 // ---------------------------------------------------------------------------
 console.log('\n1 · a tabela do ticket — a regra escolhida contra o placeholder alfabético\n');
 
-const TABELA = [
-  { modelo: 'app-data', espera: ['App subnet', 'Data subnet'] },
-  { modelo: 'web-data', espera: ['Web subnet', 'Data subnet'] },
-  { modelo: 'ingest-core', espera: ['Ingest subnet', 'Core subnet'] },
+const TABLE = [
+  { model: 'app-data', espera: ['App subnet', 'Data subnet'] },
+  { model: 'web-data', espera: ['Web subnet', 'Data subnet'] },
+  { model: 'ingest-core', espera: ['Ingest subnet', 'Core subnet'] },
 ];
 
 let alfabetoAcertou = 0;
-for (const caso of TABELA) {
-  const m = carregar(caso.modelo);
+for (const caso of TABLE) {
+  const m = load(caso.model);
   const nova = ordemDeLinhas(m);
   const velha = ordemAlfabetica(m);
   const acertouNova = JSON.stringify(nova) === JSON.stringify(caso.espera);
   const acertouVelha = JSON.stringify(velha) === JSON.stringify(caso.espera);
   if (acertouVelha) alfabetoAcertou++;
-  ok(acertouNova, `${caso.modelo.padEnd(14)} conteúdo → ${nova.join(' · ')}`,
+  ok(acertouNova, `${caso.model.padEnd(14)} conteúdo → ${nova.join(' · ')}`,
     `alfabeto → ${velha.join(' · ')} ${acertouVelha ? '(também acerta)' : '✗ ERRA'}`);
 }
 ok(alfabetoAcertou === 1,
@@ -96,7 +96,7 @@ ok(alfabetoAcertou === 1,
 // ---------------------------------------------------------------------------
 console.log('\n2 · a leitura: categoria do catálogo → andar de rede\n');
 
-const LEITURA = [
+const READING = [
   ['ecs', 'containers', 'application'],
   ['ec2', 'compute', 'application'],
   ['rds', 'database', 'data'],
@@ -108,21 +108,21 @@ const LEITURA = [
   ['network firewall', 'security_identity_compliance', 'edge'],
   ['sagemaker', 'artificial_intelligence', null],
 ];
-for (const [service, categoriaEsperada, camadaEsperada] of LEITURA) {
+for (const [service, categoriaEsperada, camadaEsperada] of READING) {
   const c = camadas.categoriaDoNo({ kind: 'service', service }, cat);
-  const andar = c ? (camadas.CATEGORIA_CAMADA[c] || null) : null;
-  ok(c === categoriaEsperada && andar === camadaEsperada,
-    `${service.padEnd(23)} ${String(c).padEnd(28)} → ${andar || '(cala — não vota)'}`);
+  const tier = c ? (camadas.CATEGORY_LAYER[c] || null) : null;
+  ok(c === categoriaEsperada && tier === camadaEsperada,
+    `${service.padEnd(23)} ${String(c).padEnd(28)} → ${tier || '(cala — não vota)'}`);
 }
 
 // mistura: vence o mais fundo
 {
-  const m = carregar('three-mixed-layers');
-  const d = derivar(m, { cat });
+  const m = load('three-mixed-layers');
+  const d = derive(m, { cat });
   const ana = d.camadas.get('ana-a');
-  ok(ana.layer === 'data' && ana.evidencia.length === 2,
+  ok(ana.layer === 'data' && ana.evidence.length === 2,
     'mistura ECS + Redshift na mesma subnet → dados',
-    `vence o mais fundo (${ana.evidencia.map(e => e.layer).join(' vs ')})`);
+    `vence o mais fundo (${ana.evidence.map(e => e.layer).join(' vs ')})`);
   ok(JSON.stringify(ordemDeLinhas(m)) === JSON.stringify(['Firewall subnet', 'Worker subnet', 'Analytics subnet']),
     'três andares saem na ordem de leitura de rede',
     `alfabeto daria ${ordemAlfabetica(m).join(' · ')}`);
@@ -130,16 +130,16 @@ for (const [service, categoriaEsperada, camadaEsperada] of LEITURA) {
 
 // o escape: declarado vence, e a divergência é contada
 {
-  const m = carregar('declared-empty-subnet');
-  const d = derivar(m, { cat });
-  ok(d.camadas.get('res-a').layer === 'data' && d.camadas.get('res-a').via === 'declarada',
+  const m = load('declared-empty-subnet');
+  const d = derive(m, { cat });
+  ok(d.camadas.get('res-a').layer === 'data' && d.camadas.get('res-a').via === 'declared',
     'subnet vazia com `camada` declarada → dados [declarada]');
   ok(JSON.stringify(ordemDeLinhas(m)) === JSON.stringify(['App subnet', 'Reserved subnet']),
     'e a linha declarada empilha embaixo da aplicação');
 
   const conflito = JSON.parse(JSON.stringify(m));
   conflito.nodes.find(n => n.id === 'app-a').layer = 'data';
-  const dc = derivar(conflito, { cat });
+  const dc = derive(conflito, { cat });
   const c = dc.camadas.get('app-a');
   ok(c.layer === 'data' && c.diverge === 'application',
     'declarar contra o próprio conteúdo → obedece e sinaliza',
@@ -150,12 +150,12 @@ for (const [service, categoriaEsperada, camadaEsperada] of LEITURA) {
 console.log('\n3 · a lacuna: onde a falta do fato recusa, e onde ela só avisa\n');
 
 {
-  const m = carregar('empty-subnet', path.join('models', 'refusal'));
-  const d = derivar(m, { cat });
-  ok(d.lacunas.length === 1 && d.lacunas[0].orfaos.length === 1 &&
-     d.lacunas[0].orfaos[0].papel === 'Reserved subnet' && d.lacunas[0].orfaos[0].vazio,
+  const m = load('empty-subnet', path.join('models', 'refusal'));
+  const d = derive(m, { cat });
+  ok(d.gaps.length === 1 && d.gaps[0].orfaos.length === 1 &&
+     d.gaps[0].orfaos[0].papel === 'Reserved subnet' && d.gaps[0].orfaos[0].vazio,
     'a lacuna é achada, e nomeia o papel exato',
-    JSON.stringify(d.lacunas.map(l => l.orfaos.map(o => o.papel))));
+    JSON.stringify(d.gaps.map(l => l.orfaos.map(o => o.papel))));
 
   let recusou = null;
   try { await dispor.porGrade(m, d, res); }
@@ -169,21 +169,21 @@ console.log('\n3 · a lacuna: onde a falta do fato recusa, e onde ela só avisa\
 
 // papel único: sem camada, mas sem contra quem ser ordenado → não recusa
 {
-  const m = carregar('empty-subnet', path.join('models', 'refusal'));
+  const m = load('empty-subnet', path.join('models', 'refusal'));
   const so = JSON.parse(JSON.stringify(m));
   so.nodes = so.nodes.filter(n => !['app-a', 'app-b', 'ecs-a', 'ecs-b'].includes(n.id));
-  const d = derivar(so, { cat });
-  ok(d.lacunas.length === 0,
+  const d = derive(so, { cat });
+  ok(d.gaps.length === 0,
     'papel único sem camada NÃO recusa — não há contra quem ordenar',
     'a recusa dispara onde a falta muda o desenho, e só lá');
 }
 
 // caminho do ELK: a mesma falta, e ele desenha
 {
-  const m = carregar('elk-no-layer');
-  const d = derivar(m, { cat });
-  ok(!d.az.desenhar, 'o modelo do ELK não aciona a grade (1 AZ)');
-  ok(d.lacunas.length === 1, 'a mesma lacuna existe lá');
+  const m = load('elk-no-layer');
+  const d = derive(m, { cat });
+  ok(!d.az.draw, 'o modelo do ELK não aciona a grade (1 AZ)');
+  ok(d.gaps.length === 1, 'a mesma lacuna existe lá');
   let erro = null;
   try { await dispor.porElk(m, d, res); } catch (e) { erro = e; }
   ok(erro === null, 'e o ELK desenha assim mesmo — avisa, não recusa');
@@ -197,15 +197,15 @@ console.log('\n4 · experimento de controle: a regra lê o CONTEÚDO, não o ró
   // regra estivesse lendo o nome, a ordem viraria; como ela lê o que está
   // dentro, a subnet que guarda o Aurora continua embaixo — só que agora ela se
   // chama "Web subnet".
-  const m = carregar('web-data');
-  const trocado = JSON.parse(JSON.stringify(m));
-  for (const n of trocado.nodes)
+  const m = load('web-data');
+  const swapped = JSON.parse(JSON.stringify(m));
+  for (const n of swapped.nodes)
     if (n.kind === 'subnet') n.label = n.label === 'Web subnet' ? 'Data subnet' : 'Web subnet';
 
-  const order = ordemDeLinhas(trocado);
+  const order = ordemDeLinhas(swapped);
   const camadaDe = r => {
-    const d = derivar(trocado, { cat });
-    const p = [...camadas.papeisDeSubnet(trocado, d.t, d.camadas).values()].find(x => x.label === r);
+    const d = derive(swapped, { cat });
+    const p = [...camadas.papeisDeSubnet(swapped, d.t, d.camadas).values()].find(x => x.label === r);
     return p.layer;
   };
   ok(JSON.stringify(order) === JSON.stringify(['Data subnet', 'Web subnet']),
@@ -215,7 +215,7 @@ console.log('\n4 · experimento de controle: a regra lê o CONTEÚDO, não o ró
   // E o controle do controle: se a regra fosse alfabética, este é o resultado
   // que ela daria — e ele é o MESMO nos dois modelos, o que é justamente o
   // sintoma de estar lendo a letra e não a arquitetura.
-  ok(JSON.stringify(ordemAlfabetica(trocado)) === JSON.stringify(ordemAlfabetica(m)),
+  ok(JSON.stringify(ordemAlfabetica(swapped)) === JSON.stringify(ordemAlfabetica(m)),
     'já o alfabeto dá a MESMA saída para os dois modelos',
     'trocar o conteúdo de lugar não move nada — é o sintoma de ler a letra');
 }

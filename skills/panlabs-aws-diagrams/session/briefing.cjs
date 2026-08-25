@@ -13,34 +13,34 @@
  * lugar de onde ele retoma a conversa sem pedir ao usuario que repita nada.
  */
 
-const { politica } = require('./open.cjs');
+const { policy } = require('./open.cjs');
 
 const cabeca = t => ['', `  ${t}`, `  ${'─'.repeat(Math.max(8, t.length))}`];
 
 function briefing(aberto, extra = {}) {
   const L = [];
-  const s = aberto.sessao;
+  const s = aberto.session;
 
   L.push('', '  ┌─ RETOMADA ' + '─'.repeat(52));
-  if (!aberto.nosso) {
+  if (!aberto.ours) {
     L.push(`  │ Este arquivo nao e meu: ${aberto.because}`);
     L.push('  └' + '─'.repeat(63));
     return L;
   }
-  L.push(`  │ Reconheci por: ${aberto.comoReconheci.join(' · ')}`);
+  L.push(`  │ Reconheci por: ${aberto.howIRecognized.join(' · ')}`);
   L.push(`  │ Caso: ${s.title}`);
   L.push(`  │ Estagio do modelo: ${s.stage}   ·   ${s.nodes.length} nos, ${(s.edges || []).length} arestas`);
   L.push('  └' + '─'.repeat(63));
 
   // ------------------------------------------------------- estado das paginas
   L.push(...cabeca('Paginas e o que o humano fez com elas'));
-  for (const p of aberto.paginas) {
-    const marca = politica(p.state).glifo;
+  for (const p of aberto.pages) {
+    const marca = policy(p.state).glifo;
     L.push(`    ${marca} ${String(p.name || p.id).padEnd(34)} vista=${p.view || '—'}  ${p.state}`);
     if (p.because) L.push(`        ${p.because}`);
   }
-  if (aberto.conflitoDeCopias)
-    L.push(`    ⚠ as paginas trazem ${aberto.conflitoDeCopias.quantas} copias DIFERENTES do modelo — ` +
+  if (aberto.copyConflict)
+    L.push(`    ⚠ as paginas trazem ${aberto.copyConflict.quantas} copias DIFERENTES do modelo — ` +
       'alguem colou aqui uma pagina de outro arquivo.');
 
   // -------------------------------------------------------------- o acordo

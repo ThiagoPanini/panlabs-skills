@@ -47,26 +47,26 @@
 
 const crypto = require('crypto');
 const path = require('path');
-const { esc, conferirXml, limparGremlins } = require(path.join(__dirname, '..', 'engine', 'emit.cjs'));
+const { esc, checkXml, stripGremlins } = require(path.join(__dirname, '..', 'engine', 'emit.cjs'));
 
 const sha = s => 'sha256:' + crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 
 /** JSON com chaves em ordem — hash so vale se a serializacao for unica. */
-function canonicalizar(v) {
+function canonicalize(v) {
   if (v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
-  if (Array.isArray(v)) return '[' + v.map(canonicalizar).join(',') + ']';
+  if (Array.isArray(v)) return '[' + v.map(canonicalize).join(',') + ']';
   return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort()
-    .map(k => JSON.stringify(k) + ':' + canonicalizar(v[k])).join(',') + '}';
+    .map(k => JSON.stringify(k) + ':' + canonicalize(v[k])).join(',') + '}';
 }
 
 // ------------------------------------------------------------- XML -> celulas
 
-const DESESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'" };
-function desescapar(s) {
+const UNESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'" };
+function unescape(s) {
   return String(s)
     .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
-    .replace(/&(amp|lt|gt|quot|#39|apos);/g, m => DESESC[m]);
+    .replace(/&(amp|lt|gt|quot|#39|apos);/g, m => UNESC[m]);
 }
 
 /**
@@ -75,7 +75,7 @@ function desescapar(s) {
  * proprio app escreve na volta, que difere do que o motor escreveu — ordem de
  * atributo, aspas, tag que fecha sozinha.
  */
-function varrer(xml) {
+function sweep(xml) {
   const raiz = { name: '#raiz', attrs: {}, filhos: [] };
   const pilha = [raiz];
   const re = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<\/([A-Za-z_][\w.-]*)\s*>|<([A-Za-z_][\w.-]*)((?:\s+[\w.:-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/g;
@@ -85,7 +85,7 @@ function varrer(xml) {
     if (m[1]) { if (pilha.length > 1) pilha.pop(); continue; }
     const attrs = {};
     for (const a of String(m[3] || '').matchAll(/([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
-      attrs[a[1]] = desescapar(a[2] !== undefined ? a[2] : a[3]);
+      attrs[a[1]] = unescape(a[2] !== undefined ? a[2] : a[3]);
     const no = { name: m[2], attrs, filhos: [] };
     pilha[pilha.length - 1].filhos.push(no);
     if (!m[4]) pilha.push(no);
@@ -98,25 +98,25 @@ function acharTodos(no, name, out = []) {
   return out;
 }
 
-const PREFIXO = 'panlabs';
-const ID_SELO = 'panlabs-modelo';
+const PREFIX = 'panlabs';
+const SEAL_ID = 'panlabs-modelo';
 
 /**
  * Le as paginas de um `.drawio`. Cada pagina vira `{ id, nome, selo, celulas }`.
  * A celula do selo NAO entra em `celulas`: ela carrega a impressao do desenho, e
  * uma impressao que se inclui nunca fecha.
  */
-function lerPaginas(xml) {
-  const raiz = varrer(xml);
+function readPages(xml) {
+  const raiz = sweep(xml);
   const mxfile = acharTodos(raiz, 'mxfile')[0];
-  const paginas = [];
+  const pages = [];
 
   for (const diagrama of acharTodos(raiz, 'diagram')) {
-    const modelo = acharTodos(diagrama, 'mxGraphModel')[0];
+    const model = acharTodos(diagrama, 'mxGraphModel')[0];
     const celulas = [];
-    let selo = null;
+    let seal = null;
 
-    const container = modelo ? acharTodos(modelo, 'root')[0] : null;
+    const container = model ? acharTodos(model, 'root')[0] : null;
     for (const filho of (container ? container.filhos : [])) {
       let id, valor, data = null, mx;
       if (filho.name === 'object' || filho.name === 'UserObject') {
@@ -134,9 +134,9 @@ function lerPaginas(xml) {
       // de a celula SUMIR das impressoes: bastava batizar um atributo qualquer
       // de `panlabsX` e a edicao daquela celula passaria despercebida. Num
       // detector de divergencia isso nao e detalhe.
-      if (id === ID_SELO || (data && data.panlabsEsquema !== undefined)) {
-        selo = {};
-        for (const [k, v] of Object.entries(data || {})) if (k.startsWith(PREFIXO)) selo[k] = v;
+      if (id === SEAL_ID || (data && data.panlabsSchema !== undefined)) {
+        seal = {};
+        for (const [k, v] of Object.entries(data || {})) if (k.startsWith(PREFIX)) seal[k] = v;
         continue;
       }
       if (id === '0' || id === '1') continue;
@@ -147,7 +147,7 @@ function lerPaginas(xml) {
         id,
         valor: valor === undefined ? '' : valor,
         style: mx.attrs.style || '',
-        pai: mx.attrs.parent,
+        parent: mx.attrs.parent,
         from: mx.attrs.source, to: mx.attrs.target,
         edge: mx.attrs.edge === '1',
         visivel: mx.attrs.visible !== '0',
@@ -159,9 +159,9 @@ function lerPaginas(xml) {
         pontos,
       });
     }
-    paginas.push({ id: diagrama.attrs.id, name: diagrama.attrs.name, selo, celulas });
+    pages.push({ id: diagrama.attrs.id, name: diagrama.attrs.name, seal, celulas });
   }
-  return { host: mxfile ? mxfile.attrs.host : undefined, paginas };
+  return { host: mxfile ? mxfile.attrs.host : undefined, pages };
 }
 
 // ------------------------------------------------------------- as impressoes
@@ -177,18 +177,18 @@ const chavesDeStyle = s => {
 };
 
 /** O que o style AFIRMA — identidade da forma e a cor, que em AWS carrega fronteira. */
-const SEMANTICO_VERTICE = ['shape', 'resIcon', 'grIcon', 'container', 'strokeColor', 'fillColor', 'dashed'];
+const SEMANTIC_VERTEX = ['shape', 'resIcon', 'grIcon', 'container', 'strokeColor', 'fillColor', 'dashed'];
 /** Numa aresta a cor e decoracao; a ponta e afirmacao de sentido. */
-const SEMANTICO_ARESTA = ['startArrow', 'endArrow', 'startFill', 'endFill'];
+const SEMANTIC_EDGE = ['startArrow', 'endArrow', 'startFill', 'endFill'];
 
 function fatiaSemantica(c, comCor = true) {
   const k = chavesDeStyle(c.style);
-  const chaves = (c.edge ? SEMANTICO_ARESTA : SEMANTICO_VERTICE)
+  const chaves = (c.edge ? SEMANTIC_EDGE : SEMANTIC_VERTEX)
     .filter(x => comCor || !/Color$/.test(x));
   const forma = {};
   for (const x of chaves) if (k[x] !== undefined) forma[x] = k[x];
   return {
-    id: c.id, valor: c.valor, pai: c.pai, edge: c.edge,
+    id: c.id, valor: c.valor, parent: c.parent, edge: c.edge,
     from: c.from, to: c.to, visivel: c.visivel, forma,
   };
 }
@@ -207,18 +207,18 @@ function fatiaSemantica(c, comCor = true) {
  * a afirmacao mudou -> o modelo virou mentira; so a aparencia mudou -> alguem
  * ajeitou o desenho e regerar apaga o trabalho dele.
  */
-function fatiaDeAparencia(c, i) {
+function appearanceSlice(c, i) {
   const r = n => Math.round(n);
   const k = chavesDeStyle(c.style);
-  const semanticas = new Set(c.edge ? SEMANTICO_ARESTA : SEMANTICO_VERTICE);
+  const semanticas = new Set(c.edge ? SEMANTIC_EDGE : SEMANTIC_VERTEX);
   const resto = {};
-  for (const [chave, v] of Object.entries(k)) if (!semanticas.has(chave)) resto[chave] = v;
+  for (const [key, v] of Object.entries(k)) if (!semanticas.has(key)) resto[key] = v;
   return {
     id: c.id,
     // ordem z = posicao ENTRE IRMAOS, nao indice na lista plana. Ver
     // `impressaoDeAparencia`, que e quem calcula o numero.
     ordemZ: i,
-    pai: c.pai === undefined || c.pai === null ? null : String(c.pai),
+    parent: c.parent === undefined || c.parent === null ? null : String(c.parent),
     colapsado: !!c.colapsado,
     geo: c.geo ? { x: r(c.geo.x), y: r(c.geo.y), w: r(c.geo.w), h: r(c.geo.h) } : null,
     pontos: c.pontos.map(p => ({ x: r(p.x), y: r(p.y) })),
@@ -226,10 +226,10 @@ function fatiaDeAparencia(c, i) {
   };
 }
 
-const ordenar = cs => [...cs].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+const sortBy = cs => [...cs].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 function impressaoSemantica(celulas, opts = {}) {
-  return sha(canonicalizar(ordenar(celulas).map(c => fatiaSemantica(c, opts.comCor !== false))));
+  return sha(canonicalize(sortBy(celulas).map(c => fatiaSemantica(c, opts.comCor !== false))));
 }
 
 /**
@@ -255,16 +255,16 @@ function impressaoSemantica(celulas, opts = {}) {
  * O caso de controle continua guardado: `check-fingerprint.cjs` move uma celula
  * para outra posicao ENTRE IRMAOS e exige `remanejado`.
  */
-function impressaoDeAparencia(celulas) {
+function appearanceFingerprint(celulas) {
   const entreIrmaos = new Map();
   const comOrdem = celulas.map(c => {
-    const chave = c.pai === undefined || c.pai === null ? '?' : String(c.pai);
-    const n = entreIrmaos.get(chave) || 0;
-    entreIrmaos.set(chave, n + 1);
+    const key = c.parent === undefined || c.parent === null ? '?' : String(c.parent);
+    const n = entreIrmaos.get(key) || 0;
+    entreIrmaos.set(key, n + 1);
     return { c, i: n };
   });
   comOrdem.sort((a, b) => a.c.id < b.c.id ? -1 : a.c.id > b.c.id ? 1 : 0);
-  return sha(canonicalizar(comOrdem.map(({ c, i }) => fatiaDeAparencia(c, i))));
+  return sha(canonicalize(comOrdem.map(({ c, i }) => appearanceSlice(c, i))));
 }
 
 /**
@@ -285,33 +285,33 @@ function impressaoDeAparencia(celulas) {
  * @returns {string}
  */
 function reescreverSelos(xml, faz) {
-  const { paginas } = lerPaginas(xml);
-  if (!paginas.length) throw new Error('XML sem pagina nenhuma');
-  const re = new RegExp(`[ \\t]*<object id="${ID_SELO}"[\\s\\S]*?</object>\\n?`, 'g');
+  const { pages } = readPages(xml);
+  if (!pages.length) throw new Error('XML sem pagina nenhuma');
+  const re = new RegExp(`[ \\t]*<object id="${SEAL_ID}"[\\s\\S]*?</object>\\n?`, 'g');
   let i = 0;
   const output = xml.replace(re, () => {
-    const p = paginas[i] || paginas[paginas.length - 1];
+    const p = pages[i] || pages[pages.length - 1];
     const attrs = Object.entries(faz(p, i))
       .filter(([, v]) => v !== undefined && v !== null)
-      .map(([k, v]) => `${k}="${esc(limparGremlins(v))}"`).join(' ');
+      .map(([k, v]) => `${k}="${esc(stripGremlins(v))}"`).join(' ');
     i += 1;
-    return `        <object id="${ID_SELO}" label="" ${attrs}>\n` +
+    return `        <object id="${SEAL_ID}" label="" ${attrs}>\n` +
       `          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">\n` +
       `            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>\n` +
       `          </mxCell>\n` +
       `        </object>\n`;
   });
-  if (i === 0) throw new Error(`o XML nao trouxe nenhuma celula ${ID_SELO} para trocar`);
-  if (i !== paginas.length)
-    throw new Error(`o XML tem ${paginas.length} pagina(s) mas ${i} celula(s) ${ID_SELO} — ` +
+  if (i === 0) throw new Error(`o XML nao trouxe nenhuma celula ${SEAL_ID} para trocar`);
+  if (i !== pages.length)
+    throw new Error(`o XML tem ${pages.length} pagina(s) mas ${i} celula(s) ${SEAL_ID} — ` +
       'alguma pagina ficou sem selo');
-  const erros = conferirXml(output);
+  const erros = checkXml(output);
   if (erros.length) { const e = new Error('a reescrita do selo produziu XML mal formado'); e.erros = erros; throw e; }
-  return { xml: output, paginas };
+  return { xml: output, pages };
 }
 
 /** A impressao que a aprovacao pendura: o recorte do acordo, canonizado. */
-const impressaoDoAcordo = snapshot => sha(canonicalizar(snapshot));
+const impressaoDoAcordo = snapshot => sha(canonicalize(snapshot));
 
 // --------------------------------------------------------------- a diferenca
 
@@ -334,12 +334,12 @@ function diferenca(antes, depois) {
     const antiga = a.get(id);
     const fa = fatiaSemantica(antiga), fd = fatiaSemantica(c);
     if (fa.valor !== fd.valor) findings.push({ kind: 'label', id, era: fa.valor, virou: fd.valor });
-    if (fa.pai !== fd.pai) findings.push({ kind: 'mudou-de-pai', id, era: fa.pai, virou: fd.pai });
+    if (fa.parent !== fd.parent) findings.push({ kind: 'mudou-de-pai', id, era: fa.parent, virou: fd.parent });
     if (fa.from !== fd.from || fa.to !== fd.to)
       findings.push({ kind: 'extremos', id, era: `${fa.from}->${fa.to}`, virou: `${fd.from}->${fd.to}` });
     if (fa.visivel !== fd.visivel) findings.push({ kind: 'visibilidade', id, era: fa.visivel, virou: fd.visivel });
-    if (canonicalizar(fa.forma) !== canonicalizar(fd.forma))
-      findings.push({ kind: 'forma', id, era: canonicalizar(fa.forma), virou: canonicalizar(fd.forma) });
+    if (canonicalize(fa.forma) !== canonicalize(fd.forma))
+      findings.push({ kind: 'forma', id, era: canonicalize(fa.forma), virou: canonicalize(fd.forma) });
   }
   return findings;
 }
@@ -354,8 +354,8 @@ function diferenca(antes, depois) {
  *               absorver; ou ele descreve o que fez, ou o desenho e a verdade e
  *               o modelo foi abandonado.
  */
-function classificar(findings) {
-  const ONDE = {
+function classify(findings) {
+  const WHERE = {
     label: 'campo `rotulo`',
     sumiu: 'tirar o elemento do modelo',
     apareceu: 'no novo — mas a skill nao sabe QUE capacidade ele serve; absorver custa uma pergunta',
@@ -363,7 +363,7 @@ function classificar(findings) {
     extremos: 'campos `de` / `para`',
   };
   return findings.map(a => {
-    let onde = ONDE[a.kind] || null;
+    let onde = WHERE[a.kind] || null;
     // Trocar o icone e expressavel: e outro `servico` do catalogo. Trocar o
     // style para algo que nao carrega icone nenhum nao e — o modelo nao tem
     // vocabulario para "uma caixa que o usuario desenhou do jeito dele".
@@ -373,8 +373,8 @@ function classificar(findings) {
 }
 
 module.exports = {
-  sha, canonicalizar, varrer, acharTodos, lerPaginas, desescapar,
-  impressaoSemantica, impressaoDeAparencia, impressaoDoAcordo,
-  fatiaSemantica, fatiaDeAparencia, diferenca, classificar, chavesDeStyle,
-  ID_SELO, PREFIXO, reescreverSelos,
+  sha, canonicalize, sweep, acharTodos, readPages, unescape,
+  impressaoSemantica, appearanceFingerprint, impressaoDoAcordo,
+  fatiaSemantica, appearanceSlice, diferenca, classify, chavesDeStyle,
+  SEAL_ID, PREFIX, reescreverSelos,
 };

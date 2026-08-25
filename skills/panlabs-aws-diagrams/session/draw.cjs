@@ -17,21 +17,21 @@
  */
 
 const path = require('path');
-const { projetar } = require('./project.cjs');
-const { selar } = require('./save.cjs');
-const { avisoDeDossie } = require('./publish.cjs');
+const { project } = require('./project.cjs');
+const { sealInto } = require('./save.cjs');
+const { dossierWarning } = require('./publish.cjs');
 
-const { gerar } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
+const { generate } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
 
-async function desenhar(sessao, view, opts = {}) {
-  const { modelo, trilha } = projetar(sessao, view);
-  const r = await gerar(modelo, opts);
-  const xml = selar(r.xml, sessao, view, { motor: opts.motor });
+async function draw(session, view, opts = {}) {
+  const { model, trilha } = project(session, view);
+  const r = await generate(model, opts);
+  const xml = sealInto(r.xml, session, view, { engine: opts.engine });
   // Aviso de uma linha, no padrao do #16: avisa, nunca bloqueia, e nomeia a
   // saida. Vai no relatorio e nao no stdout porque quem imprime e a CLI.
-  const aviso = avisoDeDossie(sessao);
-  if (aviso) r.relatorio.avisos.push(aviso);
-  return { xml, modelo, trilha, relatorio: r.relatorio, caminho: r.caminho, tema: r.tema };
+  const warning = dossierWarning(session);
+  if (warning) r.relatorio.avisos.push(warning);
+  return { xml, model, trilha, relatorio: r.relatorio, caminho: r.caminho, tema: r.tema };
 }
 
-module.exports = { desenhar };
+module.exports = { draw };

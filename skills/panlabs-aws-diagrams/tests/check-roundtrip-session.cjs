@@ -23,17 +23,17 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { abrir } = require('../session/open.cjs');
-const { canonicalizar } = require('../session/fingerprint.cjs');
+const { open } = require('../session/open.cjs');
+const { canonicalize } = require('../session/fingerprint.cjs');
 
-const RAIZ = path.join(__dirname, '..');
-const ARQ = path.join(RAIZ, 'output', 'retail.drawio');
-const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
-const DRAWIO = binario(process.argv[2]);
+const ROOT = path.join(__dirname, '..');
+const FILE = path.join(ROOT, 'output', 'retail.drawio');
+const { binary } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
+const DRAWIO = binary(process.argv[2]);
 
-if (!fs.existsSync(ARQ)) { console.error('  rode tools/approve.cjs e tools/resume.cjs antes.'); process.exit(1); }
+if (!fs.existsSync(FILE)) { console.error('  rode tools/approve.cjs e tools/resume.cjs antes.'); process.exit(1); }
 
-const antes = abrir(fs.readFileSync(ARQ, 'utf8'));
+const antes = open(fs.readFileSync(FILE, 'utf8'));
 let falhas = 0;
 const diz = (label, ok, extra = '') => {
   console.log(`    ${label.padEnd(52)} ${ok ? '✓' : '✗'} ${extra}`);
@@ -41,13 +41,13 @@ const diz = (label, ok, extra = '') => {
 };
 
 console.log('\n  Estatico (roda em qualquer maquina)\n');
-diz('reconhecido como nosso', antes.nosso, antes.comoReconheci.join(' · '));
-diz('as duas paginas trazem selo', antes.paginas.every(p => p.selo && p.selo.panlabsEsquema), `${antes.paginas.length} pagina(s)`);
-diz('as copias do modelo concordam', !antes.conflitoDeCopias);
-diz('todas as paginas intactas', antes.paginas.every(p => p.state === 'intacto'),
-  antes.paginas.map(p => `${p.view}=${p.state}`).join(' '));
-diz('o dossie viajou inteiro', !!(antes.sessao.dossier && antes.sessao.dossier.agreement && antes.sessao.dossier.candidates),
-  `${(antes.sessao.dossier.candidates || []).length} candidata(s), ${(antes.sessao.dossier.findings || []).length} achado(s)`);
+diz('reconhecido como nosso', antes.ours, antes.howIRecognized.join(' · '));
+diz('as duas paginas trazem selo', antes.pages.every(p => p.seal && p.seal.panlabsSchema), `${antes.pages.length} pagina(s)`);
+diz('as copias do modelo concordam', !antes.copyConflict);
+diz('todas as paginas intactas', antes.pages.every(p => p.state === 'intacto'),
+  antes.pages.map(p => `${p.view}=${p.state}`).join(' '));
+diz('o dossie viajou inteiro', !!(antes.session.dossier && antes.session.dossier.agreement && antes.session.dossier.candidates),
+  `${(antes.session.dossier.candidates || []).length} candidata(s), ${(antes.session.dossier.findings || []).length} achado(s)`);
 
 if (!fs.existsSync(DRAWIO)) {
   console.log(`\n  draw.io headless ausente em ${DRAWIO} — a camada do app fica de fora (premissa 8).`);
@@ -74,34 +74,34 @@ const output = path.join(TMP, 'volta.drawio');
 let bruto = null;
 for (let tentativa = 1; tentativa <= 2 && bruto === null; tentativa++) {
   try {
-    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, ARQ],
+    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, FILE],
       { stdio: ['ignore', 'ignore', 'ignore'] });
   } catch (e) {
     console.log('    o app falhou ao exportar — nesta maquina o electron morre sob pressao de memoria.');
     fs.rmSync(TMP, { recursive: true, force: true });
     process.exit(falhas ? 1 : 0);
   }
-  const lido = fs.readFileSync(output, 'utf8');
-  const paginas = (lido.match(/<diagram\b/g) || []).length;
-  if (paginas === antes.paginas.length) { bruto = lido; break; }
-  console.log(`    ⚠ tentativa ${tentativa}: o app devolveu ${paginas} de ${antes.paginas.length} pagina(s), ` +
-    `${lido.length} bytes, e saiu com codigo 0. Truncou em silencio.`);
-  if (tentativa === 2) bruto = lido;
+  const readBack = fs.readFileSync(output, 'utf8');
+  const pages = (readBack.match(/<diagram\b/g) || []).length;
+  if (pages === antes.pages.length) { bruto = readBack; break; }
+  console.log(`    ⚠ tentativa ${tentativa}: o app devolveu ${pages} de ${antes.pages.length} pagina(s), ` +
+    `${readBack.length} bytes, e saiu com codigo 0. Truncou em silencio.`);
+  if (tentativa === 2) bruto = readBack;
 }
 
-const depois = abrir(bruto);
-diz('continua reconhecido', depois.nosso, `host=${JSON.stringify(depois.host)}`);
-diz('as duas paginas voltaram', depois.paginas.length === antes.paginas.length,
-  `${antes.paginas.length} → ${depois.paginas.length}`);
-diz('o selo sobreviveu nas duas', depois.paginas.every(p => p.selo && p.selo.panlabsEsquema));
-diz('o modelo de sessao voltou identico', canonicalizar(depois.sessao) === canonicalizar(antes.sessao));
+const depois = open(bruto);
+diz('continua reconhecido', depois.ours, `host=${JSON.stringify(depois.host)}`);
+diz('as duas paginas voltaram', depois.pages.length === antes.pages.length,
+  `${antes.pages.length} → ${depois.pages.length}`);
+diz('o selo sobreviveu nas duas', depois.pages.every(p => p.seal && p.seal.panlabsSchema));
+diz('o modelo de sessao voltou identico', canonicalize(depois.session) === canonicalize(antes.session));
 diz('o dossie opaco voltou identico',
-  canonicalizar(depois.sessao && depois.sessao.dossier) === canonicalizar(antes.sessao.dossier));
+  canonicalize(depois.session && depois.session.dossier) === canonicalize(antes.session.dossier));
 diz('AINDA LE COMO INTACTO depois de o app reescrever',
-  depois.paginas.every(p => p.state === 'intacto'),
-  depois.paginas.map(p => `${p.view}=${p.state}`).join(' '));
-console.log(`\n    bytes: ${fs.statSync(ARQ).size} → ${bruto.length}` +
-  `  (o app ${bruto.length === fs.statSync(ARQ).size ? 'nao mudou o tamanho' : 'reescreveu o arquivo'})`);
+  depois.pages.every(p => p.state === 'intacto'),
+  depois.pages.map(p => `${p.view}=${p.state}`).join(' '));
+console.log(`\n    bytes: ${fs.statSync(FILE).size} → ${bruto.length}` +
+  `  (o app ${bruto.length === fs.statSync(FILE).size ? 'nao mudou o tamanho' : 'reescreveu o arquivo'})`);
 
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(falhas ? `\n  ✗ ${falhas} falha(s)\n` : '\n  ✓ o .drawio de duas paginas e o seu proprio formato de persistencia.\n');

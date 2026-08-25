@@ -15,7 +15,7 @@
  * esquema usa cabe em ~150 linhas e não paga a mesma conta.
  */
 
-const RESERVADO = new Set(['definitions', '$schema', '$id', 'title', 'description', 'default']);
+const RESERVED = new Set(['definitions', '$schema', '$id', 'title', 'description', 'default']);
 
 // ----------------------------------------------------------- 1. esquema
 
@@ -25,11 +25,11 @@ function resolverRef(ref, raiz) {
 }
 
 /** Valida `dado` contra `esq`. Devolve lista de erros (vazia = válido). */
-function contraEsquema(dado, esq, raiz, caminho = '') {
+function againstSchema(dado, esq, raiz, caminho = '') {
   const erros = [];
   const onde = caminho || '(raiz)';
 
-  if (esq.$ref) return contraEsquema(dado, resolverRef(esq.$ref, raiz), raiz, caminho);
+  if (esq.$ref) return againstSchema(dado, resolverRef(esq.$ref, raiz), raiz, caminho);
 
   if (esq.const !== undefined && dado !== esq.const)
     erros.push(`${onde}: esperado o literal ${JSON.stringify(esq.const)}, veio ${JSON.stringify(dado)}`);
@@ -69,7 +69,7 @@ function contraEsquema(dado, esq, raiz, caminho = '') {
   if (Array.isArray(dado)) {
     if (esq.minItems !== undefined && dado.length < esq.minItems)
       erros.push(`${onde}: precisa de pelo menos ${esq.minItems} item(ns), tem ${dado.length}`);
-    if (esq.items) dado.forEach((v, i) => erros.push(...contraEsquema(v, esq.items, raiz, `${onde}[${i}]`)));
+    if (esq.items) dado.forEach((v, i) => erros.push(...againstSchema(v, esq.items, raiz, `${onde}[${i}]`)));
   }
 
   if (dado && typeof dado === 'object' && !Array.isArray(dado)) {
@@ -78,7 +78,7 @@ function contraEsquema(dado, esq, raiz, caminho = '') {
 
     if (esq.properties) {
       for (const [k, sub] of Object.entries(esq.properties))
-        if (k in dado) erros.push(...contraEsquema(dado[k], sub, raiz, caminho ? `${caminho}.${k}` : k));
+        if (k in dado) erros.push(...againstSchema(dado[k], sub, raiz, caminho ? `${caminho}.${k}` : k));
     }
 
     // `patternProperties` — chave que casa com um padrão vale como declarada, e o
@@ -86,32 +86,32 @@ function contraEsquema(dado, esq, raiz, caminho = '') {
     // fechado só sabe ENUMERAR, e enumerar comentário livre é contradição: foi o
     // que reprovou `_conferir` num artefato de caso que o `_`, `_reparenta` e
     // `_refina` da lista não cobriam.
-    const padroes = Object.entries(esq.patternProperties || {}).map(([p, sub]) => [new RegExp(p), sub]);
-    for (const [re, sub] of padroes)
+    const patterns = Object.entries(esq.patternProperties || {}).map(([p, sub]) => [new RegExp(p), sub]);
+    for (const [re, sub] of patterns)
       for (const k of Object.keys(dado))
         if (re.test(k) && !(esq.properties && k in esq.properties))
-          erros.push(...contraEsquema(dado[k], sub, raiz, caminho ? `${caminho}.${k}` : k));
+          erros.push(...againstSchema(dado[k], sub, raiz, caminho ? `${caminho}.${k}` : k));
 
     if (esq.additionalProperties === false && esq.properties) {
       for (const k of Object.keys(dado))
-        if (!(k in esq.properties) && !RESERVADO.has(k) && !padroes.some(([re]) => re.test(k)))
-          erros.push(`${onde}: propriedade desconhecida "${k}"` + sugestao(k, Object.keys(esq.properties)));
+        if (!(k in esq.properties) && !RESERVED.has(k) && !patterns.some(([re]) => re.test(k)))
+          erros.push(`${onde}: propriedade desconhecida "${k}"` + suggestion(k, Object.keys(esq.properties)));
     }
   }
 
-  for (const sub of esq.allOf || []) erros.push(...contraEsquema(dado, sub, raiz, caminho));
+  for (const sub of esq.allOf || []) erros.push(...againstSchema(dado, sub, raiz, caminho));
 
   if (esq.if) {
-    const casa = contraEsquema(dado, esq.if, raiz, caminho).length === 0;
-    if (casa && esq.then) erros.push(...contraEsquema(dado, esq.then, raiz, caminho));
-    if (!casa && esq.else) erros.push(...contraEsquema(dado, esq.else, raiz, caminho));
+    const casa = againstSchema(dado, esq.if, raiz, caminho).length === 0;
+    if (casa && esq.then) erros.push(...againstSchema(dado, esq.then, raiz, caminho));
+    if (!casa && esq.else) erros.push(...againstSchema(dado, esq.else, raiz, caminho));
   }
 
   return erros;
 }
 
 /** "propriedade desconhecida" sem dica é um beco sem saída para quem escreve o modelo. */
-function sugestao(errada, validas) {
+function suggestion(errada, validas) {
   const dist = (a, b) => {
     const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
     for (let j = 0; j <= b.length; j++) d[0][j] = j;
@@ -123,31 +123,31 @@ function sugestao(errada, validas) {
   // O limiar acompanha o tamanho da chave: com um teto fixo de 3, a chave "x"
   // "casaria" com "id" e a dica viraria ruído. Chave curta exige acerto quase
   // exato para merecer sugestão.
-  const teto = Math.min(3, Math.max(1, Math.floor(errada.length / 2)));
-  const perto = validas.map(v => [v, dist(errada, v)]).filter(([, d]) => d <= teto).sort((a, b) => a[1] - b[1])[0];
+  const ceiling = Math.min(3, Math.max(1, Math.floor(errada.length / 2)));
+  const perto = validas.map(v => [v, dist(errada, v)]).filter(([, d]) => d <= ceiling).sort((a, b) => a[1] - b[1])[0];
   return perto ? ` — você quis dizer "${perto[0]}"?` : ` (válidas: ${validas.join(', ')})`;
 }
 
 // ------------------------------------------------------- 2. referências
 
-const CONTEINERES = new Set(['cloud', 'account', 'region', 'vpc', 'subnet', 'security-group', 'group']);
-const FOLHAS = new Set(['service', 'block', 'actor']);
+const CONTAINERS = new Set(['cloud', 'account', 'region', 'vpc', 'subnet', 'security-group', 'group']);
+const LEAVES = new Set(['service', 'block', 'actor']);
 
-function referencias(m) {
+function references(m) {
   const erros = [];
-  const porId = new Map();
+  const byId = new Map();
 
   for (const n of m.nodes) {
-    if (porId.has(n.id)) erros.push(`nós: id duplicado "${n.id}"`);
-    porId.set(n.id, n);
+    if (byId.has(n.id)) erros.push(`nós: id duplicado "${n.id}"`);
+    byId.set(n.id, n);
   }
 
   for (const n of m.nodes) {
     if (n.inside === undefined) continue;
-    const pai = porId.get(n.inside);
-    if (!pai) { erros.push(`nó "${n.id}": dentro="${n.inside}" não existe`); continue; }
-    if (!CONTEINERES.has(pai.kind))
-      erros.push(`nó "${n.id}": dentro="${n.inside}" é do tipo "${pai.kind}", que é folha e não contém nada`);
+    const parent = byId.get(n.inside);
+    if (!parent) { erros.push(`nó "${n.id}": dentro="${n.inside}" não existe`); continue; }
+    if (!CONTAINERS.has(parent.kind))
+      erros.push(`nó "${n.id}": dentro="${n.inside}" é do tipo "${parent.kind}", que é folha e não contém nada`);
   }
 
   // ciclo: subir a cadeia de pais a partir de cada nó
@@ -157,15 +157,15 @@ function referencias(m) {
     while (cur && cur.inside !== undefined) {
       if (visto.has(cur.inside)) { erros.push(`contenção cíclica passando por "${n.id}"`); break; }
       visto.add(cur.inside);
-      cur = porId.get(cur.inside);
+      cur = byId.get(cur.inside);
     }
   }
 
   for (const [i, a] of (m.edges || []).entries()) {
     for (const tip of ['from', 'to']) {
-      const target = porId.get(a[tip]);
+      const target = byId.get(a[tip]);
       if (!target) { erros.push(`aresta[${i}]: ${tip}="${a[tip]}" não existe`); continue; }
-      if (CONTEINERES.has(target.kind))
+      if (CONTAINERS.has(target.kind))
         erros.push(`aresta[${i}]: ${tip}="${a[tip]}" é um container ("${target.kind}"). ` +
           `Aresta que termina num container afirma que TUDO lá dentro participa — se é isso mesmo, ` +
           `dê a ela um nó concreto (ex.: o gateway da VPC).`);
@@ -175,42 +175,42 @@ function referencias(m) {
 
   for (const [i, f] of (m.bands || []).entries()) {
     for (const id of f.members)
-      if (!porId.has(id)) erros.push(`faixa "${f.id}": membro "${id}" não existe`);
+      if (!byId.has(id)) erros.push(`faixa "${f.id}": membro "${id}" não existe`);
     // Membros em PAIS diferentes é o ponto da faixa — ela existe para cruzar a
     // árvore (#19). O que quebra é membro em PROFUNDIDADE diferente: a união de
     // uma subnet com um EC2 que vive dentro de outra subnet produz uma caixa
     // que engole o pai de um dos dois.
-    const prof = id => { let d = 0, c = porId.get(id); while (c && c.inside !== undefined) { d++; c = porId.get(c.inside); } return d; };
-    const niveis = new Set(f.members.filter(id => porId.has(id)).map(prof));
+    const prof = id => { let d = 0, c = byId.get(id); while (c && c.inside !== undefined) { d++; c = byId.get(c.inside); } return d; };
+    const niveis = new Set(f.members.filter(id => byId.has(id)).map(prof));
     if (niveis.size > 1)
       erros.push(`faixa "${f.id}": membros em profundidades diferentes da árvore (${[...niveis].sort().join(' e ')}). ` +
         `A faixa é a união dos membros; misturar níveis produz uma caixa que engole o pai de um deles.`);
   }
 
   for (const [i, nt] of (m.notes || []).entries())
-    if (nt.about !== undefined && !porId.has(nt.about))
+    if (nt.about !== undefined && !byId.has(nt.about))
       erros.push(`nota[${i}]: sobre="${nt.about}" não existe`);
 
   // habilitador de permissão (#6 E9): o alvo tem de existir, e não pode ser o
   // próprio habilitador — um IAM role que autoriza a si mesmo é seta em círculo
   for (const n of m.nodes) {
     if (n.enables === undefined) continue;
-    if (!porId.has(n.enables))
+    if (!byId.has(n.enables))
       erros.push(`nó "${n.id}": habilita="${n.enables}" não existe`);
     else if (n.enables === n.id)
       erros.push(`nó "${n.id}": habilita a si mesmo`);
   }
 
-  return { erros, porId };
+  return { erros, byId };
 }
 
 // ---------------------------------------------------------- 3. domínio
 
-function dominio(m, porId) {
+function dominio(m, byId) {
   const erros = [];
   const avisos = [];
-  const pai = n => n.inside === undefined ? null : porId.get(n.inside);
-  const ancestrais = n => { const out = []; let c = pai(n); while (c) { out.push(c); c = pai(c); } return out; };
+  const parent = n => n.inside === undefined ? null : byId.get(n.inside);
+  const ancestrais = n => { const out = []; let c = parent(n); while (c) { out.push(c); c = parent(c); } return out; };
 
   for (const n of m.nodes) {
     // Uma conta dentro de outra conta não existe na AWS: a árvore do
@@ -251,17 +251,17 @@ function dominio(m, porId) {
 
 // ------------------------------------------------------------ fachada
 
-function validar(modelo, schema) {
-  const deForma = contraEsquema(modelo, schema, schema);
+function validate(model, schema) {
+  const deForma = againstSchema(model, schema, schema);
   if (deForma.length) return { ok: false, erros: deForma, avisos: [], fase: 'schema' };
 
-  const { erros: deRef, porId } = referencias(modelo);
-  if (deRef.length) return { ok: false, erros: deRef, avisos: [], fase: 'referências', porId };
+  const { erros: deRef, byId } = references(model);
+  if (deRef.length) return { ok: false, erros: deRef, avisos: [], fase: 'referências', byId };
 
-  const { erros: deDom, avisos } = dominio(modelo, porId);
-  if (deDom.length) return { ok: false, erros: deDom, avisos, fase: 'domínio', porId };
+  const { erros: deDom, avisos } = dominio(model, byId);
+  if (deDom.length) return { ok: false, erros: deDom, avisos, fase: 'domínio', byId };
 
-  return { ok: true, erros: [], avisos, fase: null, porId };
+  return { ok: true, erros: [], avisos, fase: null, byId };
 }
 
-module.exports = { validar, contraEsquema, CONTEINERES, FOLHAS };
+module.exports = { validate, againstSchema, CONTAINERS, LEAVES };

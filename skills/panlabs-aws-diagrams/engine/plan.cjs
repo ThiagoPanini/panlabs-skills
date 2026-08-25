@@ -12,7 +12,7 @@
 
 const dispor = require('./layout.cjs');
 const { AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, calhaDaFaixa, folgas } = dispor;
-const { FOLHAS } = require('./validate.cjs');
+const { LEAVES } = require('./validate.cjs');
 
 /**
  * A altura de uma linha do bloco de título, em função do corpo dela.
@@ -25,7 +25,7 @@ const { FOLHAS } = require('./validate.cjs');
  * 1,4 é entrelinha tipográfica comum e é o que o `resolve.cjs` já usa para a
  * folha (17 px a 12 pt ≈ 1,42).
  */
-const LINHA = px => Math.round(px * 1.4);
+const ROW = px => Math.round(px * 1.4);
 
 /**
  * A margem da página é token (`pagina.margem`, default 32 = 4 degraus da grade
@@ -42,16 +42,16 @@ const LINHA = px => Math.round(px * 1.4);
  * tema terem origens diferentes sem que o tema tivesse mudado. Reservar sempre
  * custa uma linha de margem num diagrama sem subtítulo; os 15 do corpus têm.
  */
-function moldura(res) {
+function frame(res) {
   const t = res.tema;
   const m = t.tokens.page.margin;
-  const alturaTitulo = LINHA(t.tokens.text.title) + LINHA(t.tokens.text.subtitle) +
+  const alturaTitulo = ROW(t.tokens.text.title) + ROW(t.tokens.text.subtitle) +
     (t.tokens.card.revision ? Math.round(t.tokens.text.subtitle * 1.3) : 0);
   return { x: m, topo: m + alturaTitulo, rodape: m };
 }
 
 /** Recorte do tema que este módulo usa. */
-function pintura(res) {
+function paint(res) {
   const t = res.tema;
   return {
     background: t.tokens.page.color,
@@ -86,12 +86,12 @@ function estiloAresta(a, anc, tema) {
 const trava = v => Math.min(1, Math.max(0, Math.round(v * 1000) / 1000));
 
 /** De que lado da caixa o ELK encostou a ponta da aresta. */
-function ancora(caixa, p) {
+function ancora(cellBox, p) {
   const eps = 2.5;
-  if (Math.abs(p.x - caixa.x) <= eps) return { x: 0, y: trava((p.y - caixa.y) / caixa.h) };
-  if (Math.abs(p.x - (caixa.x + caixa.w)) <= eps) return { x: 1, y: trava((p.y - caixa.y) / caixa.h) };
-  if (Math.abs(p.y - caixa.y) <= eps) return { x: trava((p.x - caixa.x) / caixa.w), y: 0 };
-  if (Math.abs(p.y - (caixa.y + caixa.h)) <= eps) return { x: trava((p.x - caixa.x) / caixa.w), y: 1 };
+  if (Math.abs(p.x - cellBox.x) <= eps) return { x: 0, y: trava((p.y - cellBox.y) / cellBox.h) };
+  if (Math.abs(p.x - (cellBox.x + cellBox.w)) <= eps) return { x: 1, y: trava((p.y - cellBox.y) / cellBox.h) };
+  if (Math.abs(p.y - cellBox.y) <= eps) return { x: trava((p.x - cellBox.x) / cellBox.w), y: 0 };
+  if (Math.abs(p.y - (cellBox.y + cellBox.h)) <= eps) return { x: trava((p.x - cellBox.x) / cellBox.w), y: 1 };
   return null;   // ponta solta: deixa flutuar em vez de mentir uma âncora
 }
 
@@ -108,10 +108,10 @@ function rotuloDaAresta(a) {
  * 1100 px de largura para um diagrama de 500 px produz metade da imagem em
  * branco. Foi o que aconteceu na primeira versão deste módulo.
  */
-function cabecalho(plano, modelo, res) {
-  const p = pintura(res);
-  const mo = moldura(res);
-  const larg = (text, px) => Math.ceil(res.larguraDoTexto(text) * px / 11) + 8;
+function cabecalho(layoutPlan, model, res) {
+  const p = paint(res);
+  const mo = frame(res);
+  const larg = (text, px) => Math.ceil(res.textWidth(text) * px / 11) + 8;
   /**
    * O bloco de título começa um pouco ACIMA da margem lateral, e o fator sai de
    * uma assimetria real: a margem lateral é medida até a BORDA do primeiro
@@ -121,25 +121,25 @@ function cabecalho(plano, modelo, res) {
    * excesso fica em cima. Descontar isso é o que faz a margem óptica de cima
    * bater com a lateral em vez de parecer maior.
    */
-  let y = mo.x - Math.round((LINHA(p.ptTitulo) - p.ptTitulo) / 2);
-  const alt = LINHA;
-  plano.celulas.push({
-    kind: 'vertice', id: 'title', pai: '1', label: modelo.title, style: p.title,
-    geo: { x: mo.x, y, w: larg(modelo.title, p.ptTitulo), h: alt(p.ptTitulo) },
+  let y = mo.x - Math.round((ROW(p.ptTitulo) - p.ptTitulo) / 2);
+  const alt = ROW;
+  layoutPlan.celulas.push({
+    kind: 'vertice', id: 'title', parent: '1', label: model.title, style: p.title,
+    geo: { x: mo.x, y, w: larg(model.title, p.ptTitulo), h: alt(p.ptTitulo) },
   });
   y += alt(p.ptTitulo);
-  if (modelo.subtitle) {
-    plano.celulas.push({
-      kind: 'vertice', id: 'subtitle', pai: '1', label: modelo.subtitle, style: p.subtitle,
-      geo: { x: mo.x, y, w: larg(modelo.subtitle, p.ptSub), h: alt(p.ptSub) },
+  if (model.subtitle) {
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: 'subtitle', parent: '1', label: model.subtitle, style: p.subtitle,
+      geo: { x: mo.x, y, w: larg(model.subtitle, p.ptSub), h: alt(p.ptSub) },
     });
     y += alt(p.ptSub);
   }
   // O24 do #5: 12 de 12 Reference Architecture PDFs trazem "Reviewed for
   // technical accuracy <data>". É bloco de título, e portanto camada da casa.
   if (p.linhaRevisao)
-    plano.celulas.push({
-      kind: 'vertice', id: 'revision', pai: '1', label: p.linhaRevisao, style: p.revision,
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: 'revision', parent: '1', label: p.linhaRevisao, style: p.revision,
       geo: { x: mo.x, y, w: larg(p.linhaRevisao, p.ptSub), h: Math.round(p.ptSub * 1.3) },
     });
 }
@@ -150,14 +150,14 @@ function cabecalho(plano, modelo, res) {
  * seu próprio formato de persistência e não há um segundo arquivo para
  * dessincronizar.
  */
-function celulaDoModelo(modelo, res) {
+function celulaDoModelo(model, res) {
   const t = res.tema;
   return {
-    kind: 'vertice', id: 'panlabs-modelo', pai: '1', label: '', visivel: false,
+    kind: 'vertice', id: 'panlabs-modelo', parent: '1', label: '', visivel: false,
     style: 'text;html=1;', geo: { x: 0, y: 0, w: 1, h: 1 },
     data: {
-      panlabsEsquema: modelo.schema,
-      panlabsModelo: JSON.stringify(modelo),
+      panlabsSchema: model.schema,
+      panlabsModelo: JSON.stringify(model),
       // O TEMA VIAJA RESOLVIDO, não por nome — e a razão é a mesma que o #4 §7
       // deu para recusar `style="<nome>"` no `<mxGraphModel>`: nome só resolve
       // contra o que a outra ponta tem. Um `.drawio` que guardasse "tema=claro"
@@ -201,8 +201,8 @@ const caixaEmY = b => ({ ini: b.y, fim: b.y + b.h, lo: b.x, hi: b.x + b.w });
  * que é chute, e é por isso que ele é a exceção e não a regra. Sumir com ela
  * seria pior: omissão calada é `A4.2` pelo outro lado.
  */
-function notasPresas(plano, modelo, abs, p) {
-  for (const [i, n] of (modelo.notes || []).entries()) {
+function notasPresas(layoutPlan, model, abs, p) {
+  for (const [i, n] of (model.notes || []).entries()) {
     if (n.about === undefined) continue;
     // o id vem de `dispor.idDaNota` — os dois lados TÊM de concordar, senão o
     // `abs.has(id)` abaixo falha e a nota sai duas vezes
@@ -210,27 +210,27 @@ function notasPresas(plano, modelo, abs, p) {
     if (abs.has(id)) continue;                 // o layout já a colocou
     const a = abs.get(n.about);
     if (!a) continue;
-    plano.celulas.push({
-      kind: 'vertice', id, pai: '1', label: n.text, style: p.note,
-      geo: { x: a.x + a.w + 14, y: a.y, w: dispor.NOTA_LARG, h: dispor.NOTA_ALT_MIN },
+    layoutPlan.celulas.push({
+      kind: 'vertice', id, parent: '1', label: n.text, style: p.note,
+      geo: { x: a.x + a.w + 14, y: a.y, w: dispor.NOTE_W, h: dispor.NOTE_MIN_H },
     });
   }
 }
 
-function rodape(plano, modelo, larguraUtil, res, y) {
-  const p = pintura(res);
-  const mo = moldura(res);
-  const soltas = (modelo.notes || []).filter(n => n.about === undefined);
+function rodape(layoutPlan, model, larguraUtil, res, y) {
+  const p = paint(res);
+  const mo = frame(res);
+  const soltas = (model.notes || []).filter(n => n.about === undefined);
   if (!soltas.length) return y;
   const pedacos = soltas.map(n =>
     (n.origin === 'rejected-finding' ? '<b>⚠ Achado aceito pelo time:</b> ' : '') + n.text);
   const text = pedacos.join('<br>');
   // a caixa tem de caber o texto QUEBRADO: uma nota longa numa página estreita
   // ocupa três linhas, e dimensionar por "uma linha por nota" corta a última
-  const linhas = pedacos.reduce((n, p) => n + res.linhasDoRotulo(p.replace(/<[^>]+>/g, ''), larguraUtil - 20), 0);
+  const linhas = pedacos.reduce((n, p) => n + res.labelLines(p.replace(/<[^>]+>/g, ''), larguraUtil - 20), 0);
   const alt = 22 + linhas * 16;
-  plano.celulas.push({
-    kind: 'vertice', id: 'notes', pai: '1', label: text, style: p.note,
+  layoutPlan.celulas.push({
+    kind: 'vertice', id: 'notes', parent: '1', label: text, style: p.note,
     geo: { x: mo.x, y: y + 20, w: larguraUtil, h: alt },
   });
   return y + 20 + alt;
@@ -238,33 +238,33 @@ function rodape(plano, modelo, larguraUtil, res, y) {
 
 // ------------------------------------------------------------ caminho A (ELK)
 
-function planoDeElk(modelo, d, res, layout, opts = {}) {
-  const mo = moldura(res);
-  const p = pintura(res);
-  const { output, caixas } = layout;
-  const plano = { id: modelo.id, name: modelo.title, celulas: [], background: p.background,
+function elkPlan(model, d, res, layout, opts = {}) {
+  const mo = frame(res);
+  const p = paint(res);
+  const { output, boxes } = layout;
+  const layoutPlan = { id: model.id, name: model.title, celulas: [], background: p.background,
     tema: res.tema.id };
-  cabecalho(plano, modelo, res);
+  cabecalho(layoutPlan, model, res);
 
   const abs = new Map();
 
-  (function andar(no, paiId, paiAbs) {
+  (function tier(no, paiId, paiAbs) {
     for (const c of no.children || []) {
-      const meta = caixas.get(c.id);
-      const noModelo = d.t.porId.get(c.id);
+      const meta = boxes.get(c.id);
+      const noModelo = d.t.byId.get(c.id);
       const x = c.x + (paiId === '1' ? mo.x : 0);
       const y = c.y + (paiId === '1' ? mo.topo : 0);
       const a = { x: paiAbs.x + x, y: paiAbs.y + y, w: c.width, h: c.height };
       abs.set(c.id, a);
 
-      plano.celulas.push({
-        kind: 'vertice', id: c.id, pai: paiId,
+      layoutPlan.celulas.push({
+        kind: 'vertice', id: c.id, parent: paiId,
         label: meta.container ? (noModelo.label || '') : meta.label,
         style: meta.style,
         geo: { x, y, w: c.width, h: c.height },
       });
 
-      if (c.children && c.children.length) andar(c, c.id, a);
+      if (c.children && c.children.length) tier(c, c.id, a);
     }
   })(output, '1', { x: 0, y: 0 });
 
@@ -272,17 +272,17 @@ function planoDeElk(modelo, d, res, layout, opts = {}) {
   for (const f of d.bands) {
     const members = f.members.map(id => abs.get(id)).filter(Boolean);
     if (members.length < 2) continue;
-    const anc = f.members.map(id => d.t.porId.get(id))
+    const anc = f.members.map(id => d.t.byId.get(id))
       .reduce((acc, n) => acc === undefined ? n : (require('./derive.cjs').ancestralComum(acc, n, d.t) || acc), undefined);
-    const paiId = anc && d.t.porId.get(anc.id) && abs.has(anc.id) ? anc.id : '1';
+    const paiId = anc && d.t.byId.get(anc.id) && abs.has(anc.id) ? anc.id : '1';
     const base = paiId === '1' ? { x: 0, y: 0 } : abs.get(paiId);
     const fr = res.band(f);
     const x1 = Math.min(...members.map(m => m.x)) - 12;
     const x2 = Math.max(...members.map(m => m.x + m.w)) + 12;
     const y1 = Math.min(...members.map(m => m.y)) - calhaDaFaixa(fr.style);
     const y2 = Math.max(...members.map(m => m.y + m.h)) + 12 + (layout.rotuloMax || 0);
-    plano.celulas.push({
-      kind: 'vertice', id: f.id, pai: paiId, label: f.label || '', style: fr.style,
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: f.id, parent: paiId, label: f.label || '', style: fr.style,
       geo: { x: x1 - base.x, y: y1 - base.y, w: x2 - x1, h: y2 - y1 },
     });
   }
@@ -297,21 +297,21 @@ function planoDeElk(modelo, d, res, layout, opts = {}) {
       output: ancora(abs.get(a.from), sec.startPoint),
       input: ancora(abs.get(a.to), sec.endPoint),
     };
-    plano.celulas.push({
-      kind: 'edge', id: e.id, pai: '1', from: a.from, to: a.to,
+    layoutPlan.celulas.push({
+      kind: 'edge', id: e.id, parent: '1', from: a.from, to: a.to,
       label: rotuloDaAresta(a), style: estiloAresta(a, anc, res.tema),
       pontos: (sec.bendPoints || []).map(desl),
     });
   }
 
-  notasPresas(plano, modelo, abs, p);
+  notasPresas(layoutPlan, model, abs, p);
 
-  const largura = Math.max(output.width + 2 * mo.x, 900);
-  const fim = rodape(plano, modelo, largura - 2 * mo.x, res, output.height + mo.topo + (layout.rotuloMax || 0));
-  plano.larg = largura;
-  plano.alt = fim + mo.rodape;
-  plano.celulas.push(celulaDoModelo(modelo, res));
-  return plano;
+  const widthOf = Math.max(output.width + 2 * mo.x, 900);
+  const fim = rodape(layoutPlan, model, widthOf - 2 * mo.x, res, output.height + mo.topo + (layout.rotuloMax || 0));
+  layoutPlan.larg = widthOf;
+  layoutPlan.alt = fim + mo.rodape;
+  layoutPlan.celulas.push(celulaDoModelo(model, res));
+  return layoutPlan;
 }
 
 // ---------------------------------------------------------- caminho B (grade)
@@ -322,14 +322,14 @@ function planoDeElk(modelo, d, res, layout, opts = {}) {
  * `arestasNaGrade` para as barreiras de desvio, e o #31 para saber se a caixa
  * de uma faixa abraçaria um ponto que não é dela.
  */
-function posicoesDaGrade(modelo, g) {
+function gridPositions(model, g) {
   const abs = new Map();
-  for (const s of modelo.nodes.filter(n => n.kind === 'subnet')) {
+  for (const s of model.nodes.filter(n => n.kind === 'subnet')) {
     const p = g.pos.get(s.id);
     if (!p) continue;
     abs.set(s.id, p);
     for (const filho of g.intra.get(s.id).filhos || []) {
-      const meta = g.caixas.get(filho.id);
+      const meta = g.boxes.get(filho.id);
       abs.set(filho.id, { x: p.x + filho.x, y: p.y + filho.y, w: meta.caixaW || meta.formaW, h: meta.formaH });
     }
   }
@@ -349,32 +349,32 @@ function posicoesDaGrade(modelo, g) {
  * união É as subnets inteiras. O que dá para responder é SE isso aconteceria
  * — antes de desenhar a caixa — e degradar em vez de desenhar a mentira.
  */
-function engoleNaoMembro(modelo, posGrade, f, x1, y1, x2, y2) {
+function engoleNaoMembro(model, posGrade, f, x1, y1, x2, y2) {
   const members = new Set(f.members);
-  for (const n of modelo.nodes) {
-    if (!FOLHAS.has(n.kind) || members.has(n.id)) continue;
-    const caixa = posGrade.get(n.id);
-    if (!caixa) continue;
-    if (caixa.x < x2 && caixa.x + caixa.w > x1 && caixa.y < y2 && caixa.y + caixa.h > y1) return true;
+  for (const n of model.nodes) {
+    if (!LEAVES.has(n.kind) || members.has(n.id)) continue;
+    const cellBox = posGrade.get(n.id);
+    if (!cellBox) continue;
+    if (cellBox.x < x2 && cellBox.x + cellBox.w > x1 && cellBox.y < y2 && cellBox.y + cellBox.h > y1) return true;
   }
   return false;
 }
 
-function planoDeGrade(modelo, d, res, g, opts = {}) {
-  const mo = moldura(res);
-  const p = pintura(res);
+function gridPlan(model, d, res, g, opts = {}) {
+  const mo = frame(res);
+  const p = paint(res);
   const f = folgas(res.tema);
-  const plano = { id: modelo.id, name: modelo.title, celulas: [], background: p.background,
+  const layoutPlan = { id: model.id, name: model.title, celulas: [], background: p.background,
     tema: res.tema.id };
-  cabecalho(plano, modelo, res);
+  cabecalho(layoutPlan, model, res);
 
-  const cloud = modelo.nodes.find(n => n.kind === 'cloud');
+  const cloud = model.nodes.find(n => n.kind === 'cloud');
   const larguraNuvem = g.larguraGrade + 4 * f.PAD;
   const cN = res.container(cloud || { id: 'cloud', kind: 'cloud' });
   const idNuvem = cloud ? cloud.id : 'aws-cloud';
 
-  plano.celulas.push({
-    kind: 'vertice', id: idNuvem, pai: '1',
+  layoutPlan.celulas.push({
+    kind: 'vertice', id: idNuvem, parent: '1',
     label: (cloud && cloud.label) || 'AWS Cloud', style: cN.style,
     geo: { x: mo.x, y: mo.topo, w: larguraNuvem, h: g.fim + f.PAD },
   });
@@ -389,7 +389,7 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
   // AZ em coluna a faixa é vertical e o rótulo nasce ACIMA; transposta, ela é
   // horizontal e o rótulo nasce À ESQUERDA. É a mesma calha, no outro eixo.
   for (const z of g.azs) {
-    const members = modelo.nodes.filter(n => n.az === z).map(n => g.pos.get(n.id)).filter(Boolean);
+    const members = model.nodes.filter(n => n.az === z).map(n => g.pos.get(n.id)).filter(Boolean);
     if (!members.length) continue;
     const geo = g.raia
       ? {
@@ -397,10 +397,10 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
           // direita pelo `CROSS_OUT` — é o transbordo que faz o cruzamento SE
           // VER (#19, regra 3). O rótulo mora na tira reservada acima.
           x: esquerda - 8,
-          y: Math.min(...members.map(m => m.y)) - (g.reservaDaRaia.get(z) || g.RAIA_LANE),
+          y: Math.min(...members.map(m => m.y)) - (g.reservaDaRaia.get(z) || g.SWIMLANE_LANE),
           w: Math.max(...members.map(m => m.x + m.w)) + g.CROSS_OUT - (esquerda - 8),
           h: Math.max(...members.map(m => m.y + m.h)) + 10 -
-             (Math.min(...members.map(m => m.y)) - (g.reservaDaRaia.get(z) || g.RAIA_LANE)),
+             (Math.min(...members.map(m => m.y)) - (g.reservaDaRaia.get(z) || g.SWIMLANE_LANE)),
         }
       : {
           x: Math.min(...members.map(m => m.x)) - 14,
@@ -414,30 +414,30 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
     // esquerda é do MOTOR pelo mesmo critério do halo das faixas de membro: a
     // paleta continua sendo do catálogo, a legibilidade é de quem posiciona.
     const style = res.faixaAz().style + (g.raia ? 'align=left;spacingLeft=10;' : '');
-    plano.celulas.push({
-      kind: 'vertice', id: `az-${z}`, pai: idNuvem,
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: `az-${z}`, parent: idNuvem,
       label: `Availability Zone · ${z}`, style, geo,
     });
   }
 
   // 2. a árvore de contenção real: VPC › subnet › conteúdo
   for (const [vid, box] of g.vpcBox) {
-    const v = d.t.porId.get(vid);
-    plano.celulas.push({
-      kind: 'vertice', id: vid, pai: idNuvem, label: v.label || '', style: g.caixas.get(vid).style,
+    const v = d.t.byId.get(vid);
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: vid, parent: idNuvem, label: v.label || '', style: g.boxes.get(vid).style,
       geo: { x: box.x, y: box.y, w: box.w, h: box.h },
     });
-    for (const s of modelo.nodes.filter(n => n.kind === 'subnet')) {
+    for (const s of model.nodes.filter(n => n.kind === 'subnet')) {
       const p = g.pos.get(s.id);
       if (!p || (d.t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id !== vid) continue;
-      plano.celulas.push({
-        kind: 'vertice', id: s.id, pai: vid, label: s.label || '', style: g.caixas.get(s.id).style,
+      layoutPlan.celulas.push({
+        kind: 'vertice', id: s.id, parent: vid, label: s.label || '', style: g.boxes.get(s.id).style,
         geo: { x: p.x - box.x, y: p.y - box.y, w: p.w, h: p.h },
       });
       for (const filho of g.intra.get(s.id).filhos || []) {
-        const meta = g.caixas.get(filho.id);
-        plano.celulas.push({
-          kind: 'vertice', id: filho.id, pai: s.id, label: meta.label, style: meta.style,
+        const meta = g.boxes.get(filho.id);
+        layoutPlan.celulas.push({
+          kind: 'vertice', id: filho.id, parent: s.id, label: meta.label, style: meta.style,
           geo: { x: filho.x, y: filho.y, w: meta.caixaW || meta.formaW, h: meta.formaH },
         });
       }
@@ -445,15 +445,15 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
   }
 
   // 3. faixas de membros por cima
-  const posGrade = d.bands.length ? posicoesDaGrade(modelo, g) : null;
+  const posGrade = d.bands.length ? gridPositions(model, g) : null;
   for (const f of d.bands) {
     const cel = f.members
-      .map(id => { const n = d.t.porId.get(id); return d.t.ancestrais(n).find(a => a.kind === 'subnet') || n; })
+      .map(id => { const n = d.t.byId.get(id); return d.t.ancestrais(n).find(a => a.kind === 'subnet') || n; })
       .map(s => g.pos.get(s.id)).filter(Boolean);
     if (cel.length < 2) continue;
     const x1 = Math.min(...cel.map(m => m.x)) - 10, x2 = Math.max(...cel.map(m => m.x + m.w)) + 10;
-    const calha = g.calhas.get(f.id) || g.BAND_LANE;
-    const y1 = Math.min(...cel.map(m => m.y)) - calha, y2 = Math.max(...cel.map(m => m.y + m.h)) + 10;
+    const lane = g.calhas.get(f.id) || g.BAND_LANE;
+    const y1 = Math.min(...cel.map(m => m.y)) - lane, y2 = Math.max(...cel.map(m => m.y + m.h)) + 10;
 
     // #31 — a caixa varreria um não-membro: ela DEGRADA. Para de afirmar
     // contenção (não há caixa que abrace só os membros sem também abraçar
@@ -461,18 +461,18 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
     // forma —, ancorado no canto onde a caixa desenharia a borda. A calha já
     // estava reservada ali para o rótulo da própria caixa (`layout.cjs`), então
     // o texto solto não pede espaço novo a ninguém.
-    if (engoleNaoMembro(modelo, posGrade, f, x1, y1, x2, y2)) {
+    if (engoleNaoMembro(model, posGrade, f, x1, y1, x2, y2)) {
       const text = f.label || '';
-      plano.celulas.push({
-        kind: 'vertice', id: `${f.id}-degradada`, pai: idNuvem, label: text,
+      layoutPlan.celulas.push({
+        kind: 'vertice', id: `${f.id}-degradada`, parent: idNuvem, label: text,
         style: res.tema.faixaRotulo(),
-        geo: { x: x1, y: y1, w: Math.max(40, res.larguraDoTexto(text) + 8), h: calha },
+        geo: { x: x1, y: y1, w: Math.max(40, res.textWidth(text) + 8), h: lane },
       });
       continue;
     }
 
-    plano.celulas.push({
-      kind: 'vertice', id: f.id, pai: idNuvem, label: f.label || '', style: res.band(f).style,
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: f.id, parent: idNuvem, label: f.label || '', style: res.band(f).style,
       geo: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
     });
   }
@@ -486,14 +486,14 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
   //
   // O roteamento é do motor, não do ELK, pelo mesmo motivo do caminho C: quem
   // sabe onde estão as calhas da grade é quem construiu a grade.
-  arestasNaGrade(plano, modelo, d, res, g, opts);
+  arestasNaGrade(layoutPlan, model, d, res, g, opts);
 
-  const largura = mo.x * 2 + larguraNuvem;
-  const fim = rodape(plano, modelo, largura - 2 * mo.x, res, mo.topo + g.fim + f.PAD);
-  plano.larg = largura;
-  plano.alt = fim + mo.rodape;
-  plano.celulas.push(celulaDoModelo(modelo, res));
-  return plano;
+  const widthOf = mo.x * 2 + larguraNuvem;
+  const fim = rodape(layoutPlan, model, widthOf - 2 * mo.x, res, mo.topo + g.fim + f.PAD);
+  layoutPlan.larg = widthOf;
+  layoutPlan.alt = fim + mo.rodape;
+  layoutPlan.celulas.push(celulaDoModelo(model, res));
+  return layoutPlan;
 }
 
 /**
@@ -508,7 +508,7 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
  *   > pelo lado errado atravessa exatamente as faixas que o desvio existia para
  *   > evitar.
  */
-function arestasNaGrade(plano, modelo, d, res, g, opts) {
+function arestasNaGrade(layoutPlan, model, d, res, g, opts) {
   if (!d.edges.length) return;
 
   /**
@@ -525,20 +525,20 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
    * e `A5.6` "há segmentos fora dos eixos num roteamento que se diz ortogonal".
    * Duas checagens apontando para o mesmo `+32,+76` que ninguém tinha somado.
    */
-  const mo = moldura(res);
+  const mo = frame(res);
   const daGradeParaPagina = paraPagina({ x: mo.x, y: mo.topo });
 
-  const abs = posicoesDaGrade(modelo, g);
+  const abs = gridPositions(model, g);
 
   const subnetDe = id => {
-    const n = d.t.porId.get(id);
+    const n = d.t.byId.get(id);
     if (!n) return null;
     const s = n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet');
     return s ? s.id : null;
   };
   const raiaDe = id => {
     const s = subnetDe(id);
-    const n = s && d.t.porId.get(s);
+    const n = s && d.t.byId.get(s);
     return n ? n.az : null;
   };
 
@@ -548,8 +548,8 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
    * do destino é o caminho; passar por dentro de uma terceira é `A5.5` — o
    * desenho afirmando um caminho de rede que o modelo nega.
    */
-  const subnets = modelo.nodes.filter(n => n.kind === 'subnet').map(n => n.id);
-  const barreiras = a => {
+  const subnets = model.nodes.filter(n => n.kind === 'subnet').map(n => n.id);
+  const barriers = a => {
     const minhas = new Set([subnetDe(a.from), subnetDe(a.to)]);
     return subnets.filter(id => !minhas.has(id)).map(id => abs.get(id)).filter(Boolean);
   };
@@ -568,7 +568,7 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
         // desvia pela margem mais próxima da ORIGEM (#21) — mas por um VÃO, e
         // não pelo ponto médio entre os ícones. Ver `corredorLivre`.
         const perto = adiante ? (o.x + o.w + dst.x) / 2 : (dst.x + dst.w + o.x) / 2;
-        const onde = dispor.corredorLivre([y0, y1], barreiras(a).map(caixaEmX), perto);
+        const onde = dispor.corredorLivre([y0, y1], barriers(a).map(caixaEmX), perto);
         pontos = [{ x: onde, y: y0 }, { x: onde, y: y1 }];
       }
     } else {
@@ -576,13 +576,13 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
       anc = { output: { x: 0.5, y: adiante ? 1 : 0 }, input: { x: 0.5, y: adiante ? 0 : 1 } };
       if (!mesma) {
         const perto = adiante ? (o.y + o.h + dst.y) / 2 : (dst.y + dst.h + o.y) / 2;
-        const onde = dispor.corredorLivre([x0, x1], barreiras(a).map(caixaEmY), perto);
+        const onde = dispor.corredorLivre([x0, x1], barriers(a).map(caixaEmY), perto);
         pontos = [{ x: x0, y: onde }, { x: x1, y: onde }];
       }
     }
 
-    plano.celulas.push({
-      kind: 'edge', id: a.id, pai: '1', from: a.from, to: a.to,
+    layoutPlan.celulas.push({
+      kind: 'edge', id: a.id, parent: '1', from: a.from, to: a.to,
       label: rotuloDaAresta(a), style: estiloAresta(a, anc, res.tema),
       pontos: pontos.map(daGradeParaPagina),
     });
@@ -605,7 +605,7 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
  */
 const S_OU = res => res.tema.ou();
 /** O barramento do `E4`: uma linha paralela à fileira, deslocada para FORA dela. */
-const S_BARRAMENTO = res => res.tema.barramento();
+const S_BUS = res => res.tema.bus();
 const S_STUB = res => res.tema.stub();
 
 /**
@@ -614,18 +614,18 @@ const S_STUB = res => res.tema.stub();
  * Confirmado em dois padrões oficiais independentes (bucket policy do Flow
  * Logs; Role do EventBridge cross-account).
  */
-const S_HABILITA = res => res.tema.habilitador();
+const S_ENABLES = res => res.tema.habilitador();
 
-function planoDeContas(modelo, d, res, g, opts = {}) {
-  const mo = moldura(res);
-  const p = pintura(res);
+function accountPlan(model, d, res, g, opts = {}) {
+  const mo = frame(res);
+  const p = paint(res);
   const f = folgas(res.tema);
-  const plano = { id: modelo.id, name: modelo.title, celulas: [], background: p.background,
+  const layoutPlan = { id: model.id, name: model.title, celulas: [], background: p.background,
     tema: res.tema.id };
-  cabecalho(plano, modelo, res);
+  cabecalho(layoutPlan, model, res);
 
   const abs = new Map();          // id -> caixa absoluta, para arestas e faixas
-  const cloud = modelo.nodes.find(n => n.kind === 'cloud');
+  const cloud = model.nodes.find(n => n.kind === 'cloud');
 
   // nós que não moram em conta nenhuma (o ator, tipicamente) ficam FORA da
   // nuvem e à esquerda — `O19` do #5: o usuário entra pela esquerda
@@ -635,11 +635,11 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
   // isso não se via; com dois (#32 trouxe o segundo caso real do corpus),
   // reordenar `nos` no arquivo trocava qual deles ficava em cima, e a
   // suíte de determinismo (#23) provou.
-  const forasteiros = modelo.nodes.filter(n =>
+  const outsiders = model.nodes.filter(n =>
     n.inside === undefined && n.kind !== 'cloud' && n.kind !== 'account' && !d.t.filhos.get(n.id).length)
     .sort((a, b) => String(a.label || a.id).localeCompare(String(b.label || b.id), 'pt'));
   let margemEsq = 0;
-  for (const f of forasteiros) margemEsq = Math.max(margemEsq, res.folha(f).formaW + 60);
+  for (const f of outsiders) margemEsq = Math.max(margemEsq, res.leaf(f).formaW + 60);
 
   // A canaleta de cima tem de ser RESERVADA antes de posicionar, não descoberta
   // depois: ela empurra a fileira inteira para baixo. Quantas faixas ela precisa
@@ -647,7 +647,7 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
   // conta que não é a primeira da fileira.
   const idxDaConta = new Map(g.order.map((c, i) => [c.id, i]));
   const contaDoNoId = id => {
-    const n = d.t.porId.get(id);
+    const n = d.t.byId.get(id);
     if (!n) return null;
     const c = n.kind === 'account' ? n : d.t.ancestrais(n).find(a => a.kind === 'account');
     return c ? c.id : null;
@@ -667,11 +667,11 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
    * pedido a altura. Era bug latente porque nenhum modelo o exercitava — os
    * modelos `hub-tgw` e `logs-centralizados` existem para que não seja mais.
    */
-  const desviadas = d.politica.mecanismo === 'direta'
+  const desviadas = d.policy.mecanismo === 'direta'
     ? d.travessias.filter(t => idxDaConta.get(t.contaPara) !== idxDaConta.get(t.contaDe) + 1).length
     : 0;
   const reservaFundo =
-    d.politica.mecanismo === 'barramento' ? 46 + 34
+    d.policy.mecanismo === 'bus' ? 46 + 34
     : desviadas ? 40 + desviadas * 34
     : 0;
   /**
@@ -680,14 +680,14 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
    * o trabalho no `E3` ("o texto substitui a cardinalidade"): encolher a corrida
    * até ele transbordar por cima do ícone de destino desfaz o mecanismo.
    */
-  const textoAgregado = d.politica.mecanismo === 'agregada'
-    ? (d.politica.grupos || []).map(group => {
+  const aggregatedText = d.policy.mecanismo === 'agregada'
+    ? (d.policy.grupos || []).map(group => {
         const ex = d.travessias.find(t => t.to === group.to);
-        return `${ex && ex.label ? ex.label : 'from'} · ${group.contas.length} contas`;
+        return `${ex && ex.label ? ex.label : 'from'} · ${group.accounts.length} contas`;
       })
     : [];
-  const reservaEsq = textoAgregado.length
-    ? Math.max(110, ...textoAgregado.map(t => res.larguraDoTexto(t) + 60))
+  const reservaEsq = aggregatedText.length
+    ? Math.max(110, ...aggregatedText.map(t => res.textWidth(t) + 60))
     : 0;
 
   const baseX = mo.x + margemEsq + reservaEsq;
@@ -703,20 +703,20 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
   const idNuvem = cloud ? cloud.id : null;
   if (cloud) {
     const c = res.container(cloud);
-    plano.celulas.push({
-      kind: 'vertice', id: cloud.id, pai: '1', label: cloud.label || 'AWS Cloud', style: c.style,
-      geo: { x: baseX - f.PAD - reservaEsq, y: mo.topo, w: g.largura + 2 * f.PAD + reservaEsq, h: alturaNuvem },
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: cloud.id, parent: '1', label: cloud.label || 'AWS Cloud', style: c.style,
+      geo: { x: baseX - f.PAD - reservaEsq, y: mo.topo, w: g.widthOf + 2 * f.PAD + reservaEsq, h: alturaNuvem },
     });
-    abs.set(cloud.id, { x: baseX - f.PAD - reservaEsq, y: mo.topo, w: g.largura + 2 * f.PAD + reservaEsq, h: alturaNuvem });
+    abs.set(cloud.id, { x: baseX - f.PAD - reservaEsq, y: mo.topo, w: g.widthOf + 2 * f.PAD + reservaEsq, h: alturaNuvem });
   }
 
   // 2. os forasteiros, à esquerda da nuvem, centrados na vertical
-  for (const [i, f] of forasteiros.entries()) {
-    const m = res.folha(f);
+  for (const [i, f] of outsiders.entries()) {
+    const m = res.leaf(f);
     const a = { x: mo.x, y: mo.topo + g.altura / 2 - m.formaH / 2 + i * (m.formaH + 40), w: m.formaW, h: m.formaH };
     abs.set(f.id, a);
-    plano.celulas.push({
-      kind: 'vertice', id: f.id, pai: '1', label: m.label, style: m.style,
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: f.id, parent: '1', label: m.label, style: m.style,
       geo: { x: a.x, y: a.y, w: a.w, h: a.h },
     });
   }
@@ -731,16 +731,16 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
   // vista de integração não tem coluna por OU — tem uma fileira só, ordenada
   // pela travessia, que é o assunto dela. `generate.cjs` sabe da mesma regra e
   // ajusta o aviso para não anunciar uma faixa que este bloco não emite.
-  if (d.ou.desenhar && g.modo !== 'integracao') {
+  if (d.ou.draw && g.modo !== 'integracao') {
     for (const col of g.colunas) {
       if (!col.ou) continue;
-      const band = d.faixasOu.find(f => f.members.includes(col.contas[0]));
-      plano.celulas.push({
-        kind: 'vertice', id: band ? band.id : `ou-${col.ou}`, pai: idNuvem || '1',
+      const band = d.faixasOu.find(f => f.members.includes(col.accounts[0]));
+      layoutPlan.celulas.push({
+        kind: 'vertice', id: band ? band.id : `ou-${col.ou}`, parent: idNuvem || '1',
         label: `OU – ${col.ou}`, style: S_OU(res),
         geo: {
           x: (idNuvem ? f.PAD : baseX) + col.x, y: (idNuvem ? f.PAD + 34 : baseY) + 8,
-          w: Math.max(140, res.larguraDoTexto(`OU – ${col.ou}`) + 16), h: 24,
+          w: Math.max(140, res.textWidth(`OU – ${col.ou}`) + 16), h: 24,
         },
       });
     }
@@ -751,29 +751,29 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
     const p = g.pos.get(account.id);
     const ax = baseX + p.x, ay = baseY + p.y;
     abs.set(account.id, { x: ax, y: ay, w: p.w, h: p.h });
-    const meta = g.caixas.get(account.id);
+    const meta = g.boxes.get(account.id);
 
     // `X6`: a conta que é hub ganha ênfase de borda. Hub = a que mais participa
     // de travessia — e só vale a pena marcar se ela de fato se destaca.
     const style = meta.style + (account.id === g.hub ? 'strokeWidth=2.6;fontStyle=1;' : '');
-    plano.celulas.push({
-      kind: 'vertice', id: account.id, pai: idNuvem || '1', label: account.label || '', style,
+    layoutPlan.celulas.push({
+      kind: 'vertice', id: account.id, parent: idNuvem || '1', label: account.label || '', style,
       geo: { x: ax - (idNuvem ? abs.get(idNuvem).x : 0), y: ay - (idNuvem ? abs.get(idNuvem).y : 0), w: p.w, h: p.h },
     });
 
-    (function andar(no, paiId, paiAbs) {
+    (function tier(no, paiId, paiAbs) {
       for (const c of no.children || []) {
-        const m = g.caixas.get(c.id);
-        const noModelo = d.t.porId.get(c.id);
+        const m = g.boxes.get(c.id);
+        const noModelo = d.t.byId.get(c.id);
         const a = { x: paiAbs.x + c.x, y: paiAbs.y + c.y, w: c.width, h: c.height };
         abs.set(c.id, a);
-        plano.celulas.push({
-          kind: 'vertice', id: c.id, pai: paiId,
+        layoutPlan.celulas.push({
+          kind: 'vertice', id: c.id, parent: paiId,
           label: m.container ? (noModelo.label || '') : m.label,
           style: m.style,
           geo: { x: c.x, y: c.y, w: c.width, h: c.height },
         });
-        if (c.children && c.children.length) andar(c, c.id, a);
+        if (c.children && c.children.length) tier(c, c.id, a);
       }
     })(g.interno.get(account.id), account.id, { x: ax, y: ay });
 
@@ -788,8 +788,8 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
         output: ancora(abs.get(a.from), desl(sec.startPoint)),
         input: ancora(abs.get(a.to), desl(sec.endPoint)),
       };
-      plano.celulas.push({
-        kind: 'edge', id: e.id, pai: '1', from: a.from, to: a.to,
+      layoutPlan.celulas.push({
+        kind: 'edge', id: e.id, parent: '1', from: a.from, to: a.to,
         label: rotuloDaAresta(a), style: estiloAresta(a, anc, res.tema),
         pontos: (sec.bendPoints || []).map(desl),
       });
@@ -798,28 +798,28 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
 
   // 5. a travessia, pelo mecanismo que a política escolheu — e o que entra de fora
   g.reservaEsq = reservaEsq;
-  travessiasNoPlano(plano, modelo, d, res, g, abs, opts);
-  arestasDeFora(plano, d, res, g, abs, opts);
+  travessiasNoPlano(layoutPlan, model, d, res, g, abs, opts);
+  arestasDeFora(layoutPlan, d, res, g, abs, opts);
 
   // 6. habilitadores de permissão (E9): seta curta para dentro de quem autorizam
   for (const h of d.habilitadores) {
     if (!abs.has(h.id) || !abs.has(h.target)) continue;
-    plano.celulas.push({
-      kind: 'edge', id: `hab-${h.id}`, pai: '1', from: h.id, to: h.target,
-      label: '', style: S_HABILITA(res), pontos: [],
+    layoutPlan.celulas.push({
+      kind: 'edge', id: `hab-${h.id}`, parent: '1', from: h.id, to: h.target,
+      label: '', style: S_ENABLES(res), pontos: [],
     });
   }
 
   // 7. notas presas a um nó
-  notasPresas(plano, modelo, abs, p);
+  notasPresas(layoutPlan, model, abs, p);
 
   const background = mo.topo + (cloud ? alturaNuvem : g.altura + reservaFundo) + f.PAD;
-  const largura = Math.max(baseX + g.largura + mo.x, 900);
-  const fim = rodape(plano, modelo, largura - 2 * mo.x, res, background);
-  plano.larg = largura;
-  plano.alt = fim + mo.rodape;
-  plano.celulas.push(celulaDoModelo(modelo, res));
-  return plano;
+  const widthOf = Math.max(baseX + g.widthOf + mo.x, 900);
+  const fim = rodape(layoutPlan, model, widthOf - 2 * mo.x, res, background);
+  layoutPlan.larg = widthOf;
+  layoutPlan.alt = fim + mo.rodape;
+  layoutPlan.celulas.push(celulaDoModelo(model, res));
+  return layoutPlan;
 }
 
 /**
@@ -837,7 +837,7 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
 function parentela(d, ids) {
   const meu = new Set();
   for (const id of ids) {
-    const no = d.t.porId.get(id);
+    const no = d.t.byId.get(id);
     if (!no) continue;
     meu.add(id);
     for (const a of d.t.ancestrais(no)) meu.add(a.id);
@@ -928,49 +928,49 @@ function verticalLimpa(no, y, abs, d, idNo) {
  * marcador de travessia". Então nada de `jumpStyle` na fronteira: o que marca a
  * travessia é ONDE o habilitador de permissão está (`E9`), não a linha.
  */
-function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
-  const pol = d.politica;
+function travessiasNoPlano(layoutPlan, model, d, res, g, abs, opts) {
+  const pol = d.policy;
   if (pol.mecanismo === 'suprimir') return;
 
-  const caixa = id => abs.get(id);
+  const cellBox = id => abs.get(id);
   const contaDoNo = id => {
-    const n = d.t.porId.get(id);
+    const n = d.t.byId.get(id);
     const c = n && (n.kind === 'account' ? n : d.t.ancestrais(n).find(a => a.kind === 'account'));
     return c ? c.id : null;
   };
 
-  if (pol.mecanismo === 'barramento') {
+  if (pol.mecanismo === 'bus') {
     // `E4` + `X3`: UMA linha paralela à fileira, deslocada para fora dela, com
     // stubs perpendiculares curtos entrando em cada conta. 1 linha + N stubs,
     // nunca N linhas — é literalmente o desenho do AMS MALZ.
-    const y = Math.max(...g.order.map(c => caixa(c.id).y + caixa(c.id).h)) + 46;
+    const y = Math.max(...g.order.map(c => cellBox(c.id).y + cellBox(c.id).h)) + 46;
     for (const group of pol.grupos) {
-      const alvos = group.contas.map(id => caixa(id)).filter(Boolean);
+      const alvos = group.accounts.map(id => cellBox(id)).filter(Boolean);
       if (alvos.length < 2) continue;
       const x1 = Math.min(...alvos.map(a => a.x + a.w / 2));
       const x2 = Math.max(...alvos.map(a => a.x + a.w / 2));
-      const origin = caixa(group.from);
-      plano.celulas.push({
-        kind: 'edge', id: `bus-${group.from}`, pai: '1', from: null, to: null,
-        label: '', style: S_BARRAMENTO(res),
+      const origin = cellBox(group.from);
+      layoutPlan.celulas.push({
+        kind: 'edge', id: `bus-${group.from}`, parent: '1', from: null, to: null,
+        label: '', style: S_BUS(res),
         pontos: [{ x: x1, y }, { x: x2, y }],
         solta: { x1, y1: y, x2, y2: y },
       });
       // o stub que desce da origem até o barramento
       if (origin)
-        plano.celulas.push({
-          kind: 'edge', id: `bus-tronco-${group.from}`, pai: '1', from: group.from, to: null,
-          label: '', style: S_BARRAMENTO(res),
+        layoutPlan.celulas.push({
+          kind: 'edge', id: `bus-tronco-${group.from}`, parent: '1', from: group.from, to: null,
+          label: '', style: S_BUS(res),
           pontos: [{ x: origin.x + origin.w / 2, y: origin.y + origin.h },
                    { x: origin.x + origin.w / 2, y }],
           solta: { x1: origin.x + origin.w / 2, y1: origin.y + origin.h, x2: origin.x + origin.w / 2, y2: y },
         });
-      for (const id of group.contas) {
-        const a = caixa(id);
+      for (const id of group.accounts) {
+        const a = cellBox(id);
         const cx = a.x + a.w / 2;
         const travessia = d.travessias.find(t => t.from === group.from && t.contaPara === id);
-        plano.celulas.push({
-          kind: 'edge', id: `stub-${id}`, pai: '1', from: null, to: id,
+        layoutPlan.celulas.push({
+          kind: 'edge', id: `stub-${id}`, parent: '1', from: null, to: id,
           label: travessia ? rotuloDaAresta(travessia) : '', style: S_STUB(res),
           pontos: [{ x: cx, y }, { x: cx, y: a.y + a.h }],
           solta: { x1: cx, y1: y, x2: cx, y2: a.y + a.h },
@@ -987,15 +987,15 @@ function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
     // arestas. É o que a SRA faz na Log Archive ("From CloudTrail organization
     // trail").
     for (const group of pol.grupos) {
-      const target = caixa(group.to);
+      const target = cellBox(group.to);
       if (!target) continue;
       const contaAlvo = contaDoNo(group.to);
-      const cAlvo = caixa(contaAlvo);
+      const cAlvo = cellBox(contaAlvo);
       const exemplo = d.travessias.find(t => t.to === group.to);
-      const text = `${exemplo && exemplo.label ? exemplo.label : 'from'} · ${group.contas.length} contas`;
+      const text = `${exemplo && exemplo.label ? exemplo.label : 'from'} · ${group.accounts.length} contas`;
       const x0 = (cAlvo ? cAlvo.x : target.x) - (g.reservaEsq || 90);
-      plano.celulas.push({
-        kind: 'edge', id: `fanin-${group.to}`, pai: '1', from: null, to: group.to,
+      layoutPlan.celulas.push({
+        kind: 'edge', id: `fanin-${group.to}`, parent: '1', from: null, to: group.to,
         label: text, style: S_STUB(res),
         pontos: [{ x: x0, y: target.y + target.h / 2 }],
         solta: { x1: x0, y1: target.y + target.h / 2, x2: target.x, y2: target.y + target.h / 2 },
@@ -1020,21 +1020,21 @@ function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
   // mesmo vínculo" serve igual para "esta travessia não cabe no eixo": tirar a
   // linha de dentro das caixas é o ponto dos dois.
   const ordemIdx = new Map(g.order.map((c, i) => [c.id, i]));
-  const fundoDaFileira = Math.max(...g.order.map(c => caixa(c.id).y + caixa(c.id).h));
+  const rowBackground = Math.max(...g.order.map(c => cellBox(c.id).y + cellBox(c.id).h));
   let faixaCanaleta = 0;
 
   for (const t of d.travessias) {
-    const o = caixa(t.from), dst = caixa(t.to);
+    const o = cellBox(t.from), dst = cellBox(t.to);
     if (!o || !dst) continue;
     const ia = ordemIdx.get(t.contaDe), ib = ordemIdx.get(t.contaPara);
     const adjacenteAdiante = ib === ia + 1;
 
     if (adjacenteAdiante) {
-      const cA = caixa(t.contaDe), cB = caixa(t.contaPara);
+      const cA = cellBox(t.contaDe), cB = cellBox(t.contaPara);
       const calhaX = (cA.x + cA.w + cB.x) / 2;
       const y0 = o.y + o.h / 2, y1 = dst.y + dst.h / 2;
-      plano.celulas.push({
-        kind: 'edge', id: t.id, pai: '1', from: t.from, to: t.to,
+      layoutPlan.celulas.push({
+        kind: 'edge', id: t.id, parent: '1', from: t.from, to: t.to,
         label: rotuloDaAresta(t),
         style: estiloAresta(t, { output: { x: 1, y: 0.5 }, input: { x: 0, y: 0.5 } }, res.tema),
         pontos: y0 === y1 ? [] : [{ x: calhaX, y: y0 }, { x: calhaX, y: y1 }],
@@ -1047,9 +1047,9 @@ function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
     // a outra calha; entra na horizontal. Sair pela vertical era o caminho
     // curto e era o errado — a linha descia por dentro das caixas irmãs.
     faixaCanaleta += 1;
-    const yCanal = fundoDaFileira + 40 + (faixaCanaleta - 1) * 34;
-    const cA = { ...caixa(t.contaDe), id: t.contaDe };
-    const cB = { ...caixa(t.contaPara), id: t.contaPara };
+    const yCanal = rowBackground + 40 + (faixaCanaleta - 1) * 34;
+    const cA = { ...cellBox(t.contaDe), id: t.contaDe };
+    const cB = { ...cellBox(t.contaPara), id: t.contaPara };
     const ladoO = ladoLivre(o, dst, cA, abs, d, t.from);
     const ladoD = ladoLivre(dst, o, cB, abs, d, t.to);
     // quando os dois lados estão sujos, descer direto para a canaleta é o
@@ -1057,9 +1057,9 @@ function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
     const desceO = !ladoO.limpo && verticalLimpa(o, yCanal, abs, d, t.from);
     const desceD = !ladoD.limpo && verticalLimpa(dst, yCanal, abs, d, t.to);
     const xo = desceO ? o.x + o.w / 2
-      : ladoO.lado === 'esquerda' ? cA.x - g.CALHA / 2 : cA.x + cA.w + g.CALHA / 2;
+      : ladoO.lado === 'esquerda' ? cA.x - g.LANE / 2 : cA.x + cA.w + g.LANE / 2;
     const xd = desceD ? dst.x + dst.w / 2
-      : ladoD.lado === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
+      : ladoD.lado === 'esquerda' ? cB.x - g.LANE / 2 : cB.x + cB.w + g.LANE / 2;
     const yo = desceO ? (o.y + o.h) : o.y + o.h / 2;
     const yd = desceD ? (dst.y + dst.h) : dst.y + dst.h / 2;
     /**
@@ -1079,8 +1079,8 @@ function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
      * suíte verde.
      */
     const mesmaCalha = Math.abs(xo - xd) < 0.5 && !desceO && !desceD;
-    plano.celulas.push({
-      kind: 'edge', id: t.id, pai: '1', from: t.from, to: t.to,
+    layoutPlan.celulas.push({
+      kind: 'edge', id: t.id, parent: '1', from: t.from, to: t.to,
       label: rotuloDaAresta(t),
       style: estiloAresta(t, {
         output: desceO ? { x: 0.5, y: 1 } : { x: ladoO.lado === 'esquerda' ? 0 : 1, y: 0.5 },
@@ -1105,15 +1105,15 @@ function travessiasNoPlano(plano, modelo, d, res, g, abs, opts) {
  * desenho — a aresta "1. HTTPS" do cliente para o ALB simplesmente não existia
  * no render, que é omissão calada, `A4.2`.
  */
-function arestasDeFora(plano, d, res, g, abs, opts) {
+function arestasDeFora(layoutPlan, d, res, g, abs, opts) {
   const contaDoNo = id => {
-    const n = d.t.porId.get(id);
+    const n = d.t.byId.get(id);
     if (!n) return null;
     const c = n.kind === 'account' ? n : d.t.ancestrais(n).find(a => a.kind === 'account');
     return c ? c.id : null;
   };
   const ordemIdx = new Map(g.order.map((c, i) => [c.id, i]));
-  const topoDaFileira = Math.min(...g.order.map(c => abs.get(c.id).y));
+  const rowTop = Math.min(...g.order.map(c => abs.get(c.id).y));
   let faixaTopo = 0;
 
   for (const a of d.edges) {
@@ -1133,8 +1133,8 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
 
     if (reta) {
       const meio = (o.x + o.w + dst.x) / 2;
-      plano.celulas.push({
-        kind: 'edge', id: a.id, pai: '1', from: a.from, to: a.to,
+      layoutPlan.celulas.push({
+        kind: 'edge', id: a.id, parent: '1', from: a.from, to: a.to,
         label: rotuloDaAresta(a),
         style: estiloAresta(a, { output: { x: 1, y: 0.5 }, input: { x: 0, y: 0.5 } }, res.tema),
         pontos: y0 === y1 ? [] : [{ x: meio, y: y0 }, { x: meio, y: y1 }],
@@ -1147,7 +1147,7 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
     // alheia para chegar. Duas faixas, uma de cada lado da fileira, e nenhuma
     // linha dentro de caixa que não é dela.
     faixaTopo += 1;
-    const yCanal = topoDaFileira - 26 - (faixaTopo - 1) * 30;
+    const yCanal = rowTop - 26 - (faixaTopo - 1) * 30;
 
     // as barras que NENHUMA perna deste desvio pode atravessar — todo nó que
     // não é ancestral nem descendente das duas pontas da própria aresta.
@@ -1179,17 +1179,17 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
      * tomada de bandeja: é a mesma alavanca do #24, só do outro lado da
      * canaleta.
      */
-    const dstEhForasteiro = !cb;
+    const dstIsOutsider = !cb;
     let xd, entraPelaDireita;
-    if (dstEhForasteiro) {
-      const primeiraConta = abs.get(g.order[0].id);
-      const prefDst = (dst.x + dst.w + primeiraConta.x) / 2;
-      xd = dispor.corredorLivre([yCanal, y1], barras, prefDst, g.CALHA / 2);
+    if (dstIsOutsider) {
+      const firstAccount = abs.get(g.order[0].id);
+      const prefDst = (dst.x + dst.w + firstAccount.x) / 2;
+      xd = dispor.corredorLivre([yCanal, y1], barras, prefDst, g.LANE / 2);
       entraPelaDireita = xd >= dst.x + dst.w / 2;
     } else {
       const cB = { ...abs.get(alvoConta), id: alvoConta };
       const ladoD = ladoLivre(dst, o, cB, abs, d, a.to);
-      xd = ladoD.lado === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
+      xd = ladoD.lado === 'esquerda' ? cB.x - g.LANE / 2 : cB.x + cB.w + g.LANE / 2;
       entraPelaDireita = ladoD.lado !== 'esquerda';
     }
 
@@ -1219,15 +1219,15 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
      * ninguém, e é o que a rubrica prefere.
      */
     const direita = xd >= o.x + o.w / 2;
-    const xSobe = dispor.corredorLivre([yCanal, y0], barras, direita ? o.x + o.w : o.x, g.CALHA / 2);
+    const xSobe = dispor.corredorLivre([yCanal, y0], barras, direita ? o.x + o.w : o.x, g.LANE / 2);
     // o lado de saída sai do corredor ESCOLHIDO, não do desejado: se o vão livre
     // ficou do outro lado, sair pelo lado desejado faria a perna voltar por
     // dentro do próprio nó
     const saiPelaDireita = xSobe >= o.x + o.w / 2;
-    const xSaida = saiPelaDireita ? o.x + o.w : o.x;
+    const xOutput = saiPelaDireita ? o.x + o.w : o.x;
 
-    plano.celulas.push({
-      kind: 'edge', id: a.id, pai: '1', from: a.from, to: a.to,
+    layoutPlan.celulas.push({
+      kind: 'edge', id: a.id, parent: '1', from: a.from, to: a.to,
       label: rotuloDaAresta(a),
       style: estiloAresta(a, {
         output: { x: saiPelaDireita ? 1 : 0, y: 0.5 },
@@ -1237,7 +1237,7 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
       // isso ela coincide com a ponta e vira um segmento de comprimento zero,
       // que conta como dobra em `A5.3` e não desenha nada
       pontos: [
-        ...(Math.abs(xSobe - xSaida) < 0.5 ? [] : [{ x: xSobe, y: y0 }]),
+        ...(Math.abs(xSobe - xOutput) < 0.5 ? [] : [{ x: xSobe, y: y0 }]),
         { x: xSobe, y: yCanal }, { x: xd, y: yCanal }, { x: xd, y: y1 },
       ],
     });
@@ -1245,4 +1245,4 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
   if (faixaTopo) g.canaletaTopo = 26 + faixaTopo * 30;
 }
 
-module.exports = { planoDeElk, planoDeGrade, planoDeContas, pintura, moldura };
+module.exports = { elkPlan, gridPlan, accountPlan, paint, frame };

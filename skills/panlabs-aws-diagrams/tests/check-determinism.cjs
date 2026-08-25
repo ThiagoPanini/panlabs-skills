@@ -26,15 +26,15 @@ const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
-const RAIZ = path.join(__dirname, '..');
-const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
+const ROOT = path.join(__dirname, '..');
+const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
 const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
 // o diretório de modelos é argumento para que outro corpus aponte os SEUS
 // modelos para esta mesma régua — o determinismo é propriedade do motor, não
 // de um conjunto de exemplos
-const DIR_MODELOS = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'models');
-const modelos = fs.readdirSync(DIR_MODELOS).filter(f => f.endsWith('.json'));
+const MODELS_DIR = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, 'models');
+const modelos = fs.readdirSync(MODELS_DIR).filter(f => f.endsWith('.json'));
 
 /** Só a geometria — ignora ids, estilos e a ordem em que as células saíram. */
 function digital(xml) {
@@ -45,7 +45,7 @@ function digital(xml) {
 }
 
 /** Embaralho determinístico — sem Math.random, para o teste ser reproduzível. */
-function embaralhar(arr, semente) {
+function shuffle(arr, semente) {
   const a = [...arr];
   let s = semente;
   for (let i = a.length - 1; i > 0; i--) {
@@ -60,36 +60,36 @@ function embaralhar(arr, semente) {
   let falhas = 0;
 
   for (const arq of modelos) {
-    const bruto = fs.readFileSync(path.join(DIR_MODELOS, arq), 'utf8');
-    const modelo = JSON.parse(bruto);
+    const bruto = fs.readFileSync(path.join(MODELS_DIR, arq), 'utf8');
+    const model = JSON.parse(bruto);
     console.log(`\n  ${arq}`);
 
     // 1. mesmo processo, 3 execuções
     const hs = [];
-    for (let i = 0; i < 3; i++) hs.push(hash((await gerar(JSON.parse(bruto))).xml));
+    for (let i = 0; i < 3; i++) hs.push(hash((await generate(JSON.parse(bruto))).xml));
     const iguais = new Set(hs).size === 1;
     console.log(`    mesmo processo  ×3   ${iguais ? '✓' : '✗'}  ${hs[0]}`);
     if (!iguais) { falhas++; console.log(`        ${hs.join('  ')}`); }
 
     // 2. processo novo
     const outro = execFileSync(process.execPath, ['-e', `
-      const { gerar } = require(${JSON.stringify(path.join(RAIZ, 'engine', 'generate.cjs'))});
-      const m = JSON.parse(require('fs').readFileSync(${JSON.stringify(path.join(DIR_MODELOS, arq))}, 'utf8'));
-      gerar(m).then(r => process.stdout.write(require('crypto').createHash('sha256').update(r.xml).digest('hex').slice(0,16)));
+      const { generate } = require(${JSON.stringify(path.join(ROOT, 'engine', 'generate.cjs'))});
+      const m = JSON.parse(require('fs').readFileSync(${JSON.stringify(path.join(MODELS_DIR, arq))}, 'utf8'));
+      generate(m).then(r => process.stdout.write(require('crypto').createHash('sha256').update(r.xml).digest('hex').slice(0,16)));
     `], { encoding: 'utf8' });
     const novoOk = outro === hs[0];
     console.log(`    processo novo        ${novoOk ? '✓' : '✗'}  ${outro}`);
     if (!novoOk) falhas++;
 
     // 3. entrada reordenada — a incerteza 4 do #7
-    const base = digital((await gerar(JSON.parse(bruto))).xml);
+    const base = digital((await generate(JSON.parse(bruto))).xml);
     const divergentes = [];
     for (const semente of [7, 42, 1337]) {
       const m = JSON.parse(bruto);
-      m.nodes = embaralhar(m.nodes, semente);
-      if (m.edges) m.edges = embaralhar(m.edges, semente + 1);
+      m.nodes = shuffle(m.nodes, semente);
+      if (m.edges) m.edges = shuffle(m.edges, semente + 1);
       let d;
-      try { d = digital((await gerar(m)).xml); }
+      try { d = digital((await generate(m)).xml); }
       catch (e) { d = 'ERRO: ' + e.message; }
       if (d !== base) divergentes.push(`semente ${semente} -> ${d}`);
     }

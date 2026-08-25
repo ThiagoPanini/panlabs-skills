@@ -15,24 +15,24 @@ const { arvore, gatilhoOu, modoDeContas, travessias, politicaDeTravessia } =
   require('../engine/derive.cjs');
 
 let falhas = 0;
-function caso(name, modelo, esperado, obter) {
-  const t = arvore(modelo);
-  const obtido = obter(modelo, t);
-  const ok = Object.entries(esperado).every(([k, v]) => JSON.stringify(obtido[k]) === JSON.stringify(v));
+function caso(name, model, expected, obter) {
+  const t = arvore(model);
+  const got = obter(model, t);
+  const ok = Object.entries(expected).every(([k, v]) => JSON.stringify(got[k]) === JSON.stringify(v));
   if (!ok) {
     falhas++;
     console.log(`  ✗ ${name}`);
-    for (const [k, v] of Object.entries(esperado))
-      if (JSON.stringify(obtido[k]) !== JSON.stringify(v))
-        console.log(`      ${k}: esperado ${JSON.stringify(v)}, veio ${JSON.stringify(obtido[k])}`);
-    console.log(`      porque: ${obtido.because || '—'}`);
+    for (const [k, v] of Object.entries(expected))
+      if (JSON.stringify(got[k]) !== JSON.stringify(v))
+        console.log(`      ${k}: esperado ${JSON.stringify(v)}, veio ${JSON.stringify(got[k])}`);
+    console.log(`      porque: ${got.because || '—'}`);
   } else {
-    console.log(`  ✓ ${name}  (${obtido.because || 'sem justificativa'})`);
+    console.log(`  ✓ ${name}  (${got.because || 'sem justificativa'})`);
   }
 }
 
 const account = (id, ou) => ({ id, kind: 'account', account: '000000000000', inside: 'cloud', ...(ou ? { ou } : {}) });
-const inside = (id, pai) => ({ id, kind: 'service', service: 's3', inside: pai });
+const inside = (id, parent) => ({ id, kind: 'service', service: 's3', inside: parent });
 const cloud = { id: 'cloud', kind: 'cloud' };
 const mod = (nodes, edges) => ({ nodes: [cloud, ...nodes], edges: edges || [] });
 
@@ -41,23 +41,23 @@ const mod = (nodes, edges) => ({ nodes: [cloud, ...nodes], edges: edges || [] })
 console.log('\n1. gatilho de OU — a OU só vira faixa quando ela AGRUPA algo');
 
 caso('nenhuma OU declarada', mod([account('a'), account('b')]),
-  { desenhar: false }, gatilhoOu);
+  { draw: false }, gatilhoOu);
 
 caso('uma OU só, com duas contas — não separa nada',
   mod([account('a', 'Workloads'), account('b', 'Workloads')]),
-  { desenhar: false }, gatilhoOu);
+  { draw: false }, gatilhoOu);
 
 caso('duas OUs, uma conta cada — o rótulo da conta já diz isso',
   mod([account('a', 'Security'), account('b', 'Workloads')]),
-  { desenhar: false }, gatilhoOu);
+  { draw: false }, gatilhoOu);
 
 caso('duas OUs, uma delas com duas contas — AGORA agrupa',
   mod([account('a', 'Security'), account('b', 'Security'), account('c', 'Workloads')]),
-  { desenhar: true, ous: ['Security', 'Workloads'] }, gatilhoOu);
+  { draw: true, ous: ['Security', 'Workloads'] }, gatilhoOu);
 
 caso('a conta fora de OU não inventa uma OU (Management é raiz — P2)',
   mod([account('mgmt'), account('a', 'Security'), account('b', 'Security')]),
-  { desenhar: true, ous: ['Security'] }, gatilhoOu);
+  { draw: true, ous: ['Security'] }, gatilhoOu);
 
 // -------------------------------------------------------------- modo de vista
 
@@ -99,9 +99,9 @@ caso('duas contas, oito travessias — passa do que o corpus oficial mostra (2 a
 
 console.log('\n3. política de travessia — a hierarquia de fallback do #6 §6.4');
 
-function politica(modelo, t) {
-  const edges = (modelo.edges || []).map((a, i) => ({ ...a, id: a.id || `e${i}` }));
-  const m = modoDeContas(modelo, t, edges);
+function policy(model, t) {
+  const edges = (model.edges || []).map((a, i) => ({ ...a, id: a.id || `e${i}` }));
+  const m = modoDeContas(model, t, edges);
   return politicaDeTravessia(m.modo, travessias(edges, t), t);
 }
 
@@ -109,37 +109,37 @@ caso('inventário suprime tudo — a regra soberana (E1)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('c'), inside('z', 'c'),
     account('d'), inside('w', 'd'), account('e'), inside('v', 'e')],
     [travessia('x', 'y')]),
-  { nivel: 1, mecanismo: 'suprimir' }, politica);
+  { level: 1, mecanismo: 'suprimir' }, policy);
 
 caso('fan-in de 2 contas no mesmo destino colapsa numa aresta rotulada (E3)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('log'), inside('bucket', 'log')],
     [travessia('x', 'bucket'), travessia('y', 'bucket')]),
-  { nivel: 3, mecanismo: 'agregada' }, politica);
+  { level: 3, mecanismo: 'agregada' }, policy);
 
 caso('mesma origem para 2 contas irmãs vira barramento (E4)',
   mod([account('hub'), inside('tgw', 'hub'), account('a'), inside('x', 'a'), account('b'), inside('y', 'b')],
     [travessia('tgw', 'x'), travessia('tgw', 'y')]),
-  { nivel: 4, mecanismo: 'barramento' }, politica);
+  { level: 4, mecanismo: 'bus' }, policy);
 
 caso('duas contas e uma travessia — aresta direta, sem cerimônia (E10)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b')],
     [travessia('x', 'y')]),
-  { nivel: 6, mecanismo: 'direta' }, politica);
+  { level: 6, mecanismo: 'direta' }, policy);
 
 caso('mesma origem, mas relações DIFERENTES — barramento mentiria (E4 exige o mesmo vínculo)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('c'), inside('z', 'c')],
     [travessia('x', 'y', 'atracamento VPC'), travessia('x', 'z', 'PutEvents')]),
-  { nivel: 6, mecanismo: 'direta' }, politica);
+  { level: 6, mecanismo: 'direta' }, policy);
 
 caso('mesma origem e o MESMO vínculo rotulado — aí sim barramento',
   mod([account('hub'), inside('tgw', 'hub'), account('a'), inside('x', 'a'), account('b'), inside('y', 'b')],
     [travessia('tgw', 'x', 'atracamento VPC'), travessia('tgw', 'y', 'atracamento VPC')]),
-  { nivel: 4, mecanismo: 'barramento' }, politica);
+  { level: 4, mecanismo: 'bus' }, policy);
 
 caso('fan-in com relações diferentes não agrega — o rótulo único mentiria (E3)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('log'), inside('bucket', 'log')],
     [travessia('x', 'bucket', 'logs de acesso'), travessia('y', 'bucket', 'backup noturno')]),
-  { nivel: 6, mecanismo: 'direta' }, politica);
+  { level: 6, mecanismo: 'direta' }, policy);
 
 console.log();
 if (falhas) { console.log(`${falhas} caso(s) errado(s)`); process.exit(1); }

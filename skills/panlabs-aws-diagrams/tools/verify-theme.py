@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Confere NO PIXEL que o tema chegou no render — não só na style string.
 
-    python3 tools/verify-theme.py output/temas/a-claro.png claro
+    python3 tools/verify-theme.py output/themes/a-light.png light
     python3 tools/verify-theme.py --all
 
 A lição que obriga esta ferramenta é do #17: 24 checagens estáticas estavam
@@ -129,9 +129,9 @@ def verificar(png, tema):
 
 def main():
     if '--all' in sys.argv:
-        mapa = {'a-claro': 'claro', 'b-escuro': 'escuro',
-                'c-corporativo': 'corporativo', 'd-armadilha': 'armadilha',
-                'e-indizivel': 'indizivel', 'g-vista-logica': 'logica'}
+        mapa = {'a-light': 'light', 'b-dark': 'dark',
+                'c-corporate': 'corporate', 'd-trap': 'trap',
+                'e-unspeakable': 'unspeakable', 'g-logical-view': 'logical'}
         falhou = 0
         for nome, tema in mapa.items():
             png = AQUI / 'output' / 'themes' / f'{nome}.png'

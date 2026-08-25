@@ -22,22 +22,22 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const ANTES = path.join(RAIZ, 'prototypes', 'q11', 'engine', 'generate.cjs');
-const { validarGeometria } = require(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
+const ROOT = path.join(__dirname, '..');
+const BEFORE = path.join(ROOT, 'prototypes', 'q11', 'engine', 'generate.cjs');
+const { validateGeometry } = require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
 
 async function main() {
-  if (!fs.existsSync(ANTES)) {
+  if (!fs.existsSync(BEFORE)) {
     console.log('  o motor de ANTES não existe mais em prototypes/ — não há o que comparar.');
     console.log('  (é o estado esperado depois que os protótipos saírem da árvore)');
     return 0;
   }
   const motores = {
-    antes: require(ANTES).gerar,
-    depois: require(path.join(RAIZ, 'engine', 'generate.cjs')).gerar,
+    antes: require(BEFORE).generate,
+    depois: require(path.join(ROOT, 'engine', 'generate.cjs')).generate,
   };
   const comBytes = process.argv.includes('--bytes');
-  const modelos = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).sort();
+  const modelos = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
 
   console.log('\n  o mesmo modelo nos dois motores — laudo do validador do #18\n');
   const L = comBytes ? 32 : 26;
@@ -46,24 +46,24 @@ async function main() {
 
   let mudouSemantica = 0, mudouFalha = 0, naoGerou = 0;
   for (const arq of modelos) {
-    const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', arq), 'utf8'));
+    const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', arq), 'utf8'));
     const col = {};
-    for (const [rot, gerar] of Object.entries(motores)) {
+    for (const [rot, generate] of Object.entries(motores)) {
       try {
-        const r = await gerar(JSON.parse(JSON.stringify(m)));
-        const l = validarGeometria(r.plano);
-        col[rot] = { falha: l.resumo.falha, sem: l.semanticas.map(s => `${s.id}×${s.occurrences.length}`),
+        const r = await generate(JSON.parse(JSON.stringify(m)));
+        const l = validateGeometry(r.layoutPlan);
+        col[rot] = { failure: l.resumo.failure, sem: l.semanticas.map(s => `${s.id}×${s.occurrences.length}`),
           ids: l.falhas.map(f => f.id), bytes: r.xml.length };
       } catch (e) { col[rot] = { erro: e.message.slice(0, 40) }; }
     }
     const mostra = c => c.erro ? `NÃO GEROU (${c.erro})`
-      : `falha=${String(c.falha).padStart(2)} sem=[${c.sem.join(',') || '—'}]` +
+      : `falha=${String(c.failure).padStart(2)} sem=[${c.sem.join(',') || '—'}]` +
         (comBytes ? ` ${c.bytes}b` : '');
     console.log(`  ${path.basename(arq, '.json').padEnd(30)}${mostra(col.antes).padEnd(comBytes ? 32 : 26)}${mostra(col.depois)}`);
     if (col.antes.erro || col.depois.erro) naoGerou++;
     else {
       if (JSON.stringify(col.antes.sem) !== JSON.stringify(col.depois.sem)) mudouSemantica++;
-      if (col.antes.falha !== col.depois.falha) {
+      if (col.antes.failure !== col.depois.failure) {
         mudouFalha++;
         // QUAIS mudaram, sempre. "A contagem caiu" sem a lista é um número que
         // ninguém pode conferir, e o #23 existe justamente porque um número

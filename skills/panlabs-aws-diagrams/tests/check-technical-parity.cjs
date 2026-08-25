@@ -41,10 +41,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..');
 
-const ESTRUTURAIS = new Set(['id', 'inside']);
-const COPIADOS_DIRETO = new Set(['kind', 'label']);
+const STRUCTURAL = new Set(['id', 'inside']);
+const COPIED_VERBATIM = new Set(['kind', 'label']);
 
 /**
  * Diferença simétrica entre dois conjuntos de propriedades, menos as `fora`.
@@ -52,7 +52,7 @@ const COPIADOS_DIRETO = new Set(['kind', 'label']);
  * arquivos reais, outra contra uma cópia mutilada (a prova de que ela sabe
  * falhar).
  */
-function divergencias(propsA, propsB, fora = ESTRUTURAIS) {
+function divergences(propsA, propsB, fora = STRUCTURAL) {
   const a = new Set(propsA);
   const b = new Set(propsB);
   const soEmA = [...a].filter(p => !b.has(p) && !fora.has(p));
@@ -66,20 +66,20 @@ const ok = (cond, title, detail) => {
   if (!cond) falhas++;
 };
 
-const { CAMPOS_TECNICOS } = require(path.join(RAIZ, 'session', 'project.cjs'));
+const { TECHNICAL_FIELDS } = require(path.join(ROOT, 'session', 'project.cjs'));
 
-const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'schema.json'), 'utf8'));
-const sessao = JSON.parse(fs.readFileSync(path.join(RAIZ, 'session', 'schema.json'), 'utf8'));
+const model = JSON.parse(fs.readFileSync(path.join(ROOT, 'schema.json'), 'utf8'));
+const session = JSON.parse(fs.readFileSync(path.join(ROOT, 'session', 'schema.json'), 'utf8'));
 
-const nodeProps = Object.keys(modelo.definitions.node.properties);
-const propsCasaco = Object.keys(sessao.definitions.technicalFacet.properties);
+const nodeProps = Object.keys(model.definitions.node.properties);
+const propsCasaco = Object.keys(session.definitions.technicalFacet.properties);
 
 console.log('\n1 · os dois ESQUEMAS — model@1.no contra session@1.casacoTecnico\n');
 console.log(`  campos de model@1.no:              ${nodeProps.length}  (${nodeProps.slice().sort().join(', ')})`);
 console.log(`  campos de session@1.casacoTecnico:   ${propsCasaco.length}  (${propsCasaco.slice().sort().join(', ')})`);
-console.log(`  estruturais, de fora por construção: ${[...ESTRUTURAIS].join(', ')}`);
+console.log(`  estruturais, de fora por construção: ${[...STRUCTURAL].join(', ')}`);
 
-const realEsquema = divergencias(nodeProps, propsCasaco);
+const realEsquema = divergences(nodeProps, propsCasaco);
 ok(realEsquema.soEmA.length === 0,
   'nenhum campo de model@1.no ficou de fora de casacoTecnico',
   realEsquema.soEmA.length ? realEsquema.soEmA.join(', ') : 'none');
@@ -88,16 +88,16 @@ ok(realEsquema.soEmB.length === 0,
   realEsquema.soEmB.length ? realEsquema.soEmB.join(', ') : 'none');
 
 console.log('\n2 · o esquema contra quem de fato PROJETA — casacoTecnico × CAMPOS_TECNICOS\n');
-console.log(`  CAMPOS_TECNICOS (project.cjs):     ${CAMPOS_TECNICOS.length}  (${CAMPOS_TECNICOS.slice().sort().join(', ')})`);
-console.log(`  copiados direto, fora da lista:      ${[...COPIADOS_DIRETO].join(', ')}`);
+console.log(`  CAMPOS_TECNICOS (project.cjs):     ${TECHNICAL_FIELDS.length}  (${TECHNICAL_FIELDS.slice().sort().join(', ')})`);
+console.log(`  copiados direto, fora da lista:      ${[...COPIED_VERBATIM].join(', ')}`);
 
-const realProjecao = divergencias(propsCasaco, CAMPOS_TECNICOS, COPIADOS_DIRETO);
-ok(realProjecao.soEmA.length === 0,
+const realProjection = divergences(propsCasaco, TECHNICAL_FIELDS, COPIED_VERBATIM);
+ok(realProjection.soEmA.length === 0,
   'todo campo de casacoTecnico (além de tipo/rotulo) está em CAMPOS_TECNICOS — atravessa a projeção',
-  realProjecao.soEmA.length ? realProjecao.soEmA.join(', ') : 'none');
-ok(realProjecao.soEmB.length === 0,
+  realProjection.soEmA.length ? realProjection.soEmA.join(', ') : 'none');
+ok(realProjection.soEmB.length === 0,
   'CAMPOS_TECNICOS não tem entrada que casacoTecnico não declare',
-  realProjecao.soEmB.length ? realProjecao.soEmB.join(', ') : 'none');
+  realProjection.soEmB.length ? realProjection.soEmB.join(', ') : 'none');
 
 // ---------------------------------------------------------------------------
 // 3 · a prova de controle — a checagem TEM de acusar quando um campo falta
@@ -111,16 +111,16 @@ ok(realProjecao.soEmB.length === 0,
 console.log('\n3 · prova de controle — remover um campo de um dos lados, ela acusa\n');
 
 const semQualificador = propsCasaco.filter(p => p !== 'qualifier');
-const perdaDetectada = divergencias(nodeProps, semQualificador);
-ok(perdaDetectada.soEmA.includes('qualifier'),
+const lossDetected = divergences(nodeProps, semQualificador);
+ok(lossDetected.soEmA.includes('qualifier'),
   'CONTROLE: tirando "qualificador" do casaco simulado, a paridade de esquema acusa',
-  perdaDetectada.soEmA.join(', '));
+  lossDetected.soEmA.join(', '));
 
-const comCampoOrfao = [...propsCasaco, 'inventado'];
-const orfaoDetectado = divergencias(nodeProps, comCampoOrfao);
-ok(orfaoDetectado.soEmB.includes('inventado'),
+const withOrphanField = [...propsCasaco, 'inventado'];
+const orphanDetected = divergences(nodeProps, withOrphanField);
+ok(orphanDetected.soEmB.includes('inventado'),
   'CONTROLE: acrescentando "inventado" só no casaco simulado, a paridade de esquema acusa',
-  orfaoDetectado.soEmB.join(', '));
+  orphanDetected.soEmB.join(', '));
 
 // e o campo estrutural excluído de propósito não pode disparar sozinho —
 // senão o "de fora por construção" seria decoração, não comportamento. A
@@ -128,7 +128,7 @@ ok(orfaoDetectado.soEmB.includes('inventado'),
 // exatamente o que a exclusão de "dentro" muda, sem depender de o corpus real
 // estar limpo de outras divergências no momento em que isto roda.
 const semDentroNoModelo = nodeProps.filter(p => p !== 'inside');
-const controleEstrutural = divergencias(semDentroNoModelo, propsCasaco);
+const controleEstrutural = divergences(semDentroNoModelo, propsCasaco);
 ok(!controleEstrutural.soEmA.includes('inside') && !controleEstrutural.soEmB.includes('inside') &&
    controleEstrutural.soEmA.length === realEsquema.soEmA.length &&
    controleEstrutural.soEmB.length === realEsquema.soEmB.length,
@@ -137,11 +137,11 @@ ok(!controleEstrutural.soEmA.includes('inside') && !controleEstrutural.soEmB.inc
 // a mesma prova, do lado da PROJEÇÃO: tirar "camada" de CAMPOS_TECNICOS tem
 // de acusar — é o exato incidente que a seção 2 existe para nunca mais deixar
 // passar calado.
-const semCamadaNaLista = CAMPOS_TECNICOS.filter(c => c !== 'layer');
-const perdaNaProjecao = divergencias(propsCasaco, semCamadaNaLista, COPIADOS_DIRETO);
-ok(perdaNaProjecao.soEmA.includes('layer'),
+const withoutLayerInList = TECHNICAL_FIELDS.filter(c => c !== 'layer');
+const lossInProjection = divergences(propsCasaco, withoutLayerInList, COPIED_VERBATIM);
+ok(lossInProjection.soEmA.includes('layer'),
   'CONTROLE: tirando "camada" de CAMPOS_TECNICOS simulado, a paridade de projeção acusa',
-  perdaNaProjecao.soEmA.join(', '));
+  lossInProjection.soEmA.join(', '));
 
 console.log(falhas
   ? `\n  ✗ ${falhas} falha(s) — model@1, o casaco técnico de session@1 e/ou CAMPOS_TECNICOS divergem em campo de folha.\n`

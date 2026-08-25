@@ -46,23 +46,23 @@ const ehCor = hex => paraRgb(hex) !== null;
 // ------------------------------------------------------------- contraste WCAG
 
 /** sRGB 0–255 para o canal linearizado. O degrau é o da WCAG G18. */
-function linearizar(canal) {
+function linearize(canal) {
   const v = canal / 255;
   return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
 }
 
 /** Luminância relativa, WCAG G18: L = 0,2126R + 0,7152G + 0,0722B. */
-function luminancia(hex) {
+function luminance(hex) {
   const rgb = paraRgb(hex);
   if (!rgb) return null;
-  const [r, g, b] = rgb.map(linearizar);
+  const [r, g, b] = rgb.map(linearize);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 /** Razão de contraste (L1+0,05)/(L2+0,05). Simétrica, em [1, 21]. */
 function contraste(a, b) {
-  const la = luminancia(a);
-  const lb = luminancia(b);
+  const la = luminance(a);
+  const lb = luminance(b);
   if (la === null || lb === null) return null;
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
@@ -93,7 +93,7 @@ const M_XYZ = [
   [0.2126729, 0.7151522, 0.0721750],
   [0.0193339, 0.1191920, 0.9503041],
 ];
-const BRANCO_D65 = [0.95047, 1.0, 1.08883];
+const WHITE_D65 = [0.95047, 1.0, 1.08883];
 
 const DELTA = 6 / 29;
 const f = t => (t > DELTA ** 3 ? Math.cbrt(t) : t / (3 * DELTA * DELTA) + 4 / 29);
@@ -102,9 +102,9 @@ const f = t => (t > DELTA ** 3 ? Math.cbrt(t) : t / (3 * DELTA * DELTA) + 4 / 29
 function paraLab(hex) {
   const rgb = paraRgb(hex);
   if (!rgb) return null;
-  const lin = rgb.map(linearizar);
-  const xyz = M_XYZ.map(linha => linha[0] * lin[0] + linha[1] * lin[1] + linha[2] * lin[2]);
-  const [fx, fy, fz] = xyz.map((v, i) => f(v / BRANCO_D65[i]));
+  const lin = rgb.map(linearize);
+  const xyz = M_XYZ.map(row => row[0] * lin[0] + row[1] * lin[1] + row[2] * lin[2]);
+  const [fx, fy, fz] = xyz.map((v, i) => f(v / WHITE_D65[i]));
   return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 }
 
@@ -185,7 +185,7 @@ function deltaE00(lab1, lab2, pesos = {}) {
 }
 
 /** ΔE00 direto entre duas cores hexadecimais. */
-function distancia(a, b) {
+function distance(a, b) {
   const la = paraLab(a);
   const lb = paraLab(b);
   return la && lb ? deltaE00(la, lb) : null;
@@ -208,30 +208,30 @@ const M_LMS_INV = [
   [-0.000365296938, -0.00412161469, 0.693511405],
 ];
 
-const PROJECAO = {
+const PROJECTION = {
   protanopia: ([, M, S]) => [2.02344 * M - 2.52581 * S, M, S],
   deuteranopia: ([L, , S]) => [L, 0.494207 * L + 1.24827 * S, S],
   tritanopia: ([L, M]) => [L, M, -0.395913 * L + 0.801109 * M],
 };
 
-const aplica = (m, v) => m.map(linha => linha[0] * v[0] + linha[1] * v[1] + linha[2] * v[2]);
-const deslinearizar = v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(Math.max(0, v), 1 / 2.4) - 0.055);
+const aplica = (m, v) => m.map(row => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]);
+const delinearize = v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(Math.max(0, v), 1 / 2.4) - 0.055);
 
 /** A cor como um dicromata a vê. `tipo` ∈ protanopia | deuteranopia | tritanopia. */
-function simular(hex, kind) {
-  const projetar = PROJECAO[kind];
-  if (!projetar) throw new Error(`tipo de deficiência desconhecido: "${kind}"`);
+function simulate(hex, kind) {
+  const project = PROJECTION[kind];
+  if (!project) throw new Error(`tipo de deficiência desconhecido: "${kind}"`);
   const rgb = paraRgb(hex);
   if (!rgb) return null;
-  const lms = aplica(M_LMS, rgb.map(linearizar));
-  return paraHex(aplica(M_LMS_INV, projetar(lms)).map(deslinearizar));
+  const lms = aplica(M_LMS, rgb.map(linearize));
+  return paraHex(aplica(M_LMS_INV, project(lms)).map(delinearize));
 }
 
-const TIPOS_DE_DEFICIENCIA = Object.keys(PROJECAO);
+const DEFICIENCY_KINDS = Object.keys(PROJECTION);
 
 module.exports = {
   paraRgb, paraHex, ehCor,
-  linearizar, luminancia, contraste, compor,
-  paraLab, deltaE00, distancia,
-  simular, TIPOS_DE_DEFICIENCIA,
+  linearize, luminance, contraste, compor,
+  paraLab, deltaE00, distance,
+  simulate, DEFICIENCY_KINDS,
 };

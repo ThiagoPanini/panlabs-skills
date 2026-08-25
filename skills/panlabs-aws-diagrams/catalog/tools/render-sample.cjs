@@ -18,17 +18,17 @@
 
 const fs = require('fs');
 const path = require('path');
-const { carregar } = require(path.join(__dirname, '..', 'aws-shapes.cjs'));
+const { load } = require(path.join(__dirname, '..', 'aws-shapes.cjs'));
 
 const output = process.argv[2] || path.join(__dirname, '..', 'tests');
-const cat = carregar(path.join(__dirname, '..'));
+const cat = load(path.join(__dirname, '..'));
 
-const MARCADOR = '#FF00FF';
+const MARKER = '#FF00FF';
 
 // ------------------------------------------------------------- o que provar
 
 // Service icons — incluindo os que só resolvem por renome ou desambiguação.
-const SERVICOS = [
+const SERVICES = [
   'lambda', 's3', 'dynamodb', 'ec2', 'rds',
   'sqs', 'sns', 'cloudfront', 'iam', 'eventbridge',
   'step functions', 'bedrock', 'fargate', 'athena', 'glue',
@@ -44,13 +44,13 @@ const SERVICOS = [
 
 // Resource icons planos — o segundo caminho de ícone. Buscar só por
 // resourceIcon faz o gerador concluir que estes não existem.
-const RECURSOS = [
+const RESOURCES = [
   's3 tables', 's3 express one zone', 'eventbridge pipes',
   'eventbridge scheduler', 'trainium', 'inferentia'
 ];
 
 // Grupos — os 4 sem container=1 e os 8 com cor pré-2022 estão todos aqui.
-const GRUPOS = [
+const GROUPS = [
   'AWS Cloud', 'Region', 'VPC', 'Availability Zone', 'Private subnet',
   'Public subnet', 'Security group', 'AWS Account', 'Auto Scaling group',
   'Corporate data center', 'Elastic Beanstalk container', 'Generic group'
@@ -58,9 +58,9 @@ const GRUPOS = [
 
 // ------------------------------------------------------------------ layout
 
-const ICONE = 78, PASSO_X = 150, PASSO_Y = 150, COLS = 6, X0 = 60, Y0 = 60;
+const ICON = 78, PASSO_X = 150, PASSO_Y = 150, COLS = 6, X0 = 60, Y0 = 60;
 const GRUPO_W = 300, GRUPO_H = 190, GRUPO_COLS = 4, GRUPO_GAP = 40;
-const FILHO = 48, FILHO_X = 40, FILHO_Y = 90;
+const CHILD = 48, FILHO_X = 40, FILHO_Y = 90;
 
 const celulas = [];
 const manifesto = [];
@@ -72,51 +72,51 @@ function esc(s) {
                   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function vertice({ valor, style, x, y, w, h, pai = '1' }) {
+function vertice({ valor, style, x, y, w, h, parent = '1' }) {
   const cid = id();
   celulas.push(
-    `        <mxCell id="${cid}" value="${esc(valor)}" style="${esc(style)}" vertex="1" parent="${pai}">\n` +
+    `        <mxCell id="${cid}" value="${esc(valor)}" style="${esc(style)}" vertex="1" parent="${parent}">\n` +
     `          <mxGeometry x="${x}" y="${y}" width="${w}" height="${h}" as="geometry"/>\n` +
     `        </mxCell>`);
   return cid;
 }
 
 // ---- marcador de calibração superior-esquerdo
-const marcadorStyle = `rounded=0;whiteSpace=wrap;html=1;fillColor=${MARCADOR};strokeColor=none;`;
+const marcadorStyle = `rounded=0;whiteSpace=wrap;html=1;fillColor=${MARKER};strokeColor=none;`;
 vertice({ valor: '', style: marcadorStyle, x: 0, y: 0, w: 10, h: 10 });
 
 // ---- banda A+B: ícones soltos
-let linha = 0, coluna = 0;
-function proximaPosicao() {
-  const x = X0 + coluna * PASSO_X;
-  const y = Y0 + linha * PASSO_Y;
-  coluna++;
-  if (coluna >= COLS) { coluna = 0; linha++; }
+let row = 0, column = 0;
+function nextPosition() {
+  const x = X0 + column * PASSO_X;
+  const y = Y0 + row * PASSO_Y;
+  column++;
+  if (column >= COLS) { column = 0; row++; }
   return { x, y };
 }
 
-for (const [lista, esperado] of [[SERVICOS, 'svc'], [RECURSOS, 'res']]) {
-  if (coluna !== 0) { coluna = 0; linha++; }          // cada lista começa numa linha
-  for (const name of lista) {
+for (const [list, expected] of [[SERVICES, 'svc'], [RESOURCES, 'res']]) {
+  if (column !== 0) { column = 0; row++; }          // cada lista começa numa linha
+  for (const name of list) {
     const r = cat.service(name);
     if (!r) throw new Error(`amostra pede "${name}" e o catálogo não resolve`);
     const tipoReal = r.via.startsWith('recurso') ? 'res' : 'svc';
-    if (tipoReal !== esperado) {
-      throw new Error(`"${name}" deveria ser ${esperado} e resolveu como ${tipoReal} (${r.via})`);
+    if (tipoReal !== expected) {
+      throw new Error(`"${name}" deveria ser ${expected} e resolveu como ${tipoReal} (${r.via})`);
     }
-    const { x, y } = proximaPosicao();
-    const cid = vertice({ valor: r.title, style: r.style, x, y, w: ICONE, h: ICONE });
+    const { x, y } = nextPosition();
+    const cid = vertice({ valor: r.title, style: r.style, x, y, w: ICON, h: ICON });
     manifesto.push({
       id: cid, pedido: name, title: r.title, kind: tipoReal, via: r.via,
-      stencil: r.stencil, fill: r.fill, x, y, w: ICONE, h: ICONE,
+      stencil: r.stencil, fill: r.fill, x, y, w: ICON, h: ICON,
       glifo: tipoReal === 'svc' ? '#ffffff' : r.fill
     });
   }
 }
 
 // ---- banda C: grupos, cada um com um ícone dentro (prova o aninhamento)
-const yGrupos = Y0 + (linha + 1) * PASSO_Y;
-GRUPOS.forEach((name, i) => {
+const yGrupos = Y0 + (row + 1) * PASSO_Y;
+GROUPS.forEach((name, i) => {
   const g = cat.group(name);
   if (!g) throw new Error(`amostra pede o grupo "${name}" e o catálogo não resolve`);
   const gx = X0 + (i % GRUPO_COLS) * (GRUPO_W + GRUPO_GAP);
@@ -127,26 +127,26 @@ GRUPOS.forEach((name, i) => {
   // arquivo deixa de expressar contenção — por isso o manifesto guarda o pai.
   const inside = cat.service('lambda');
   const fid = vertice({ valor: '', style: inside.style, x: FILHO_X, y: FILHO_Y,
-                        w: FILHO, h: FILHO, pai: gid });
+                        w: CHILD, h: CHILD, parent: gid });
 
   const stroke = (g.style.match(/strokeColor=([^;]*)/) || [])[1];
   manifesto.push({
     id: gid, pedido: name, title: g.title, kind: 'group',
-    grIcon: g.grIcon, shapeClass: g.shapeClass, correcoes: g.correcoes,
+    grIcon: g.grIcon, shapeClass: g.shapeClass, corrections: g.corrections,
     x: gx, y: gy, w: GRUPO_W, h: GRUPO_H,
     edge: stroke === 'none' ? null : stroke,
-    filho: { id: fid, x: gx + FILHO_X, y: gy + FILHO_Y, w: FILHO, h: FILHO,
+    filho: { id: fid, x: gx + FILHO_X, y: gy + FILHO_Y, w: CHILD, h: CHILD,
              fill: inside.fill, glifo: '#ffffff' }
   });
 });
 
 // ---- marcador inferior-direito
 const larguraTotal = X0 + GRUPO_COLS * (GRUPO_W + GRUPO_GAP);
-const alturaTotal = yGrupos + Math.ceil(GRUPOS.length / GRUPO_COLS) * (GRUPO_H + GRUPO_GAP) + 40;
+const alturaTotal = yGrupos + Math.ceil(GROUPS.length / GRUPO_COLS) * (GRUPO_H + GRUPO_GAP) + 40;
 vertice({ valor: '', style: marcadorStyle, x: larguraTotal, y: alturaTotal, w: 10, h: 10 });
 
 const calib = { a: { x: 0, y: 0, w: 10, h: 10 }, b: { x: larguraTotal, y: alturaTotal, w: 10, h: 10 },
-                color: MARCADOR };
+                color: MARKER };
 
 // ------------------------------------------------------------------- saída
 
@@ -171,16 +171,16 @@ fs.writeFileSync(path.join(output, 'sample.drawio'), xml);
 fs.writeFileSync(path.join(output, 'sample.manifest.json'), JSON.stringify({
   meta: {
     drawio: cat.meta.drawio, commit: cat.meta.commit,
-    servicos: SERVICOS.length, recursos: RECURSOS.length, grupos: GRUPOS.length
+    servicos: SERVICES.length, recursos: RESOURCES.length, grupos: GROUPS.length
   },
   calibracao: calib,
   celulas: manifesto
 }, null, 1) + '\n');
 
 console.error([
-  `service icons  ${SERVICOS.length}`,
-  `resource icons ${RECURSOS.length}`,
-  `grupos         ${GRUPOS.length}`,
-  `células        ${manifesto.length} (+ ${GRUPOS.length} filhos aninhados + 2 marcadores)`,
+  `service icons  ${SERVICES.length}`,
+  `resource icons ${RESOURCES.length}`,
+  `grupos         ${GROUPS.length}`,
+  `células        ${manifesto.length} (+ ${GROUPS.length} filhos aninhados + 2 marcadores)`,
   `saída          ${path.join(output, 'sample.drawio')}`
 ].join('\n'));

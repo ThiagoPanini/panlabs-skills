@@ -29,61 +29,61 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
-const { validarGeometria } = require(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
-const { aprovar } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
-const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
-const { projetar } = require(path.join(RAIZ, 'session', 'project.cjs'));
+const ROOT = path.join(__dirname, '..');
+const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
+const { validateGeometry } = require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
+const { approve } = require(path.join(ROOT, 'session', 'agreement.cjs'));
+const { elaborate } = require(path.join(ROOT, 'session', 'elaborate.cjs'));
+const { project } = require(path.join(ROOT, 'session', 'project.cjs'));
 
 /** O modelo técnico da sessão do #14, sem passar por arquivo nenhum. */
-function modelosDaSessao() {
-  const ler = f => JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', f), 'utf8'));
-  const aprovado = aprovar(ler('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
-  const technical = elaborar(aprovado, ler('retail-elaboration.json'));
+function sessionModels() {
+  const read = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', f), 'utf8'));
+  const approved = approve(read('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
+  const technical = elaborate(approved, read('retail-elaboration.json'));
   return [
-    { name: 'sessao:retail/logica', modelo: projetar(technical, 'logical').modelo },
-    { name: 'sessao:retail/tecnica', modelo: projetar(technical, 'technical').modelo },
+    { name: 'sessao:retail/logica', model: project(technical, 'logical').model },
+    { name: 'sessao:retail/tecnica', model: project(technical, 'technical').model },
   ];
 }
 
 function entradas() {
-  const dir = path.join(RAIZ, 'models');
+  const dir = path.join(ROOT, 'models');
   const corpus = fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort()
-    .map(f => ({ name: path.basename(f, '.json'), modelo: JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) }));
-  return [...corpus, ...modelosDaSessao()];
+    .map(f => ({ name: path.basename(f, '.json'), model: JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) }));
+  return [...corpus, ...sessionModels()];
 }
 
-const SIMBOLO = { ok: 'ok   ', aviso: 'AVISO', falha: 'FALHA', notApplicable: 'n/a  ', pulada: 'render', erro: 'ERRO ' };
+const SYMBOL = { ok: 'ok   ', warning: 'AVISO', failure: 'FALHA', notApplicable: 'n/a  ', skipped: 'render', erro: 'ERRO ' };
 
 async function main() {
   const soAlvo = process.argv.includes('--target');
-  const ALVO = ['A5.5', 'A3.5', 'A3.4', 'A5.1', 'A4.2', 'A4.4', 'A3.2'];
+  const TARGET = ['A5.5', 'A3.5', 'A3.4', 'A5.1', 'A4.2', 'A4.4', 'A3.2'];
   let totalSemantica = 0, totalFalha = 0;
 
-  for (const { name, modelo } of entradas()) {
+  for (const { name, model } of entradas()) {
     let r;
     try {
-      r = await gerar(modelo);
+      r = await generate(model);
     } catch (e) {
       console.log(`${name} :: NÃO GEROU :: ${e.message}`);
       for (const l of e.erros || []) console.log(`${name} ::   · ${l}`);
       continue;
     }
-    console.log(`${name} :: caminho=${r.caminho} paginas=${1 + r.paginas.length}`);
-    for (const p of [r.plano, ...r.paginas]) {
-      const laudo = validarGeometria(p);
+    console.log(`${name} :: caminho=${r.caminho} paginas=${1 + r.pages.length}`);
+    for (const p of [r.layoutPlan, ...r.pages]) {
+      const report = validateGeometry(p);
       const pag = p.id || '(sem id)';
-      totalSemantica += laudo.semanticas.length;
-      totalFalha += laudo.falhas.length;
-      const linhas = [...laudo.resultados, ...laudo.extras]
-        .filter(x => !soAlvo || ALVO.includes(x.id))
-        .map(x => `${name}/${pag} :: ${x.id.padEnd(5)} ${SIMBOLO[x.state] || x.state} ` +
-          `${String(x.occurrences.length).padStart(3)}oc${x.semantica && x.state === 'falha' ? ' SEMANTICA' : ''}`)
+      totalSemantica += report.semanticas.length;
+      totalFalha += report.falhas.length;
+      const linhas = [...report.resultados, ...report.extras]
+        .filter(x => !soAlvo || TARGET.includes(x.id))
+        .map(x => `${name}/${pag} :: ${x.id.padEnd(5)} ${SYMBOL[x.state] || x.state} ` +
+          `${String(x.occurrences.length).padStart(3)}oc${x.semantica && x.state === 'failure' ? ' SEMANTICA' : ''}`)
         .sort();
       for (const l of linhas) console.log(l);
-      if (laudo.cobertura.naoRodaram.length)
-        console.log(`${name}/${pag} :: NÃO RODARAM ${laudo.cobertura.naoRodaram.join(',')}`);
+      if (report.cobertura.naoRodaram.length)
+        console.log(`${name}/${pag} :: NÃO RODARAM ${report.cobertura.naoRodaram.join(',')}`);
     }
   }
   console.log(`TOTAL :: falhas=${totalFalha} semanticas=${totalSemantica}`);

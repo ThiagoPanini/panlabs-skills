@@ -25,7 +25,7 @@ const path = require('path');
  * "Simple Storage Service (S3)", "simple_storage_service". Todos precisam
  * cair no mesmo balde antes de qualquer comparação.
  */
-function normalizar(name) {
+function normalize(name) {
   return String(name)
     .toLowerCase()
     .replace(/[_\-/]+/g, ' ')
@@ -37,42 +37,42 @@ function normalizar(name) {
 }
 
 /** "Simple Storage Service (S3)" indexa também como "s3" e como "simple storage service". */
-function variantes(title) {
-  const out = new Set([normalizar(title)]);
+function variants(title) {
+  const out = new Set([normalize(title)]);
   const m = String(title).match(/^(.*?)\s*\(([^)]+)\)\s*$/);
   if (m) {
-    out.add(normalizar(m[1]));
-    out.add(normalizar(m[2]));
+    out.add(normalize(m[1]));
+    out.add(normalize(m[2]));
   }
   return [...out].filter(Boolean);
 }
 
 // ------------------------------------------------------------------ styles
 
-function aplicarTemplate(tpl, { fill, stencil }) {
+function applyTemplate(tpl, { fill, stencil }) {
   return tpl
     .split('${FILL}').join(fill)
     .split('${STENCIL}').join(stencil);
 }
 
 /** Troca o valor de uma chave de style, preservando a ordem das demais. */
-function setChave(style, chave, valor) {
+function setKey(style, key, valor) {
   const partes = style.split(';');
   let achou = false;
   const novas = partes.map(p => {
-    if (p.startsWith(chave + '=')) { achou = true; return chave + '=' + valor; }
+    if (p.startsWith(key + '=')) { achou = true; return key + '=' + valor; }
     return p;
   });
   if (!achou) {
     // insere antes do terminador vazio final, se houver
     const i = novas.length && novas[novas.length - 1] === '' ? novas.length - 1 : novas.length;
-    novas.splice(i, 0, chave + '=' + valor);
+    novas.splice(i, 0, key + '=' + valor);
   }
   return novas.join(';');
 }
 
-function temChave(style, chave) {
-  return style.split(';').some(p => p === chave || p.startsWith(chave + '='));
+function temChave(style, key) {
+  return style.split(';').some(p => p === key || p.startsWith(key + '='));
 }
 
 // ---------------------------------------------------------------- correções
@@ -82,11 +82,11 @@ function temChave(style, chave) {
  * cores da paleta pré-2022, a falta de container=1 e o tingimento das duas
  * subnets. Ver corrections.json.
  */
-function corrigirGrupo(style, correcoes, title) {
+function fixGroup(style, corrections, title) {
   let s = style;
   const aplicadas = [];
 
-  for (const [legado, info] of Object.entries(correcoes.paletaLegada)) {
+  for (const [legado, info] of Object.entries(corrections.paletaLegada)) {
     if (legado.startsWith('_')) continue;
     if (s.includes(legado)) {
       s = s.split(legado).join(info.to);
@@ -95,7 +95,7 @@ function corrigirGrupo(style, correcoes, title) {
   }
 
   if (!temChave(s, 'container')) {
-    const sufixo = correcoes.container.sufixo;
+    const sufixo = corrections.container.sufixo;
     s = (s.endsWith(';') ? s : s + ';') + sufixo;
     aplicadas.push('container=1');
   }
@@ -103,24 +103,24 @@ function corrigirGrupo(style, correcoes, title) {
   // Duas subnets saem do draw.io TINGIDAS (#E6F6F7 / #F2F6E8) enquanto as outras
   // 18 são `none`. O deck é `<a:noFill/>` em todos (A2), e o tingimento derruba
   // #ED7100 de 3,02 para 2,71:1 em quem cai dentro. Ver preenchimentoDeGrupo.
-  const pg = correcoes.preenchimentoDeGrupo;
+  const pg = corrections.preenchimentoDeGrupo;
   if (pg && (pg.afeta || []).includes(title)) {
     const antes = (/(?:^|;)fillColor=([^;]*)/.exec(s) || [])[1];
     if (antes && antes !== pg.to) {
-      s = setChave(s, 'fillColor', pg.to);
+      s = setKey(s, 'fillColor', pg.to);
       aplicadas.push(`fillColor ${antes}->${pg.to}`);
     }
   }
 
-  return { style: s, correcoes: aplicadas };
+  return { style: s, corrections: aplicadas };
 }
 
 // ------------------------------------------------------------------ carga
 
-function carregar(dir) {
+function load(dir) {
   const base = dir || __dirname;
   const catalog = JSON.parse(fs.readFileSync(path.join(base, 'aws4.catalog.json'), 'utf8'));
-  const correcoes = JSON.parse(fs.readFileSync(path.join(base, 'corrections.json'), 'utf8'));
+  const corrections = JSON.parse(fs.readFileSync(path.join(base, 'corrections.json'), 'utf8'));
 
   const corDaCategoria = cat => (catalog.categories[cat] || {}).fill || '#232F3D';
 
@@ -130,13 +130,13 @@ function carregar(dir) {
   const porStencil = new Map();   // stencil -> entrada (service icon vence)
   const gruposPorNome = new Map();
 
-  function indexar(input, kind) {
+  function buildIndex(input, kind) {
     const rec = { ...input, kind };
-    for (const v of variantes(input.title)) {
+    for (const v of variants(input.title)) {
       if (!porNome.has(v)) porNome.set(v, []);
       porNome.get(v).push(rec);
     }
-    const sn = normalizar(input.stencil);
+    const sn = normalize(input.stencil);
     if (sn && !porNome.has(sn)) porNome.set(sn, []);
     if (sn) porNome.get(sn).push(rec);
 
@@ -149,27 +149,27 @@ function carregar(dir) {
     return rec;
   }
 
-  for (const s of catalog.services) indexar(s, 'service');
-  for (const r of catalog.resources) indexar(r, 'recurso');
+  for (const s of catalog.services) buildIndex(s, 'service');
+  for (const r of catalog.resources) buildIndex(r, 'recurso');
   for (const g of catalog.groups) {
-    for (const v of variantes(g.title)) {
+    for (const v of variants(g.title)) {
       if (!gruposPorNome.has(v)) gruposPorNome.set(v, g);   // 1ª variante vence
     }
   }
 
   // ---- montagem de style ---------------------------------------------
 
-  function montar(rec) {
+  function build(rec) {
     if (rec.style) {                       // fora do template: literal do upstream
       return { style: rec.style, literal: true };
     }
     const tpl = rec.kind === 'service' ? catalog.templates.svc.style : catalog.templates.res.style;
     const fill = rec.fill || corDaCategoria(rec.palette);
-    return { style: aplicarTemplate(tpl, { fill, stencil: rec.stencil }), literal: false };
+    return { style: applyTemplate(tpl, { fill, stencil: rec.stencil }), literal: false };
   }
 
-  function entregar(rec, via) {
-    const { style, literal } = montar(rec);
+  function deliver(rec, via) {
+    const { style, literal } = build(rec);
     return {
       style, via, literal,
       title: rec.title, stencil: rec.stencil, palette: rec.palette,
@@ -180,18 +180,18 @@ function carregar(dir) {
 
   // ---- busca ----------------------------------------------------------
 
-  function buscar(name) {
-    const n = normalizar(name);
+  function lookup(name) {
+    const n = normalize(name);
 
     // 0. título que existe em mais de uma paleta com cor/ícone divergente.
     //    Vem ANTES da busca por nome: é justamente o caso em que o nome sozinho
     //    não decide, e "o primeiro que casar" faria a mesma arquitetura sair
     //    com cores diferentes conforme a ordem da paleta.
-    const des = correcoes.desambiguacao[n];
+    const des = corrections.desambiguacao[n];
     if (des && !n.startsWith('_')) {
-      const escolhido = (porNome.get(n) || []).find(
+      const chosen = (porNome.get(n) || []).find(
         c => c.stencil === des.stencil && c.palette === des.palette);
-      if (escolhido) return { candidatos: [escolhido], via: 'desambiguado:' + des.origin };
+      if (chosen) return { candidatos: [chosen], via: 'desambiguado:' + des.origin };
     }
 
     // 1. rename congelado (OpenSearch -> elasticsearch_service).
@@ -200,7 +200,7 @@ function carregar(dir) {
     //    "sagemaker" casa por título exato com 'Sagemaker' (sagemaker_2, roxo
     //    de Analytics) e nunca chegaria em 'SageMaker AI' (sagemaker, teal).
     //    O título que o upstream não atualizou venceria o nome atual.
-    const ren = correcoes.renomes[n];
+    const ren = corrections.renomes[n];
     if (ren && porStencil.has(ren)) return { candidatos: [porStencil.get(ren)], via: 'renome' };
 
     // 2. título ou nome de stencil, direto
@@ -208,7 +208,7 @@ function carregar(dir) {
 
     // 3. sigla / apelido — DEPOIS do título: conveniência nossa não derruba
     //    um casamento real com o catálogo.
-    const sin = correcoes.sinonimos[n];
+    const sin = corrections.sinonimos[n];
     if (sin && porStencil.has(sin)) return { candidatos: [porStencil.get(sin)], via: 'sinonimo' };
 
     // 4. substring, e SÓ se for inequívoca. "trainium" acha "Trainium Instance";
@@ -237,61 +237,61 @@ function carregar(dir) {
    *   service icon > resource icon > ícone da categoria > genérico > grupo genérico
    */
   function service(name, opts = {}) {
-    const finding = buscar(name);
+    const finding = lookup(name);
 
     if (finding) {
       const svc = finding.candidatos.find(c => c.kind === 'service');
-      if (svc) return entregar(svc, finding.via === 'name' ? 'service' : 'servico:' + finding.via);
+      if (svc) return deliver(svc, finding.via === 'name' ? 'service' : 'servico:' + finding.via);
       const res = finding.candidatos.find(c => c.kind === 'recurso');
-      if (res) return entregar(res, finding.via === 'name' ? 'recurso' : 'recurso:' + finding.via);
+      if (res) return deliver(res, finding.via === 'name' ? 'recurso' : 'recurso:' + finding.via);
     }
 
     if (opts.categoria) {
-      const cat = normalizar(opts.categoria);
+      const cat = normalize(opts.categoria);
       const porCategoria = catalog.services.find(
-        s => s.palette === cat.replace(/ /g, '_') && normalizar(s.title) === cat);
-      if (porCategoria) return entregar({ ...porCategoria, kind: 'service' }, 'categoria');
-      const iconeCat = buscar(opts.categoria);
+        s => s.palette === cat.replace(/ /g, '_') && normalize(s.title) === cat);
+      if (porCategoria) return deliver({ ...porCategoria, kind: 'service' }, 'categoria');
+      const iconeCat = lookup(opts.categoria);
       if (iconeCat) {
         const c = iconeCat.candidatos.find(x => x.kind === 'service') || iconeCat.candidatos[0];
-        if (c) return entregar(c, 'categoria');
+        if (c) return deliver(c, 'categoria');
       }
     }
 
     const generic = porStencil.get('generic_application');
-    if (generic) return { ...entregar(generic, 'generic'), rotuloSugerido: String(name) };
+    if (generic) return { ...deliver(generic, 'generic'), rotuloSugerido: String(name) };
 
     return null;
   }
 
   function group(name) {
-    const g = gruposPorNome.get(normalizar(name));
+    const g = gruposPorNome.get(normalize(name));
     if (!g) return null;
-    const { style, correcoes: aplicadas } = corrigirGrupo(g.style, correcoes, g.title);
+    const { style, corrections: aplicadas } = fixGroup(g.style, corrections, g.title);
     return {
       style, title: g.title, w: g.w, h: g.h,
       shapeClass: g.shapeClass, grIcon: g.grIcon,
-      correcoes: aplicadas,
+      corrections: aplicadas,
       styleUpstream: g.style
     };
   }
 
   return {
-    catalog, correcoes,
+    catalog, corrections,
     meta: catalog.meta,
-    service, group, buscar, normalizar,
+    service, group, lookup, normalize,
     grupos: () => catalog.groups.map(g => g.title),
     categorias: () => catalog.categories,
     corDaCategoria
   };
 }
 
-module.exports = { carregar, normalizar, variantes, aplicarTemplate, setChave, corrigirGrupo };
+module.exports = { load, normalize, variants, applyTemplate, setKey, fixGroup };
 
 // --------------------------------------------------------------------- CLI
 
 if (require.main === module) {
-  const cat = carregar();
+  const cat = load();
   const args = process.argv.slice(2);
   if (!args.length) {
     console.log(`catálogo aws4 — draw.io ${cat.meta.drawio && cat.meta.drawio.version} (${cat.meta.commit && cat.meta.commit.slice(0, 8)})`);
@@ -302,7 +302,7 @@ if (require.main === module) {
   for (const a of args) {
     const s = cat.service(a);
     const g = cat.group(a);
-    if (g) console.log(`grupo   ${a} -> ${g.title} [${g.correcoes.join(' ') || 'sem correção'}]\n  ${g.style}`);
+    if (g) console.log(`grupo   ${a} -> ${g.title} [${g.corrections.join(' ') || 'sem correção'}]\n  ${g.style}`);
     else if (s) console.log(`serviço ${a} -> ${s.title} (${s.stencil}, ${s.via}, ${s.fill})\n  ${s.style}`);
     else console.log(`?       ${a} -> não resolvido`);
   }

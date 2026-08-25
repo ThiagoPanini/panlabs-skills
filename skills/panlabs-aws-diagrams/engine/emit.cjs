@@ -24,7 +24,7 @@ function esc(s) {
 }
 
 /** zapGremlins: caracteres de controle ilegais em XML e surrogates órfãos. */
-function limparGremlins(s) {
+function stripGremlins(s) {
   let out = '';
   for (const ch of String(s)) {
     const c = ch.codePointAt(0);
@@ -41,7 +41,7 @@ function geometry(g, extra = '') {
 
 function vertice(c, ind) {
   const p = ' '.repeat(ind);
-  const attrs = `id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" vertex="1" parent="${esc(c.pai)}"` +
+  const attrs = `id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" vertex="1" parent="${esc(c.parent)}"` +
     (c.visivel === false ? ' visible="0"' : '');
   return `${p}<mxCell ${attrs}>\n${p}  ${geometry(c.geo)}\n${p}</mxCell>`;
 }
@@ -53,9 +53,9 @@ function vertice(c, ind) {
 function verticeComDados(c, ind) {
   const p = ' '.repeat(ind);
   const data = Object.entries(c.data)
-    .map(([k, v]) => `${k}="${esc(limparGremlins(v))}"`).join(' ');
+    .map(([k, v]) => `${k}="${esc(stripGremlins(v))}"`).join(' ');
   return `${p}<object id="${esc(c.id)}" label="${esc(c.label || '')}" ${data}>\n` +
-    `${p}  <mxCell style="${esc(c.style)}" vertex="1" parent="${esc(c.pai)}"${c.visivel === false ? ' visible="0"' : ''}>\n` +
+    `${p}  <mxCell style="${esc(c.style)}" vertex="1" parent="${esc(c.parent)}"${c.visivel === false ? ' visible="0"' : ''}>\n` +
     `${p}    ${geometry(c.geo)}\n` +
     `${p}  </mxCell>\n${p}</object>`;
 }
@@ -87,20 +87,20 @@ function edge(c, ind) {
     : `<mxGeometry relative="1" as="geometry"/>`;
 
   return `${p}<mxCell id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" edge="1" ` +
-    `parent="${esc(c.pai)}"${c.from ? ` source="${esc(c.from)}"` : ''}${c.to ? ` target="${esc(c.to)}"` : ''}>\n` +
+    `parent="${esc(c.parent)}"${c.from ? ` source="${esc(c.from)}"` : ''}${c.to ? ` target="${esc(c.to)}"` : ''}>\n` +
     `${p}  ${geo}\n${p}</mxCell>`;
 }
 
-function page(plano) {
-  const corpo = plano.celulas.map(c =>
+function page(layoutPlan) {
+  const corpo = layoutPlan.celulas.map(c =>
     c.kind === 'edge' ? edge(c, 8)
       : c.data ? verticeComDados(c, 8)
       : vertice(c, 8)).join('\n');
 
-  return `  <diagram id="${esc(plano.id)}" name="${esc(plano.name || plano.title)}">
+  return `  <diagram id="${esc(layoutPlan.id)}" name="${esc(layoutPlan.name || layoutPlan.title)}">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
-        arrows="1" fold="1" page="1" pageScale="1" pageWidth="${r(plano.larg)}" pageHeight="${r(plano.alt)}"
-        math="0" shadow="0"${plano.background ? ` background="${esc(plano.background)}"` : ''}>
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="${r(layoutPlan.larg)}" pageHeight="${r(layoutPlan.alt)}"
+        math="0" shadow="0"${layoutPlan.background ? ` background="${esc(layoutPlan.background)}"` : ''}>
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
@@ -122,10 +122,10 @@ ${corpo}
  * O id de cada página é derivado do domínio, nunca sorteado — é o que faz o
  * arquivo versionar com diff limpo (#11).
  */
-function emitir(planos) {
-  const lista = Array.isArray(planos) ? planos : [planos];
+function emit(planos) {
+  const list = Array.isArray(planos) ? planos : [planos];
   return `<mxfile host="panlabs-aws-diagrams" compressed="false">
-${lista.map(page).join('\n')}
+${list.map(page).join('\n')}
 </mxfile>
 `;
 }
@@ -136,7 +136,7 @@ ${lista.map(page).join('\n')}
  * Parser mínimo de boa-formação. Não valida contra o XSD — valida que o
  * arquivo é XML, que é a falha que o draw.io engole em silêncio.
  */
-function conferirXml(xml) {
+function checkXml(xml) {
   const erros = [];
   const pilha = [];
   const re = /<\/?([A-Za-z_][\w.-]*)((?:\s+[\w.:-]+\s*=\s*"[^"]*")*)\s*(\/?)>/g;
@@ -168,4 +168,4 @@ function conferirXml(xml) {
   return erros;
 }
 
-module.exports = { emitir, esc, conferirXml, limparGremlins };
+module.exports = { emit, esc, checkXml, stripGremlins };

@@ -21,12 +21,12 @@
 const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometry.cjs'));
 const { lim } = require(path.join(__dirname, '..', 'index.cjs'));
-const { ok, notApplicable, conforme, pares, media, desvio, arredonda, semTags, name } = require(path.join(__dirname, 'common.cjs'));
+const { ok, notApplicable, matches, pairs, mean, deviation, roundTo, withoutTags, name } = require(path.join(__dirname, 'common.cjs'));
 
 
-module.exports = function a4(cena) {
+module.exports = function a4(scene) {
   const output = [];
-  const { nodes, grupos } = cena;
+  const { nodes, grupos } = scene;
   const solidos = [...nodes, ...grupos];
 
   // ---------------------------------------------------------------- A4.1
@@ -34,16 +34,16 @@ module.exports = function a4(cena) {
     const padding = lim('paddingDeGrupo');
     const casos = [];
     for (const e of solidos) {
-      const pai = cena.porElemento.get(e.pai);
-      if (!pai || !pai.caixa) continue;
-      if (!g.contem(pai.caixa, e.caixa, padding)) {
-        const p = g.paddings(pai.caixa, [e.caixa]);
-        const apertado = Object.entries(p).filter(([, d]) => d < padding)
-          .map(([lado, d]) => `${lado}=${arredonda(d, 1)}`).join(', ');
-        casos.push({ o_que: `${name(e)} não respeita ${padding} px dentro de "${pai.id}" (${apertado})`, ids: [e.id, pai.id] });
+      const parent = scene.byElement.get(e.parent);
+      if (!parent || !parent.cellBox) continue;
+      if (!g.contem(parent.cellBox, e.cellBox, padding)) {
+        const p = g.paddings(parent.cellBox, [e.cellBox]);
+        const tight = Object.entries(p).filter(([, d]) => d < padding)
+          .map(([lado, d]) => `${lado}=${roundTo(d, 1)}`).join(', ');
+        casos.push({ o_que: `${name(e)} não respeita ${padding} px dentro de "${parent.id}" (${tight})`, ids: [e.id, parent.id] });
       }
     }
-    output.push(conforme('A4.1', casos, { medida: { filhos: solidos.filter(e => cena.porElemento.get(e.pai)).length, violacoes: casos.length } }));
+    output.push(matches('A4.1', casos, { measured: { filhos: solidos.filter(e => scene.byElement.get(e.parent)).length, violations: casos.length } }));
   }
 
   // ---------------------------------------------------------------- A4.2
@@ -53,11 +53,11 @@ module.exports = function a4(cena) {
     for (const n of solidos) {
       for (const group of grupos) {
         if (group.id === n.id) continue;
-        if (cena.ehDescendente(n.id, group.id)) continue;      // é membro: pode estar dentro
-        if (cena.ehDescendente(group.id, n.id)) continue;      // é o contrário: o grupo é filho
-        const area = g.areaDaIntersecao(n.caixa, group.caixa);
+        if (scene.ehDescendente(n.id, group.id)) continue;      // é membro: pode estar dentro
+        if (scene.ehDescendente(group.id, n.id)) continue;      // é o contrário: o grupo é filho
+        const area = g.intersectionArea(n.cellBox, group.cellBox);
         if (area > 0) {
-          const inside = g.contem(group.caixa, n.caixa);
+          const inside = g.contem(group.cellBox, n.cellBox);
           casos.push({
             o_que: `${name(n)} ${inside ? 'está dentro' : 'invade'} de "${group.id}" sem ser membro — ` +
               `o desenho afirma um pertencimento de fronteira que o modelo não tem`,
@@ -66,8 +66,8 @@ module.exports = function a4(cena) {
         }
       }
     }
-    output.push(conforme('A4.2', casos, {
-      medida: { violacoes: casos.length },
+    output.push(matches('A4.2', casos, {
+      measured: { violations: casos.length },
       mensagem: casos.length
         ? `${casos.length} pertencimento(s) falso(s) — tolerância é zero`
         : 'nenhum não-membro dentro de grupo alheio',
@@ -77,13 +77,13 @@ module.exports = function a4(cena) {
   // ---------------------------------------------------------------- A4.3
   {
     const casos = [];
-    const candidatos = [...pares(grupos)].filter(([a, b]) =>
-      a.pai === b.pai && !cena.ehDescendente(a.id, b.id) && !cena.ehDescendente(b.id, a.id));
+    const candidatos = [...pairs(grupos)].filter(([a, b]) =>
+      a.parent === b.parent && !scene.ehDescendente(a.id, b.id) && !scene.ehDescendente(b.id, a.id));
     for (const [a, b] of candidatos) {
-      const area = g.areaDaIntersecao(a.caixa, b.caixa);
-      if (area > 0) casos.push({ o_que: `os grupos irmãos "${a.id}" e "${b.id}" se sobrepõem em ${arredonda(area, 0)} px²`, ids: [a.id, b.id] });
+      const area = g.intersectionArea(a.cellBox, b.cellBox);
+      if (area > 0) casos.push({ o_que: `os grupos irmãos "${a.id}" e "${b.id}" se sobrepõem em ${roundTo(area, 0)} px²`, ids: [a.id, b.id] });
     }
-    output.push(candidatos.length ? conforme('A4.3', casos, { medida: { pares: candidatos.length, sobrepostos: casos.length } })
+    output.push(candidatos.length ? matches('A4.3', casos, { measured: { pairs: candidatos.length, sobrepostos: casos.length } })
       : notApplicable('A4.3', 'não há dois grupos irmãos para comparar'));
   }
 
@@ -93,16 +93,16 @@ module.exports = function a4(cena) {
   {
     const casos = [];
     for (const e of solidos) {
-      const contendo = grupos.filter(gr => gr.id !== e.id && !cena.ehDescendente(gr.id, e.id) && g.contem(gr.caixa, e.caixa));
-      const geometrico = contendo.sort((a, b) => (a.caixa.w * a.caixa.h) - (b.caixa.w * b.caixa.h))[0];
-      const declarado = cena.porElemento.get(e.pai);
+      const contendo = grupos.filter(gr => gr.id !== e.id && !scene.ehDescendente(gr.id, e.id) && g.contem(gr.cellBox, e.cellBox));
+      const geometrico = contendo.sort((a, b) => (a.cellBox.w * a.cellBox.h) - (b.cellBox.w * b.cellBox.h))[0];
+      const declaredValue = scene.byElement.get(e.parent);
       const idGeo = geometrico ? geometrico.id : '(raiz)';
-      const idDec = declarado ? declarado.id : '(raiz)';
+      const idDec = declaredValue ? declaredValue.id : '(raiz)';
       if (idGeo !== idDec)
         casos.push({ o_que: `${name(e)} é desenhado dentro de "${idGeo}" e declarado dentro de "${idDec}"`, ids: [e.id] });
     }
-    output.push(conforme('A4.4', casos, {
-      medida: { elementos: solidos.length, divergencias: casos.length },
+    output.push(matches('A4.4', casos, {
+      measured: { elements: solidos.length, divergences: casos.length },
       mensagem: casos.length
         ? `${casos.length} elemento(s) onde o desenho e o modelo contam topologias diferentes`
         : 'a árvore desenhada é a árvore declarada',
@@ -115,25 +115,25 @@ module.exports = function a4(cena) {
     const casos = [];
     const porTipo = new Map();
     for (const group of grupos) {
-      const filhos = (cena.filhosDe.get(group.id) || []).map(f => f.caixa);
+      const filhos = (scene.filhosDe.get(group.id) || []).map(f => f.cellBox);
       if (!filhos.length) continue;
-      const p = g.paddings(group.caixa, filhos);
+      const p = g.paddings(group.cellBox, filhos);
       // O topo carrega a faixa de título, que é reserva deliberada e não desvio.
       const laterais = [p.esquerda, p.direita, p.baixo];
-      const s = desvio(laterais);
+      const s = deviation(laterais);
       if (s > sigmaMax)
-        casos.push({ o_que: `"${group.id}" tem paddings ${laterais.map(x => arredonda(x, 1)).join('/')} (σ = ${arredonda(s, 2)} > ${sigmaMax})`, ids: [group.id] });
+        casos.push({ o_que: `"${group.id}" tem paddings ${laterais.map(x => roundTo(x, 1)).join('/')} (σ = ${roundTo(s, 2)} > ${sigmaMax})`, ids: [group.id] });
       const kind = group.tipoSemantico || 'desconhecido';
       if (!porTipo.has(kind)) porTipo.set(kind, []);
-      porTipo.get(kind).push({ id: group.id, p: media(laterais) });
+      porTipo.get(kind).push({ id: group.id, p: mean(laterais) });
     }
-    for (const [kind, lista] of porTipo) {
-      if (lista.length < 2) continue;
-      const s = desvio(lista.map(x => x.p));
+    for (const [kind, list] of porTipo) {
+      if (list.length < 2) continue;
+      const s = deviation(list.map(x => x.p));
       if (s > sigmaMax)
-        casos.push({ o_que: `grupos do tipo "${kind}" usam paddings diferentes entre si (σ = ${arredonda(s, 2)})`, ids: lista.map(x => x.id) });
+        casos.push({ o_que: `grupos do tipo "${kind}" usam paddings diferentes entre si (σ = ${roundTo(s, 2)})`, ids: list.map(x => x.id) });
     }
-    output.push(grupos.length ? conforme('A4.5', casos, { medida: { grupos: grupos.length, irregulares: casos.length } })
+    output.push(grupos.length ? matches('A4.5', casos, { measured: { grupos: grupos.length, irregulares: casos.length } })
       : notApplicable('A4.5', 'o diagrama não tem grupos'));
   }
 
@@ -143,42 +143,42 @@ module.exports = function a4(cena) {
     let comRotulo = 0;
     for (const group of grupos) {
       const r = group.rotuloCaixa;
-      if (!r || !semTags(group.label)) continue;
+      if (!r || !withoutTags(group.label)) continue;
       comRotulo++;
-      const noTopo = Math.abs(r.y - group.caixa.y) <= lim('alturaDaFaixaDeTitulo');
-      const naEsquerda = r.x - group.caixa.x <= group.caixa.w / 2;
+      const noTopo = Math.abs(r.y - group.cellBox.y) <= lim('alturaDaFaixaDeTitulo');
+      const naEsquerda = r.x - group.cellBox.x <= group.cellBox.w / 2;
       if (!noTopo || !naEsquerda)
         casos.push({ o_que: `o rótulo de "${group.id}" não está no canto superior esquerdo`, ids: [group.id] });
-      for (const filho of cena.filhosDe.get(group.id) || [])
-        if (g.areaDaIntersecao(r, filho.caixa) > 0) {
+      for (const filho of scene.filhosDe.get(group.id) || [])
+        if (g.intersectionArea(r, filho.cellBox) > 0) {
           casos.push({ o_que: `o rótulo de "${group.id}" colide com o filho "${filho.id}"`, ids: [group.id, filho.id] });
           break;
         }
     }
-    output.push(comRotulo ? conforme('A4.6', casos, { medida: { grupos_rotulados: comRotulo, fora_do_canone: casos.length } })
+    output.push(comRotulo ? matches('A4.6', casos, { measured: { grupos_rotulados: comRotulo, fora_do_canone: casos.length } })
       : notApplicable('A4.6', 'nenhum grupo tem rótulo'));
   }
 
   // ---------------------------------------------------------------- A4.7
   {
-    const teto = lim('proximidadeMaxima');
+    const ceiling = lim('proximidadeMaxima');
     const grupoDe = n => {
-      const a = cena.ancestrais(n.id);
+      const a = scene.ancestrais(n.id);
       return a.length ? a[0].id : '(raiz)';
     };
     const intra = [];
     const inter = [];
-    for (const [a, b] of pares(nodes)) {
-      const d = Math.hypot(...['x', 'y'].map(k => g.centro(a.caixa)[k] - g.centro(b.caixa)[k]));
+    for (const [a, b] of pairs(nodes)) {
+      const d = Math.hypot(...['x', 'y'].map(k => g.centro(a.cellBox)[k] - g.centro(b.cellBox)[k]));
       (grupoDe(a) === grupoDe(b) ? intra : inter).push(d);
     }
     if (!intra.length || !inter.length) output.push(notApplicable('A4.7', 'não há pares intra e inter grupo para comparar'));
     else {
-      const rho = media(intra) / media(inter);
-      output.push(rho <= teto
-        ? ok('A4.7', { medida: { rho: arredonda(rho), intra: arredonda(media(intra), 1), inter: arredonda(media(inter), 1) }, mensagem: `ρ = ${arredonda(rho)} ≤ ${teto}` })
-        : conforme('A4.7', [{ o_que: `ρ = ${arredonda(rho)} > ${teto}: nós do mesmo grupo não estão mais próximos entre si do que de nós de fora`, ids: [] }],
-          { medida: { rho: arredonda(rho), intra: arredonda(media(intra), 1), inter: arredonda(media(inter), 1) } }));
+      const rho = mean(intra) / mean(inter);
+      output.push(rho <= ceiling
+        ? ok('A4.7', { measured: { rho: roundTo(rho), intra: roundTo(mean(intra), 1), inter: roundTo(mean(inter), 1) }, mensagem: `ρ = ${roundTo(rho)} ≤ ${ceiling}` })
+        : matches('A4.7', [{ o_que: `ρ = ${roundTo(rho)} > ${ceiling}: nós do mesmo grupo não estão mais próximos entre si do que de nós de fora`, ids: [] }],
+          { measured: { rho: roundTo(rho), intra: roundTo(mean(intra), 1), inter: roundTo(mean(inter), 1) } }));
     }
   }
 

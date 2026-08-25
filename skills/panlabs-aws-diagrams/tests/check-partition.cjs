@@ -26,11 +26,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { gerar } = require('../engine/generate.cjs');
+const { generate } = require('../engine/generate.cjs');
 const temaMod = require('../theme/theme.cjs');
 
-const ler = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'models', f), 'utf8'));
-const MODELO = ler('orders-serverless.json');
+const read = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'models', f), 'utf8'));
+const MODEL = read('orders-serverless.json');
 
 /**
  * DOIS modelos, e o segundo não é zelo.
@@ -45,9 +45,9 @@ const MODELO = ler('orders-serverless.json');
  * estilo pode depender de um fato do modelo**, e uma bateria de um modelo só não
  * distingue "token morto" de "modelo que não exercita o token".
  */
-const LOGICO = ler('logical-orders.json');
+const LOGICAL_VIEW = read('logical-orders.json');
 
-const PINTURA = [
+const PAINT = [
   ['pagina.cor', { page: { color: '#FAFAFA' } }],
   ['tinta.forte', { ink: { strong: '#111111' } }],
   ['tinta.fraca', { ink: { weak: '#444444' } }],
@@ -70,13 +70,13 @@ const PINTURA = [
 ];
 
 /** Pintura que só existe na vista lógica — medida contra o modelo lógico. */
-const PINTURA_LOGICA = [
+const LOGICAL_PAINT = [
   ['bloco.fundo', { block: { background: '#F5F5F5' } }],
   ['bloco.borda', { block: { edge: '#777777' } }],
   ['bloco.cantos', { block: { corners: 0 } }],
 ];
 
-const METRICA = [
+const METRIC = [
   // margem da página não move nada DENTRO do desenho, mas desloca o desenho
   // inteiro e muda a caixa da página — geometria, portanto métrica
   ['pagina.margem', { page: { margin: 56 } }],
@@ -108,9 +108,9 @@ function semPayload(xml) {
 }
 
 /** Assinatura de geometria: id -> x,y,w,h. Pintura não pode mudar nenhuma. */
-function geometry(plano) {
+function geometry(layoutPlan) {
   const m = new Map();
-  for (const c of plano.celulas) {
+  for (const c of layoutPlan.celulas) {
     if (c.kind === 'edge') { m.set(c.id, JSON.stringify(c.pontos || [])); continue; }
     m.set(c.id, `${Math.round(c.geo.x)},${Math.round(c.geo.y)},${Math.round(c.geo.w)},${Math.round(c.geo.h)}`);
   }
@@ -128,20 +128,20 @@ function diferencas(a, b) {
 }
 
 async function main() {
-  const base = await gerar(MODELO, { tema: 'light', force: true });
-  const g0 = geometry(base.plano);
-  const baseLog = await gerar(LOGICO, { tema: 'light', force: true });
-  const gLog = geometry(baseLog.plano);
+  const base = await generate(MODEL, { tema: 'light', force: true });
+  const g0 = geometry(base.layoutPlan);
+  const baseLog = await generate(LOGICAL_VIEW, { tema: 'light', force: true });
+  const gLog = geometry(baseLog.layoutPlan);
   let falhou = 0;
 
   console.log(`referência: tema "claro" · técnico ${g0.size} células · lógico ${gLog.size} células\n`);
   console.log('PINTURA — não pode mover coordenada');
-  for (const [name, patch, ehLogico] of [...PINTURA, ...PINTURA_LOGICA.map(p => [...p, true])]) {
-    const modelo = ehLogico ? LOGICO : MODELO;
+  for (const [name, patch, ehLogico] of [...PAINT, ...LOGICAL_PAINT.map(p => [...p, true])]) {
+    const model = ehLogico ? LOGICAL_VIEW : MODEL;
     const ref = ehLogico ? gLog : g0;
     const refXml = ehLogico ? baseLog.xml : base.xml;
-    const r = await gerar(modelo, { tema: temaMod.comPatch('light', patch), force: true });
-    const d = diferencas(ref, geometry(r.plano));
+    const r = await generate(model, { tema: temaMod.withPatch('light', patch), force: true });
+    const d = diferencas(ref, geometry(r.layoutPlan));
     const inerte = semPayload(r.xml) === semPayload(refXml);
     if (d.length) {
       console.log(`  ✗ ${name.padEnd(20)} moveu ${d.length} célula(s): ${d.slice(0, 2).join(' · ')}`);
@@ -156,9 +156,9 @@ async function main() {
   }
 
   console.log('\nMÉTRICA — tem de mover alguma coisa');
-  for (const [name, patch] of METRICA) {
-    const r = await gerar(MODELO, { tema: temaMod.comPatch('light', patch), force: true });
-    const d = diferencas(g0, geometry(r.plano));
+  for (const [name, patch] of METRIC) {
+    const r = await generate(MODEL, { tema: temaMod.withPatch('light', patch), force: true });
+    const d = diferencas(g0, geometry(r.layoutPlan));
     if (!d.length) { console.log(`  ✗ ${name.padEnd(20)} NÃO moveu nada — o motor está ignorando o token`); falhou = 1; }
     else console.log(`  ✓ ${name.padEnd(20)} moveu ${String(d.length).padStart(2)} célula(s)`);
   }

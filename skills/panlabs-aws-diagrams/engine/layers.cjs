@@ -48,7 +48,7 @@
  * aparece é appliance de inspeção — Network Firewall, WAF. Serviço regional
  * não entra em subnet.
  */
-const CATEGORIA_CAMADA = {
+const CATEGORY_LAYER = {
   // borda — o andar que encara alguma coisa de fora da subnet
   network_content_delivery: 'edge',
   security_identity_compliance: 'edge',
@@ -66,14 +66,14 @@ const CATEGORIA_CAMADA = {
 };
 
 /** Cima para baixo. É a ordem de leitura da vista de rede, e é só ela. */
-const CAMADAS = ['edge', 'application', 'data'];
+const LAYERS = ['edge', 'application', 'data'];
 
 /** Sem camada vai para o fim do grupo de exposição — ver `chaveDeIrmao`. */
-const SEM_CAMADA = 9;
+const NO_LAYER = 9;
 
-function ordemDeCamada(c) {
-  const i = CAMADAS.indexOf(c);
-  return i < 0 ? SEM_CAMADA : i;
+function layerOrder(c) {
+  const i = LAYERS.indexOf(c);
+  return i < 0 ? NO_LAYER : i;
 }
 
 /**
@@ -86,10 +86,10 @@ function ordemDeCamada(c) {
  * para 9. Empatavam na prática (os dois vão depois de `privada`), mas duas
  * tabelas para uma regra é uma a mais.
  */
-const ORDEM_ACESSO = { public: 0, private: 1 };
+const ACCESS_ORDER = { public: 0, private: 1 };
 
 function ordemDeAcesso(a) {
-  return ORDEM_ACESSO[a] ?? 9;
+  return ACCESS_ORDER[a] ?? 9;
 }
 
 /**
@@ -97,16 +97,16 @@ function ordemDeAcesso(a) {
  * vota. É a regra de mistura, e ela vale nos dois níveis em que agregamos —
  * os membros dentro de uma subnet, e as subnets dentro de uma linha da grade.
  */
-function camadaDeGrupo(lista) {
-  const idx = lista.map(c => CAMADAS.indexOf(c)).filter(i => i >= 0);
-  return idx.length ? CAMADAS[Math.max(...idx)] : null;
+function camadaDeGrupo(list) {
+  const idx = list.map(c => LAYERS.indexOf(c)).filter(i => i >= 0);
+  return idx.length ? LAYERS[Math.max(...idx)] : null;
 }
 
 /** Categoria AWS de um nó folha, ou null se ele não resolve para serviço. */
 function categoriaDoNo(no, cat) {
-  const chave = no.service || (no.kind === 'actor' ? 'users' : null);
-  if (!chave) return null;
-  const s = cat.service(chave);
+  const key = no.service || (no.kind === 'actor' ? 'users' : null);
+  if (!key) return null;
+  const s = cat.service(key);
   return s ? (s.palette || null) : null;
 }
 
@@ -128,29 +128,29 @@ function categoriaDoNo(no, cat) {
  * cima declara `camada: "borda"`. O escape existe para isto.
  */
 function camadaDaSubnet(subnet, descendentes, cat) {
-  const evidencia = [];
+  const evidence = [];
   for (const n of descendentes) {
     const categoria = categoriaDoNo(n, cat);
-    const layer = categoria ? (CATEGORIA_CAMADA[categoria] || null) : null;
-    if (layer) evidencia.push({ id: n.id, service: n.service || n.kind, categoria, layer });
+    const layer = categoria ? (CATEGORY_LAYER[categoria] || null) : null;
+    if (layer) evidence.push({ id: n.id, service: n.service || n.kind, categoria, layer });
   }
 
-  const declarada = subnet.layer || null;
-  const derivada = camadaDeGrupo(evidencia.map(e => e.layer));
+  const declared = subnet.layer || null;
+  const derived = camadaDeGrupo(evidence.map(e => e.layer));
 
-  if (declarada) {
+  if (declared) {
     return {
-      layer: declarada,
-      via: 'declarada',
-      derivada,
-      evidencia,
+      layer: declared,
+      via: 'declared',
+      derived,
+      evidence,
       // Declarar contra o próprio conteúdo é afirmação sobre a arquitetura, não
       // erro de digitação — o motor obedece e conta. Mesma política do #16 para
       // conflito com premissa corporativa: obedece e sinaliza, nunca calado.
-      diverge: derivada && derivada !== declarada ? derivada : null,
+      diverge: derived && derived !== declared ? derived : null,
     };
   }
-  return { layer: derivada, via: derivada ? 'derivada' : null, derivada, evidencia, diverge: null };
+  return { layer: derived, via: derived ? 'derived' : null, derived, evidence, diverge: null };
 }
 
 /**
@@ -160,18 +160,18 @@ function camadaDaSubnet(subnet, descendentes, cat) {
  * dentro de um security group dentro da subnet continua sendo o que a subnet
  * guarda.
  */
-function camadasDeSubnets(modelo, t, cat) {
+function camadasDeSubnets(model, t, cat) {
   const porSubnet = new Map();
   const descendentesDe = new Map();
 
-  for (const n of modelo.nodes) {
+  for (const n of model.nodes) {
     const sub = t.ancestrais(n).find(a => a.kind === 'subnet');
     if (!sub) continue;
     if (!descendentesDe.has(sub.id)) descendentesDe.set(sub.id, []);
     descendentesDe.get(sub.id).push(n);
   }
 
-  for (const s of modelo.nodes.filter(n => n.kind === 'subnet'))
+  for (const s of model.nodes.filter(n => n.kind === 'subnet'))
     porSubnet.set(s.id, camadaDaSubnet(s, descendentesDe.get(s.id) || [], cat));
 
   return porSubnet;
@@ -193,22 +193,22 @@ function chaveDePapel(subnet, t) {
   return `${vpc}|${subnet.access || '?'}|${subnet.label || ''}`;
 }
 
-function papeisDeSubnet(modelo, t, camadas) {
+function papeisDeSubnet(model, t, camadas) {
   const papeis = new Map();
-  for (const s of modelo.nodes.filter(n => n.kind === 'subnet')) {
-    const chave = chaveDePapel(s, t);
-    if (!papeis.has(chave))
+  for (const s of model.nodes.filter(n => n.kind === 'subnet')) {
+    const key = chaveDePapel(s, t);
+    if (!papeis.has(key))
       // os campos vêm da SUBNET, não de fatiar a chave de volta: a chave é um
       // identificador, e ler dado de dentro dela é o que quebra quando um
       // rótulo tem `|`
-      papeis.set(chave, {
-        chave,
+      papeis.set(key, {
+        key,
         vpc: (t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id,
         access: s.access || null,
         label: s.label || '',
         subnets: [], layer: null,
       });
-    papeis.get(chave).subnets.push(s.id);
+    papeis.get(key).subnets.push(s.id);
   }
   for (const p of papeis.values())
     p.layer = camadaDeGrupo(p.subnets.map(id => (camadas.get(id) || {}).layer || null));
@@ -224,29 +224,29 @@ function papeisDeSubnet(modelo, t, camadas) {
  *
  * Devolve uma lacuna por grupo (vpc × exposição), com os papéis órfãos.
  */
-function lacunasDeCamada(modelo, t, camadas) {
+function layerGaps(model, t, camadas) {
   const grupos = new Map();
-  for (const p of papeisDeSubnet(modelo, t, camadas).values()) {
-    const chave = `${p.vpc}|${p.access}`;
-    if (!grupos.has(chave)) grupos.set(chave, { vpc: p.vpc, access: p.access, papeis: [] });
-    grupos.get(chave).papeis.push(p);
+  for (const p of papeisDeSubnet(model, t, camadas).values()) {
+    const key = `${p.vpc}|${p.access}`;
+    if (!grupos.has(key)) grupos.set(key, { vpc: p.vpc, access: p.access, papeis: [] });
+    grupos.get(key).papeis.push(p);
   }
 
-  const lacunas = [];
+  const gaps = [];
   for (const { vpc, access, papeis } of grupos.values()) {
     if (papeis.length < 2) continue;                     // nada a ordenar
     const orfaos = papeis.filter(p => !p.layer);
     if (!orfaos.length) continue;
-    lacunas.push({
+    gaps.push({
       vpc, access: access || 'sem exposição declarada', papeis: papeis.length,
       orfaos: orfaos.map(o => ({
         papel: o.label || `(sem rótulo: ${o.subnets.join(', ')})`,
         subnets: o.subnets,
-        vazio: o.subnets.every(id => !((camadas.get(id) || {}).evidencia || []).length),
+        vazio: o.subnets.every(id => !((camadas.get(id) || {}).evidence || []).length),
       })).sort((a, b) => a.papel.localeCompare(b.papel, 'pt')),
     });
   }
-  return lacunas.sort((a, b) => a.vpc.localeCompare(b.vpc) || a.access.localeCompare(b.access));
+  return gaps.sort((a, b) => a.vpc.localeCompare(b.vpc) || a.access.localeCompare(b.access));
 }
 
 /**
@@ -256,9 +256,9 @@ function lacunasDeCamada(modelo, t, camadas) {
  * põe `· ` em cada erro; o aviso do caminho do ELK indenta. Embutir o bullet
  * aqui dava bullet dobrado num dos dois.
  */
-function textoDaLacuna(lacunas) {
+function textoDaLacuna(gaps) {
   const linhas = [];
-  for (const l of lacunas)
+  for (const l of gaps)
     for (const o of l.orfaos)
       linhas.push(`VPC "${l.vpc}" · ${l.access}s: "${o.papel}" (${o.subnets.join(', ')}) ` +
         `não diz que camada de rede ocupa — ${o.vazio ? 'vazia, nada a inferir' : 'o que ela guarda não tem andar de rede'}` +
@@ -268,7 +268,7 @@ function textoDaLacuna(lacunas) {
 }
 
 module.exports = {
-  CATEGORIA_CAMADA, CAMADAS,
-  ordemDeCamada, ordemDeAcesso, camadaDeGrupo, categoriaDoNo, camadasDeSubnets,
-  chaveDePapel, papeisDeSubnet, lacunasDeCamada, textoDaLacuna,
+  CATEGORY_LAYER, LAYERS,
+  layerOrder, ordemDeAcesso, camadaDeGrupo, categoriaDoNo, camadasDeSubnets,
+  chaveDePapel, papeisDeSubnet, layerGaps, textoDaLacuna,
 };

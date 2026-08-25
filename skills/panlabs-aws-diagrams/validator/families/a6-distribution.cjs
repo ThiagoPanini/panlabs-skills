@@ -17,7 +17,7 @@
 const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometry.cjs'));
 const { lim } = require(path.join(__dirname, '..', 'index.cjs'));
-const { ok, aviso, falha, notApplicable, pares, media, arredonda } = require(path.join(__dirname, 'common.cjs'));
+const { ok, warning, failure, notApplicable, pairs, mean, roundTo } = require(path.join(__dirname, 'common.cjs'));
 
 /** Distâncias de grafo por BFS, a partir de um nó. */
 function bfs(inicio, vizinhos) {
@@ -31,10 +31,10 @@ function bfs(inicio, vizinhos) {
   return d;
 }
 
-module.exports = function a6(cena) {
+module.exports = function a6(scene) {
   const output = [];
-  const { nodes, edges, canvas } = cena;
-  const centros = new Map(nodes.map(n => [n.id, g.centro(n.caixa)]));
+  const { nodes, edges, canvas } = scene;
+  const centros = new Map(nodes.map(n => [n.id, g.centro(n.cellBox)]));
 
   // ---------------------------------------------------------------- A6.1
   {
@@ -79,27 +79,27 @@ module.exports = function a6(cena) {
         termos.push(Math.abs((ideal - menor) / ideal));
         if (menor < pisoAbsoluto)
           (todasAncoradas ? apertados : reconstruidos).push({
-            o_que: `duas arestas saem de "${id}" a ${arredonda(menor, 1)}° uma da outra (piso ${pisoAbsoluto}°)` +
+            o_que: `duas arestas saem de "${id}" a ${roundTo(menor, 1)}° uma da outra (piso ${pisoAbsoluto}°)` +
               (todasAncoradas ? '' : ' — ângulo reconstruído, sem âncora declarada'),
             ids: [id],
           });
       }
-      const AR = arredonda(1 - media(termos));
-      const medida = {
+      const AR = roundTo(1 - mean(termos));
+      const measured = {
         AR, nos_com_grau_maior_que_um: comGrau.length, piso_absoluto: pisoAbsoluto,
         angulos_reconstruidos: algumSemAncora,
       };
       output.push(apertados.length
-        ? falha('A6.1', { medida, mensagem: `${apertados.length} par(es) de arestas incidentes indistinguíveis`, occurrences: apertados })
+        ? failure('A6.1', { measured, mensagem: `${apertados.length} par(es) de arestas incidentes indistinguíveis`, occurrences: apertados })
         : reconstruidos.length
-          ? aviso('A6.1', {
-            medida,
+          ? warning('A6.1', {
+            measured,
             mensagem: `${reconstruidos.length} par(es) de arestas parecem sair juntas, mas as pontas foram reconstruídas — ` +
               'o renderizador desencosta as duas (jettySize=auto). Declare a âncora para que isto vire medição',
             occurrences: reconstruidos,
           })
-          : AR < q1 ? aviso('A6.1', { medida, mensagem: `AR = ${AR} < ${q1} (Q1)`, occurrences: [{ o_que: 'arestas saem em leque desigual dos nós', ids: [] }] })
-            : ok('A6.1', { medida, mensagem: `AR = ${AR}` }));
+          : AR < q1 ? warning('A6.1', { measured, mensagem: `AR = ${AR} < ${q1} (Q1)`, occurrences: [{ o_que: 'arestas saem em leque desigual dos nós', ids: [] }] })
+            : ok('A6.1', { measured, mensagem: `AR = ${AR}` }));
     }
   }
 
@@ -108,34 +108,34 @@ module.exports = function a6(cena) {
     if (nodes.length < 2) output.push(notApplicable('A6.2', 'menos de dois nós'));
     else {
       const V = nodes.length;
-      const env = g.envolvente(nodes.map(n => n.caixa));
+      const env = g.envolvente(nodes.map(n => n.cellBox));
       const colunas = Math.floor(Math.sqrt(V)) || 1;
       const linhas = Math.ceil(V / colunas);
       const T = colunas * linhas;
       const celula = new Map();
       for (const n of nodes) {
-        const c = g.centro(n.caixa);
+        const c = g.centro(n.cellBox);
         const i = Math.min(colunas - 1, Math.floor(((c.x - env.x) / (env.w || 1)) * colunas));
         const j = Math.min(linhas - 1, Math.floor(((c.y - env.y) / (env.h || 1)) * linhas));
-        const chave = `${i},${j}`;
-        celula.set(chave, (celula.get(chave) || 0) + 1);
+        const key = `${i},${j}`;
+        celula.set(key, (celula.get(key) || 0) + 1);
       }
       const mu = V / T;
       const dMax = (2 * V * (T - 1)) / T;
       let soma = 0;
       for (let i = 0; i < colunas; i++) for (let j = 0; j < linhas; j++) soma += Math.abs((celula.get(`${i},${j}`) || 0) - mu);
-      const NU = arredonda(dMax > 0 ? 1 - soma / dMax : 1);
+      const NU = roundTo(dMax > 0 ? 1 - soma / dMax : 1);
       const q1 = lim('uniformidadeDeNosQ1');
-      const medida = { NU, grade: `${colunas}×${linhas}`, nodes: V };
+      const measured = { NU, grade: `${colunas}×${linhas}`, nodes: V };
       output.push(NU < q1
-        ? aviso('A6.2', { medida, mensagem: `NU = ${NU} < ${q1} (Q1) — há aglomerado e vazio`, occurrences: [{ o_que: `${[...celula.values()].filter(v => v === 0).length || T - celula.size} célula(s) da grade estão vazias`, ids: [] }] })
-        : ok('A6.2', { medida, mensagem: `NU = ${NU}` }));
+        ? warning('A6.2', { measured, mensagem: `NU = ${NU} < ${q1} (Q1) — há aglomerado e vazio`, occurrences: [{ o_que: `${[...celula.values()].filter(v => v === 0).length || T - celula.size} célula(s) da grade estão vazias`, ids: [] }] })
+        : ok('A6.2', { measured, mensagem: `NU = ${NU}` }));
     }
   }
 
   // ---------------------------------------------------------------- A6.3
   {
-    const env = g.envolvente(cena.caixas.map(e => e.caixa));
+    const env = g.envolvente(scene.boxes.map(e => e.cellBox));
     if (!env || !env.w || !env.h) output.push(notApplicable('A6.3', 'o desenho não tem área'));
     else {
       // `Asp` é a métrica de Mooney e é `min/max` por definição — ela mede
@@ -144,21 +144,21 @@ module.exports = function a6(cena) {
       // página em pé, com a mesma razão, daria diferença ZERO e passaria — e é
       // exatamente o caso das "faixas vazias grandes" que o limiar persegue.
       // Ali a razão tem de ser orientada.
-      const asp = arredonda(Math.min(env.h, env.w) / Math.max(env.h, env.w));
+      const asp = roundTo(Math.min(env.h, env.w) / Math.max(env.h, env.w));
       const razaoDesenho = env.w / env.h;
       const razaoCanvas = canvas.w / canvas.h;
-      const diferenca = arredonda(Math.abs(razaoDesenho - razaoCanvas) / (razaoCanvas || 1));
+      const diferenca = roundTo(Math.abs(razaoDesenho - razaoCanvas) / (razaoCanvas || 1));
       const q1 = lim('razaoDeAspectoQ1');
       const tol = lim('toleranciaDeRazaoDeAspecto');
-      const medida = {
-        Asp: asp, razao_desenho: arredonda(razaoDesenho, 2), razao_canvas: arredonda(razaoCanvas, 2),
+      const measured = {
+        Asp: asp, razao_desenho: roundTo(razaoDesenho, 2), razao_canvas: roundTo(razaoCanvas, 2),
         diferenca_relativa: diferenca, Q1: q1, tolerancia: tol,
       };
       const motivos = [];
       if (asp < q1) motivos.push({ o_que: `Asp = ${asp} < ${q1} (Q1): o desenho é uma faixa muito alongada`, ids: [] });
-      if (diferenca > tol) motivos.push({ o_que: `a razão do desenho difere da do canvas em ${arredonda(diferenca * 100, 0)}% (tolerância ${arredonda(tol * 100, 0)}%): sobram faixas vazias`, ids: [] });
-      output.push(motivos.length ? aviso('A6.3', { medida, mensagem: motivos.map(m => m.o_que).join('; '), occurrences: motivos })
-        : ok('A6.3', { medida, mensagem: `Asp = ${asp}` }));
+      if (diferenca > tol) motivos.push({ o_que: `a razão do desenho difere da do canvas em ${roundTo(diferenca * 100, 0)}% (tolerância ${roundTo(tol * 100, 0)}%): sobram faixas vazias`, ids: [] });
+      output.push(motivos.length ? warning('A6.3', { measured, mensagem: motivos.map(m => m.o_que).join('; '), occurrences: motivos })
+        : ok('A6.3', { measured, mensagem: `Asp = ${asp}` }));
     }
   }
 
@@ -166,19 +166,19 @@ module.exports = function a6(cena) {
   {
     if (nodes.length < 2) output.push(notApplicable('A6.4', 'menos de dois nós'));
     else {
-      const passo = lim('passoDaGrade');
+      const step = lim('passoDaGrade');
       const minimo = lim('alinhamentoMinimo');
-      const naGrade = v => Math.round(v / passo);
+      const naGrade = v => Math.round(v / step);
       const alinhados = nodes.filter(n => {
-        const c = g.centro(n.caixa);
-        return nodes.some(o => o.id !== n.id && (naGrade(g.centro(o.caixa).x) === naGrade(c.x) || naGrade(g.centro(o.caixa).y) === naGrade(c.y)));
+        const c = g.centro(n.cellBox);
+        return nodes.some(o => o.id !== n.id && (naGrade(g.centro(o.cellBox).x) === naGrade(c.x) || naGrade(g.centro(o.cellBox).y) === naGrade(c.y)));
       });
-      const fracao = arredonda(alinhados.length / nodes.length);
-      const medida = { fracao_alinhada: fracao, minimo, passo, nodes: nodes.length };
+      const fraction = roundTo(alinhados.length / nodes.length);
+      const measured = { fracao_alinhada: fraction, minimo, step, nodes: nodes.length };
       const soltos = nodes.filter(n => !alinhados.includes(n)).map(n => ({ o_que: `${n.id} não compartilha eixo com nenhum outro nó`, ids: [n.id] }));
-      output.push(fracao >= minimo
-        ? ok('A6.4', { medida, mensagem: `${arredonda(fracao * 100, 0)}% dos nós alinhados a pelo menos um outro` })
-        : aviso('A6.4', { medida, mensagem: `só ${arredonda(fracao * 100, 0)}% alinhados (mínimo ${arredonda(minimo * 100, 0)}%)`, occurrences: soltos }));
+      output.push(fraction >= minimo
+        ? ok('A6.4', { measured, mensagem: `${roundTo(fraction * 100, 0)}% dos nós alinhados a pelo menos um outro` })
+        : warning('A6.4', { measured, mensagem: `só ${roundTo(fraction * 100, 0)}% alinhados (mínimo ${roundTo(minimo * 100, 0)}%)`, occurrences: soltos }));
     }
   }
 
@@ -195,7 +195,7 @@ module.exports = function a6(cena) {
       for (const n of nodes) dGrafo.set(n.id, bfs(n.id, vizinhos));
 
       const paresConectados = [];
-      for (const [a, b] of pares(nodes)) {
+      for (const [a, b] of pairs(nodes)) {
         const d = dGrafo.get(a.id).get(b.id);
         if (d === undefined) continue;
         paresConectados.push({ a, b, d, euclidiana: Math.hypot(centros.get(a.id).x - centros.get(b.id).x, centros.get(a.id).y - centros.get(b.id).y) });
@@ -206,8 +206,8 @@ module.exports = function a6(cena) {
         const num = paresConectados.reduce((s, p) => s + p.euclidiana / p.d, 0);
         const den = paresConectados.reduce((s, p) => s + (p.euclidiana ** 2) / (p.d ** 2), 0);
         const alfa = den > 0 ? num / den : 1;
-        const stress = media(paresConectados.map(p => ((alfa * p.euclidiana - p.d) ** 2) / (p.d ** 2)));
-        const KSM = arredonda(1 / (1 + stress));
+        const stress = mean(paresConectados.map(p => ((alfa * p.euclidiana - p.d) ** 2) / (p.d ** 2)));
+        const KSM = roundTo(1 / (1 + stress));
 
         // preservação de vizinhança: os k mais próximos no desenho contra os k vizinhos de grafo
         const NPs = [];
@@ -221,10 +221,10 @@ module.exports = function a6(cena) {
           const reais = new Set(vizinhos.get(n.id));
           NPs.push(proximos.filter(id => reais.has(id)).length / k);
         }
-        const NP = arredonda(media(NPs));
+        const NP = roundTo(mean(NPs));
         const q1NP = lim('preservacaoDeVizinhancaQ1');
         const q1KSM = lim('stressQ1');
-        const medida = {
+        const measured = {
           NP, KSM, Q1_NP: q1NP, Q1_KSM: q1KSM,
           formula_KSM: '1/(1+stress) com escala ótima — a normalização exata da eq. (8) de Mooney não foi acessada; ver U10 da rubrica',
           ressalva: 'a rubrica classifica A6.5 como provavelmente ruído em diagrama de arquitetura, onde a posição é ditada pelos grupos',
@@ -233,8 +233,8 @@ module.exports = function a6(cena) {
         if (NP < q1NP) motivos.push({ o_que: `NP = ${NP} < ${q1NP} (Q1)`, ids: [] });
         if (KSM < q1KSM) motivos.push({ o_que: `KSM = ${KSM} < ${q1KSM} (Q1)`, ids: [] });
         output.push(motivos.length
-          ? aviso('A6.5', { medida, mensagem: `${motivos.map(m => m.o_que).join('; ')} — mas ver a ressalva: aqui a posição vem dos grupos, não do grafo`, occurrences: motivos })
-          : ok('A6.5', { medida, mensagem: `NP = ${NP}, KSM = ${KSM}` }));
+          ? warning('A6.5', { measured, mensagem: `${motivos.map(m => m.o_que).join('; ')} — mas ver a ressalva: aqui a posição vem dos grupos, não do grafo`, occurrences: motivos })
+          : ok('A6.5', { measured, mensagem: `NP = ${NP}, KSM = ${KSM}` }));
       }
     }
   }

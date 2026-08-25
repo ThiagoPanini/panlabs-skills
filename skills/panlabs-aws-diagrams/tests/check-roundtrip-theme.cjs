@@ -45,15 +45,15 @@ function exportarXml(origin, destino, perfil) {
   return false;
 }
 
-const RAIZ = path.join(__dirname, '..');
-const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
-const DRAWIO = binario(process.argv[2]);
+const ROOT = path.join(__dirname, '..');
+const { binary } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
+const DRAWIO = binary(process.argv[2]);
 
-const ENTIDADES = { '&quot;': '"', '&#39;': "'", '&lt;': '<', '&gt;': '>', '&#xa;': '\n', '&#x9;': '\t', '&#xd;': '\r', '&amp;': '&' };
-const desescapar = s => String(s).replace(/&(?:quot|#39|lt|gt|#xa|#x9|#xd|amp);/g, e => ENTIDADES[e]);
+const ENTITIES = { '&quot;': '"', '&#39;': "'", '&lt;': '<', '&gt;': '>', '&#xa;': '\n', '&#x9;': '\t', '&#xd;': '\r', '&amp;': '&' };
+const unescape = s => String(s).replace(/&(?:quot|#39|lt|gt|#xa|#x9|#xd|amp);/g, e => ENTITIES[e]);
 const atributo = (xml, name) => {
   const m = new RegExp(name + '="([^"]*)"').exec(xml);
-  return m ? desescapar(m[1]) : null;
+  return m ? unescape(m[1]) : null;
 };
 
 /**
@@ -62,19 +62,19 @@ const atributo = (xml, name) => {
  * ausência deles saía como "pulado" e a suíte ficava verde tendo conferido zero
  * — uma checagem que não sabe falhar. Agora ela falha se conferiu nada.
  */
-const VARIANTES = [
-  { name: 'a-claro' }, { name: 'b-escuro' }, { name: 'c-corporativo' },
-  { name: 'g-vista-logica' },
+const VARIANTS = [
+  { name: 'a-light' }, { name: 'b-dark' }, { name: 'c-corporate' },
+  { name: 'g-logical-view' },
   // multi-conta: a página consolidada MAIS as de detalhe, que é onde o #12 e o
   // #13 se encontram e onde ninguém tinha medido round-trip de tema
-  { name: 'h-contas-escuro' },
+  { name: 'h-accounts-dark' },
 ];
 
 /** Quem sabe construir as variantes é `tools/generate-themes.cjs` — um lugar só. */
 async function gerarVariantes() {
   const { execFileSync } = require('child_process');
-  execFileSync(process.execPath, [path.join(RAIZ, 'tools', 'generate-themes.cjs')], { stdio: 'ignore' });
-  return path.join(RAIZ, 'output', 'themes');
+  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'generate-themes.cjs')], { stdio: 'ignore' });
+  return path.join(ROOT, 'output', 'themes');
 }
 
 async function main() {
@@ -86,7 +86,7 @@ async function main() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tema-rt-'));
   let falhou = 0, conferidos = 0;
 
-  for (const { name } of VARIANTES) {
+  for (const { name } of VARIANTS) {
     const origin = path.join(dirVariantes, name + '.drawio');
     if (!fs.existsSync(origin)) { console.log(`   ✗ ${name}: .drawio ausente`); falhou = 1; continue; }
     conferidos++;

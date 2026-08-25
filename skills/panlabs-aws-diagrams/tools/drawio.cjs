@@ -24,20 +24,20 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const INSTALADO = path.join(os.homedir(), '.local', 'opt', 'drawio', 'squashfs-root', 'drawio');
+const INSTALLED = path.join(os.homedir(), '.local', 'opt', 'drawio', 'squashfs-root', 'drawio');
 
 /**
  * @param {string} [arg]  o que veio na linha de comando, se veio
  * @returns {string}      o caminho, existindo ou não — quem chama decide o que fazer
  */
-function binario(arg) {
-  return arg || process.env.DRAWIO || INSTALADO;
+function binary(arg) {
+  return arg || process.env.DRAWIO || INSTALLED;
 }
 
 /** O caminho, ou `null` quando não há binário executável ali. */
-function binarioSeExistir(arg) {
-  const p = binario(arg);
+function binaryIfPresent(arg) {
+  const p = binary(arg);
   try { fs.accessSync(p, fs.constants.X_OK); return p; } catch (e) { return null; }
 }
 
-module.exports = { binario, binarioSeExistir, INSTALADO };
+module.exports = { binary, binaryIfPresent, INSTALLED };

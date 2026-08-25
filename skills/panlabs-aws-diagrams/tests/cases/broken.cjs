@@ -22,7 +22,7 @@
  * um filho que escapa da caixa sem perceber.
  */
 
-const CINZA = '#232F3E';
+const GRAY = '#232F3E';
 
 /** Estilo de container (grupo de contenção). */
 const group = (traco = '#00A4A6', preenche = 'none') =>
@@ -32,7 +32,7 @@ const group = (traco = '#00A4A6', preenche = 'none') =>
 
 /** Estilo de service icon (folha). */
 const icone = (preenche = '#ED7100', res = 'lambda') =>
-  `sketch=0;outlineConnect=0;fontColor=${CINZA};gradientColor=none;fillColor=${preenche};strokeColor=#ffffff;` +
+  `sketch=0;outlineConnect=0;fontColor=${GRAY};gradientColor=none;fillColor=${preenche};strokeColor=#ffffff;` +
   `dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;` +
   `aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.${res};`;
 
@@ -42,27 +42,27 @@ const band = (traco = '#7AA116') =>
   `whiteSpace=wrap;html=1;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;labelBackgroundColor=#FFFFFF;`;
 
 const edge = (extra = '') =>
-  `edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=${CINZA};strokeWidth=1.6;` +
-  `endArrow=blockThin;endFill=1;fontSize=12;fontColor=${CINZA};labelBackgroundColor=#FFFFFF;${extra}`;
+  `edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=${GRAY};strokeWidth=1.6;` +
+  `endArrow=blockThin;endFill=1;fontSize=12;fontColor=${GRAY};labelBackgroundColor=#FFFFFF;${extra}`;
 
-const v = (id, pai, x, y, w, h, style, label = id) => ({ kind: 'vertice', id, pai, label, style, geo: { x, y, w, h } });
-const e = (id, from, to, label, style = edge(), pontos = []) => ({ kind: 'edge', id, pai: '1', from, to, label, style, pontos });
+const v = (id, parent, x, y, w, h, style, label = id) => ({ kind: 'vertice', id, parent, label, style, geo: { x, y, w, h } });
+const e = (id, from, to, label, style = edge(), pontos = []) => ({ kind: 'edge', id, parent: '1', from, to, label, style, pontos });
 
 /** Empacota células num plano, com o modelo embutido como o motor faz. */
-function montar(id, celulas, modelo, larg = 900, alt = 700) {
+function build(id, celulas, model, larg = 900, alt = 700) {
   return {
-    plano: {
+    layoutPlan: {
       id, name: id, background: '#FFFFFF', larg, alt,
       celulas: [
         ...celulas,
         {
-          kind: 'vertice', id: 'panlabs-modelo', pai: '1', label: '', visivel: false,
+          kind: 'vertice', id: 'panlabs-modelo', parent: '1', label: '', visivel: false,
           style: 'text;html=1;', geo: { x: 0, y: 0, w: 1, h: 1 },
-          data: { panlabsModelo: JSON.stringify(modelo) },
+          data: { panlabsModelo: JSON.stringify(model) },
         },
       ],
     },
-    modelo,
+    model,
   };
 }
 
@@ -72,13 +72,13 @@ const mod = (nodes, extra = {}) => ({
   view: 'technical', nodes, ...extra,
 });
 
-const CASOS = [
+const CASES = [
 
   {
     name: 'nó desenhado dentro da VPC errada',
     because: 'a caixa de VPC É a fronteira de rede; o desenho afirma um pertencimento que o modelo nega',
     espera: ['A4.2', 'A4.4'],
-    ...montar('a4.2', [
+    ...build('a4.2', [
       v('vpc-a', '1', 60, 60, 300, 260, group()),
       v('vpc-b', '1', 460, 60, 300, 260, group('#C925D1')),
       // filho de vpc-a, mas com geo que o joga para dentro de vpc-b
@@ -93,7 +93,7 @@ const CASOS = [
     name: 'aresta atravessando uma VPC de que não sai nem para onde vai',
     because: 'sugere um caminho de rede inexistente entre duas redes que não se falam',
     espera: ['A5.5'],
-    ...montar('a5.5', [
+    ...build('a5.5', [
       v('vpc-meio', '1', 300, 60, 260, 300, group()),
       v('inside', 'vpc-meio', 90, 120, 78, 78, icone('#8C4FFF', 'vpc_endpoints')),
       v('esq', '1', 60, 160, 78, 78, icone()),
@@ -112,7 +112,7 @@ const CASOS = [
     name: 'faixa de AZ abraçando um nó que não é membro dela',
     because: 'a faixa afirma um atributo compartilhado — dizer que um EC2 está numa AZ em que ele não está é a mesma mentira de A4.2, por outro caminho',
     espera: ['F1'],
-    ...montar('f1', [
+    ...build('f1', [
       v('az-a', '1', 60, 60, 320, 300, band()),
       v('membro', '1', 100, 140, 78, 78, icone()),
       v('forasteiro', '1', 240, 140, 78, 78, icone('#C925D1', 'rds')),
@@ -126,7 +126,7 @@ const CASOS = [
     name: 'faixa que declara um membro e não o abraça',
     because: 'o outro lado do mesmo defeito: o modelo afirma o atributo e o desenho não mostra',
     espera: ['F1'],
-    ...montar('f1-b', [
+    ...build('f1-b', [
       v('asg', '1', 60, 60, 200, 200, band()),
       v('inside', '1', 100, 120, 78, 78, icone()),
       v('esquecido', '1', 500, 120, 78, 78, icone()),
@@ -143,7 +143,7 @@ const CASOS = [
       'É o desenho que o fallback do #21 existia para evitar, e o motor de hoje não o produz ' +
       '(medido em malha completa de 3 a 6 zonas): por isso o corpo de prova é plantado aqui.',
     espera: ['F2'],
-    ...montar('f2', [
+    ...build('f2', [
       v('az-a', '1', 60, 60, 200, 300, band()),
       v('az-b', '1', 300, 60, 200, 300, band()),
       v('az-c', '1', 540, 60, 200, 300, band()),
@@ -173,7 +173,7 @@ const CASOS = [
     name: 'dois nós sobrepostos',
     because: 'node occlusion — um ícone tapa o outro e o leitor não sabe que há dois',
     espera: ['A3.1'],
-    ...montar('a3.1', [
+    ...build('a3.1', [
       v('a', '1', 100, 100, 78, 78, icone()),
       v('b', '1', 140, 130, 78, 78, icone('#C925D1', 'rds')),
     ], mod([
@@ -186,7 +186,7 @@ const CASOS = [
     name: 'aresta passando por cima de um nó que não é ponta dela',
     because: 'node-edge occlusion — a linha parece tocar um serviço que ela não toca',
     espera: ['A3.5'],
-    ...montar('a3.5', [
+    ...build('a3.5', [
       v('origin', '1', 60, 160, 78, 78, icone()),
       v('meio', '1', 380, 160, 78, 78, icone('#8C4FFF', 'vpc_endpoints')),
       v('destino', '1', 700, 160, 78, 78, icone('#C925D1', 'rds')),
@@ -202,7 +202,7 @@ const CASOS = [
     name: 'duas arestas paralelas coladas uma na outra',
     because: 'os dois rótulos caem no mesmo traço e nenhum dos dois se lê',
     espera: ['A5.8'],
-    ...montar('a5.8', [
+    ...build('a5.8', [
       v('a', '1', 60, 160, 78, 78, icone()),
       v('b', '1', 600, 160, 78, 78, icone('#C925D1', 'rds')),
       e('e1', 'a', 'b', 'lê', edge(), [{ x: 300, y: 199 }]),
@@ -217,7 +217,7 @@ const CASOS = [
     name: 'arestas que se cruzam em ângulo raso',
     because: 'Purchase 1997 — cruzamento é a estética de maior efeito medido, e raso é o pior tipo',
     espera: ['A5.1', 'A5.2'],
-    ...montar('a5.1', [
+    ...build('a5.1', [
       v('a1', '1', 60, 100, 78, 78, icone()),
       v('a2', '1', 60, 300, 78, 78, icone()),
       v('b1', '1', 700, 130, 78, 78, icone('#C925D1', 'rds')),
@@ -234,9 +234,9 @@ const CASOS = [
     name: 'contraste de texto insuficiente',
     because: 'WCAG 2.2 SC 1.4.3 — cinza claro sobre branco não chega a 4,5:1',
     espera: ['A7.1'],
-    ...montar('a7.1', [
-      v('grupo-palido', '1', 60, 60, 400, 300, group('#CCCCCC').replace(`fontColor=${CINZA}`, '') + 'fontColor=#BBBBBB;'),
-      v('no', 'grupo-palido', 40, 80, 78, 78, icone().replace(`fontColor=${CINZA}`, 'fontColor=#DDDDDD')),
+    ...build('a7.1', [
+      v('grupo-palido', '1', 60, 60, 400, 300, group('#CCCCCC').replace(`fontColor=${GRAY}`, '') + 'fontColor=#BBBBBB;'),
+      v('no', 'grupo-palido', 40, 80, 78, 78, icone().replace(`fontColor=${GRAY}`, 'fontColor=#DDDDDD')),
     ], mod([
       { id: 'grupo-palido', kind: 'vpc' },
       { id: 'no', kind: 'service', service: 'lambda', inside: 'grupo-palido' },
@@ -247,7 +247,7 @@ const CASOS = [
     name: 'preenchimento de ícone que some no fundo',
     because: 'WCAG 2.2 SC 1.4.11 — a silhueta do ícone precisa de 3:1 contra o que está atrás',
     espera: ['A7.2'],
-    ...montar('a7.2', [
+    ...build('a7.2', [
       // a borda do grupo é escura de propósito: se ela também reprovasse, o caso
       // passaria sem provar que o PREENCHIMENTO do ícone é medido
       v('background', '1', 60, 60, 400, 300, group('#595959', '#F2F2F2')),
@@ -263,7 +263,7 @@ const CASOS = [
     because: 'o caso que o corte de z errado deixava passar: 1,00:1 na tela virava 13,57:1 medido contra a página. '
       + 'É a direção perigosa do bug — o falso NEGATIVO, que aprova o ilegível',
     espera: ['A7.1'],
-    ...montar('a7.1-escuro', [
+    ...build('a7.1-escuro', [
       // grupo com preenchimento escuro e rótulo quase da mesma cor
       v('grupo-escuro', '1', 60, 60, 400, 300,
         group('#232F3E', '#232F3D').replace('fontColor=', 'fontColorAntigo=') + 'fontColor=#232F3E;'),
@@ -278,7 +278,7 @@ const CASOS = [
     name: 'desenho estourando o canvas',
     because: 'o `drawio -x` exporta a caixa que contém tudo; o que passa da página vira imagem cortada ou faixa em branco',
     espera: ['A3.7'],
-    ...montar('a3.7', [
+    ...build('a3.7', [
       v('a', '1', 100, 100, 78, 78, icone()),
       v('longe', '1', 1400, 100, 78, 78, icone()),
     ], mod([
@@ -291,7 +291,7 @@ const CASOS = [
     name: 'ícone espelhado e com sombra',
     because: 'AWS e Azure proíbem deformar o ícone; Tufte chama a sombra de chartjunk',
     espera: ['A2.2', 'A2.11'],
-    ...montar('a2.2', [
+    ...build('a2.2', [
       v('torto', '1', 100, 100, 78, 78, icone() + 'flipH=1;shadow=1;'),
       v('reto', '1', 300, 100, 78, 78, icone()),
     ], mod([
@@ -304,7 +304,7 @@ const CASOS = [
     name: 'elemento sem nome e aresta bidirecional',
     because: 'C4 — todo elemento nomeado, toda linha unidirecional',
     espera: ['A1.4', 'A1.7'],
-    ...montar('a1', [
+    ...build('a1', [
       v('anonimo', '1', 100, 100, 78, 78, icone(), ''),
       v('outro', '1', 400, 100, 78, 78, icone('#C925D1', 'rds')),
       e('e1', 'anonimo', 'outro', 'conversa', edge('startArrow=blockThin;startFill=1;')),
@@ -318,7 +318,7 @@ const CASOS = [
     name: 'dois grupos irmãos sobrepostos',
     because: 'a hierarquia AWS é uma árvore; irmãos sobrepostos deixam ambíguo quem contém o quê',
     espera: ['A4.3'],
-    ...montar('a4.3', [
+    ...build('a4.3', [
       v('vpc-a', '1', 60, 60, 300, 260, group()),
       v('vpc-b', '1', 260, 60, 300, 260, group('#C925D1')),
     ], mod([{ id: 'vpc-a', kind: 'vpc' }, { id: 'vpc-b', kind: 'vpc' }])),
@@ -328,7 +328,7 @@ const CASOS = [
     name: 'filho escapando da caixa do pai',
     because: 'contenção estrita — metade do recurso desenhado fora da subnet a que pertence',
     espera: ['A4.1'],
-    ...montar('a4.1', [
+    ...build('a4.1', [
       v('vpc', '1', 60, 60, 300, 260, group()),
       v('vazando', 'vpc', 260, 100, 78, 78, icone()),
     ], mod([
@@ -345,7 +345,7 @@ const CASOS = [
  * construção — se este aqui também acusasse A4.2, o que a suíte estaria medindo
  * seria o construtor de planos, não o validador.
  */
-const CONTROLE = montar('controle', [
+const CONTROL = build('controle', [
   v('cloud', '1', 40, 40, 760, 420, group('#232F3E')),
   v('vpc', 'cloud', 20, 46, 480, 340, group()),
   v('sub', 'vpc', 20, 46, 440, 260, group('#00A4A6', '#E6F6F7')),
@@ -362,4 +362,4 @@ const CONTROLE = montar('controle', [
   { id: 'externo', kind: 'service', service: 'vpc_endpoints', inside: 'cloud' },
 ], { edges: [{ from: 'app', to: 'banco', label: 'consulta', protocol: 'sql' }] }), 900, 560);
 
-module.exports = { CASOS, CONTROLE };
+module.exports = { CASES, CONTROL };

@@ -87,7 +87,7 @@ if git -C "$RAIZ" rev-parse --git-dir > /dev/null 2>&1; then
       echo
       echo "  ⚠ ${#IGNORADOS[@]} arquivo(s) que o GIT IGNORA e o pacote LEVA — $(hum $cb)"
       echo "    O empacotador não lê .gitignore. Rode a limpeza antes de publicar:"
-      echo "      rm -rf output/* && mkdir -p output/temas"
+      echo "      rm -rf output/* && mkdir -p output/themes"
     fi
   fi
 fi

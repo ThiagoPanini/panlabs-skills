@@ -39,7 +39,7 @@
  */
 
 const path = require('path');
-const { validarGeometria, formatar } = require(path.join(__dirname, 'validate-geometry.cjs'));
+const { validateGeometry, format } = require(path.join(__dirname, 'validate-geometry.cjs'));
 
 /**
  * Níveis de bloqueio, do mais frouxo ao mais apertado.
@@ -49,11 +49,11 @@ const { validarGeometria, formatar } = require(path.join(__dirname, 'validate-ge
  * diagrama INCOMPLETO (sem legenda, sem metadados) ainda é verdadeiro e pode
  * ir para a parede; um diagrama que MENTE sobre a fronteira de rede, não.
  */
-const NIVEIS = {
+const LEVELS = {
   none: () => false,
-  veracidade: laudo => laudo.semanticas.length > 0,
-  falha: laudo => laudo.falhas.length > 0,
-  strict: laudo => laudo.falhas.length > 0 || laudo.avisos.length > 0,
+  truthfulness: report => report.semanticas.length > 0,
+  failure: report => report.falhas.length > 0,
+  strict: report => report.falhas.length > 0 || report.avisos.length > 0,
 };
 
 /**
@@ -67,37 +67,37 @@ const NIVEIS = {
  * @returns {object} o laudo, quando passa
  * @throws {Error} com `.erros` (linhas legíveis) e `.laudo`, quando barra
  */
-function gate(plano, opts = {}) {
-  const laudo = validarGeometria(plano, opts);
-  const nivel = opts.nivel || (opts.bloquear ? 'falha' : 'none');
-  const barra = NIVEIS[nivel];
-  if (!barra) throw new Error(`nível de portão desconhecido: "${nivel}" (use ${Object.keys(NIVEIS).join(', ')})`);
+function gate(layoutPlan, opts = {}) {
+  const report = validateGeometry(layoutPlan, opts);
+  const level = opts.level || (opts.bloquear ? 'failure' : 'none');
+  const barra = LEVELS[level];
+  if (!barra) throw new Error(`nível de portão desconhecido: "${level}" (use ${Object.keys(LEVELS).join(', ')})`);
 
   // Um laudo incompleto nunca passa, em nenhum nível: se uma checagem que devia
   // rodar não rodou, o verde não quer dizer nada — e é justamente no dia em que
   // alguém quebra uma família que o portão precisa não estar mentindo.
-  const incompleto = laudo.cobertura.naoRodaram.length > 0 || laudo.resultados.some(r => r.state === 'erro');
+  const incompleto = report.cobertura.naoRodaram.length > 0 || report.resultados.some(r => r.state === 'erro');
 
-  if (!barra(laudo) && !incompleto) return laudo;
+  if (!barra(report) && !incompleto) return report;
 
   const linhas = [];
   if (incompleto) {
-    if (laudo.cobertura.naoRodaram.length)
-      linhas.push(`checagens que não rodaram: ${laudo.cobertura.naoRodaram.join(', ')}`);
-    for (const r of laudo.resultados.filter(x => x.state === 'erro')) linhas.push(r.mensagem);
+    if (report.cobertura.naoRodaram.length)
+      linhas.push(`checagens que não rodaram: ${report.cobertura.naoRodaram.join(', ')}`);
+    for (const r of report.resultados.filter(x => x.state === 'erro')) linhas.push(r.mensagem);
   }
-  for (const r of [...laudo.semanticas, ...laudo.falhas.filter(f => !f.semantica)]) {
+  for (const r of [...report.semanticas, ...report.falhas.filter(f => !f.semantica)]) {
     linhas.push(`${r.id} ${r.name}${r.semantica ? ' (o desenho afirma o que o modelo nega)' : ''}: ${r.mensagem}`);
     for (const o of r.occurrences.slice(0, 3)) linhas.push(`    · ${o.o_que}`);
   }
-  if (nivel === 'strict') for (const r of laudo.avisos) linhas.push(`${r.id} ${r.name}: ${r.mensagem}`);
+  if (level === 'strict') for (const r of report.avisos) linhas.push(`${r.id} ${r.name}: ${r.mensagem}`);
 
   const erro = new Error(incompleto
     ? 'laudo geométrico incompleto — há checagem que não rodou'
-    : `geometria reprovada no portão "${nivel}"`);
+    : `geometria reprovada no portão "${level}"`);
   erro.erros = linhas;
-  erro.laudo = laudo;
+  erro.report = report;
   throw erro;
 }
 
-module.exports = { gate, NIVEIS, formatar };
+module.exports = { gate, LEVELS, format };

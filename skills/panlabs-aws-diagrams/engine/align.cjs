@@ -25,16 +25,16 @@ const SNAP = 30;         // acima disso o desalinhamento é deliberado
 const MAX_PASSES = 4;
 
 /** Índice plano da saída do ELK, com posição absoluta e ponteiro para o pai. */
-function indexar(output) {
+function buildIndex(output) {
   const nodes = new Map();
-  (function andar(n, paiId, ox, oy) {
+  (function tier(n, paiId, ox, oy) {
     for (const c of n.children || []) {
       nodes.set(c.id, {
         no: c, paiId,
         x: ox + c.x, y: oy + c.y, w: c.width, h: c.height,
-        folha: !(c.children && c.children.length),
+        leaf: !(c.children && c.children.length),
       });
-      andar(c, c.id, ox + c.x, oy + c.y);
+      tier(c, c.id, ox + c.x, oy + c.y);
     }
   })(output, null, 0, 0);
   return nodes;
@@ -43,10 +43,10 @@ function indexar(output) {
 const cy = r => r.y + r.h / 2;
 
 /** Irmãos que compartilham a mesma coluna (mesmo x) dentro do mesmo pai. */
-function coluna(nodes, target) {
+function column(nodes, target) {
   const a = nodes.get(target);
   const out = [];
-  for (const [id, r] of nodes) if (r.paiId === a.paiId && r.folha && Math.abs(r.x - a.x) < 1) out.push(id);
+  for (const [id, r] of nodes) if (r.paiId === a.paiId && r.leaf && Math.abs(r.x - a.x) < 1) out.push(id);
   return out;
 }
 
@@ -73,8 +73,8 @@ function coluna(nodes, target) {
  * cobre a diferença nem por acidente: ele só CRESCE o container (`Math.max`), e
  * crescer resolve quem passa do pé, nunca quem sai pelo topo.
  */
-function temSobreposicao(output, paddings) {
-  const nodes = indexar(output);
+function hasOverlap(output, paddings) {
+  const nodes = buildIndex(output);
   const porPai = new Map();
   for (const [id, r] of nodes) {
     if (!porPai.has(r.paiId)) porPai.set(r.paiId, []);
@@ -100,7 +100,7 @@ function temSobreposicao(output, paddings) {
 }
 
 /** Cresce cada container para caber os filhos, de baixo para cima. */
-function refitar(output, paddings) {
+function refit(output, paddings) {
   (function sobe(n) {
     for (const c of n.children || []) sobe(c);
     if (!n.children || !n.children.length || n.id === 'root') return;
@@ -117,7 +117,7 @@ function refitar(output, paddings) {
  * os deixou. Só dois casos, e ambos ortogonais por construção:
  * reto quando os centros coincidem, Z no meio do vão quando não.
  */
-function rerrotear(sec, u, v) {
+function reroute(sec, u, v) {
   const uy = cy(u), vy = cy(v);
   const paraDireita = u.x + u.w <= v.x;
   const xs = paraDireita ? u.x + u.w : u.x;
@@ -130,17 +130,17 @@ function rerrotear(sec, u, v) {
 /**
  * @returns {{aplicados: Array, desfeitos: Array}}
  */
-function alinhar(output, paddings) {
+function align(output, paddings) {
   const aplicados = [], desfeitos = [];
 
   for (let passe = 0; passe < MAX_PASSES; passe++) {
-    const nodes = indexar(output);
+    const nodes = buildIndex(output);
 
     // candidatos: aresta entre duas folhas, quase alinhadas, em colunas distintas
     const cands = [];
     for (const e of output.edges || []) {
       const u = nodes.get(e.sources[0]), v = nodes.get(e.targets[0]);
-      if (!u || !v || !u.folha || !v.folha) continue;
+      if (!u || !v || !u.leaf || !v.leaf) continue;
       if (Math.abs(u.x - v.x) < 1) continue;                 // mesma coluna: não é faixa
       const delta = cy(u) - cy(v);
       if (Math.abs(delta) > 0.5 && Math.abs(delta) <= SNAP) cands.push({ e, delta });
@@ -150,15 +150,15 @@ function alinhar(output, paddings) {
     const { e, delta } = cands[0];
 
     // mover a coluna inteira do alvo, preservando os vãos internos dela
-    const alvos = coluna(nodes, e.targets[0]);
+    const alvos = column(nodes, e.targets[0]);
     const antes = alvos.map(id => ({ id, y: nodes.get(id).no.y }));
     for (const id of alvos) nodes.get(id).no.y += delta;
 
     const alturasAntes = [];
     (function guarda(n) { alturasAntes.push([n, n.width, n.height]); for (const c of n.children || []) guarda(c); })(output);
-    refitar(output, paddings);
+    refit(output, paddings);
 
-    const problema = temSobreposicao(output, paddings);
+    const problema = hasOverlap(output, paddings);
     if (problema) {
       for (const a of antes) nodes.get(a.id).no.y = a.y;
       for (const [n, w, h] of alturasAntes) { n.width = w; n.height = h; }
@@ -168,7 +168,7 @@ function alinhar(output, paddings) {
 
     // as pontas mudaram de lugar: o traçado do ELK não vale mais para quem tocou
     const movidos = new Set(alvos);
-    const depois = indexar(output);
+    const depois = buildIndex(output);
     for (const outra of output.edges || []) {
       const su = outra.sources[0], sv = outra.targets[0];
       if (!movidos.has(su) && !movidos.has(sv)) continue;
@@ -180,7 +180,7 @@ function alinhar(output, paddings) {
         sec.startPoint.y += delta; sec.endPoint.y += delta;
         for (const p of sec.bendPoints || []) p.y += delta;
       } else {
-        rerrotear(sec, u, v);
+        reroute(sec, u, v);
       }
     }
     aplicados.push({ edge: e.id, delta: Math.round(delta), moveu: alvos });
@@ -189,4 +189,4 @@ function alinhar(output, paddings) {
   return { aplicados, desfeitos };
 }
 
-module.exports = { alinhar, SNAP, indexar };
+module.exports = { align, SNAP, buildIndex };

@@ -23,15 +23,15 @@
 
 const fs = require('fs');
 const path = require('path');
-const { gerar } = require('../engine/generate.cjs');
+const { generate } = require('../engine/generate.cjs');
 const contraste = require('../engine/contrast.cjs');
 
-const RAIZ = path.join(__dirname, '..');
-fs.mkdirSync(path.join(RAIZ, 'output', 'themes'), { recursive: true });
-const MODELO = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'orders-serverless.json'), 'utf8'));
+const ROOT = path.join(__dirname, '..');
+fs.mkdirSync(path.join(ROOT, 'output', 'themes'), { recursive: true });
+const MODEL = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'orders-serverless.json'), 'utf8'));
 
 /** Remendo bruto: o que o vocabulário não deixa dizer, dito na marra. */
-function remendar(xml) {
+function patch(xml) {
   return xml
     // 1. sketch nos shapes AWS4 — a paleta oficial força sketch=0 em 56/56 entradas
     .replace(/shape=mxgraph\.aws4\./g, 'sketch=1;curveFitting=1;jiggle=2;shape=mxgraph.aws4.')
@@ -45,18 +45,18 @@ function remendar(xml) {
 
 async function main() {
   // --- d: dizível e errado -------------------------------------------------
-  const d = await gerar(MODELO, { tema: 'trap', force: true });
-  fs.writeFileSync(path.join(RAIZ, 'output', 'themes', 'd-armadilha.drawio'), d.xml);
+  const d = await generate(MODEL, { tema: 'trap', force: true });
+  fs.writeFileSync(path.join(ROOT, 'output', 'themes', 'd-trap.drawio'), d.xml);
   console.log('d-armadilha  — o portão reprovaria assim:');
-  for (const l of contraste.resumir(d.relatorio.contraste)) console.log('   ✗ ' + l);
-  fs.writeFileSync(path.join(RAIZ, 'output', 'themes', 'd-armadilha.veredito.txt'),
-    contraste.resumir(d.relatorio.contraste).join('\n') + '\n');
+  for (const l of contraste.summarize(d.relatorio.contraste)) console.log('   ✗ ' + l);
+  fs.writeFileSync(path.join(ROOT, 'output', 'themes', 'd-trap.verdict.txt'),
+    contraste.summarize(d.relatorio.contraste).join('\n') + '\n');
 
   // --- e: indizível --------------------------------------------------------
-  const e = await gerar(MODELO, { tema: 'light' });
-  const remendado = remendar(e.xml);
-  fs.writeFileSync(path.join(RAIZ, 'output', 'themes', 'e-indizivel.drawio'), remendado);
-  const quantos = k => (remendado.match(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+  const e = await generate(MODEL, { tema: 'light' });
+  const patched = patch(e.xml);
+  fs.writeFileSync(path.join(ROOT, 'output', 'themes', 'e-unspeakable.drawio'), patched);
+  const quantos = k => (patched.match(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
   console.log('\ne-indizivel  — remendos que NENHUM token do tema pode escrever:');
   console.log(`   sketch=1 injetado em ${quantos('sketch=1')} shape(s) AWS4`);
   console.log(`   cor de grupo trocada por #1B6AC9 em ${quantos('strokeColor=#1B6AC9')} grupo(s)`);
@@ -64,11 +64,11 @@ async function main() {
   // A afirmação abaixo é MEDIDA, não suposta: o mesmo remendo aplicado ao PLANO,
   // passado pelo portão. Se um dia o azul escolhido reprovasse, esta linha muda de
   // lado sozinha em vez de continuar afirmando o que não é mais verdade.
-  const planoRemendado = {
-    ...e.plano,
-    celulas: e.plano.celulas.map(c => ({ ...c, style: remendar(c.style || '') })),
+  const patchedPlan = {
+    ...e.layoutPlan,
+    celulas: e.layoutPlan.celulas.map(c => ({ ...c, style: patch(c.style || '') })),
   };
-  const v = contraste.medir(planoRemendado);
+  const v = contraste.measure(patchedPlan);
   console.log(`\n   E note o que este arquivo prova sobre o portão: a versão remendada ` +
     `${v.ok ? 'PASSA' : 'REPROVA'} no contraste`);
   const n = x => Number.isFinite(x) ? x.toFixed(2) + ':1' : 'sem par medido';
@@ -77,7 +77,7 @@ async function main() {
   console.log('   três fronteiras diferentes na mesma cor. Contraste é acessibilidade, não');
   console.log('   veracidade: por isso a camada normativa precisa ser INDIZÍVEL, e não');
   console.log('   apenas medida.');
-  if (!v.ok) { for (const l of contraste.resumir(v)) console.log('     · ' + l); }
+  if (!v.ok) { for (const l of contraste.summarize(v)) console.log('     · ' + l); }
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });

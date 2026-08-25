@@ -129,12 +129,12 @@ passo "check-geometry.cjs aceita --theme (#33)"     node "$AQUI/check-theme-geom
 passo "e o portão está ENXERTADO no motor"         bash -c '
   G="'"$RAIZ"'/engine/generate.cjs"
   M="'"$RAIZ"'/models/refusal/lying-band.json"
-  if node "$G" "$M" --gate veracidade --output /dev/null > /dev/null 2>&1; then
+  if node "$G" "$M" --gate truthfulness --output /dev/null > /dev/null 2>&1; then
     echo "   ✗ o motor DESENHOU um plano que mente, com o portão pedido"; exit 1
   fi
-  echo "   ✓ --gate veracidade recusa o desenho que mente"
+  echo "   ✓ --gate truthfulness recusa o desenho que mente"
   # e o controle: o mesmo nível deixa passar um que não mente
-  node "$G" "'"$RAIZ"'/models/web-multi-az.json" --gate veracidade --output /dev/null > /dev/null 2>&1 \
+  node "$G" "'"$RAIZ"'/models/web-multi-az.json" --gate truthfulness --output /dev/null > /dev/null 2>&1 \
     && echo "   ✓ e deixa passar o que não mente" \
     || { echo "   ✗ recusou um desenho que não mente"; exit 1; }
   # sem portão, o motor desenha — mas AVISA
@@ -176,7 +176,7 @@ else
     exit $falhou'
   # ⚠️ REGENERADAS AQUI, e nao lidas de arquivo versionado.
   #
-  # Ate o #29 `output/temas/*.drawio` estava commitado, e a camada 7 rendia o que
+  # Ate o #29 `output/themes/*.drawio` estava commitado, e a camada 7 rendia o que
   # achasse la. Isso punha 6,7 MB de saida gerada dentro do pacote que o usuario
   # instala — e a convencao oficial de autoria e a oposta: resultado de eval mora
   # em workspace irmao. `output/` virou rascunho ignorado, e quem constroi as
@@ -184,12 +184,12 @@ else
   # byte igual ao que estava commitado.
   passo "as variantes de tema, reconstruidas"        bash -c '
     node "'"$RAIZ"'/tools/generate-themes.cjs" > /dev/null && node "'"$RAIZ"'/tools/generate-trap.cjs" > /dev/null
-    n=$(ls "'"$RAIZ"'"/output/temas/*.drawio | wc -l)
+    n=$(ls "'"$RAIZ"'"/output/themes/*.drawio | wc -l)
     [ "$n" -ge 7 ] && echo "   ✓ $n variante(s)" || { echo "   ✗ so $n variante(s)"; exit 1; }'
   passo "render das variantes de tema" bash -c '
     "'"$RAIZ"'/tools/clean-render.sh" > /dev/null 2>&1 || true
     falhou=0
-    for d in "'"$RAIZ"'"/output/temas/*.drawio; do
+    for d in "'"$RAIZ"'"/output/themes/*.drawio; do
       nome="$(basename "$d" .drawio)"
       # a animada só se vê em SVG — o #4 mediu que o PNG dela vira tracejado
       # ESTÁTICO sem erro nenhum, e um PNG aqui seria prova falsa

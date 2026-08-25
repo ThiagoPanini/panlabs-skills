@@ -34,50 +34,50 @@
 
 const fs = require('fs');
 const path = require('path');
-const { contraEsquema } = require(path.join(__dirname, '..', 'engine', 'validate.cjs'));
+const { againstSchema } = require(path.join(__dirname, '..', 'engine', 'validate.cjs'));
 
-const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'elaboration.schema.json'), 'utf8'));
+const SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'elaboration.schema.json'), 'utf8'));
 
-const clonar = o => JSON.parse(JSON.stringify(o));
+const clone = o => JSON.parse(JSON.stringify(o));
 
-function elaborar(base, el) {
-  const deForma = contraEsquema(el, ESQUEMA, ESQUEMA);
+function elaborate(base, el) {
+  const deForma = againstSchema(el, SCHEMA, SCHEMA);
   if (deForma.length) { const e = new Error('elaboracao fora do esquema'); e.erros = deForma; throw e; }
 
   if (el.about && el.about !== base.id)
     throw new Error(`elaboracao e sobre "${el.about}", o modelo e "${base.id}"`);
 
-  const m = clonar(base);
+  const m = clone(base);
   const erros = [];
-  const porId = new Map(m.nodes.map(n => [n.id, n]));
+  const byId = new Map(m.nodes.map(n => [n.id, n]));
   const porAresta = new Map((m.edges || []).filter(a => a.id).map(a => [a.id, a]));
 
   // 1 · nos novos ------------------------------------------------------------
   for (const n of (el.nodes || [])) {
-    if (porId.has(n.id)) { erros.push(`no novo "${n.id}" ja existe no modelo aprovado`); continue; }
+    if (byId.has(n.id)) { erros.push(`no novo "${n.id}" ja existe no modelo aprovado`); continue; }
     if (n.logical)
       erros.push(`no novo "${n.id}" traz casaco logico. A fase tecnica nao inventa capacidade: ` +
         `se ela e mesmo nova, a vista logica mudou e precisa de aprovacao nova, nao de um casaco a mais.`);
     if ((n.layer || 'both') !== 'technical')
       erros.push(`no novo "${n.id}" sem camada "tecnica" — tudo que a elaboracao acrescenta e infraestrutura.`);
-    const copia = clonar(n);
-    m.nodes.push(copia); porId.set(copia.id, copia);
+    const copia = clone(n);
+    m.nodes.push(copia); byId.set(copia.id, copia);
   }
 
   // 2 · casacos tecnicos -----------------------------------------------------
   for (const [id, facet] of Object.entries(el.facets || {})) {
-    const n = porId.get(id);
+    const n = byId.get(id);
     if (!n) { erros.push(`casaco para "${id}", que nao existe`); continue; }
     if (n.technical) erros.push(`no "${id}" ja tinha casaco tecnico`);
-    n.technical = clonar(facet);
+    n.technical = clone(facet);
   }
 
   // 3 · reparentar -----------------------------------------------------------
-  for (const [id, pai] of Object.entries(el.inside || {})) {
-    const n = porId.get(id);
+  for (const [id, parent] of Object.entries(el.inside || {})) {
+    const n = byId.get(id);
     if (!n) { erros.push(`reparenta "${id}", que nao existe`); continue; }
-    if (!porId.has(pai)) { erros.push(`reparenta "${id}" para dentro de "${pai}", que nao existe`); continue; }
-    n.inside = pai;
+    if (!byId.has(parent)) { erros.push(`reparenta "${id}" para dentro de "${parent}", que nao existe`); continue; }
+    n.inside = parent;
   }
 
   // 4 · refinar aresta em caminho -------------------------------------------
@@ -85,7 +85,7 @@ function elaborar(base, el) {
     const a = porAresta.get(id);
     if (!a) { erros.push(`refina a aresta "${id}", que nao existe`); continue; }
     const jumps = r.by || [];
-    for (const s of jumps) if (!porId.has(s)) erros.push(`refina "${id}" por "${s}", que nao existe`);
+    for (const s of jumps) if (!byId.has(s)) erros.push(`refina "${id}" por "${s}", que nao existe`);
     const rotulos = r.rotulos || [];
     if (rotulos.length && rotulos.length !== jumps.length + 1)
       erros.push(`refina "${id}": ${jumps.length} salto(s) exigem ${jumps.length + 1} rotulo(s), vieram ${rotulos.length}`);
@@ -109,28 +109,28 @@ function elaborar(base, el) {
   // 5 · arestas novas e casacos de aresta ------------------------------------
   for (const a of (el.edges || [])) {
     if (a.id && porAresta.has(a.id)) { erros.push(`aresta nova "${a.id}" ja existe`); continue; }
-    const copia = clonar(a);
+    const copia = clone(a);
     m.edges.push(copia); if (copia.id) porAresta.set(copia.id, copia);
   }
   for (const [id, facet] of Object.entries(el.facetEdges || {})) {
     const a = porAresta.get(id);
     if (!a) { erros.push(`casaco para a aresta "${id}", que nao existe`); continue; }
-    a.technical = { ...(a.technical || {}), ...clonar(facet) };
+    a.technical = { ...(a.technical || {}), ...clone(facet) };
   }
 
   // 6 · notas e dossie -------------------------------------------------------
-  m.notes = [...(m.notes || []), ...clonar(el.notes || [])];
+  m.notes = [...(m.notes || []), ...clone(el.notes || [])];
   if (el.dossier) {
     m.dossier = m.dossier || {};
     for (const e of (el.dossier.parking || [])) {
       const l = m.dossier.parking || (m.dossier.parking = []);
       const i = l.findIndex(x => x.name === e.name);
-      if (i >= 0) l[i] = clonar(e); else l.push(clonar(e));
+      if (i >= 0) l[i] = clone(e); else l.push(clone(e));
     }
     for (const a of (el.dossier.findings || [])) {
       const l = m.dossier.findings || (m.dossier.findings = []);
       const i = l.findIndex(x => x.rule === a.rule && x.target === a.target);
-      if (i >= 0) l[i] = clonar(a); else l.push(clonar(a));
+      if (i >= 0) l[i] = clone(a); else l.push(clone(a));
     }
   }
 
@@ -146,7 +146,7 @@ function elaborar(base, el) {
   // alguem acrescentasse um campo amanha.
   const antes = new Map(base.nodes.map(n => [n.id, JSON.stringify(n.logical)]));
   for (const [id, logical] of antes) {
-    const agora = porId.get(id);
+    const agora = byId.get(id);
     if (!agora) { erros.push(`o no aprovado "${id}" sumiu na elaboracao`); continue; }
     if (JSON.stringify(agora.logical) !== logical)
       erros.push(`a elaboracao mexeu no casaco logico de "${id}" — isso muda o que foi aprovado`);
@@ -156,4 +156,4 @@ function elaborar(base, el) {
   return m;
 }
 
-module.exports = { elaborar, ESQUEMA };
+module.exports = { elaborate, SCHEMA };

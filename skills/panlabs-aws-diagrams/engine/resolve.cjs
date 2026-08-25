@@ -16,10 +16,10 @@
 
 const path = require('path');
 
-const CAMINHO_CATALOGO = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
+const CATALOG_PATH = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
 
 // Tipo do modelo -> nome do grupo no catálogo. A subnet depende de `acesso`.
-const GRUPO_DE = {
+const GROUP_OF = {
   cloud: 'AWS Cloud',
   account: 'AWS Account',
   region: 'Region',
@@ -33,7 +33,7 @@ const GRUPO_DE = {
 // As styles do catálogo desenham rótulo de folha com `fontSize=12`, não 10 —
 // a primeira versão estimou por 10 e subdimensionou a faixa do rótulo em ~25%.
 // Foi assim que o "VPC endpoint" encostou no rótulo "Catálogo" do RDS.
-const ROTULO_MIN = 23;
+const MIN_LABEL = 23;
 /**
  * ⚠️ NÃO HÁ MÉTRICA DE TEXTO AQUI — ela vem do tema.
  *
@@ -45,12 +45,12 @@ const ROTULO_MIN = 23;
  */
 
 /** Quantas linhas o rótulo ocupa se quebrado numa caixa de `larg` px. */
-function linhasDoRotulo(text, larg, largCar) {
+function labelLines(text, larg, largCar) {
   if (!text) return 0;
   // um rótulo com qualificador (O21) já traz a quebra dentro dele
   const forcadas = String(text).split(/<br\s*\/?>/i);
   if (forcadas.length > 1)
-    return forcadas.reduce((n, p) => n + linhasDoRotulo(p.replace(/<[^>]+>/g, ''), larg, largCar), 0);
+    return forcadas.reduce((n, p) => n + labelLines(p.replace(/<[^>]+>/g, ''), larg, largCar), 0);
   const porLinha = Math.max(1, Math.floor(larg / largCar));
   let linhas = 1, atual = 0;
   for (const palavra of String(text).split(/\s+/)) {
@@ -61,20 +61,20 @@ function linhasDoRotulo(text, larg, largCar) {
   return linhas;
 }
 
-function larguraDoTexto(text, largCar) {
+function textWidth(text, largCar) {
   return Math.ceil(String(text || '').length * largCar);
 }
 
-function criar(tema, dirCatalogo) {
+function create(tema, dirCatalogo) {
   if (!tema) throw new Error('resolver.criar exige um tema — não existe caminho sem tema');
-  const cat = require(dirCatalogo || CAMINHO_CATALOGO).carregar();
+  const cat = require(dirCatalogo || CATALOG_PATH).load();
 
   const usados = [];   // trilha de auditoria: como cada nome foi resolvido
   const M = tema.metrica;
 
   function grupoDoNo(no) {
     if (no.kind === 'subnet') return no.access === 'public' ? 'Public subnet' : 'Private subnet';
-    return GRUPO_DE[no.kind] || 'Generic group';
+    return GROUP_OF[no.kind] || 'Generic group';
   }
 
   /** Container: style + faixa de título reservada. */
@@ -82,7 +82,7 @@ function criar(tema, dirCatalogo) {
     const name = grupoDoNo(no);
     const g = cat.group(name);
     if (!g) throw new Error(`grupo "${name}" ausente do catálogo`);
-    usados.push({ id: no.id, pediu: no.kind, virou: g.title, via: 'group', correcoes: g.correcoes });
+    usados.push({ id: no.id, pediu: no.kind, virou: g.title, via: 'group', corrections: g.corrections });
     const style = tema.group(g.style, g.title);
     // `spacingLeft=30` no style do grupo é a janela do ícone: o rótulo começa
     // depois dele. A faixa de título é área do filho (#2 §3.2), então quem
@@ -94,18 +94,18 @@ function criar(tema, dirCatalogo) {
       // do texto do grupo — não da densidade. `check-partition.cjs` pegou isto: com
       // a faixa fixa em 4 degraus, subir `texto.grupo` para 16 pt não movia uma
       // coordenada e o rótulo passava a raspar a borda de cima.
-      tituloH: Math.max(tema.calha(4), Math.round(tema.tokens.text.group * 2.2)),
+      tituloH: Math.max(tema.lane(4), Math.round(tema.tokens.text.group * 2.2)),
       recuoTitulo: temIcone ? 30 : 8,
       color: (style.match(/strokeColor=(#[0-9A-Fa-f]{6})/) || [])[1] || '#5A6C86',
-      correcoes: g.correcoes,
+      corrections: g.corrections,
     };
   }
 
   /** Folha: style + caixa que já inclui a faixa do rótulo. */
-  function folha(no) {
+  function leaf(no) {
     if (no.kind === 'block') {
       const larg = 170;
-      const linhas = linhasDoRotulo(no.label || no.id, larg - 16, M.largCar);
+      const linhas = labelLines(no.label || no.id, larg - 16, M.largCar);
       usados.push({ id: no.id, pediu: 'block', virou: '(bloco lógico)', via: 'block' });
       return {
         // vista lógica: pré-serviços, portanto fora do alcance da convenção AWS.
@@ -117,12 +117,12 @@ function criar(tema, dirCatalogo) {
       };
     }
 
-    const chave = no.service || (no.kind === 'actor' ? 'users' : null);
-    if (!chave) throw new Error(`nó "${no.id}" do tipo "${no.kind}" sem chave de serviço`);
-    const s = cat.service(chave);
-    if (!s) throw new Error(`serviço "${chave}" não resolveu nem para o genérico`);
+    const key = no.service || (no.kind === 'actor' ? 'users' : null);
+    if (!key) throw new Error(`nó "${no.id}" do tipo "${no.kind}" sem chave de serviço`);
+    const s = cat.service(key);
+    if (!s) throw new Error(`serviço "${key}" não resolveu nem para o genérico`);
     usados.push({
-      id: no.id, pediu: chave, virou: s.title, via: s.via,
+      id: no.id, pediu: key, virou: s.title, via: s.via,
       fallback: s.via === 'generic' || String(s.via).includes(':'),
     });
 
@@ -140,14 +140,14 @@ function criar(tema, dirCatalogo) {
     // centrado dentro da caixa porque o style do catálogo já traz
     // `aspect=fixed` — não há offset para calcular aqui.
     const rotuloW = Math.max(0, ...label.split(/<br\s*\/?>/i)
-      .map(linha => larguraDoTexto(linha.replace(/<[^>]+>/g, ''), M.largCar)));
+      .map(row => textWidth(row.replace(/<[^>]+>/g, ''), M.largCar)));
     const caixaW = Math.max(formaW, rotuloW);
-    const linhas = linhasDoRotulo(label, caixaW, M.largCar);
+    const linhas = labelLines(label, caixaW, M.largCar);
     return {
       style: tema.service(s.style, s),
       label,
       formaW, formaH,
-      rotuloH: Math.max(ROTULO_MIN, linhas * M.altLinha),
+      rotuloH: Math.max(MIN_LABEL, linhas * M.altLinha),
       rotuloW,
       caixaW,
     };
@@ -156,7 +156,7 @@ function criar(tema, dirCatalogo) {
   function band(f) {
     const name = f.kind === 'auto-scaling' ? 'Auto Scaling group' : 'Generic group';
     const g = cat.group(name);
-    usados.push({ id: f.id, pediu: f.kind || 'generic', virou: g.title, via: 'band', correcoes: g.correcoes });
+    usados.push({ id: f.id, pediu: f.kind || 'generic', virou: g.title, via: 'band', corrections: g.corrections });
     // Uma faixa existe para CRUZAR outras caixas, então o rótulo dela nasce por
     // cima de bordas alheias — com 2 colunas de AZ o centro da faixa cai
     // exatamente na divisa entre as zonas, e a linha tracejada risca o texto.
@@ -171,16 +171,16 @@ function criar(tema, dirCatalogo) {
 
   function faixaAz() {
     const g = cat.group('Availability Zone');
-    return { style: tema.group(g.style, g.title), correcoes: g.correcoes };
+    return { style: tema.group(g.style, g.title), corrections: g.corrections };
   }
 
   return {
-    container, folha, band, faixaAz, cat, usados, tema,
-    linhasDoRotulo: (t, l) => linhasDoRotulo(t, l, M.largCar),
-    larguraDoTexto: t => larguraDoTexto(t, M.largCar),
-    larguraDaAresta: t => larguraDoTexto(t, M.largCarAresta),
-    larguraDoRotuloDeGrupo: t => larguraDoTexto(t, M.largCarGrupo),
+    container, leaf, band, faixaAz, cat, usados, tema,
+    labelLines: (t, l) => labelLines(t, l, M.largCar),
+    textWidth: t => textWidth(t, M.largCar),
+    larguraDaAresta: t => textWidth(t, M.largCarAresta),
+    larguraDoRotuloDeGrupo: t => textWidth(t, M.largCarGrupo),
   };
 }
 
-module.exports = { criar, linhasDoRotulo, larguraDoTexto };
+module.exports = { create, labelLines, textWidth };

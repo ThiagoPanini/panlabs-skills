@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * As variantes de tema, num lugar só — `output/temas/`.
+ * As variantes de tema, num lugar só — `output/themes/`.
  *
  *   node tools/generate-themes.cjs
  *
@@ -17,27 +17,27 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { gerar } = require('../engine/generate.cjs');
+const { generate } = require('../engine/generate.cjs');
 
-const RAIZ = path.join(__dirname, '..');
-const DIR = path.join(RAIZ, 'output', 'themes');
+const ROOT = path.join(__dirname, '..');
+const DIR = path.join(ROOT, 'output', 'themes');
 
-const VARIANTES = [
-  { name: 'a-claro', modelo: 'orders-serverless.json', tema: 'light' },
-  { name: 'b-escuro', modelo: 'orders-serverless.json', tema: 'dark' },
-  { name: 'c-corporativo', modelo: 'orders-serverless.json', tema: 'corporate' },
-  { name: 'g-vista-logica', modelo: 'logical-orders.json', tema: 'light' },
+const VARIANTS = [
+  { name: 'a-light', model: 'orders-serverless.json', tema: 'light' },
+  { name: 'b-dark', model: 'orders-serverless.json', tema: 'dark' },
+  { name: 'c-corporate', model: 'orders-serverless.json', tema: 'corporate' },
+  { name: 'g-logical-view', model: 'logical-orders.json', tema: 'light' },
   // o encontro do #12 com o #13: multi-conta no deck escuro
-  { name: 'h-contas-escuro', modelo: 'hub-tgw-3-accounts.json', tema: 'dark' },
+  { name: 'h-accounts-dark', model: 'hub-tgw-3-accounts.json', tema: 'dark' },
   // a variante animada só se vê em SVG (#4): PNG dela seria prova falsa
-  { name: 'f-fluxo-animado', modelo: 'orders-serverless.json', tema: 'light', flow: 'animated' },
+  { name: 'f-animated-flow', model: 'orders-serverless.json', tema: 'light', flow: 'animated' },
 ];
 
 async function main() {
   fs.mkdirSync(DIR, { recursive: true });
-  for (const v of VARIANTES) {
-    const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', v.modelo), 'utf8'));
-    const r = await gerar(m, { tema: v.tema, flow: v.flow });
+  for (const v of VARIANTS) {
+    const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', v.model), 'utf8'));
+    const r = await generate(m, { tema: v.tema, flow: v.flow });
     fs.writeFileSync(path.join(DIR, v.name + '.drawio'), r.xml);
     console.log(`  ${v.name.padEnd(18)} tema=${v.tema}${v.flow ? ` fluxo=${v.flow}` : ''}  ${r.xml.length} bytes`);
   }

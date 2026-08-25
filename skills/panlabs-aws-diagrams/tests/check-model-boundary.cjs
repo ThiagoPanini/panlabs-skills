@@ -20,42 +20,42 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const schema = JSON.parse(fs.readFileSync(path.join(RAIZ, 'schema.json'), 'utf8'));
+const ROOT = path.join(__dirname, '..');
+const schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schema.json'), 'utf8'));
 
-const GEOMETRIA = [
+const GEOMETRY = [
   'x', 'y', 'w', 'h', 'cx', 'cy', 'dx', 'dy',
-  'width', 'height', 'largura', 'altura', 'tamanho', 'size',
+  'width', 'height', 'widthOf', 'altura', 'tamanho', 'size',
   'pos', 'posicao', 'position', 'coord', 'coordenada', 'ponto', 'pontos', 'point', 'points',
   'waypoint', 'waypoints', 'bend', 'bendpoints', 'offset', 'deslocamento',
   'top', 'left', 'right', 'bottom', 'topo', 'esquerda', 'direita', 'background',
-  'margin', 'margin', 'padding', 'recuo', 'spacing', 'espacamento', 'gap', 'calha', 'lane',
+  'margin', 'margin', 'padding', 'recuo', 'spacing', 'spacing', 'gap', 'lane', 'lane',
   'align', 'alinhamento', 'anchor', 'ancora', 'grid', 'grade', 'scale', 'escala',
-  'z', 'zorder', 'zindex', 'linha', 'coluna', 'row', 'col', 'column', 'eixo', 'axis',
+  'z', 'zorder', 'zindex', 'row', 'column', 'row', 'col', 'column', 'eixo', 'axis',
   'style', 'style', 'color', 'color', 'fill', 'stroke',
 ];
 
 const falhas = [];
 const props = new Set();
-const semFechar = [];
+const unclosed = [];
 
-(function andar(no, caminho) {
+(function tier(no, caminho) {
   if (!no || typeof no !== 'object') return;
-  if (Array.isArray(no)) return no.forEach((v, i) => andar(v, `${caminho}[${i}]`));
+  if (Array.isArray(no)) return no.forEach((v, i) => tier(v, `${caminho}[${i}]`));
 
   if (no.properties) {
     for (const k of Object.keys(no.properties)) props.add(k);
     if (no.additionalProperties !== false && no.type === 'object' && caminho !== '/properties/dossie')
-      semFechar.push(caminho || '(raiz)');
+      unclosed.push(caminho || '(raiz)');
   }
-  for (const [k, v] of Object.entries(no)) andar(v, `${caminho}/${k}`);
+  for (const [k, v] of Object.entries(no)) tier(v, `${caminho}/${k}`);
 })(schema, '');
 
 for (const p of props) {
   const n = p.toLowerCase().replace(/[^a-z]/g, '');
-  if (GEOMETRIA.includes(n)) falhas.push(`o esquema declara a propriedade "${p}" — vocabulário de geometria`);
+  if (GEOMETRY.includes(n)) falhas.push(`o esquema declara a propriedade "${p}" — vocabulário de geometria`);
 }
-for (const c of semFechar) falhas.push(`objeto sem additionalProperties:false em ${c} — dá para contrabandear chave`);
+for (const c of unclosed) falhas.push(`objeto sem additionalProperties:false em ${c} — dá para contrabandear chave`);
 
 // 3. os modelos de exemplo
 //
@@ -64,18 +64,18 @@ for (const c of semFechar) falhas.push(`objeto sem additionalProperties:false em
 // propriedade do formato, não de um conjunto de exemplos — e quando o #22
 // acrescentou `camada` ao esquema, quem tinha de dizer que ela não é geometria
 // era esta checagem rodando contra os modelos que a usam.
-const dirModelos = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'models');
+const dirModelos = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, 'models');
 const modelos = fs.existsSync(dirModelos) ? fs.readdirSync(dirModelos).filter(f => f.endsWith('.json')) : [];
 for (const arq of modelos) {
   const bruto = JSON.parse(fs.readFileSync(path.join(dirModelos, arq), 'utf8'));
-  (function varrer(no, caminho) {
+  (function sweep(no, caminho) {
     if (!no || typeof no !== 'object') return;
-    if (Array.isArray(no)) return no.forEach((v, i) => varrer(v, `${caminho}[${i}]`));
+    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${caminho}[${i}]`));
     for (const [k, v] of Object.entries(no)) {
       if (caminho.startsWith('dossier')) continue;      // o dossiê é opaco por contrato
       const n = k.toLowerCase().replace(/[^a-z]/g, '');
-      if (GEOMETRIA.includes(n)) falhas.push(`${arq}: chave "${k}" em ${caminho}`);
-      varrer(v, caminho ? `${caminho}.${k}` : k);
+      if (GEOMETRY.includes(n)) falhas.push(`${arq}: chave "${k}" em ${caminho}`);
+      sweep(v, caminho ? `${caminho}.${k}` : k);
     }
   })(bruto, '');
 }

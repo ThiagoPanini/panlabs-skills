@@ -15,39 +15,39 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { gerar } = require('../engine/generate.cjs');
+const { generate } = require('../engine/generate.cjs');
 
-const AQUI = path.join(__dirname, '..');
+const HERE = path.join(__dirname, '..');
 const RENDER = path.join(__dirname, 'render.sh');
 
 /** Remove um nó e tudo que depende dele — descendentes, arestas, faixas. */
-function podar(modelo, ids) {
+function prune(model, ids) {
   const target = new Set(ids);
   let mudou = true;
   while (mudou) {
     mudou = false;
-    for (const n of modelo.nodes)
+    for (const n of model.nodes)
       if (n.inside && target.has(n.inside) && !target.has(n.id)) { target.add(n.id); mudou = true; }
   }
   return {
-    ...modelo,
-    nodes: modelo.nodes.filter(n => !target.has(n.id)),
-    edges: (modelo.edges || []).filter(a => !target.has(a.from) && !target.has(a.to)),
-    bands: (modelo.bands || []).filter(f => f.members.every(m => !target.has(m))),
+    ...model,
+    nodes: model.nodes.filter(n => !target.has(n.id)),
+    edges: (model.edges || []).filter(a => !target.has(a.from) && !target.has(a.to)),
+    bands: (model.bands || []).filter(f => f.members.every(m => !target.has(m))),
   };
 }
 
-const { binario } = require('./drawio.cjs');
-const DRAWIO = binario(process.argv[3]);
-const TEM_APP = fs.existsSync(DRAWIO) && fs.existsSync(RENDER);
+const { binary } = require('./drawio.cjs');
+const DRAWIO = binary(process.argv[3]);
+const HAS_APP = fs.existsSync(DRAWIO) && fs.existsSync(RENDER);
 
-async function testar(name, modelo) {
-  const drawio = path.join(AQUI, 'output', `_bis-${name}.drawio`);
+async function test(name, model) {
+  const drawio = path.join(HERE, 'output', `_bis-${name}.drawio`);
   let r;
-  try { r = await gerar(modelo); }
+  try { r = await generate(model); }
   catch (e) { return { name, state: 'rejected', txt: `${name.padEnd(24)} motor recusou: ${e.message}` }; }
-  const forma = `(${r.plano.larg}×${r.plano.alt}, ${r.plano.celulas.length} células)`;
-  if (!TEM_APP) {
+  const forma = `(${r.layoutPlan.larg}×${r.layoutPlan.alt}, ${r.layoutPlan.celulas.length} células)`;
+  if (!HAS_APP) {
     // Sem o app, a bisseção ainda responde metade da pergunta: o MOTOR aceita
     // cada recorte? Dizer "✗ FALHOU" aqui seria a ferramenta acusando o modelo
     // por uma dependência de desenvolvimento que não existe na máquina.
@@ -64,16 +64,16 @@ async function testar(name, modelo) {
 }
 
 async function main() {
-  const modelo = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-  const contas = modelo.nodes.filter(n => n.kind === 'account').map(n => n.id);
+  const model = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+  const accounts = model.nodes.filter(n => n.kind === 'account').map(n => n.id);
 
   const casos = [['inteiro', []], ['sem-ator', ['cliente']]];
-  for (const c of contas) casos.push([`sem-${c}`, [c]]);
-  for (const c of contas) casos.push([`so-${c}`, contas.filter(o => o !== c).concat(['cliente'])]);
+  for (const c of accounts) casos.push([`sem-${c}`, [c]]);
+  for (const c of accounts) casos.push([`so-${c}`, accounts.filter(o => o !== c).concat(['cliente'])]);
 
   const r = [];
   for (const [name, remover] of casos) {
-    const t = await testar(name, podar(modelo, remover));
+    const t = await test(name, prune(model, remover));
     console.log(t.txt);
     r.push(t);
   }
@@ -94,7 +94,7 @@ async function main() {
     process.exit(1);
   }
   console.log(`\n  ✓ os ${r.length} recortes do modelo passam` +
-    (TEM_APP ? ' — motor e render' : ' pelo motor (render é dependência de desenvolvimento)'));
+    (HAS_APP ? ' — motor e render' : ' pelo motor (render é dependência de desenvolvimento)'));
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

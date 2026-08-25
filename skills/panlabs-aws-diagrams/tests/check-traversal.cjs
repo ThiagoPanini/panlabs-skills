@@ -13,9 +13,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { gerar } = require('../engine/generate.cjs');
+const { generate } = require('../engine/generate.cjs');
 
-const AQUI = path.join(__dirname, '..');
+const HERE = path.join(__dirname, '..');
 let falhas = 0;
 
 function ok(name, condicao, detail) {
@@ -25,7 +25,7 @@ function ok(name, condicao, detail) {
 }
 
 /** Só a primeira página: é ela a vista consolidada. */
-function paginaConsolidada(xml) {
+function consolidatedPage(xml) {
   const m = /<diagram\b[\s\S]*?<\/diagram>/.exec(xml);
   return m ? m[0] : xml;
 }
@@ -44,7 +44,7 @@ function atributo(tag, name) {
  * origem nem o destino dela. É `A5.5` da rubrica (#8) — aresta cortando faixa
  * alheia — e é a diferença entre "desenhei a aresta" e "desenhei bem".
  */
-function contarInvasoes(celulas, travessias, caixaDaConta) {
+function countIntrusions(celulas, travessias, caixaDaConta) {
   let n = 0;
   for (const cel of celulas) {
     const t = travessias.find(x => x.id === cel.id);
@@ -68,21 +68,21 @@ function contarInvasoes(celulas, travessias, caixaDaConta) {
 }
 
 async function main() {
-  const modelo = f => JSON.parse(fs.readFileSync(path.join(AQUI, 'models', f), 'utf8'));
+  const model = f => JSON.parse(fs.readFileSync(path.join(HERE, 'models', f), 'utf8'));
 
   // ---------------------------------------------------------------- E1
   console.log('\n1. E1 — a regra soberana: a vista consolidada de inventário não tem travessia');
-  const inv = modelo('landing-zone-6-accounts.json');
-  const rInv = await gerar(inv);
+  const inv = model('landing-zone-6-accounts.json');
+  const rInv = await generate(inv);
   // conta de cada nó, subindo a cadeia de `dentro` — sem depender do motor,
   // para a checagem não conferir o motor contra ele mesmo
-  const porId = new Map(inv.nodes.map(n => [n.id, n]));
+  const byId = new Map(inv.nodes.map(n => [n.id, n]));
   const contaDoNo = new Map();
   for (const n of inv.nodes) {
     let c = n, achou = null;
     while (c) {
       if (c.kind === 'account') { achou = c.id; break; }
-      c = c.inside ? porId.get(c.inside) : null;
+      c = c.inside ? byId.get(c.inside) : null;
     }
     contaDoNo.set(n.id, achou);
   }
@@ -91,7 +91,7 @@ async function main() {
     contaDoNo.get(a.from) && contaDoNo.get(a.to) && contaDoNo.get(a.from) !== contaDoNo.get(a.to));
   ok('o modelo declara travessias', cruzamNoModelo.length > 0, `${cruzamNoModelo.length} no modelo`);
 
-  const arestasDesenhadas = celulasDeAresta(paginaConsolidada(rInv.xml))
+  const arestasDesenhadas = celulasDeAresta(consolidatedPage(rInv.xml))
     .map(t => ({ from: atributo(t, 'source'), to: atributo(t, 'target') }));
   const cruzamDesenhadas = arestasDesenhadas.filter(a =>
     a.from && a.to && contaDoNo.get(a.from) && contaDoNo.get(a.to) &&
@@ -103,8 +103,8 @@ async function main() {
 
   // ---------------------------------------------------------------- G2
   console.log('\n2. G2 — a OU não é container: rótulo flutuante, sem caixa');
-  ok('o motor decidiu desenhar faixas de OU', rInv.derived.ou.desenhar, rInv.derived.ou.because);
-  const celulasOu = rInv.plano.celulas.filter(c => String(c.id).startsWith('ou-'));
+  ok('o motor decidiu desenhar faixas de OU', rInv.derived.ou.draw, rInv.derived.ou.because);
+  const celulasOu = rInv.layoutPlan.celulas.filter(c => String(c.id).startsWith('ou-'));
   ok('há uma célula por OU declarada', celulasOu.length === rInv.derived.ou.ous.length,
     `${celulasOu.length} células para ${rInv.derived.ou.ous.length} OUs`);
   ok('nenhuma delas é container', celulasOu.every(c => !/container=1/.test(c.style)),
@@ -115,7 +115,7 @@ async function main() {
   // ---------------------------------------------------------------- S3
   console.log('\n3. S3 — o contraste de gap 1:4 entre irmãs e grupos de OU');
   const colunas = [];
-  for (const c of rInv.plano.celulas) {
+  for (const c of rInv.layoutPlan.celulas) {
     if (!/grIcon=mxgraph\.aws4\.group_account/.test(c.style || '')) continue;
     colunas.push({ id: c.id, x: c.geo.x, y: c.geo.y, w: c.geo.w, h: c.geo.h });
   }
@@ -125,10 +125,10 @@ async function main() {
     porColuna.get(c.x).push(c);
   }
   let gapIrma = Infinity;
-  for (const lista of porColuna.values()) {
-    lista.sort((a, b) => a.y - b.y);
-    for (let i = 1; i < lista.length; i++)
-      gapIrma = Math.min(gapIrma, lista[i].y - (lista[i - 1].y + lista[i - 1].h));
+  for (const list of porColuna.values()) {
+    list.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < list.length; i++)
+      gapIrma = Math.min(gapIrma, list[i].y - (list[i - 1].y + list[i - 1].h));
   }
   const xs = [...porColuna.keys()].sort((a, b) => a - b);
   let gapOu = Infinity;
@@ -142,23 +142,23 @@ async function main() {
 
   // ---------------------------------------------------------------- D2
   console.log('\n4. D2 — uma vista de detalhe por conta, SEMPRE (não é fallback)');
-  const paginas = [...rInv.xml.matchAll(/<diagram id="([^"]+)"/g)].map(m => m[1]);
-  const contas = inv.nodes.filter(n => n.kind === 'account');
-  ok('há 1 consolidada + 1 página por conta', paginas.length === 1 + contas.length,
-    `${paginas.length} páginas para ${contas.length} contas`);
-  ok('cada conta tem a sua', contas.every(c => paginas.includes(`${inv.id}-${c.id}`)),
-    paginas.slice(1).join(', '));
+  const pages = [...rInv.xml.matchAll(/<diagram id="([^"]+)"/g)].map(m => m[1]);
+  const accounts = inv.nodes.filter(n => n.kind === 'account');
+  ok('há 1 consolidada + 1 página por conta', pages.length === 1 + accounts.length,
+    `${pages.length} páginas para ${accounts.length} contas`);
+  ok('cada conta tem a sua', accounts.every(c => pages.includes(`${inv.id}-${c.id}`)),
+    pages.slice(1).join(', '));
 
   // ------------------------------------------------------- X1 / E8 / E10
   console.log('\n5. X1/E8/E10 — na vista de integração a travessia é desenhada, e não vira espaguete');
-  const integ = modelo('platform-3-accounts.json');
-  const rInt = await gerar(integ);
+  const integ = model('platform-3-accounts.json');
+  const rInt = await generate(integ);
   ok('o motor entrou no modo de integração', rInt.derived.modo.modo === 'integracao', rInt.derived.modo.because);
-  ok('escolheu um nível da hierarquia do #6 §6.4', rInt.derived.politica.nivel > 1,
-    `nível ${rInt.derived.politica.nivel} — ${rInt.derived.politica.mecanismo}`);
+  ok('escolheu um nível da hierarquia do #6 §6.4', rInt.derived.policy.level > 1,
+    `nível ${rInt.derived.policy.level} — ${rInt.derived.policy.mecanismo}`);
 
   const idsTravessia = new Set(rInt.derived.travessias.map(t => t.id));
-  const desenhadas = rInt.plano.celulas.filter(c => c.kind === 'edge' && idsTravessia.has(c.id));
+  const desenhadas = rInt.layoutPlan.celulas.filter(c => c.kind === 'edge' && idsTravessia.has(c.id));
   ok('toda travessia declarada foi desenhada', desenhadas.length === idsTravessia.size,
     `${desenhadas.length}/${idsTravessia.size}`);
 
@@ -179,9 +179,9 @@ async function main() {
    * passou a reprovar uma coisa que o `E8` não proíbe. Estreitar a checagem para
    * o que o `E8` diz é a correção; afrouxar o token seria obedecer ao teste.
    */
-  const CERIMONIA = /startArrow=diamond|endArrow=diamond|startArrow=oval|endArrow=oval/;
+  const CEREMONY = /startArrow=diamond|endArrow=diamond|startArrow=oval|endArrow=oval/;
   ok('nenhuma cerimônia na borda da conta (E8)',
-    desenhadas.every(c => !CERIMONIA.test(c.style)),
+    desenhadas.every(c => !CEREMONY.test(c.style)),
     'sem losango nem marcador de travessia na ponta');
   /**
    * CONTROLE, nos dois sentidos. Sem ele, trocar a regex por `/$^/` deixaria a
@@ -189,45 +189,45 @@ async function main() {
    * ela também casava `shape=…gateway`, que NUNCA aparece numa aresta, e a
    * alternativa morta passou despercebida porque nada exercitava a regra.
    */
-  const COM_LOSANGO = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=diamond;endFill=1;';
-  const LIMPA = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=blockThin;endFill=1;jumpStyle=arc;';
-  ok('e a regra ACUSA um losango na ponta (controle)', CERIMONIA.test(COM_LOSANGO),
+  const WITH_DIAMOND = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=diamond;endFill=1;';
+  const CLEANED = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=blockThin;endFill=1;jumpStyle=arc;';
+  ok('e a regra ACUSA um losango na ponta (controle)', CEREMONY.test(WITH_DIAMOND),
     'a mesma regra, sobre um estilo com losango, reprova');
   ok('e NÃO acusa `jumpStyle`, que é salto entre ARESTAS e não marcador de borda',
-    !CERIMONIA.test(LIMPA),
+    !CEREMONY.test(CLEANED),
     'o E8 do #6 fala de porta/losango na fronteira da conta, não de cruzamento de linha');
 
   // e o anti-espaguete: a linha não pode atravessar o INTERIOR de uma conta que
   // não é a dela. É a checagem que separa "desenhei a aresta" de "desenhei bem".
   const caixaDaConta = new Map();
-  for (const c of rInt.plano.celulas) {
+  for (const c of rInt.layoutPlan.celulas) {
     if (!/grIcon=mxgraph\.aws4\.group_account/.test(c.style || '')) continue;
-    const pai = rInt.plano.celulas.find(x => x.id === c.pai);
-    const base = pai ? { x: pai.geo.x, y: pai.geo.y } : { x: 0, y: 0 };
+    const parent = rInt.layoutPlan.celulas.find(x => x.id === c.parent);
+    const base = parent ? { x: parent.geo.x, y: parent.geo.y } : { x: 0, y: 0 };
     caixaDaConta.set(c.id, { x: base.x + c.geo.x, y: base.y + c.geo.y, w: c.geo.w, h: c.geo.h });
   }
-  const invasoes = contarInvasoes(desenhadas, rInt.derived.travessias, caixaDaConta);
-  ok('nenhuma travessia corta o interior de uma conta alheia (A5.5)', invasoes === 0,
-    invasoes ? `${invasoes} invasão(ões)` : 'as calhas e a canaleta seguraram');
+  const intrusions = countIntrusions(desenhadas, rInt.derived.travessias, caixaDaConta);
+  ok('nenhuma travessia corta o interior de uma conta alheia (A5.5)', intrusions === 0,
+    intrusions ? `${intrusions} invasão(ões)` : 'as calhas e a canaleta seguraram');
 
   // EXPERIMENTO DE CONTROLE. Uma checagem geométrica que só sabe passar não
   // prova nada — pode estar medindo a coisa errada e concordando consigo mesma.
   // Aqui a mesma rotina recebe a rota INGÊNUA (linha reta de ponta a ponta, que
   // é o que o motor fazia antes da canaleta) e tem de acusar.
-  const primeira = rInt.derived.travessias[0];
-  const oAbs = rInt.plano.celulas.find(c => c.id === primeira.from);
-  const dAbs = rInt.plano.celulas.find(c => c.id === primeira.to);
+  const first = rInt.derived.travessias[0];
+  const oAbs = rInt.layoutPlan.celulas.find(c => c.id === first.from);
+  const dAbs = rInt.layoutPlan.celulas.find(c => c.id === first.to);
   if (oAbs && dAbs) {
     const meio = [...caixaDaConta.entries()].find(([id]) =>
-      id !== primeira.contaDe && id !== primeira.contaPara);
+      id !== first.contaDe && id !== first.contaPara);
     if (meio) {
       const [, cx] = meio;
       const y = cx.y + cx.h / 2;
       const reta = [{
-        id: primeira.id, kind: 'edge',
+        id: first.id, kind: 'edge',
         pontos: [{ x: cx.x - 60, y }, { x: cx.x + cx.w + 60, y }],
       }];
-      const acusou = contarInvasoes(reta, rInt.derived.travessias, caixaDaConta);
+      const acusou = countIntrusions(reta, rInt.derived.travessias, caixaDaConta);
       ok('e a checagem ACUSA quando a rota é a ingênua (controle)', acusou > 0,
         acusou ? `${acusou} invasão(ões) detectada(s) na reta` : 'a checagem não viu — ela não mede o que diz medir');
     }
@@ -240,7 +240,7 @@ async function main() {
   // dispara `gatilhoOu` — e modo integração, onde `plan.cjs` suprime a
   // faixa. É o caso do corpus com OU em integração que o #34 pediu.
   ok('o gatilho de OU disparou (contraste real: Workloads×2 fora de Infrastructure)',
-    rInt.derived.ou.desenhar, rInt.derived.ou.because);
+    rInt.derived.ou.draw, rInt.derived.ou.because);
   const ouNoXml = (rInt.xml.match(/OU – /g) || []).length;
   ok('a faixa de OU não está no .drawio (modo integração suprime)', ouNoXml === 0,
     `${ouNoXml} ocorrência(s) de "OU – " na saída`);

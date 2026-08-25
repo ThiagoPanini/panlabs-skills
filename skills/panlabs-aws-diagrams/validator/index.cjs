@@ -42,18 +42,18 @@ const path = require('path');
 const bruto = require(path.join(__dirname, 'thresholds.json'));
 
 /** Os limiares num mapa chato, porque quem consulta quer o número, não o grupo. */
-const LIMIARES = Object.freeze({ ...bruto.normativos, ...bruto.calibraveis });
+const THRESHOLDS = Object.freeze({ ...bruto.normativos, ...bruto.calibraveis });
 
-const SEVERIDADES = ['fail', 'warn'];
+const SEVERITIES = ['fail', 'warn'];
 const INPUTS = ['geometry', 'style', 'model', 'catalog', 'render'];
 
 /** Atalho: o valor cru de um limiar, pelo nome. */
-const lim = chave => {
-  if (!(chave in LIMIARES)) throw new Error(`limiar "${chave}" não existe em thresholds.json`);
-  return LIMIARES[chave].valor;
+const lim = key => {
+  if (!(key in THRESHOLDS)) throw new Error(`limiar "${key}" não existe em thresholds.json`);
+  return THRESHOLDS[key].valor;
 };
 
-const CHECAGENS = [
+const CHECKS = [
 
   // ------------------------------------------------------------------- A1
   // "Não é geometria, é presença de campos" — a rubrica. O grupo mais barato e
@@ -135,7 +135,7 @@ const CHECAGENS = [
   {
     id: 'A2.1', family: 'A2', name: 'Complexidade gráfica ≤ 6', severity: 'fail', escalona: true, input: 'style',
     mede: 'número de entradas distintas que a legenda precisaria ter (tipos de símbolo, não instâncias)',
-    limiar: { chave: 'complexidadeGraficaAlvo', descricao: `≤ ${lim('complexidadeGraficaAlvo')}; warn em 7–8; fail acima de ${lim('complexidadeGraficaFalha')}` },
+    limiar: { key: 'complexidadeGraficaAlvo', descricao: `≤ ${lim('complexidadeGraficaAlvo')}; warn em 7–8; fail acima de ${lim('complexidadeGraficaFalha')}` },
     fonte: 'Moody, Physics of Notations ("span of absolute judgement is around 6 categories")',
   },
   {
@@ -211,13 +211,13 @@ const CHECAGENS = [
   {
     id: 'A3.1', family: 'A3', name: 'Sobreposição nó–nó', severity: 'fail', input: 'geometry',
     mede: 'área de interseção entre caixas irmãs não aninhadas, e a folga entre elas',
-    limiar: { chave: 'folgaEntreCaixas', descricao: `0 pares sobrepostos; folga ≥ ${lim('folgaEntreCaixas')} px` },
+    limiar: { key: 'folgaEntreCaixas', descricao: `0 pares sobrepostos; folga ≥ ${lim('folgaEntreCaixas')} px` },
     fonte: 'Purchase 2002; Dunne et al. 2015 (node occlusion); Azure WAF',
   },
   {
     id: 'A3.2', family: 'A3', name: 'Sobreposição rótulo–rótulo', severity: 'fail', input: 'geometry',
     mede: 'interseção das faixas de rótulo que o motor reservou',
-    limiar: { chave: 'paddingDeRotulo', descricao: `0 pares, com padding de ${lim('paddingDeRotulo')} px` },
+    limiar: { key: 'paddingDeRotulo', descricao: `0 pares, com padding de ${lim('paddingDeRotulo')} px` },
     fonte: 'Dunne et al. 2015; C4 checklist (legibilidade do rótulo)',
     note: 'o motor RESERVA a faixa do rótulo na altura da caixa (resolve.cjs) porque o mxGraph não reserva. ' +
       'Esta checagem confere a reserva; se o texto real estourar a reserva, quem acusa é o render (B7).',
@@ -243,25 +243,25 @@ const CHECAGENS = [
   {
     id: 'A3.6', family: 'A3', name: 'Ancoragem de seta', severity: 'fail', input: 'geometry',
     mede: 'as pontas da polilinha encostam no perímetro da origem e do destino',
-    limiar: { chave: 'toleranciaDeAncoragem', descricao: `±${lim('toleranciaDeAncoragem')} px do perímetro` },
+    limiar: { key: 'toleranciaDeAncoragem', descricao: `±${lim('toleranciaDeAncoragem')} px do perímetro` },
     fonte: 'consequência de A1.6/A1.8; Azure WAF',
   },
   {
     id: 'A3.7', family: 'A3', name: 'Nada fora do canvas', severity: 'fail', input: 'geometry',
     mede: 'a união de tudo cabe no canvas, com margem',
-    limiar: { chave: 'margemDoCanvas', descricao: `contido, margem ≥ ${lim('margemDoCanvas')} px` },
+    limiar: { key: 'margemDoCanvas', descricao: `contido, margem ≥ ${lim('margemDoCanvas')} px` },
     fonte: 'requisito de render; nenhum guia precisa dizer',
   },
   {
     id: 'A3.8', family: 'A3', name: 'Resolução de nó (NR)', severity: 'warn', input: 'geometry',
     mede: 'NR = min‖u−v‖ / max‖u−v‖ sobre centros de nós',
-    limiar: { chave: 'resolucaoDeNoQ1', descricao: `warn se NR < ${lim('resolucaoDeNoQ1')}; alvo ≥ ${lim('resolucaoDeNoMediana')}` },
+    limiar: { key: 'resolucaoDeNoQ1', descricao: `warn se NR < ${lim('resolucaoDeNoQ1')}; alvo ≥ ${lim('resolucaoDeNoMediana')}` },
     fonte: 'Mooney et al., GD 2025, eq. (9) + Tabela 2',
   },
   {
     id: 'A3.9', family: 'A3', name: 'Tamanho mínimo de fonte', severity: 'warn', input: 'style', calibravel: true,
     mede: 'tamanho de fonte declarado por classe de texto',
-    limiar: { chave: 'fonteMinimaRotuloDeAresta', descricao: `≥ ${lim('fonteMinimaRotuloDeAresta')} px em rótulo de aresta; ≥ ${lim('fonteMinimaNomeDeElemento')} px em nome de elemento` },
+    limiar: { key: 'fonteMinimaRotuloDeAresta', descricao: `≥ ${lim('fonteMinimaRotuloDeAresta')} px em rótulo de aresta; ≥ ${lim('fonteMinimaNomeDeElemento')} px em nome de elemento` },
     fonte: 'derivado — a rubrica é explícita: NÃO é regra WCAG (WCAG normatiza contraste, não tamanho)',
   },
 
@@ -271,7 +271,7 @@ const CHECAGENS = [
   {
     id: 'A4.1', family: 'A4', name: 'Contenção estrita', severity: 'fail', input: 'geometry',
     mede: 'todo filho cabe dentro do pai, com padding nos quatro lados',
-    limiar: { chave: 'paddingDeGrupo', descricao: `100%, padding ≥ ${lim('paddingDeGrupo')} px, tolerância 0` },
+    limiar: { key: 'paddingDeGrupo', descricao: `100%, padding ≥ ${lim('paddingDeGrupo')} px, tolerância 0` },
     fonte: 'Gestalt/região comum (Kobourov, Mchedlidze & Vonessen); Azure WAF ("Be accurate")',
   },
   {
@@ -298,7 +298,7 @@ const CHECAGENS = [
   {
     id: 'A4.5', family: 'A4', name: 'Padding de grupo uniforme', severity: 'warn', input: 'geometry',
     mede: 'desvio dos quatro paddings internos, e entre grupos do mesmo tipo',
-    limiar: { chave: 'desvioDePaddingMaximo', descricao: `σ ≤ ${lim('desvioDePaddingMaximo')} px intra-grupo` },
+    limiar: { key: 'desvioDePaddingMaximo', descricao: `σ ≤ ${lim('desvioDePaddingMaximo')} px intra-grupo` },
     fonte: 'Azure WAF ("Maintain consistency"); similaridade Gestalt',
   },
   {
@@ -310,7 +310,7 @@ const CHECAGENS = [
   {
     id: 'A4.7', family: 'A4', name: 'Razão de proximidade intra/inter grupo', severity: 'warn', input: 'geometry', calibravel: true,
     mede: 'ρ = distância média intra-grupo / distância média inter-grupo',
-    limiar: { chave: 'proximidadeMaxima', descricao: `ρ ≤ ${lim('proximidadeMaxima')}` },
+    limiar: { key: 'proximidadeMaxima', descricao: `ρ ≤ ${lim('proximidadeMaxima')}` },
     fonte: 'proximidade formalizada em Kobourov, Mchedlidze & Vonessen',
   },
 
@@ -318,25 +318,25 @@ const CHECAGENS = [
   {
     id: 'A5.1', family: 'A5', name: 'Cruzamentos de aresta (EC)', severity: 'fail', escalona: true, input: 'geometry',
     mede: 'EC = 1 − c/c_max, e a contagem absoluta de cruzamentos',
-    limiar: { chave: 'cruzamentosQ1', descricao: `alvo 0 cruzamentos; warn em ≥1; fail acima de ⌈|E|/10⌉` },
+    limiar: { key: 'cruzamentosQ1', descricao: `alvo 0 cruzamentos; warn em ≥1; fail acima de ⌈|E|/10⌉` },
     fonte: 'Purchase 1997 ("by far the most important aesthetic"); Mooney et al., GD 2025, eq. (3)',
   },
   {
     id: 'A5.2', family: 'A5', name: 'Ângulo de cruzamento (CA)', severity: 'fail', escalona: true, input: 'geometry',
     mede: 'CA normalizado e o menor ângulo absoluto entre arestas que se cruzam',
-    limiar: { chave: 'anguloDeCruzamentoMinimo', descricao: `alvo ≥ ${lim('anguloDeCruzamentoIdeal')}°; fail se < ${lim('anguloDeCruzamentoMinimo')}°` },
+    limiar: { key: 'anguloDeCruzamentoMinimo', descricao: `alvo ≥ ${lim('anguloDeCruzamentoIdeal')}°; fail se < ${lim('anguloDeCruzamentoMinimo')}°` },
     fonte: 'Huang, Eades, Hong & Lin (JVLC 2014); fórmula em Mooney et al., GD 2025, eq. (2)',
   },
   {
     id: 'A5.3', family: 'A5', name: 'Número de dobras por aresta', severity: 'fail', escalona: true, input: 'geometry', calibravel: true,
     mede: 'dobras(e) = |pontos(e)| − 2; máximo e média',
-    limiar: { chave: 'dobrasAviso', descricao: `alvo ≤ ${lim('dobrasAlvo')}; warn acima de ${lim('dobrasAviso')}; fail acima de ${lim('dobrasFalha')}` },
+    limiar: { key: 'dobrasAviso', descricao: `alvo ≤ ${lim('dobrasAlvo')}; warn acima de ${lim('dobrasAviso')}; fail acima de ${lim('dobrasFalha')}` },
     fonte: 'Purchase 1997; Gestalt/continuação (Kobourov et al.)',
   },
   {
     id: 'A5.4', family: 'A5', name: 'Ângulo de dobra', severity: 'fail', escalona: true, input: 'geometry', calibravel: false,
     mede: 'ângulo interno em cada vértice da polilinha',
-    limiar: { chave: 'anguloDeDobraAlvo', descricao: `≥ ${lim('anguloDeDobraAlvo')}°; fail abaixo de ${lim('anguloDeDobraFalha')}°` },
+    limiar: { key: 'anguloDeDobraAlvo', descricao: `≥ ${lim('anguloDeDobraAlvo')}°; fail abaixo de ${lim('anguloDeDobraFalha')}°` },
     fonte: 'Gestalt/continuação — "poucas dobras que não sejam bruscas"',
   },
   {
@@ -349,25 +349,25 @@ const CHECAGENS = [
   {
     id: 'A5.6', family: 'A5', name: 'Ortogonalidade de aresta (EO)', severity: 'warn', input: 'geometry',
     mede: 'desvio angular ponderado por comprimento até o eixo mais próximo',
-    limiar: { chave: 'ortogonalidadeAlvo', descricao: `se ortogonal: EO ≥ ${lim('ortogonalidadeAlvo')}; se reto: warn só se EO < ${lim('ortogonalidadeQ1')}` },
+    limiar: { key: 'ortogonalidadeAlvo', descricao: `se ortogonal: EO ≥ ${lim('ortogonalidadeAlvo')}; se reto: warn só se EO < ${lim('ortogonalidadeQ1')}` },
     fonte: 'Mooney et al., GD 2025, eqs. (5)–(6); Purchase 2002',
   },
   {
     id: 'A5.7', family: 'A5', name: 'Direção de fluxo consistente', severity: 'warn', input: 'geometry', calibravel: true,
     mede: 'fração de arestas que projetam positivo no eixo dominante',
-    limiar: { chave: 'fluxoConsistenteMinimo', descricao: `≥ ${lim('fluxoConsistenteMinimo')}` },
+    limiar: { key: 'fluxoConsistenteMinimo', descricao: `≥ ${lim('fluxoConsistenteMinimo')}` },
     fonte: 'Purchase 2002 (consistent flow direction); Kobourov et al.',
   },
   {
     id: 'A5.8', family: 'A5', name: 'Arestas paralelas separadas', severity: 'fail', input: 'geometry',
     mede: 'distância de Hausdorff entre polilinhas do mesmo par origem→destino; e comprimento não nulo',
-    limiar: { chave: 'separacaoDeArestasParalelas', descricao: `separação ≥ ${lim('separacaoDeArestasParalelas')} px` },
+    limiar: { key: 'separacaoDeArestasParalelas', descricao: `separação ≥ ${lim('separacaoDeArestasParalelas')} px` },
     fonte: 'consequência de A1.6 (cada aresta tem rótulo próprio e legível)',
   },
   {
     id: 'A5.9', family: 'A5', name: 'Uniformidade de comprimento de aresta (ELD)', severity: 'warn', input: 'geometry',
     mede: 'ELD = 1/(1 + desvio relativo médio ao comprimento ideal)',
-    limiar: { chave: 'uniformidadeDeComprimentoQ1', descricao: `warn se ELD < ${lim('uniformidadeDeComprimentoQ1')}` },
+    limiar: { key: 'uniformidadeDeComprimentoQ1', descricao: `warn se ELD < ${lim('uniformidadeDeComprimentoQ1')}` },
     fonte: 'Mooney et al., GD 2025, eq. (4); Purchase 2002',
     note: 'a rubrica pede o cálculo SEPARADO por classe de aresta — em diagrama com grupos aninhados, ' +
       'comprimento intra-grupo e inter-grupo variam por desenho, não por defeito.',
@@ -377,32 +377,32 @@ const CHECAGENS = [
   {
     id: 'A6.1', family: 'A6', name: 'Resolução angular (AR)', severity: 'fail', escalona: true, input: 'geometry',
     mede: 'AR normalizado, e o ângulo absoluto mínimo entre arestas incidentes ao mesmo nó',
-    limiar: { chave: 'resolucaoAngularQ1', descricao: `warn se AR < ${lim('resolucaoAngularQ1')}; fail se o ângulo absoluto < ${lim('anguloIncidenteMinimo')}°` },
+    limiar: { key: 'resolucaoAngularQ1', descricao: `warn se AR < ${lim('resolucaoAngularQ1')}; fail se o ângulo absoluto < ${lim('anguloIncidenteMinimo')}°` },
     fonte: 'Mooney et al., GD 2025, eq. (1); Purchase 2002',
   },
   {
     id: 'A6.2', family: 'A6', name: 'Uniformidade de nós (NU)', severity: 'warn', input: 'geometry',
     mede: 'distribuição dos nós numa grade sobre o bounding box',
-    limiar: { chave: 'uniformidadeDeNosQ1', descricao: `warn se NU < ${lim('uniformidadeDeNosQ1')}` },
+    limiar: { key: 'uniformidadeDeNosQ1', descricao: `warn se NU < ${lim('uniformidadeDeNosQ1')}` },
     fonte: 'Mooney et al., GD 2025, eq. (10)',
   },
   {
     id: 'A6.3', family: 'A6', name: 'Razão de aspecto (Asp)', severity: 'warn', input: 'geometry',
     mede: 'min(h,w)/max(h,w) do bounding box, e a diferença para a razão do canvas',
-    limiar: { chave: 'razaoDeAspectoQ1', descricao: `warn se Asp < ${lim('razaoDeAspectoQ1')} ou se difere do canvas em > ${lim('toleranciaDeRazaoDeAspecto') * 100}%` },
+    limiar: { key: 'razaoDeAspectoQ1', descricao: `warn se Asp < ${lim('razaoDeAspectoQ1')} ou se difere do canvas em > ${lim('toleranciaDeRazaoDeAspecto') * 100}%` },
     fonte: 'Mooney et al., GD 2025 (definição + percentis)',
   },
   {
     id: 'A6.4', family: 'A6', name: 'Alinhamento a grid', severity: 'warn', input: 'geometry', calibravel: true,
     mede: 'fração de nós que compartilham x ou y com pelo menos um outro nó',
-    limiar: { chave: 'alinhamentoMinimo', descricao: `≥ ${lim('alinhamentoMinimo') * 100}% dos nós, passo de ${lim('passoDaGrade')} px` },
+    limiar: { key: 'alinhamentoMinimo', descricao: `≥ ${lim('alinhamentoMinimo') * 100}% dos nós, passo de ${lim('passoDaGrade')} px` },
     fonte: 'graph aesthetics (alinhamento a grade); Gestalt/simetria via Kobourov et al.',
     note: 'é o substituto operacional da simetria — ver B1, que a deixa deliberadamente fora de (A).',
   },
   {
     id: 'A6.5', family: 'A6', name: 'Preservação de vizinhança (NP) / Stress (KSM)', severity: 'warn', input: 'geometry',
     mede: 'NP e KSM conforme Mooney et al., eqs. (7)–(8)',
-    limiar: { chave: 'preservacaoDeVizinhancaQ1', descricao: `warn se NP < ${lim('preservacaoDeVizinhancaQ1')} ou KSM < ${lim('stressQ1')}` },
+    limiar: { key: 'preservacaoDeVizinhancaQ1', descricao: `warn se NP < ${lim('preservacaoDeVizinhancaQ1')} ou KSM < ${lim('stressQ1')}` },
     fonte: 'Mooney et al., GD 2025, eqs. (7)–(8)',
     note: 'a própria rubrica avisa: em diagrama de arquitetura a posição é ditada pelos grupos (VPC/AZ), ' +
       'não pela distância de grafo. "Baixa prioridade; provavelmente ruído."',
@@ -412,13 +412,13 @@ const CHECAGENS = [
   {
     id: 'A7.1', family: 'A7', name: 'Contraste de texto', severity: 'fail', input: 'style',
     mede: 'razão de contraste entre a cor do texto e o FUNDO EFETIVO resolvido pela pilha de grupos',
-    limiar: { chave: 'contrasteTextoPequeno', descricao: `≥ ${lim('contrasteTextoPequeno')}:1; ≥ ${lim('contrasteTextoGrande')}:1 para texto grande` },
+    limiar: { key: 'contrasteTextoPequeno', descricao: `≥ ${lim('contrasteTextoPequeno')}:1; ≥ ${lim('contrasteTextoGrande')}:1 para texto grande` },
     fonte: 'WCAG 2.2 SC 1.4.3 (AA); fórmula em G18',
   },
   {
     id: 'A7.2', family: 'A7', name: 'Contraste não-textual', severity: 'fail', input: 'style',
     mede: 'contraste de borda de nó, borda de grupo, traço de aresta e ponta de seta contra o fundo efetivo',
-    limiar: { chave: 'contrasteNaoTextual', descricao: `≥ ${lim('contrasteNaoTextual')}:1` },
+    limiar: { key: 'contrasteNaoTextual', descricao: `≥ ${lim('contrasteNaoTextual')}:1` },
     fonte: 'WCAG 2.2 SC 1.4.11 — cobre "each line in a graph"',
   },
   {
@@ -430,7 +430,7 @@ const CHECAGENS = [
   {
     id: 'A7.4', family: 'A7', name: 'Distinguibilidade sob deficiência de cor', severity: 'warn', input: 'style', calibravel: true,
     mede: 'menor ΔE00 entre cores de significados distintos, sob protanopia, deuteranopia e tritanopia',
-    limiar: { chave: 'deltaE00Minimo', descricao: `ΔE00 ≥ ${lim('deltaE00Minimo')} nas três simulações` },
+    limiar: { key: 'deltaE00Minimo', descricao: `ΔE00 ≥ ${lim('deltaE00Minimo')} nas três simulações` },
     fonte: 'WCAG SC 1.4.1 é o requisito normativo; o teste de simulação é operacionalização de engenharia',
     note: 'A7.3 já é a rede de segurança normativa; A7.4 é diagnóstico complementar.',
   },
@@ -445,41 +445,41 @@ const CHECAGENS = [
   {
     id: 'A8.1', family: 'A8', name: 'Contagem de elementos de primeira classe', severity: 'fail', escalona: true, input: 'geometry',
     mede: 'número de nós, excluindo caixas de grupo',
-    limiar: { chave: 'elementosAlvo', descricao: `alvo ≤ ${lim('elementosAlvo')}; warn em 21–${lim('elementosFalha')}; fail acima de ${lim('elementosFalha')}` },
+    limiar: { key: 'elementosAlvo', descricao: `alvo ≤ ${lim('elementosAlvo')}; warn em 21–${lim('elementosFalha')}; fail acima de ${lim('elementosFalha')}` },
     fonte: 'Ghoniem/Fekete/Castagliola; Yoghourdjian et al.; Störrle; C4 FAQ',
     note: 'a rubrica é explícita quanto ao remédio: DECOMPOR, não encolher (Moody & Heymans, RE\'09).',
   },
   {
     id: 'A8.2', family: 'A8', name: 'Densidade de arestas', severity: 'warn', input: 'geometry',
     mede: 'd = |E|/C(|V|,2) e a densidade linear |E|/|V|',
-    limiar: { chave: 'densidadeMaxima', descricao: `warn se d > ${lim('densidadeMaxima')} E |V| > ${lim('elementosAlvo')}` },
+    limiar: { key: 'densidadeMaxima', descricao: `warn se d > ${lim('densidadeMaxima')} E |V| > ${lim('elementosAlvo')}` },
     fonte: 'Yoghourdjian et al. (78% dos estudos usam densidade <10%)',
   },
   {
     id: 'A8.3', family: 'A8', name: 'Arestas por nó (fan-out)', severity: 'warn', input: 'geometry', calibravel: true,
     mede: 'max(grau(v))',
-    limiar: { chave: 'fanOutMaximo', descricao: `warn se grau > ${lim('fanOutMaximo')}` },
+    limiar: { key: 'fanOutMaximo', descricao: `warn se grau > ${lim('fanOutMaximo')}` },
     fonte: 'derivado de A6.1 + Ware et al. 2002',
   },
   {
     id: 'A8.4', family: 'A8', name: 'Cobertura de tinta', severity: 'warn', input: 'render', calibravel: true,
     mede: 'fração de pixels não-fundo sobre a área do canvas',
-    limiar: { chave: 'coberturaDeTinta', descricao: `faixa [${lim('coberturaDeTinta').join(' ; ')}] como sinal, não reprovação` },
+    limiar: { key: 'coberturaDeTinta', descricao: `faixa [${lim('coberturaDeTinta').join(' ; ')}] como sinal, não reprovação` },
     fonte: 'Tufte (data-ink), explicitamente adaptado e enfraquecido pela própria rubrica',
     porqueRender: 'pixel não-fundo só existe depois de rasterizar. Não há aproximação honesta a partir do plano: ' +
       'somar áreas de caixa conta o vão dentro de um grupo como tinta, e um grupo grande e vazio ficaria "denso".',
   },
 ];
 
-const INDICE = new Map(CHECAGENS.map(c => [c.id, c]));
-const porId = id => INDICE.get(id);
+const INDEX = new Map(CHECKS.map(c => [c.id, c]));
+const byId = id => INDEX.get(id);
 
 /** As que o validador obrigatório cobre — tudo que não foi entregue ao render. */
-const DO_VALIDADOR = CHECAGENS.filter(c => c.input !== 'render');
+const FROM_VALIDATOR = CHECKS.filter(c => c.input !== 'render');
 /** As que o juiz oportunista cobre. A partição é exaustiva e sem sobreposição. */
-const DO_RENDER = CHECAGENS.filter(c => c.input === 'render');
+const FROM_RENDER = CHECKS.filter(c => c.input === 'render');
 
 module.exports = {
-  CHECAGENS, INDICE, LIMIARES, SEVERIDADES, INPUTS,
-  DO_VALIDADOR, DO_RENDER, porId, lim,
+  CHECKS, INDEX, THRESHOLDS, SEVERITIES, INPUTS,
+  FROM_VALIDATOR, FROM_RENDER, byId, lim,
 };

@@ -22,46 +22,46 @@
 const fs = require('fs');
 const path = require('path');
 
-const MOTOR_DIR = path.join(__dirname, '..', 'engine');
-const { contraEsquema } = require(path.join(MOTOR_DIR, 'validate.cjs'));
+const ENGINE_DIR = path.join(__dirname, '..', 'engine');
+const { againstSchema } = require(path.join(ENGINE_DIR, 'validate.cjs'));
 
-const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8'));
+const SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8'));
 
-const CONTEINERES_TECNICOS = new Set(['cloud', 'account', 'region', 'vpc', 'subnet', 'security-group', 'group']);
-const CONTEINERES_LOGICOS = new Set(['group']);
+const TECHNICAL_CONTAINERS = new Set(['cloud', 'account', 'region', 'vpc', 'subnet', 'security-group', 'group']);
+const LOGICAL_CONTAINERS = new Set(['group']);
 
-function referencias(m) {
+function references(m) {
   const erros = [];
-  const porId = new Map();
+  const byId = new Map();
   for (const n of m.nodes) {
-    if (porId.has(n.id)) erros.push(`no "${n.id}" declarado duas vezes`);
-    porId.set(n.id, n);
+    if (byId.has(n.id)) erros.push(`no "${n.id}" declarado duas vezes`);
+    byId.set(n.id, n);
   }
   for (const n of m.nodes) {
     if (n.inside === undefined) continue;
-    if (!porId.has(n.inside)) erros.push(`no "${n.id}": dentro="${n.inside}" nao existe`);
+    if (!byId.has(n.inside)) erros.push(`no "${n.id}": dentro="${n.inside}" nao existe`);
     if (n.inside === n.id) erros.push(`no "${n.id}": contido em si mesmo`);
   }
   // ciclo de contencao — a lista e plana (#11), entao o ciclo e possivel
   for (const n of m.nodes) {
     const visto = new Set([n.id]);
     let c = n.inside;
-    while (c !== undefined && porId.has(c)) {
+    while (c !== undefined && byId.has(c)) {
       if (visto.has(c)) { erros.push(`ciclo de contencao passando por "${n.id}"`); break; }
-      visto.add(c); c = porId.get(c).inside;
+      visto.add(c); c = byId.get(c).inside;
     }
   }
   for (const [i, a] of (m.edges || []).entries())
     for (const p of ['from', 'to'])
-      if (!porId.has(a[p])) erros.push(`aresta[${i}]: ${p}="${a[p]}" nao existe`);
+      if (!byId.has(a[p])) erros.push(`aresta[${i}]: ${p}="${a[p]}" nao existe`);
   for (const f of (m.bands || []))
-    for (const id of f.members) if (!porId.has(id)) erros.push(`faixa "${f.id}": membro "${id}" nao existe`);
+    for (const id of f.members) if (!byId.has(id)) erros.push(`faixa "${f.id}": membro "${id}" nao existe`);
   for (const [i, nt] of (m.notes || []).entries())
-    if (nt.about !== undefined && !porId.has(nt.about)) erros.push(`nota[${i}]: sobre="${nt.about}" nao existe`);
-  return { erros, porId };
+    if (nt.about !== undefined && !byId.has(nt.about)) erros.push(`nota[${i}]: sobre="${nt.about}" nao existe`);
+  return { erros, byId };
 }
 
-function facets(m, porId) {
+function facets(m, byId) {
   const erros = [], avisos = [];
   const camadaDe = el => el.layer || 'both';
 
@@ -96,15 +96,15 @@ function facets(m, porId) {
     // folha sobre um no com filhos produziria um model@1 em que a folha e pai
     // de alguem — e o motor desenharia o filho dentro de um icone.
     if (temFilho.has(n.id)) {
-      if (n.technical && !CONTEINERES_TECNICOS.has(n.technical.kind))
+      if (n.technical && !TECHNICAL_CONTAINERS.has(n.technical.kind))
         erros.push(`no "${n.id}": contem outros nos, mas o casaco tecnico e "${n.technical.kind}", que e folha.`);
-      if (n.logical && !CONTEINERES_LOGICOS.has(n.logical.kind)) {
+      if (n.logical && !LOGICAL_CONTAINERS.has(n.logical.kind)) {
         // So vale se algum descendente sobrevive na vista logica — senao o
         // colapso passa por cima dele e ninguem fica dentro de nada.
         const descendentesLogicos = m.nodes.some(o => {
           if (camadaDe(o) === 'technical' || o.id === n.id) return false;
           let c = o.inside;
-          while (c !== undefined && porId.has(c)) { if (c === n.id) return true; c = porId.get(c).inside; }
+          while (c !== undefined && byId.has(c)) { if (c === n.id) return true; c = byId.get(c).inside; }
           return false;
         });
         if (descendentesLogicos)
@@ -118,7 +118,7 @@ function facets(m, porId) {
     if (m.stage === 'logical' && camadaDe(a) === 'technical')
       erros.push(`aresta[${i}]: camada "tecnica" num modelo no estagio logico.`);
     if (camadaDe(a) === 'both') {
-      const pontas = [a.from, a.to].map(id => porId.get(id)).filter(Boolean);
+      const pontas = [a.from, a.to].map(id => byId.get(id)).filter(Boolean);
       for (const p of pontas)
         if (camadaDe(p) === 'technical' && !avisos.some(x => x.includes(`"${p.id}"`)))
           avisos.push(`aresta[${i}]: passa por "${p.id}", que so existe na vista tecnica — ` +
@@ -210,19 +210,19 @@ function dossier(m) {
   return { erros, avisos };
 }
 
-function validar(modelo) {
-  const deForma = contraEsquema(modelo, ESQUEMA, ESQUEMA);
+function validate(model) {
+  const deForma = againstSchema(model, SCHEMA, SCHEMA);
   if (deForma.length) return { ok: false, fase: 'schema', erros: deForma, avisos: [] };
 
-  const { erros: deRef, porId } = referencias(modelo);
-  if (deRef.length) return { ok: false, fase: 'referencias', erros: deRef, avisos: [] };
+  const { erros: deRef, byId } = references(model);
+  if (deRef.length) return { ok: false, fase: 'references', erros: deRef, avisos: [] };
 
-  const c = facets(modelo, porId);
-  const d = dossier(modelo);
+  const c = facets(model, byId);
+  const d = dossier(model);
   const erros = [...c.erros, ...d.erros];
   const avisos = [...c.avisos, ...d.avisos];
   if (erros.length) return { ok: false, fase: 'session', erros, avisos };
-  return { ok: true, fase: null, erros: [], avisos, porId };
+  return { ok: true, fase: null, erros: [], avisos, byId };
 }
 
-module.exports = { validar, ESQUEMA };
+module.exports = { validate, SCHEMA };

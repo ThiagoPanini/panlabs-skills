@@ -27,8 +27,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const { validarGeometria, formatar } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
+const ROOT = path.join(__dirname, '..');
+const { validateGeometry, format } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
 
 async function main() {
   const args = process.argv.slice(2);
@@ -40,16 +40,16 @@ async function main() {
   const nomeTema = iTema >= 0 ? args[iTema + 1] : 'light';
   let entradas = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--theme');
 
-  if (examples) entradas = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).map(f => path.join(RAIZ, 'models', f));
+  if (examples) entradas = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).map(f => path.join(ROOT, 'models', f));
   if (!entradas.length) {
     console.error('uso: node check-geometry.cjs <modelo.json> [...] | --examples  [--all] [--json] [--strict] [--theme <nome>]');
     process.exit(2);
   }
 
-  let gerar;
-  try { ({ gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'))); }
+  let generate;
+  try { ({ generate } = require(path.join(ROOT, 'engine', 'generate.cjs'))); }
   catch (erro) {
-    console.error(`não consegui carregar o motor em ${RAIZ}: ${erro.message}`);
+    console.error(`não consegui carregar o motor em ${ROOT}: ${erro.message}`);
     process.exit(2);
   }
 
@@ -60,33 +60,33 @@ async function main() {
     const name = path.basename(input, '.json');
     let r;
     try {
-      r = await gerar(JSON.parse(fs.readFileSync(input, 'utf8')), { tema: nomeTema });
+      r = await generate(JSON.parse(fs.readFileSync(input, 'utf8')), { tema: nomeTema });
     } catch (erro) {
       console.error(`\n✗ ${name}: o motor não gerou — ${erro.message}`);
-      for (const linha of erro.erros || []) console.error(`    · ${linha}`);
+      for (const row of erro.erros || []) console.error(`    · ${row}`);
       ruim++;
       continue;
     }
 
-    const laudo = validarGeometria(r.plano);
-    const reprovado = laudo.falhas.length > 0 || (strict && laudo.avisos.length > 0);
-    if (reprovado || laudo.cobertura.naoRodaram.length) ruim++;
+    const report = validateGeometry(r.layoutPlan);
+    const failed = report.falhas.length > 0 || (strict && report.avisos.length > 0);
+    if (failed || report.cobertura.naoRodaram.length) ruim++;
 
     if (json) {
       laudos.push({
-        diagrama: name, caminho: r.caminho, ok: laudo.ok, resumo: laudo.resumo,
-        cobertura: laudo.cobertura,
-        checagens: [...laudo.resultados, ...laudo.extras].map(x => ({
+        diagrama: name, caminho: r.caminho, ok: report.ok, resumo: report.resumo,
+        cobertura: report.cobertura,
+        checagens: [...report.resultados, ...report.extras].map(x => ({
           id: x.id, name: x.name, state: x.state, semantica: x.semantica,
-          mensagem: x.mensagem, medida: x.medida,
+          mensagem: x.mensagem, measured: x.measured,
           occurrences: x.occurrences.map(o => o.o_que),
         })),
       });
       continue;
     }
 
-    console.log(`\n${'='.repeat(72)}\n${name}  (caminho "${r.caminho}", ${r.plano.celulas.length} células)\n${'='.repeat(72)}`);
-    console.log(formatar(laudo, { all }));
+    console.log(`\n${'='.repeat(72)}\n${name}  (caminho "${r.caminho}", ${r.layoutPlan.celulas.length} células)\n${'='.repeat(72)}`);
+    console.log(format(report, { all }));
   }
 
   if (json) console.log(JSON.stringify(laudos, null, 2));

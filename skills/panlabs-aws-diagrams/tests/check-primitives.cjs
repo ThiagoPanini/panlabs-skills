@@ -31,20 +31,20 @@ function ok(name, condicao, detail) {
   casos.push(name);
   if (!condicao) falhas.push(`${name}${detail ? ` — ${detail}` : ''}`);
 }
-function perto(name, obtido, esperado, tol) {
-  const d = Math.abs(obtido - esperado);
-  ok(name, d <= tol, `esperava ${esperado} (±${tol}), veio ${Number(obtido.toFixed(4))}`);
+function perto(name, got, expected, tol) {
+  const d = Math.abs(got - expected);
+  ok(name, d <= tol, `esperava ${expected} (±${tol}), veio ${Number(got.toFixed(4))}`);
 }
 
 // ------------------------------------------------------------------ geometria
 
 const r = (x, y, w, h) => ({ x, y, w, h });
 
-perto('área de interseção de retângulos que se cruzam', g.areaDaIntersecao(r(0, 0, 10, 10), r(5, 5, 10, 10)), 25, 1e-9);
-perto('área de interseção de retângulos disjuntos', g.areaDaIntersecao(r(0, 0, 10, 10), r(20, 20, 5, 5)), 0, 1e-9);
+perto('área de interseção de retângulos que se cruzam', g.intersectionArea(r(0, 0, 10, 10), r(5, 5, 10, 10)), 25, 1e-9);
+perto('área de interseção de retângulos disjuntos', g.intersectionArea(r(0, 0, 10, 10), r(20, 20, 5, 5)), 0, 1e-9);
 // Encostar não é sobrepor: dois grupos irmãos que compartilham a borda têm
 // interseção de área zero, e A4.3 não pode acusar isso como sobreposição.
-perto('área de interseção de retângulos que só se encostam', g.areaDaIntersecao(r(0, 0, 10, 10), r(10, 0, 10, 10)), 0, 1e-9);
+perto('área de interseção de retângulos que só se encostam', g.intersectionArea(r(0, 0, 10, 10), r(10, 0, 10, 10)), 0, 1e-9);
 
 ok('contém: filho dentro do pai com folga', g.contem(r(0, 0, 100, 100), r(20, 20, 10, 10)));
 ok('contém: filho estourando a borda', !g.contem(r(0, 0, 100, 100), r(95, 20, 10, 10)));
@@ -54,24 +54,24 @@ ok('folga entre retângulos sobrepostos é negativa', g.gap(r(0, 0, 10, 10), r(5
 perto('folga entre retângulos que se encostam é zero', g.gap(r(0, 0, 10, 10), r(10, 0, 10, 10)), 0, 1e-9);
 
 // segmento × retângulo — o coração de A3.5 e A5.5
-ok('segmento atravessando o retângulo', g.segmentoCruzaRetangulo({ x: -5, y: 5 }, { x: 15, y: 5 }, r(0, 0, 10, 10)));
-ok('segmento passando ao largo', !g.segmentoCruzaRetangulo({ x: -5, y: 50 }, { x: 15, y: 50 }, r(0, 0, 10, 10)));
-ok('segmento inteiramente dentro do retângulo', g.segmentoCruzaRetangulo({ x: 2, y: 2 }, { x: 8, y: 8 }, r(0, 0, 10, 10)));
+ok('segmento atravessando o retângulo', g.segmentCrossesRect({ x: -5, y: 5 }, { x: 15, y: 5 }, r(0, 0, 10, 10)));
+ok('segmento passando ao largo', !g.segmentCrossesRect({ x: -5, y: 50 }, { x: 15, y: 50 }, r(0, 0, 10, 10)));
+ok('segmento inteiramente dentro do retângulo', g.segmentCrossesRect({ x: 2, y: 2 }, { x: 8, y: 8 }, r(0, 0, 10, 10)));
 // A aresta que ENCOSTA na borda do próprio dono não pode contar como travessia,
 // senão toda aresta bem ancorada (A3.6) viraria uma violação de A3.5.
-ok('segmento tangente à borda não é travessia', !g.segmentoCruzaRetangulo({ x: 10, y: -5 }, { x: 10, y: 15 }, r(0, 0, 10, 10)));
+ok('segmento tangente à borda não é travessia', !g.segmentCrossesRect({ x: 10, y: -5 }, { x: 10, y: 15 }, r(0, 0, 10, 10)));
 
-const x1 = g.cruzamento({ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 10, y: 0 });
+const x1 = g.crossing({ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 10, y: 0 });
 ok('cruzamento em X é detectado', !!x1);
 if (x1) {
   perto('ponto de cruzamento em X', x1.x, 5, 1e-9);
   perto('ângulo de cruzamento em X', g.anguloEntre({ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 10, y: 0 }), 90, 1e-9);
 }
-ok('segmentos paralelos não cruzam', !g.cruzamento({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 5 }, { x: 10, y: 5 }));
+ok('segmentos paralelos não cruzam', !g.crossing({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 5 }, { x: 10, y: 5 }));
 // Duas arestas que saem do mesmo nó compartilham um ponto. Isso é incidência,
 // não cruzamento — e contar como cruzamento estouraria A5.1 em todo diagrama
 // com um nó de grau 2. É por isso que c_max desconta C(deg(v),2).
-ok('encontro num extremo comum não é cruzamento', !g.cruzamento({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 10 }));
+ok('encontro num extremo comum não é cruzamento', !g.crossing({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 10 }));
 
 perto('ângulo raso entre segmentos', g.anguloEntre({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 1 }), 5.7106, 1e-3);
 perto('ângulo interno de dobra em L é 90°', g.anguloInterno({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }), 90, 1e-9);
@@ -124,8 +124,8 @@ const SHARMA = [
   [[22.7233, 20.0904, -46.6940], [23.0331, 14.9730, -42.5619], 2.0373],
   [[2.0776, 0.0795, -1.1350], [0.9033, -0.0636, -0.5514], 0.9082],
 ];
-for (const [lab1, lab2, esperado] of SHARMA)
-  perto(`ΔE00 de Sharma (${lab1.join(',')}) vs (${lab2.join(',')})`, c.deltaE00(lab1, lab2), esperado, 1e-4);
+for (const [lab1, lab2, expected] of SHARMA)
+  perto(`ΔE00 de Sharma (${lab1.join(',')}) vs (${lab2.join(',')})`, c.deltaE00(lab1, lab2), expected, 1e-4);
 
 // sRGB → Lab, ida e volta pelo que se pode conferir de cabeça.
 const labBranco = c.paraLab('#FFFFFF');
@@ -137,13 +137,13 @@ perto('L* do preto', c.paraLab('#000000')[0], 0, 1e-3);
 // Simulação de deficiência de cor: o cinza é o ponto fixo das três matrizes —
 // se uma simulação mexe num cinza, ela está errada.
 for (const kind of ['protanopia', 'deuteranopia', 'tritanopia']) {
-  const simulado = c.simular('#808080', kind);
-  ok(`${kind} não mexe no cinza`, c.deltaE00(c.paraLab(simulado), c.paraLab('#808080')) < 1.5, `virou ${simulado}`);
+  const simulated = c.simulate('#808080', kind);
+  ok(`${kind} não mexe no cinza`, c.deltaE00(c.paraLab(simulated), c.paraLab('#808080')) < 1.5, `virou ${simulated}`);
 }
 // E o que ela tem de fazer: vermelho e verde colapsam sob protanopia. Se a
 // distância entre eles não cair muito, a matriz está inerte e A7.4 nunca acusa.
 const dNormal = c.deltaE00(c.paraLab('#D62728'), c.paraLab('#2CA02C'));
-const dProtan = c.deltaE00(c.paraLab(c.simular('#D62728', 'protanopia')), c.paraLab(c.simular('#2CA02C', 'protanopia')));
+const dProtan = c.deltaE00(c.paraLab(c.simulate('#D62728', 'protanopia')), c.paraLab(c.simulate('#2CA02C', 'protanopia')));
 ok('vermelho e verde colapsam sob protanopia', dProtan < dNormal / 2,
   `normal ΔE00=${dNormal.toFixed(1)}, protanopia ΔE00=${dProtan.toFixed(1)}`);
 

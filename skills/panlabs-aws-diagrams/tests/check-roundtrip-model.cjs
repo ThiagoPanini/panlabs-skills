@@ -22,50 +22,50 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const RAIZ = path.join(__dirname, '..');
-const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
-const DRAWIO = binario(process.argv[2]);
+const ROOT = path.join(__dirname, '..');
+const { binary } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
+const DRAWIO = binary(process.argv[2]);
 const TMP = process.env.TMPDIR || '/tmp';
 
-const DESESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'" };
-function desescapar(s) {
+const UNESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'" };
+function unescape(s) {
   return s.replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
-    .replace(/&(amp|lt|gt|quot|#39|apos);/g, m => DESESC[m]);
+    .replace(/&(amp|lt|gt|quot|#39|apos);/g, m => UNESC[m]);
 }
 
 /** Extrai o modelo embutido no atributo `panlabsModelo` do `<object>`. */
-function extrair(xml) {
+function extract(xml) {
   const m = /panlabsModelo="([^"]*)"/.exec(xml);
   if (!m) return null;
-  return JSON.parse(desescapar(m[1]));
+  return JSON.parse(unescape(m[1]));
 }
 
 const iguais = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 let falhas = 0;
-const arquivos = fs.readdirSync(path.join(RAIZ, 'output')).filter(f => f.endsWith('.drawio'));
+const arquivos = fs.readdirSync(path.join(ROOT, 'output')).filter(f => f.endsWith('.drawio'));
 if (!arquivos.length) { console.log('  (nenhum .drawio em output/ — rode o motor antes)'); process.exit(1); }
 
 const temApp = fs.existsSync(DRAWIO);
 if (!temApp) console.log(`  draw.io headless ausente em ${DRAWIO} — só a camada estática.\n`);
 
 for (const arq of arquivos) {
-  const caminho = path.join(RAIZ, 'output', arq);
+  const caminho = path.join(ROOT, 'output', arq);
   const xml = fs.readFileSync(caminho, 'utf8');
   const name = arq.replace(/\.drawio$/, '');
   // variantes de estilo (fluxo tracejado/animado) saem do mesmo modelo com outro
   // nome de arquivo; sem modelo correspondente não há o que comparar
-  const caminhoModelo = path.join(RAIZ, 'models', name + '.json');
+  const caminhoModelo = path.join(ROOT, 'models', name + '.json');
   if (!fs.existsSync(caminhoModelo)) { console.log(`  ${arq}\n    (variante sem modelo próprio — pulada)`); continue; }
   const fonte = JSON.parse(fs.readFileSync(caminhoModelo, 'utf8'));
 
   // 1. estática: o que foi escrito no arquivo é o modelo de origem
-  const lido = extrair(xml);
-  const ok1 = lido && iguais(lido, fonte);
+  const readBack = extract(xml);
+  const ok1 = readBack && iguais(readBack, fonte);
   console.log(`  ${arq}`);
   console.log(`    extraído do arquivo          ${ok1 ? '✓' : '✗'}`);
-  if (!ok1) { falhas++; if (lido) console.log(`        difere do modelo de origem`); else console.log('        atributo panlabsModelo ausente'); }
+  if (!ok1) { falhas++; if (readBack) console.log(`        difere do modelo de origem`); else console.log('        atributo panlabsModelo ausente'); }
 
   // 2. o app decodifica e re-serializa pelo codec dele
   if (!temApp) continue;
@@ -76,7 +76,7 @@ for (const arq of arquivos) {
   } catch (e) { console.log(`    round-trip pelo app          ✗ (falhou ao exportar)`); falhas++; continue; }
 
   const depois = fs.readFileSync(output, 'utf8');
-  const lido2 = extrair(depois);
+  const lido2 = extract(depois);
   const ok2 = lido2 && iguais(lido2, fonte);
   console.log(`    round-trip pelo app          ${ok2 ? '✓' : '✗'}  (${depois.length} bytes, host=${/host="([^"]*)"/.exec(depois)?.[1]})`);
   if (!ok2) { falhas++; console.log(lido2 ? '        o app alterou o modelo embutido' : '        o app comeu o atributo'); }

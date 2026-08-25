@@ -15,7 +15,7 @@
 
 const path = require('path');
 
-const CAMINHO = path.join(__dirname, '..', '..', 'catalog', 'aws-shapes.cjs');
+const PATH = path.join(__dirname, '..', '..', 'catalog', 'aws-shapes.cjs');
 
 let cache;
 
@@ -23,7 +23,7 @@ let cache;
 function catalog() {
   if (cache !== undefined) return cache;
   try {
-    const cat = require(CAMINHO).carregar();
+    const cat = require(PATH).load();
     const cru = cat.catalog || {};
     const titulos = [];
     const ids = new Set();
@@ -51,7 +51,7 @@ function catalog() {
 }
 
 /** O `fillColor` que o catálogo prescreve para um estilo, se houver. */
-const preenchimentoDe = style => (String(style || '').match(/fillColor=(#[0-9A-Fa-f]{3,6})/) || [])[1] || null;
+const fillOf = style => (String(style || '').match(/fillColor=(#[0-9A-Fa-f]{3,6})/) || [])[1] || null;
 
 /**
  * O id de stencil de verdade.
@@ -62,13 +62,13 @@ const preenchimentoDe = style => (String(style || '').match(/fillColor=(#[0-9A-F
  * catálogo por não achar "resourceIcon" na lista de stencils, que é o oposto
  * do que a checagem quer dizer.
  */
-function stencilDe(style) {
+function stencilOf(style) {
   const s = String(style || '');
-  for (const chave of ['resIcon', 'grIcon', 'shape']) {
-    const m = s.match(new RegExp(`(?:^|;)${chave}=mxgraph\\.aws4\\.([A-Za-z0-9_]+)`));
+  for (const key of ['resIcon', 'grIcon', 'shape']) {
+    const m = s.match(new RegExp(`(?:^|;)${key}=mxgraph\\.aws4\\.([A-Za-z0-9_]+)`));
     if (m && m[1] !== 'resourceIcon') return m[1];
   }
   return null;
 }
 
-module.exports = { catalog, preenchimentoDe, stencilDe, CAMINHO };
+module.exports = { catalog, fillOf, stencilOf, PATH };

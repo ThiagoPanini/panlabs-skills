@@ -31,12 +31,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const { validar } = require(path.join(RAIZ, 'session', 'validate.cjs'));
-const { aprovar, check } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
-const { desenhar } = require(path.join(RAIZ, 'session', 'draw.cjs'));
+const ROOT = path.join(__dirname, '..');
+const { validate } = require(path.join(ROOT, 'session', 'validate.cjs'));
+const { approve, check } = require(path.join(ROOT, 'session', 'agreement.cjs'));
+const { draw } = require(path.join(ROOT, 'session', 'draw.cjs'));
 
-const AJUDA = `
+const HELP = `
   node tools/approve.cjs <sessao-logica.json> [opcoes]
 
     --by <quem>          quem aprovou            (default: "usuario")
@@ -68,8 +68,8 @@ function parse(args) {
 // Sem --candidate o agente teria de repetir uma informacao que o proprio dossie
 // ja carrega. A sabatina marca a escolhida com `estado: "escolhida"` no passo 3;
 // ler dali e o unico jeito de o comando nao pedir de volta o que ele recebeu.
-function candidataDoDossie(sessao) {
-  const cs = (sessao.dossier && sessao.dossier.candidates) || [];
+function candidataDoDossie(session) {
+  const cs = (session.dossier && session.dossier.candidates) || [];
   const chosen = cs.find(c => c.state === 'chosen');
   if (chosen) return chosen.id;
   if (cs.length === 1) return cs[0].id;
@@ -82,29 +82,29 @@ function hoje() {
 
 async function main() {
   const { opts, soltos } = parse(process.argv.slice(2));
-  if (opts.help || opts.h) { console.log(AJUDA); return; }
+  if (opts.help || opts.h) { console.log(HELP); return; }
 
-  const input = soltos[0] || path.join(RAIZ, 'models', 'session', 'retail-logical.json');
+  const input = soltos[0] || path.join(ROOT, 'models', 'session', 'retail-logical.json');
 
   if (!fs.existsSync(input)) {
     console.error(`\n  ✗ nao achei ${input}`);
-    console.error(AJUDA);
+    console.error(HELP);
     process.exit(1);
   }
 
-  const sessao = JSON.parse(fs.readFileSync(input, 'utf8'));
-  console.log(`\n  APROVAR · ${sessao.title}\n`);
+  const session = JSON.parse(fs.readFileSync(input, 'utf8'));
+  console.log(`\n  APROVAR · ${session.title}\n`);
 
-  const v = validar(sessao);
+  const v = validate(session);
   for (const a of v.avisos) console.log(`  ⚠ ${a}`);
   if (!v.ok) {
     console.error(`\n  ✗ modelo invalido (${v.fase})`);
     for (const e of v.erros) console.error(`      · ${e}`);
     process.exit(1);
   }
-  console.log(`  validar     ok · estagio=${sessao.stage} · ${sessao.nodes.length} nos · ${sessao.edges.length} arestas`);
+  console.log(`  validar     ok · estagio=${session.stage} · ${session.nodes.length} nos · ${session.edges.length} arestas`);
 
-  const candidate = opts.candidate || candidataDoDossie(sessao);
+  const candidate = opts.candidate || candidataDoDossie(session);
   if (!candidate) {
     console.error('\n  ✗ nao sei qual candidata foi aprovada.');
     console.error('    Nenhuma tem `estado: "escolhida"` no dossie e ha mais de uma.');
@@ -114,25 +114,25 @@ async function main() {
 
   // A aprovacao nao muda um no nem uma aresta — o que muda e o dossie ganhando
   // o RECORTE da projecao logica. `conferir()` reprojeta e compara depois.
-  const aprovado = aprovar(sessao, {
+  const approved = approve(session, {
     at: opts.at || hoje(),
     by: opts.by || 'usuario',
     candidate,
   });
-  const ac = aprovado.dossier.agreement;
+  const ac = approved.dossier.agreement;
   console.log(`  aprovar     candidata="${candidate}" por="${ac.by}" em=${ac.at}`);
   console.log(`              impressao ${ac.fingerprint.slice(0, 23)}…  ` +
     `(${ac.snapshot.nodes.length} capacidades, ${ac.snapshot.edges.length} fluxos)`);
 
-  const d = check(aprovado);
+  const d = check(approved);
   console.log(`  conferir    ${d.ok ? '✓ o acordo confere' : '✗ ' + d.motivo}`);
   if (!d.ok) { for (const x of d.diferencas) console.error(`      · ${x.text}`); process.exit(2); }
 
-  const r = await desenhar(aprovado, 'logical');
+  const r = await draw(approved, 'logical');
   for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  console.log(`  desenhar    caminho="${r.caminho}" · ${r.modelo.nodes.length} nos projetados`);
+  console.log(`  desenhar    caminho="${r.caminho}" · ${r.model.nodes.length} nos projetados`);
 
-  const output = opts.output || path.join(RAIZ, 'output', `${sessao.id}.drawio`);
+  const output = opts.output || path.join(ROOT, 'output', `${session.id}.drawio`);
   fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
   fs.writeFileSync(output, r.xml);
   console.log(`\n  → ${path.relative(process.cwd(), output)}  (${r.xml.length} bytes, 1 pagina)`);

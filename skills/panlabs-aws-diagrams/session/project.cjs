@@ -55,7 +55,7 @@ const VISTAS = ['logical', 'technical'];
  * chegar ao model@1 projetado, se esta lista esquecesse dele. Exportada por
  * isso — a checagem le a lista de verdade, nao uma copia dela.
  */
-const CAMPOS_TECNICOS = ['service', 'az', 'access', 'cidr', 'account', 'note',
+const TECHNICAL_FIELDS = ['service', 'az', 'access', 'cidr', 'account', 'note',
                          'qualifier', 'ou', 'enables', 'layer'];
 
 /** O mesmo, do lado logico. `nota` ja vinha; `qualificador` entrou no #29. */
@@ -69,52 +69,52 @@ const existeNa = (el, view) =>
  * @param {'logica'|'tecnica'} vista
  * @returns {{modelo: object, trilha: object}}
  */
-function projetar(sessao, view) {
+function project(session, view) {
   if (!VISTAS.includes(view)) throw new Error(`vista "${view}" — esperado logica ou tecnica`);
-  if (view === 'technical' && sessao.stage !== 'technical')
+  if (view === 'technical' && session.stage !== 'technical')
     throw new Error('modelo no estagio "logica" nao emite vista tecnica: nenhum no tem casaco tecnico ainda');
 
-  const porId = new Map(sessao.nodes.map(n => [n.id, n]));
+  const byId = new Map(session.nodes.map(n => [n.id, n]));
   const trilha = { colapsados: [], contraidas: [], descartados: [] };
 
   // ------------------------------------------------------- 1. quem sobrevive
   const vive = new Set();
-  for (const n of sessao.nodes) {
+  for (const n of session.nodes) {
     if (!existeNa(n, view)) { trilha.descartados.push({ o: 'no', id: n.id, because: 'so existe na vista tecnica' }); continue; }
     vive.add(n.id);
   }
 
   // ------------------------------------------------- 2. contencao colapsada
   /** Sobe por `dentro` ate achar um ancestral que exista nesta vista. */
-  function paiNaVista(no) {
+  function parentInView(no) {
     let atual = no.inside, jumps = 0;
     while (atual !== undefined) {
-      if (vive.has(atual)) return { pai: atual, jumps };
-      const acima = porId.get(atual);
-      if (!acima) return { pai: undefined, jumps };   // referencia quebrada — o validador reclama antes
+      if (vive.has(atual)) return { parent: atual, jumps };
+      const acima = byId.get(atual);
+      if (!acima) return { parent: undefined, jumps };   // referencia quebrada — o validador reclama antes
       atual = acima.inside; jumps++;
     }
-    return { pai: undefined, jumps };
+    return { parent: undefined, jumps };
   }
 
   const nodes = [];
-  for (const n of sessao.nodes) {
+  for (const n of session.nodes) {
     if (!vive.has(n.id)) continue;
     const facet = view === 'logical' ? n.logical : n.technical;
     if (!facet) throw new Error(`no "${n.id}" sem casaco "${view}" — o validador de sessao deveria ter pego isto`);
 
-    const { pai, jumps } = paiNaVista(n);
-    if (jumps > 0) trilha.colapsados.push({ id: n.id, from: n.inside, to: pai, jumps });
+    const { parent, jumps } = parentInView(n);
+    if (jumps > 0) trilha.colapsados.push({ id: n.id, from: n.inside, to: parent, jumps });
 
     const output = { id: n.id, kind: facet.kind };
     const label = facet.label !== undefined ? facet.label : n.label;
     if (label !== undefined) output.label = label;
-    if (pai !== undefined) output.inside = pai;
+    if (parent !== undefined) output.inside = parent;
     // As chaves aqui NAO sao decoracao: sem elas o `else` gruda no `if` de
     // dentro do `for` e a projecao LOGICA nunca copia `nota` — o casaco logico
     // declara o campo, o esquema o documenta, e ele some sem erro nenhum.
     if (view === 'technical') {
-      for (const c of CAMPOS_TECNICOS) if (facet[c] !== undefined) output[c] = facet[c];
+      for (const c of TECHNICAL_FIELDS) if (facet[c] !== undefined) output[c] = facet[c];
     } else {
       for (const c of CAMPOS_LOGICOS) if (facet[c] !== undefined) output[c] = facet[c];
     }
@@ -122,13 +122,13 @@ function projetar(sessao, view) {
   }
 
   // ---------------------------------------------------- 3. arestas
-  const arestasDaVista = (sessao.edges || []).filter(a => existeNa(a, view));
-  for (const a of (sessao.edges || []))
+  const viewEdges = (session.edges || []).filter(a => existeNa(a, view));
+  for (const a of (session.edges || []))
     if (!existeNa(a, view))
       trilha.descartados.push({ o: 'edge', id: a.id || `${a.from}->${a.to}`, because: 'so existe na vista tecnica' });
 
   const saindoDe = new Map();
-  for (const a of arestasDaVista) {
+  for (const a of viewEdges) {
     if (!saindoDe.has(a.from)) saindoDe.set(a.from, []);
     saindoDe.get(a.from).push(a);
   }
@@ -151,8 +151,8 @@ function projetar(sessao, view) {
   }
 
   const edges = [];
-  const jaVistas = new Set();
-  for (const a of arestasDaVista) {
+  const alreadySeenSet = new Set();
+  for (const a of viewEdges) {
     if (!vive.has(a.from)) continue;   // caminho que comeca em infraestrutura nao tem leitura logica
 
     // Os alvos tem de estar todos conhecidos ANTES de emitir, porque o id de
@@ -171,9 +171,9 @@ function projetar(sessao, view) {
       // so, e as duas pontas da comparacao do acordo perderiam a mesma, deixando
       // a checagem cega para a perda. `vistos` continua deduplicando o leque de
       // UMA aresta, que e o caso que a contracao realmente cria.
-      const chave = `${a.id || `${a.from}>${a.to}`}#${target.id}`;
-      if (jaVistas.has(chave)) continue;
-      jaVistas.add(chave); vistos.add(target.id);
+      const key = `${a.id || `${a.from}>${a.to}`}#${target.id}`;
+      if (alreadySeenSet.has(key)) continue;
+      alreadySeenSet.add(key); vistos.add(target.id);
       alvos.push(target);
     }
 
@@ -201,11 +201,11 @@ function projetar(sessao, view) {
   // ---------------------------------------------------- 4. faixas e notas
   // Faixa e conceito de topologia (#19) — a vista logica nao tem o que cruzar.
   const bands = view === 'technical'
-    ? (sessao.bands || []).filter(f => f.members.every(m => vive.has(m)))
+    ? (session.bands || []).filter(f => f.members.every(m => vive.has(m)))
     : [];
 
   const notes = [];
-  for (const nt of (sessao.notes || [])) {
+  for (const nt of (session.notes || [])) {
     if (!existeNa(nt, view)) { trilha.descartados.push({ o: 'note', id: nt.id || nt.text.slice(0, 24), because: 'so existe na vista tecnica' }); continue; }
     if (nt.about !== undefined && !vive.has(nt.about)) {
       // Nota presa a um no que sumiu na projecao. Reancorar no ancestral seria
@@ -220,21 +220,21 @@ function projetar(sessao, view) {
     notes.push(resto);
   }
 
-  const ap = (sessao.vistas && sessao.vistas[view]) || {};
-  const modelo = {
+  const ap = (session.vistas && session.vistas[view]) || {};
+  const model = {
     schema: 'panlabs-aws-diagrams/model@1',
-    id: `${sessao.id}-${view}`,
-    title: ap.title || sessao.title,
+    id: `${session.id}-${view}`,
+    title: ap.title || session.title,
     view,
     nodes, edges,
   };
-  const sub = ap.subtitle !== undefined ? ap.subtitle : sessao.subtitle;
-  if (sub) modelo.subtitle = sub;
-  if (ap.genre) modelo.genre = ap.genre;
-  if (bands.length) modelo.bands = bands;
-  if (notes.length) modelo.notes = notes;
+  const sub = ap.subtitle !== undefined ? ap.subtitle : session.subtitle;
+  if (sub) model.subtitle = sub;
+  if (ap.genre) model.genre = ap.genre;
+  if (bands.length) model.bands = bands;
+  if (notes.length) model.notes = notes;
 
-  return { modelo, trilha };
+  return { model, trilha };
 }
 
 /**
@@ -264,4 +264,4 @@ function recorteDoAcordo(modeloLogico) {
   };
 }
 
-module.exports = { projetar, recorteDoAcordo, VISTAS, CAMPOS_TECNICOS, CAMPOS_LOGICOS };
+module.exports = { project, recorteDoAcordo, VISTAS, TECHNICAL_FIELDS, CAMPOS_LOGICOS };

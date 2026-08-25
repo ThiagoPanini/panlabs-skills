@@ -18,9 +18,9 @@
  */
 
 const ELK = require('./vendor/elk.bundled.js');
-const { alinhar } = require('./align.cjs');
+const { align } = require('./align.cjs');
 const camadasMod = require('./layers.cjs');
-const { CONTEINERES, FOLHAS } = require('./validate.cjs');
+const { CONTAINERS, LEAVES } = require('./validate.cjs');
 
 // ---- as quatro calhas do #19 -------------------------------------------------
 //
@@ -62,8 +62,8 @@ const OU_LANE = 62;
  * Subnet vazia não é erro de modelo: é o range reservado para o que ainda não
  * existe, e um diagrama de rede a desenha.
  */
-const VAZIO_LARG = 200;
-const VAZIO_ALT = 56;
+const EMPTY_W = 200;
+const EMPTY_H = 56;
 
 /**
  * Caixa de um container sem filho — uma definição só, para os dois `paraElk`.
@@ -76,8 +76,8 @@ function caixaVazia(no, c, res) {
   const precisaTitulo = res.larguraDoRotuloDeGrupo(no.label || '') + (c.recuoTitulo || 8) + 16;
   return {
     id: no.id,
-    width: Math.max(VAZIO_LARG, Math.ceil(precisaTitulo)),
-    height: c.tituloH + VAZIO_ALT,
+    width: Math.max(EMPTY_W, Math.ceil(precisaTitulo)),
+    height: c.tituloH + EMPTY_H,
   };
 }
 
@@ -90,7 +90,7 @@ function caixaVazia(no, c, res) {
  * linha. Então a reserva deixa de ser global e passa a viver no vão ENTRE as
  * raias. 26 px é o que o rótulo de 12 px ocupa com folga.
  */
-const RAIA_LANE = 26;
+const SWIMLANE_LANE = 26;
 
 /**
  * `BAND_LANE` não pode ser constante — descoberto ao ligar o motor no catálogo.
@@ -172,7 +172,7 @@ function folgas(tema) {
  * e o aviso de OPCOES_RAIZ acima continua valendo, porque o bloco inteiro tem
  * de ser repetido por container.
  */
-function espacamentoDe(fg) {
+function spacingOf(fg) {
   return {
     'elk.spacing.nodeNode': String(fg.nodeNode),
     'elk.layered.spacing.nodeNodeBetweenLayers': String(fg.entreCamadas),
@@ -183,7 +183,7 @@ function espacamentoDe(fg) {
   };
 }
 
-const OPCOES_RAIZ = {
+const ROOT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',   // sem isto cada container é layoutado sozinho
@@ -240,7 +240,7 @@ function sentidoDeLeitura(a) {
  * Desreverter é trocar as pontas e virar a lista de dobras. O traçado é o
  * mesmo — uma polilinha não tem sentido, só a leitura dela tem.
  */
-function desreverter(output, revertidas) {
+function unrevert(output, revertidas) {
   if (!revertidas || !revertidas.size) return output;
   for (const e of output.edges || []) {
     if (!revertidas.has(e.id)) continue;
@@ -400,8 +400,8 @@ function folhaComRotulo(id, f) {
  * afirma e o que o modelo declara passam a ser a mesma coisa, que é literalmente
  * o enunciado de `A4.4`.
  */
-const NOTA_LARG = 190;
-const NOTA_ALT_MIN = 46;
+const NOTE_W = 190;
+const NOTE_MIN_H = 46;
 
 /**
  * O id de uma nota tem UM dono, e a razão é dura: `planejar.notasPresas` decide
@@ -412,32 +412,32 @@ const NOTA_ALT_MIN = 46;
  */
 function idDaNota(n, i) { return n.id || `nota-${i}`; }
 
-function notasPorPai(modelo, d, res, caixas) {
+function notasPorPai(model, d, res, boxes) {
   const porPai = new Map();
-  for (const [i, n] of (modelo.notes || []).entries()) {
+  for (const [i, n] of (model.notes || []).entries()) {
     if (n.about === undefined) continue;
-    const target = d.t.porId.get(n.about);
+    const target = d.t.byId.get(n.about);
     if (!target) continue;                        // nota órfã — `validate.cjs` já reclama dela
     const id = idDaNota(n, i);
-    const linhas = res.linhasDoRotulo(n.text, NOTA_LARG - 16);
-    const caixa = {
+    const linhas = res.labelLines(n.text, NOTE_W - 16);
+    const cellBox = {
       container: false, note: true, label: n.text, style: res.tema.note(),
-      formaW: NOTA_LARG, formaH: Math.max(NOTA_ALT_MIN, 12 + linhas * 16),
+      formaW: NOTE_W, formaH: Math.max(NOTE_MIN_H, 12 + linhas * 16),
     };
-    caixas.set(id, caixa);
-    const pai = target.inside || null;
-    if (!porPai.has(pai)) porPai.set(pai, []);
-    porPai.get(pai).push({ id, width: caixa.formaW, height: caixa.formaH });
+    boxes.set(id, cellBox);
+    const parent = target.inside || null;
+    if (!porPai.has(parent)) porPai.set(parent, []);
+    porPai.get(parent).push({ id, width: cellBox.formaW, height: cellBox.formaH });
   }
   return porPai;
 }
 
 /** O `$H` do GWT vaza no JSON e muda a cada execução sem mover uma coordenada (#7). */
-function limpar(o) {
-  if (Array.isArray(o)) return o.map(limpar);
+function clean(o) {
+  if (Array.isArray(o)) return o.map(clean);
   if (o && typeof o === 'object') {
     const r = {};
-    for (const [k, v] of Object.entries(o)) if (k !== '$H') r[k] = limpar(v);
+    for (const [k, v] of Object.entries(o)) if (k !== '$H') r[k] = clean(v);
     return r;
   }
   return o;
@@ -460,18 +460,18 @@ function limpar(o) {
  *     vizinho encosta nele;
  *   - no rodapé do container, por `padding.bottom`.
  */
-function montarElk(modelo, d, res, medir) {
-  const FOLGA = folgas(res.tema);
-  const caixas = new Map();
+function montarElk(model, d, res, measure) {
+  const GAP = folgas(res.tema);
+  const boxes = new Map();
   const paddings = new Map();     // o passe de alinhamento precisa saber o limite de cada caixa
 
   // pré-resolve as folhas para saber de quanto rótulo o layout precisa fugir
   let rotuloMax = 0, transbordo = 0;
-  for (const no of modelo.nodes) {
+  for (const no of model.nodes) {
     // FOLHA é o tipo, não "quem não tem filho" — ver `caixaVazia`. O teste por
     // contagem de filhos mandava toda subnet vazia para `res.folha()`.
-    if (!FOLHAS.has(no.kind)) continue;
-    const f = res.folha(no);
+    if (!LEAVES.has(no.kind)) continue;
+    const f = res.leaf(no);
     rotuloMax = Math.max(rotuloMax, f.rotuloH);
     // quanto o texto passa de cada lado do ícone — é isso que precisa caber no
     // vão entre camadas, já que a caixa do layout é a do ícone
@@ -480,53 +480,53 @@ function montarElk(modelo, d, res, medir) {
 
   // O espaçamento efetivo depende do rótulo, e precisa ser IDÊNTICO na raiz e
   // em cada container — ver o aviso acima de OPCOES_RAIZ.
-  const espacamento = {
-    ...espacamentoDe(FOLGA),
+  const spacing = {
+    ...spacingOf(GAP),
     // o vão entre vizinhos é só respiro: o rótulo é reservado pelo ELK, que
     // agora o conhece (`folhaComRotulo`). Somar `rotuloMax` aqui pagaria duas
     // vezes pelo mesmo espaço.
-    'elk.spacing.nodeNode': String(FOLGA.ROW_GAP),
+    'elk.spacing.nodeNode': String(GAP.ROW_GAP),
     // e o vizinho de lado tem de caber o transbordo do texto pelos dois lados
-    'elk.layered.spacing.nodeNodeBetweenLayers': String(FOLGA.PAD + Math.ceil(2 * transbordo)),
+    'elk.layered.spacing.nodeNodeBetweenLayers': String(GAP.PAD + Math.ceil(2 * transbordo)),
   };
 
-  const notes = notasPorPai(modelo, d, res, caixas);
+  const notes = notasPorPai(model, d, res, boxes);
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
     // a nota presa a um filho deste container é filha DELE — ver `notasPorPai`
     const minhasNotas = notes.get(no.id) || [];
-    if (CONTEINERES.has(no.kind)) {
+    if (CONTAINERS.has(no.kind)) {
       const c = res.container(no);
-      caixas.set(no.id, { container: true, ...c });
+      boxes.set(no.id, { container: true, ...c });
       if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
       // o rótulo da folha transborda a caixa dela PARA OS LADOS, e o container
       // tem de reservar isso — a reserva de BAIXO passou a ser do ELK
       // (`folhaComRotulo`). "tem folha" é sobre TIPO, igual a `caixaVazia`.
-      const temFolha = kids.some(k => FOLHAS.has(k.kind));
+      const temFolha = kids.some(k => LEAVES.has(k.kind));
       const gap = temFolha ? Math.ceil(transbordo) : 0;
       const pad = {
-        top: c.tituloH + FOLGA.PAD, left: FOLGA.PAD + gap,
-        bottom: FOLGA.PAD, right: FOLGA.PAD + gap + (medir.get(no.id) || 0),
+        top: c.tituloH + GAP.PAD, left: GAP.PAD + gap,
+        bottom: GAP.PAD, right: GAP.PAD + gap + (measure.get(no.id) || 0),
       };
       paddings.set(no.id, pad);
       return {
         id: no.id,
         layoutOptions: {
           'elk.padding': `[top=${pad.top},left=${pad.left},bottom=${pad.bottom},right=${pad.right}]`,
-          ...espacamento,          // sem isto, o container usa os defaults do ELK — ver o aviso acima
+          ...spacing,          // sem isto, o container usa os defaults do ELK — ver o aviso acima
         },
         children: [...kids.map(paraElk), ...minhasNotas],
       };
     }
-    const f = res.folha(no);
-    caixas.set(no.id, { container: false, ...f });
+    const f = res.leaf(no);
+    boxes.set(no.id, { container: false, ...f });
     return folhaComRotulo(no.id, f);
   };
 
   const revertidas = new Set();
   const grafo = {
     id: 'root',
-    layoutOptions: { ...OPCOES_RAIZ, ...espacamento },
+    layoutOptions: { ...ROOT_OPTIONS, ...spacing },
     children: [...d.t.raizes.map(paraElk), ...(notes.get(null) || [])],
     // O rótulo da aresta vai JUNTO. Sem ele o ELK aproxima os nós até o vão
     // ficar menor que o texto, e o texto cai em cima do ícone vizinho — que é
@@ -545,7 +545,7 @@ function montarElk(modelo, d, res, medir) {
       };
     }),
   };
-  return { grafo, caixas, paddings, rotuloMax, transbordo, revertidas };
+  return { grafo, boxes, paddings, rotuloMax, transbordo, revertidas };
 }
 
 /**
@@ -554,36 +554,36 @@ function montarElk(modelo, d, res, medir) {
  * Aqui a folga entra como `padding.right` e o ELK relayouta com ela, então os
  * irmãos se afastam sozinhos. Duas passadas, ~180 ms cada no pior caso medido.
  */
-function deficitDeTitulo(no, caixa, larguraObtida, res) {
-  if (!caixa || !caixa.container) return 0;
+function deficitDeTitulo(no, cellBox, larguraObtida, res) {
+  if (!cellBox || !cellBox.container) return 0;
   const text = no.label || '';
   if (!text) return 0;
   // o rótulo de grupo tem corpo próprio (`texto.grupo`), que pode diferir do de folha
-  const precisa = res.larguraDoRotuloDeGrupo(text) + (caixa.recuoTitulo || 8) + 16;
+  const precisa = res.larguraDoRotuloDeGrupo(text) + (cellBox.recuoTitulo || 8) + 16;
   return Math.max(0, Math.ceil(precisa - larguraObtida));
 }
 
-async function porElk(modelo, d, res) {
+async function porElk(model, d, res) {
   const elk = new ELK();
-  let medir = new Map();
+  let measure = new Map();
   let output = null;
 
-  for (let passada = 0; passada < 2; passada++) {
-    const { grafo, caixas, paddings, rotuloMax, revertidas } = montarElk(modelo, d, res, medir);
-    output = desreverter(limpar(await elk.layout(structuredClone(grafo))), revertidas);
-    if (passada === 1) return { output, caixas, rotuloMax, passadas: 2, encaixe: alinhar(output, paddings) };
+  for (let pass = 0; pass < 2; pass++) {
+    const { grafo, boxes, paddings, rotuloMax, revertidas } = montarElk(model, d, res, measure);
+    output = unrevert(clean(await elk.layout(structuredClone(grafo))), revertidas);
+    if (pass === 1) return { output, boxes, rotuloMax, passadas: 2, encaixe: align(output, paddings) };
 
     const proximo = new Map();
     (function medirTitulos(n) {
       for (const c of n.children || []) {
-        const no = d.t.porId.get(c.id);
-        const def = deficitDeTitulo(no, caixas.get(c.id), c.width, res);
+        const no = d.t.byId.get(c.id);
+        const def = deficitDeTitulo(no, boxes.get(c.id), c.width, res);
         if (def > 0) proximo.set(c.id, def);
         medirTitulos(c);
       }
     })(output);
-    if (!proximo.size) return { output, caixas, rotuloMax, passadas: 1, encaixe: alinhar(output, paddings) };
-    medir = proximo;
+    if (!proximo.size) return { output, boxes, rotuloMax, passadas: 1, encaixe: align(output, paddings) };
+    measure = proximo;
   }
 }
 
@@ -614,11 +614,11 @@ async function porElk(modelo, d, res) {
  * longo do PRINCIPAL, porque a faixa de zona atravessa todas elas e ela corre
  * nessa direção.
  */
-function eixoDaGrade(modelo) {
-  const numerado = (modelo.edges || []).some(a => a.order !== undefined);
+function eixoDaGrade(model) {
+  const numbered = (model.edges || []).some(a => a.order !== undefined);
   return {
-    eixo: numerado ? 'raia' : 'coluna',
-    because: numerado
+    eixo: numbered ? 'raia' : 'column',
+    because: numbered
       ? 'há passo numerado — a dimensão ordenada fica com a horizontal (#21)'
       : 'sem passo numerado — a AZ fica com a coluna, como no deck (#21)',
   };
@@ -635,23 +635,23 @@ function eixoDaGrade(modelo) {
  * O custo é o do #21: aresta entre zonas não vizinhas cruza a faixa de quem
  * está no meio, que é `A5.5` da rubrica (#8).
  */
-function ordemDeRaias(modelo, d, subnets) {
+function ordemDeRaias(model, d, subnets) {
   const zonas = [...new Set(subnets.map(s => s.az).filter(Boolean))].sort();
   if (zonas.length < 3) return { zonas, custo: 0, varridas: 0 };
 
   const zonaDo = id => {
-    const n = d.t.porId.get(id);
+    const n = d.t.byId.get(id);
     if (!n) return null;
     const s = n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet');
     return s ? s.az : null;
   };
-  const cruzam = (modelo.edges || [])
+  const cruzam = (model.edges || [])
     .map(a => [zonaDo(a.from), zonaDo(a.to)])
     .filter(([x, y]) => x && y && x !== y);
   if (!cruzam.length) return { zonas, custo: 0, varridas: 0 };
 
   let melhor = null;
-  const todas = permutar(zonas);
+  const todas = permute(zonas);
   for (const perm of todas) {
     const idx = new Map(perm.map((z, i) => [z, i]));
     let custo = 0;
@@ -682,15 +682,15 @@ function calhaDaLinha(faixasDaLinha, zonas) {
   let maior = 0;
   for (const z of zonas) {
     let soma = 0;
-    for (const f of faixasDaLinha) if (f.zonas.has(z)) soma += f.calha;
+    for (const f of faixasDaLinha) if (f.zonas.has(z)) soma += f.lane;
     maior = Math.max(maior, soma);
   }
-  for (const f of faixasDaLinha) if (!f.zonas.size) maior = Math.max(maior, f.calha);
+  for (const f of faixasDaLinha) if (!f.zonas.size) maior = Math.max(maior, f.lane);
   return maior;
 }
 
-async function porGrade(modelo, d, res) {
-  const FOLGA = folgas(res.tema);
+async function porGrade(model, d, res) {
+  const GAP = folgas(res.tema);
   /**
    * A grade RECUSA quando a ordem depende de um fato que o modelo não tem (#22),
    * e recusa ANTES de layoutar coisa nenhuma.
@@ -706,26 +706,26 @@ async function porGrade(modelo, d, res) {
    * com ninguém. O agente lê a mensagem e conserta o modelo; o humano não é
    * chamado, e a premissa 11 continua de pé.
    */
-  if (d.lacunas.length) {
+  if (d.gaps.length) {
     const e = new Error('a grade não sabe empilhar estas linhas — falta a camada de rede das subnets');
-    e.erros = camadasMod.textoDaLacuna(d.lacunas);
+    e.erros = camadasMod.textoDaLacuna(d.gaps);
     throw e;
   }
 
   const elk = new ELK();
-  const caixas = new Map();
-  const { eixo, because: porqueEixo } = eixoDaGrade(modelo);
+  const boxes = new Map();
+  const { eixo, because: porqueEixo } = eixoDaGrade(model);
   const raia = eixo === 'raia';
 
-  const vpcs = modelo.nodes.filter(n => n.kind === 'vpc');
-  const subnets = modelo.nodes.filter(n => n.kind === 'subnet');
+  const vpcs = model.nodes.filter(n => n.kind === 'vpc');
+  const subnets = model.nodes.filter(n => n.kind === 'subnet');
 
   // 1. cada subnet é layoutada isolada, para saber de que tamanho ela precisa
   const intra = new Map();
   for (const s of subnets) {
     const kids = d.t.filhos.get(s.id);
     const c = res.container(s);
-    caixas.set(s.id, { container: true, ...c });
+    boxes.set(s.id, { container: true, ...c });
     if (!kids.length) { intra.set(s.id, { w: 200, h: 90, filhos: [] }); continue; }
     const g = {
       id: s.id,
@@ -736,12 +736,12 @@ async function porGrade(modelo, d, res) {
         'elk.padding': `[top=${c.tituloH + 10},left=14,bottom=14,right=14]`,
       },
       children: kids.map(k => {
-        const f = res.folha(k);
-        caixas.set(k.id, { container: false, ...f });
+        const f = res.leaf(k);
+        boxes.set(k.id, { container: false, ...f });
         return { id: k.id, width: f.caixaW || f.formaW, height: f.formaH + f.rotuloH };
       }),
     };
-    const r = limpar(await elk.layout(g));
+    const r = clean(await elk.layout(g));
     intra.set(s.id, { w: r.width, h: r.height, filhos: r.children });
   }
 
@@ -751,14 +751,14 @@ async function porGrade(modelo, d, res) {
   const papel = s => camadasMod.chaveDePapel(s, d.t);
   const vpcDe = s => (d.t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id;
 
-  const varreduraRaias = ordemDeRaias(modelo, d, subnets);
+  const varreduraRaias = ordemDeRaias(model, d, subnets);
   const zonas = varreduraRaias.zonas;
 
   const papeisPorVpc = new Map();
   for (const v of vpcs) papeisPorVpc.set(v.id, []);
   for (const s of subnets) {
-    const lista = papeisPorVpc.get(vpcDe(s));
-    if (lista && !lista.includes(papel(s))) lista.push(papel(s));
+    const list = papeisPorVpc.get(vpcDe(s));
+    if (list && !list.includes(papel(s))) list.push(papel(s));
   }
   /**
    * A ORDEM DOS PAPÉIS É DERIVADA, não herdada da ordem do arquivo.
@@ -790,13 +790,13 @@ async function porGrade(modelo, d, res) {
    * lado errado do texto. O `papeisDeSubnet` já devolve o papel como objeto;
    * basta consultá-lo.
    */
-  const porChave = camadasMod.papeisDeSubnet(modelo, d.t, d.camadas);
-  const ordemDe = chave => {
-    const p = porChave.get(chave) || {};
-    return [camadasMod.ordemDeAcesso(p.access), camadasMod.ordemDeCamada(p.layer), p.label || ''];
+  const porChave = camadasMod.papeisDeSubnet(model, d.t, d.camadas);
+  const ordemDe = key => {
+    const p = porChave.get(key) || {};
+    return [camadasMod.ordemDeAcesso(p.access), camadasMod.layerOrder(p.layer), p.label || ''];
   };
-  for (const lista of papeisPorVpc.values())
-    lista.sort((a, b) => {
+  for (const list of papeisPorVpc.values())
+    list.sort((a, b) => {
       const ka = ordemDe(a), kb = ordemDe(b);
       return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2], 'pt');
     });
@@ -819,8 +819,8 @@ async function porGrade(modelo, d, res) {
    * reserva é a grade.
    */
   const larguraDoRotulo = Math.max(0, ...d.edges.map(a => res.larguraDaAresta(textoDaAresta(a))));
-  const GAP_T = raia ? FOLGA.ROW_GAP : FOLGA.COL_GAP;
-  const GAP_P = raia ? Math.max(FOLGA.ROW_GAP, larguraDoRotulo + 24) : FOLGA.ROW_GAP;
+  const GAP_T = raia ? GAP.ROW_GAP : GAP.COL_GAP;
+  const GAP_P = raia ? Math.max(GAP.ROW_GAP, larguraDoRotulo + 24) : GAP.ROW_GAP;
 
   const tamT = new Map(zonas.map(z =>
     [z, Math.max(minT, ...subnets.filter(s => s.az === z).map(extT))]));
@@ -843,11 +843,11 @@ async function porGrade(modelo, d, res) {
   const calhas = new Map();
   const porLinha = new Map();      // vpc -> Map(linha de papel -> [{calha, zonas}])
   const porRaia = new Map();       // índice da raia -> calha acumulada
-  for (const f of (modelo.bands || [])) {
-    const calha = calhaDaFaixa(res.band(f).style);
-    calhas.set(f.id, calha);
+  for (const f of (model.bands || [])) {
+    const lane = calhaDaFaixa(res.band(f).style);
+    calhas.set(f.id, lane);
     const members = f.members.map(m => {
-      const s = d.t.ancestrais(d.t.porId.get(m)).find(a => a.kind === 'subnet') || d.t.porId.get(m);
+      const s = d.t.ancestrais(d.t.byId.get(m)).find(a => a.kind === 'subnet') || d.t.byId.get(m);
       const v = vpcDe(s);
       return { v, az: s.az, idx: papeisPorVpc.get(v) ? papeisPorVpc.get(v).indexOf(papel(s)) : -1 };
     }).filter(x => x.idx >= 0);
@@ -855,17 +855,17 @@ async function porGrade(modelo, d, res) {
     if (raia) {
       const idxs = members.map(l => zonas.indexOf(l.az)).filter(i => i >= 0);
       if (!idxs.length) continue;
-      const primeira = Math.min(...idxs);
-      porRaia.set(primeira, Math.max(porRaia.get(primeira) || 0, calha));
+      const first = Math.min(...idxs);
+      porRaia.set(first, Math.max(porRaia.get(first) || 0, lane));
       continue;
     }
     for (const v of new Set(members.map(l => l.v))) {
       const meus = members.filter(l => l.v === v);
-      const primeira = Math.min(...meus.map(l => l.idx));
+      const first = Math.min(...meus.map(l => l.idx));
       if (!porLinha.has(v)) porLinha.set(v, new Map());
       const mapa = porLinha.get(v);
-      if (!mapa.has(primeira)) mapa.set(primeira, []);
-      mapa.get(primeira).push({ calha, zonas: new Set(meus.map(l => l.az).filter(Boolean)) });
+      if (!mapa.has(first)) mapa.set(first, []);
+      mapa.get(first).push({ lane, zonas: new Set(meus.map(l => l.az).filter(Boolean)) });
     }
   }
 
@@ -888,7 +888,7 @@ async function porGrade(modelo, d, res) {
   let t = 0;
   for (const [i, z] of zonas.entries()) {
     if (i > 0) t += GAP_T;
-    const reserva = raia ? RAIA_LANE + (porRaia.get(i) || 0) : 0;
+    const reserva = raia ? SWIMLANE_LANE + (porRaia.get(i) || 0) : 0;
     reservaDaRaia.set(z, reserva);
     t += reserva;
     posT.set(z, t);
@@ -903,53 +903,53 @@ async function porGrade(modelo, d, res) {
   // quem a contém. Em coluna, isso é um deslocamento no principal (o Y); em
   // raia, o rótulo da zona vive na calha ENTRE as raias, então o principal
   // começa na margem e é o transversal que carrega a reserva.
-  let p = raia ? FOLGA.PAD : HEAD + AZ_LANE;
+  let p = raia ? GAP.PAD : HEAD + AZ_LANE;
   for (const v of vpcs) {
     const papeis = papeisPorVpc.get(v.id);
     const doVpc = porLinha.get(v.id) || new Map();
     const cV = res.container(v);
-    caixas.set(v.id, { container: true, ...cV });
+    boxes.set(v.id, { container: true, ...cV });
 
     // a faixa de título do container consome o PRINCIPAL quando o principal é o
     // Y; com a grade transposta ela consome o transversal, não o principal
-    let corrida = raia ? FOLGA.PAD : cV.tituloH + FOLGA.PAD;
+    let race = raia ? GAP.PAD : cV.tituloH + GAP.PAD;
     const posP = [], tamP = [];
     papeis.forEach((pa, i) => {
-      if (i > 0) corrida += GAP_P + calhaDaLinha(doVpc.get(i) || [], zonas);
+      if (i > 0) race += GAP_P + calhaDaLinha(doVpc.get(i) || [], zonas);
       const ext = Math.max(minP, ...subnets.filter(s => papel(s) === pa).map(extP));
-      posP.push(corrida); tamP.push(ext); corrida += ext;
+      posP.push(race); tamP.push(ext); race += ext;
     });
-    corrida += FOLGA.PAD;
+    race += GAP.PAD;
 
     // o topo do conteúdo dentro da VPC: título + padding, mais a faixa de
     // rótulo da primeira raia quando a grade está transposta
-    const desloT = raia ? HEAD + cV.tituloH + FOLGA.PAD : 2 * FOLGA.PAD;
+    const desloT = raia ? HEAD + cV.tituloH + GAP.PAD : 2 * GAP.PAD;
     vpcBox.set(v.id, raia
-      ? { x: p, y: HEAD, w: corrida, h: cV.tituloH + FOLGA.PAD + extensaoT + FOLGA.PAD }
-      : { x: FOLGA.PAD, y: p, w: extensaoT + 2 * FOLGA.PAD, h: corrida });
+      ? { x: p, y: HEAD, w: race, h: cV.tituloH + GAP.PAD + extensaoT + GAP.PAD }
+      : { x: GAP.PAD, y: p, w: extensaoT + 2 * GAP.PAD, h: race });
 
     for (const s of subnets) {
       if (vpcDe(s) !== v.id) continue;
       const i = papeis.indexOf(papel(s));
       pos.set(s.id, raia
         ? { x: p + posP[i], y: desloT + posT.get(s.az), w: tamP[i], h: tamT.get(s.az) }
-        : { x: 2 * FOLGA.PAD + posT.get(s.az), y: p + posP[i], w: tamT.get(s.az), h: tamP[i] });
+        : { x: 2 * GAP.PAD + posT.get(s.az), y: p + posP[i], w: tamT.get(s.az), h: tamP[i] });
     }
-    p += corrida + FOLGA.COL_GAP + FOLGA.ROW_GAP;
+    p += race + GAP.COL_GAP + GAP.ROW_GAP;
   }
 
-  const fimP = p - FOLGA.COL_GAP - FOLGA.ROW_GAP;
+  const fimP = p - GAP.COL_GAP - GAP.ROW_GAP;
   const alturaRaia = vpcs.length
     ? Math.max(...[...vpcBox.values()].map(b => b.y + b.h))
     : HEAD;
 
   return {
-    pos, vpcBox, intra, caixas, calhas, zonas, azs: zonas, eixo, raia, porqueEixo,
-    varreduraRaias, RAIA_LANE, reservaDaRaia,
+    pos, vpcBox, intra, boxes, calhas, zonas, azs: zonas, eixo, raia, porqueEixo,
+    varreduraRaias, SWIMLANE_LANE, reservaDaRaia,
     colX: posT, colW: tamT, posT, tamT, extensaoT,
     larguraGrade: raia ? fimP : extensaoT,
     fim: raia ? alturaRaia : fimP,
-    AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD: FOLGA.PAD,
+    AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD: GAP.PAD,
   };
 }
 
@@ -979,7 +979,7 @@ const GAP_OU = 4 * GAP_IRMA;
 // `X1`/`X2`: na vista de integração as contas ficam lado a lado com uma calha
 // LARGA, porque é nela que mora o elemento compartilhado (peering, PrivateLink,
 // TGW) e é por ela que a travessia respira.
-const CALHA = 130;
+const LANE = 130;
 
 /**
  * `P1` — a ordem de leitura canônica, medida em três diagramas oficiais
@@ -998,11 +998,11 @@ function rankOu(ou) {
 }
 
 /** Permutações de uma lista curta. Só é chamada com n ≤ 4 — ver `ordemDeContas`. */
-function permutar(xs) {
+function permute(xs) {
   if (xs.length <= 1) return [xs];
   const out = [];
   for (let i = 0; i < xs.length; i++)
-    for (const resto of permutar([...xs.slice(0, i), ...xs.slice(i + 1)]))
+    for (const resto of permute([...xs.slice(0, i), ...xs.slice(i + 1)]))
       out.push([xs[i], ...resto]);
   return out;
 }
@@ -1030,8 +1030,8 @@ function permutar(xs) {
  * custo não dependam da ordem em que o agente escreveu a lista (#11 mediu que
  * nenhum LLM emite a mesma lista duas vezes).
  */
-function ordemDeContas(contas, cruz, modo) {
-  const canonica = [...contas].sort((a, b) =>
+function ordemDeContas(accounts, cruz, modo) {
+  const canonica = [...accounts].sort((a, b) =>
     rankOu(a.ou) - rankOu(b.ou) ||
     String(a.label || a.id).localeCompare(String(b.label || b.id), 'pt'));
 
@@ -1068,7 +1068,7 @@ function ordemDeContas(contas, cruz, modo) {
    * usa.
    */
   const idxCanonico = new Map(canonica.map((c, i) => [c.id, i]));
-  const inversoes = (perm) => {
+  const inversions = (perm) => {
     let n = 0;
     for (let i = 0; i < perm.length; i++)
       for (let j = i + 1; j < perm.length; j++)
@@ -1077,13 +1077,13 @@ function ordemDeContas(contas, cruz, modo) {
   };
 
   let melhor = null;
-  const todas = permutar(canonica);
+  const todas = permute(canonica);
   for (const perm of todas) {
-    const c = custoDe(perm), inv = inversoes(perm);
+    const c = custoDe(perm), inv = inversions(perm);
     if (!melhor || c < melhor.custo || (c === melhor.custo && inv < melhor.inv))
       melhor = { perm, custo: c, inv };
   }
-  return { order: melhor.perm, custo: melhor.custo, inversoes: melhor.inv, varridas: todas.length };
+  return { order: melhor.perm, custo: melhor.custo, inversions: melhor.inv, varridas: todas.length };
 }
 
 /**
@@ -1097,60 +1097,60 @@ function ordemDeContas(contas, cruz, modo) {
  * então nada precisa ser esticado depois (que é o contorno que o #7 propõe e
  * que pode encostar num irmão).
  */
-async function layoutDaConta(elk, account, d, res, caixas, metrica, medir = new Map(), notes = new Map()) {
-  const FOLGA = folgas(res.tema);
-  const espacamento = {
-    ...espacamentoDe(FOLGA),
-    'elk.spacing.nodeNode': String(FOLGA.ROW_GAP),
-    'elk.layered.spacing.nodeNodeBetweenLayers': String(FOLGA.PAD + Math.ceil(2 * metrica.transbordo)),
+async function layoutDaConta(elk, account, d, res, boxes, metrica, measure = new Map(), notes = new Map()) {
+  const GAP = folgas(res.tema);
+  const spacing = {
+    ...spacingOf(GAP),
+    'elk.spacing.nodeNode': String(GAP.ROW_GAP),
+    'elk.layered.spacing.nodeNodeBetweenLayers': String(GAP.PAD + Math.ceil(2 * metrica.transbordo)),
   };
 
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
     const minhasNotas = notes.get(no.id) || [];              // ver `notasPorPai`
-    if (CONTEINERES.has(no.kind)) {
+    if (CONTAINERS.has(no.kind)) {
       const c = res.container(no);
-      caixas.set(no.id, { container: true, ...c });
+      boxes.set(no.id, { container: true, ...c });
       if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
-      const temFolha = kids.some(k => FOLHAS.has(k.kind));   // por TIPO — ver `caixaVazia`
+      const temFolha = kids.some(k => LEAVES.has(k.kind));   // por TIPO — ver `caixaVazia`
       const gap = temFolha ? Math.ceil(metrica.transbordo) : 0;
       return {
         id: no.id,
         layoutOptions: {
-          'elk.padding': `[top=${c.tituloH + FOLGA.PAD},left=${FOLGA.PAD + gap},` +
-            `bottom=${FOLGA.PAD},right=${FOLGA.PAD + gap + (medir.get(no.id) || 0)}]`,
-          ...espacamento,
+          'elk.padding': `[top=${c.tituloH + GAP.PAD},left=${GAP.PAD + gap},` +
+            `bottom=${GAP.PAD},right=${GAP.PAD + gap + (measure.get(no.id) || 0)}]`,
+          ...spacing,
         },
         children: [...kids.map(paraElk), ...minhasNotas],
       };
     }
-    const f = res.folha(no);
-    caixas.set(no.id, { container: false, ...f });
+    const f = res.leaf(no);
+    boxes.set(no.id, { container: false, ...f });
     return folhaComRotulo(no.id, f);
   };
 
   const cC = res.container(account);
-  caixas.set(account.id, { container: true, ...cC });
-  const folgaConta = d.t.filhos.get(account.id).some(k => FOLHAS.has(k.kind))
+  boxes.set(account.id, { container: true, ...cC });
+  const folgaConta = d.t.filhos.get(account.id).some(k => LEAVES.has(k.kind))
     ? metrica.transbordo : 0;                              // por TIPO — ver `caixaVazia`
 
   // só as arestas cujas DUAS pontas moram nesta conta — a travessia é do motor
   const inside = new Set();
-  (function marcar(id) { inside.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(account.id);
+  (function mark(id) { inside.add(id); for (const k of d.t.filhos.get(id)) mark(k.id); })(account.id);
   const internas = d.edges.filter(a => inside.has(a.from) && inside.has(a.to));
   const revertidas = new Set();
 
   const grafo = {
     id: account.id,
     layoutOptions: {
-      ...OPCOES_RAIZ,
+      ...ROOT_OPTIONS,
       'elk.json.edgeCoords': 'CONTAINER',   // dentro da conta, o espaço é o da conta
       // a folga lateral vale para a CONTA também, não só para os containers de
       // dentro: o rótulo da folha é desenhado centrado sob o ícone e mais largo
       // que ele, então sem isto "IAM Identity Center" encosta na borda magenta
-      'elk.padding': `[top=${cC.tituloH + FOLGA.PAD},left=${FOLGA.PAD + folgaConta},` +
-        `bottom=${FOLGA.PAD},right=${FOLGA.PAD + folgaConta + (medir.get(account.id) || 0)}]`,
-      ...espacamento,
+      'elk.padding': `[top=${cC.tituloH + GAP.PAD},left=${GAP.PAD + folgaConta},` +
+        `bottom=${GAP.PAD},right=${GAP.PAD + folgaConta + (measure.get(account.id) || 0)}]`,
+      ...spacing,
     },
     children: [...d.t.filhos.get(account.id).map(paraElk), ...(notes.get(account.id) || [])],
     edges: internas.map(a => {
@@ -1163,62 +1163,62 @@ async function layoutDaConta(elk, account, d, res, caixas, metrica, medir = new 
       };
     }),
   };
-  return desreverter(limpar(await elk.layout(grafo)), revertidas);
+  return unrevert(clean(await elk.layout(grafo)), revertidas);
 }
 
 /** As duas medidas de rótulo que todo caminho precisa antes de montar grafo nenhum. */
-function metricaDeRotulo(modelo, d, res) {
+function metricaDeRotulo(model, d, res) {
   let rotuloMax = 0, transbordo = 0;
-  for (const no of modelo.nodes) {
-    if (!FOLHAS.has(no.kind)) continue;              // ver `caixaVazia`
-    const f = res.folha(no);
+  for (const no of model.nodes) {
+    if (!LEAVES.has(no.kind)) continue;              // ver `caixaVazia`
+    const f = res.leaf(no);
     rotuloMax = Math.max(rotuloMax, f.rotuloH);
     transbordo = Math.max(transbordo, Math.max(0, ((f.rotuloW || 0) - f.formaW) / 2));
   }
   return { rotuloMax, transbordo: Math.ceil(transbordo) };
 }
 
-async function porContas(modelo, d, res) {
+async function porContas(model, d, res) {
   const elk = new ELK();
-  const caixas = new Map();
-  const metrica = metricaDeRotulo(modelo, d, res);
+  const boxes = new Map();
+  const metrica = metricaDeRotulo(model, d, res);
   // a nota presa a um nó entra no ELK da CONTA dele — ver `notasPorPai`. A que
   // fala de um nó fora de conta nenhuma não tem ELK onde entrar (a fileira de
   // contas é grade do motor), e `planejar` a coloca no offset de sempre.
-  const notes = notasPorPai(modelo, d, res, caixas);
-  const contas = modelo.nodes.filter(n => n.kind === 'account');
+  const notes = notasPorPai(model, d, res, boxes);
+  const accounts = model.nodes.filter(n => n.kind === 'account');
   const modo = d.modo.modo;
 
   // 1. cada conta é layoutada isolada, para saber de que tamanho ela precisa (S4)
   const interno = new Map();
-  for (const c of contas) {
-    let medir = new Map(), r = null;
-    for (let passada = 0; passada < 2; passada++) {
-      r = await layoutDaConta(elk, c, d, res, caixas, metrica, medir, notes);
+  for (const c of accounts) {
+    let measure = new Map(), r = null;
+    for (let pass = 0; pass < 2; pass++) {
+      r = await layoutDaConta(elk, c, d, res, boxes, metrica, measure, notes);
       const proximo = new Map();
-      const def = deficitDeTitulo(c, caixas.get(c.id), r.width, res);
+      const def = deficitDeTitulo(c, boxes.get(c.id), r.width, res);
       if (def > 0) proximo.set(c.id, def);
       (function medirTitulos(n) {
         for (const filho of n.children || []) {
-          const no = d.t.porId.get(filho.id);
-          const dd = deficitDeTitulo(no, caixas.get(filho.id), filho.width, res);
+          const no = d.t.byId.get(filho.id);
+          const dd = deficitDeTitulo(no, boxes.get(filho.id), filho.width, res);
           if (dd > 0) proximo.set(filho.id, dd);
           medirTitulos(filho);
         }
       })(r);
       if (!proximo.size) break;
-      medir = proximo;
+      measure = proximo;
     }
     interno.set(c.id, r);
   }
 
   // 2. a ordem ao longo do eixo — varrida na integração, canônica no inventário
-  const { order, custo, varridas } = ordemDeContas(contas, d.travessias, modo);
+  const { order, custo, varridas } = ordemDeContas(accounts, d.travessias, modo);
 
   // `X6`: a conta que é hub ganha ênfase de borda, os spokes ficam finos. Só
   // marca quem DOMINA — empate não tem hub, e uma ênfase que não distingue é
   // ruído. Hub = quem mais participa de travessia.
-  const grau = new Map(contas.map(c => [c.id, 0]));
+  const grau = new Map(accounts.map(c => [c.id, 0]));
   for (const a of d.travessias) {
     grau.set(a.contaDe, (grau.get(a.contaDe) || 0) + 1);
     grau.set(a.contaPara, (grau.get(a.contaPara) || 0) + 1);
@@ -1244,7 +1244,7 @@ async function porContas(modelo, d, res) {
     const alt = Math.max(...order.map(c => interno.get(c.id).height));
     order.forEach((c, i) => {
       const g = interno.get(c.id);
-      if (i > 0) x += CALHA;
+      if (i > 0) x += LANE;
       // `S5` transposto: numa COLUNA as contas são left-aligned na origem; numa
       // FILEIRA, top-aligned. O topo reto é o que deixa a travessia sair
       // horizontal e curta.
@@ -1252,22 +1252,22 @@ async function porContas(modelo, d, res) {
       x += g.width;
     });
     larguraTotal = x; alturaTotal = alt;
-    colunas.push({ ou: null, contas: order.map(c => c.id) });
+    colunas.push({ ou: null, accounts: order.map(c => c.id) });
   } else {
     // agrupa em colunas por OU, preservando a ordem canônica já calculada
     let atual = null;
     for (const c of order) {
-      const chave = c.ou || null;
-      if (!atual || atual.ou !== chave) { atual = { ou: chave, contas: [] }; colunas.push(atual); }
-      atual.contas.push(c.id);
+      const key = c.ou || null;
+      if (!atual || atual.ou !== key) { atual = { ou: key, accounts: [] }; colunas.push(atual); }
+      atual.accounts.push(c.id);
     }
     let x = 0;
     for (const [i, col] of colunas.entries()) {
       if (i > 0) x += GAP_OU;
-      const larg = Math.max(...col.contas.map(id => interno.get(id).width));
-      let y = d.ou.desenhar ? OU_LANE : 0;   // a faixa de rótulo da OU nasce acima do primeiro membro
+      const larg = Math.max(...col.accounts.map(id => interno.get(id).width));
+      let y = d.ou.draw ? OU_LANE : 0;   // a faixa de rótulo da OU nasce acima do primeiro membro
       col.x = x; col.larg = larg; col.y = 0;
-      for (const id of col.contas) {
+      for (const id of col.accounts) {
         const g = interno.get(id);
         pos.set(id, { x, y, w: g.width, h: g.height });   // S5: left-aligned na origem da coluna
         y += g.height + GAP_IRMA;
@@ -1280,17 +1280,17 @@ async function porContas(modelo, d, res) {
   }
 
   return {
-    pos, interno, caixas, order, colunas, modo, hub,
-    largura: larguraTotal, altura: alturaTotal,
+    pos, interno, boxes, order, colunas, modo, hub,
+    widthOf: larguraTotal, altura: alturaTotal,
     varredura: { custo, varridas },
-    metrica, GAP_IRMA, GAP_OU, CALHA, OU_LANE,
+    metrica, GAP_IRMA, GAP_OU, LANE, OU_LANE,
   };
 }
 
 module.exports = {
   porElk, porGrade, porContas, ordemDeContas, ordemDeRaias, eixoDaGrade, calhaDaLinha,
   rankOu, metricaDeRotulo,
-  textoDaAresta, calhaDaFaixa, OPCOES_RAIZ, corredorLivre, sentidoDeLeitura,
-  notasPorPai, idDaNota, NOTA_LARG, NOTA_ALT_MIN,
-  AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, GAP_IRMA, GAP_OU, CALHA, OU_LANE, limpar, folgas,
+  textoDaAresta, calhaDaFaixa, ROOT_OPTIONS, corredorLivre, sentidoDeLeitura,
+  notasPorPai, idDaNota, NOTE_W, NOTE_MIN_H,
+  AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, GAP_IRMA, GAP_OU, LANE, OU_LANE, clean, folgas,
 };

@@ -33,18 +33,18 @@ const baixo = r => r.y + r.h;
 const centro = r => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 
 /** Área da interseção. Zero quando as caixas só se encostam. */
-function areaDaIntersecao(a, b) {
+function intersectionArea(a, b) {
   const larg = Math.min(direita(a), direita(b)) - Math.max(a.x, b.x);
   const alt = Math.min(baixo(a), baixo(b)) - Math.max(a.y, b.y);
   return larg > 0 && alt > 0 ? larg * alt : 0;
 }
 
 /** `filho` cabe inteiro em `pai`, com folga opcional em todos os lados. */
-function contem(pai, filho, padding = 0) {
-  return filho.x >= pai.x + padding - EPS
-    && filho.y >= pai.y + padding - EPS
-    && direita(filho) <= direita(pai) - padding + EPS
-    && baixo(filho) <= baixo(pai) - padding + EPS;
+function contem(parent, filho, padding = 0) {
+  return filho.x >= parent.x + padding - EPS
+    && filho.y >= parent.y + padding - EPS
+    && direita(filho) <= direita(parent) - padding + EPS
+    && baixo(filho) <= baixo(parent) - padding + EPS;
 }
 
 /**
@@ -62,21 +62,21 @@ function gap(a, b) {
 }
 
 /** Os quatro paddings internos entre o retângulo e a caixa dos filhos. */
-function paddings(pai, filhos) {
+function paddings(parent, filhos) {
   if (!filhos.length) return null;
   const cx1 = Math.min(...filhos.map(f => f.x));
   const cy1 = Math.min(...filhos.map(f => f.y));
   const cx2 = Math.max(...filhos.map(direita));
   const cy2 = Math.max(...filhos.map(baixo));
-  return { esquerda: cx1 - pai.x, topo: cy1 - pai.y, direita: direita(pai) - cx2, baixo: baixo(pai) - cy2 };
+  return { esquerda: cx1 - parent.x, topo: cy1 - parent.y, direita: direita(parent) - cx2, baixo: baixo(parent) - cy2 };
 }
 
 /** A caixa que envolve todas as caixas. */
-function envolvente(caixas) {
-  if (!caixas.length) return null;
-  const x = Math.min(...caixas.map(c => c.x));
-  const y = Math.min(...caixas.map(c => c.y));
-  return { x, y, w: Math.max(...caixas.map(direita)) - x, h: Math.max(...caixas.map(baixo)) - y };
+function envolvente(boxes) {
+  if (!boxes.length) return null;
+  const x = Math.min(...boxes.map(c => c.x));
+  const y = Math.min(...boxes.map(c => c.y));
+  return { x, y, w: Math.max(...boxes.map(direita)) - x, h: Math.max(...boxes.map(baixo)) - y };
 }
 
 // -------------------------------------------------------- segmento e retângulo
@@ -88,7 +88,7 @@ function envolvente(caixas) {
  * sobrou tem comprimento e cai dentro, não em cima da borda. É o que separa
  * "a aresta corta a VPC" de "a aresta sai do nó que encosta na VPC".
  */
-function segmentoCruzaRetangulo(p, q, r) {
+function segmentCrossesRect(p, q, r) {
   const dx = q.x - p.x;
   const dy = q.y - p.y;
   let t0 = 0;
@@ -115,7 +115,7 @@ function segmentoCruzaRetangulo(p, q, r) {
 /** Qualquer segmento da polilinha passa pelo interior do retângulo. */
 function polilinhaCruzaRetangulo(pontos, r) {
   for (let i = 0; i + 1 < pontos.length; i++)
-    if (segmentoCruzaRetangulo(pontos[i], pontos[i + 1], r)) return true;
+    if (segmentCrossesRect(pontos[i], pontos[i + 1], r)) return true;
   return false;
 }
 
@@ -125,7 +125,7 @@ function polilinhaCruzaRetangulo(pontos, r) {
  * Ponto de cruzamento no interior dos dois segmentos, ou `null`.
  * Extremo compartilhado devolve `null` — incidência não é cruzamento.
  */
-function cruzamento(p1, p2, p3, p4) {
+function crossing(p1, p2, p3, p4) {
   const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
   const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
   const den = d1x * d2y - d1y * d2x;
@@ -158,7 +158,7 @@ function anguloInterno(a, b, c) {
 
 // ------------------------------------------------------------------- polilinha
 
-function distanciaPontoSegmento(p, a, b) {
+function pointSegmentDistance(p, a, b) {
   const dx = b.x - a.x, dy = b.y - a.y;
   const den = dx * dx + dy * dy;
   if (den < EPS) return Math.hypot(p.x - a.x, p.y - a.y);
@@ -166,11 +166,11 @@ function distanciaPontoSegmento(p, a, b) {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-function distanciaPontoPolilinha(p, linha) {
+function pointPolylineDistance(p, row) {
   let m = Infinity;
-  for (let i = 0; i + 1 < linha.length; i++)
-    m = Math.min(m, distanciaPontoSegmento(p, linha[i], linha[i + 1]));
-  return linha.length === 1 ? Math.hypot(p.x - linha[0].x, p.y - linha[0].y) : m;
+  for (let i = 0; i + 1 < row.length; i++)
+    m = Math.min(m, pointSegmentDistance(p, row[i], row[i + 1]));
+  return row.length === 1 ? Math.hypot(p.x - row[0].x, p.y - row[0].y) : m;
 }
 
 /**
@@ -181,12 +181,12 @@ function distanciaPontoPolilinha(p, linha) {
  */
 function hausdorff(a, b) {
   if (!a.length || !b.length) return Infinity;
-  const out = Math.max(...a.map(p => distanciaPontoPolilinha(p, b)));
-  const back = Math.max(...b.map(p => distanciaPontoPolilinha(p, a)));
+  const out = Math.max(...a.map(p => pointPolylineDistance(p, b)));
+  const back = Math.max(...b.map(p => pointPolylineDistance(p, a)));
   return Math.max(out, back);
 }
 
-function comprimento(pontos) {
+function polylineLength(pontos) {
   let t = 0;
   for (let i = 0; i + 1 < pontos.length; i++) t += Math.hypot(pontos[i + 1].x - pontos[i].x, pontos[i + 1].y - pontos[i].y);
   return t;
@@ -204,8 +204,8 @@ function noPerimetro(p, r, tol) {
 
 module.exports = {
   EPS, direita, baixo, centro,
-  areaDaIntersecao, contem, gap, paddings, envolvente,
-  segmentoCruzaRetangulo, polilinhaCruzaRetangulo,
-  cruzamento, anguloEntre, anguloInterno,
-  distanciaPontoSegmento, distanciaPontoPolilinha, hausdorff, comprimento, noPerimetro,
+  intersectionArea, contem, gap, paddings, envolvente,
+  segmentCrossesRect, polilinhaCruzaRetangulo,
+  crossing, anguloEntre, anguloInterno,
+  pointSegmentDistance, pointPolylineDistance, hausdorff, polylineLength, noPerimetro,
 };

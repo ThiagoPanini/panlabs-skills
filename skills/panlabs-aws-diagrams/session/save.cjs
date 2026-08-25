@@ -34,12 +34,12 @@
 
 const path = require('path');
 
-const MOTOR_DIR = path.join(__dirname, '..', 'engine');
-const { esc, conferirXml } = require(path.join(MOTOR_DIR, 'emit.cjs'));
-const { impressaoSemantica, impressaoDeAparencia, reescreverSelos } = require('./fingerprint.cjs');
+const ENGINE_DIR = path.join(__dirname, '..', 'engine');
+const { esc, checkXml } = require(path.join(ENGINE_DIR, 'emit.cjs'));
+const { impressaoSemantica, appearanceFingerprint, reescreverSelos } = require('./fingerprint.cjs');
 
 /** Marca de reconhecimento. Ver `open.cjs` para por que nao basta o `host`. */
-const ESQUEMA_SELO = 'panlabs-aws-diagrams/session@1';
+const SEAL_SCHEMA = 'panlabs-aws-diagrams/session@1';
 
 /**
  * Quem desenhou. Era `'q11'` — o nome do PROTOTIPO — enquanto o motor morava
@@ -48,7 +48,7 @@ const ESQUEMA_SELO = 'panlabs-aws-diagrams/session@1';
  * "foi o experimento tal". O `open.cjs` usa este campo so para explicar
  * divergencia geometrica que nao veio de edicao humana.
  */
-const MOTOR = 'panlabs-aws-diagrams/motor@1';
+const ENGINE = 'panlabs-aws-diagrams/motor@1';
 
 /**
  * Troca a celula de metadados que o motor do #11 emitiu pelo selo da sessao.
@@ -58,7 +58,7 @@ const MOTOR = 'panlabs-aws-diagrams/motor@1';
  * seguinte precisa do modelo de sessao, com os dois casacos e o dossie, ou nao
  * ha o que retomar.
  */
-function selar(xml, sessao, view, opts = {}) {
+function sealInto(xml, session, view, opts = {}) {
   /**
    * ⚠️ UMA CHAMADA DO MOTOR PODE DEVOLVER N PAGINAS — e ate a recertificacao do
    * #23 esta funcao dizia `selar espera uma pagina, veio N` e morria.
@@ -85,12 +85,12 @@ function selar(xml, sessao, view, opts = {}) {
   // codigo 0 — esta guardada la, e o selo e justamente o lugar onde texto
   // arbitrario do usuario entra num atributo.
   return reescreverSelos(xml, p => ({
-    panlabsEsquema: ESQUEMA_SELO,
+    panlabsSchema: SEAL_SCHEMA,
     panlabsVista: view,
     panlabsSemantica: impressaoSemantica(p.celulas),
-    panlabsAparencia: impressaoDeAparencia(p.celulas),
-    panlabsMotor: opts.motor || MOTOR,
-    panlabsSessao: JSON.stringify(sessao),
+    panlabsAparencia: appearanceFingerprint(p.celulas),
+    panlabsMotor: opts.engine || ENGINE,
+    panlabsSessao: JSON.stringify(session),
   })).xml;
 }
 
@@ -108,7 +108,7 @@ function selar(xml, sessao, view, opts = {}) {
  * de uma execucao num pedaco so, o que por sorte produzia XML valido, e a
  * checagem de id repetido logo abaixo passava a olhar so o primeiro id.
  */
-function costurar(xmlsPorPagina, opts = {}) {
+function stitch(xmlsPorPagina, opts = {}) {
   const diagramas = xmlsPorPagina.flatMap(xml => {
     const findings = [...xml.matchAll(/[ \t]*<diagram\b[\s\S]*?<\/diagram>/g)].map(m => m[0]);
     if (!findings.length) throw new Error('XML sem <diagram> para costurar');
@@ -122,9 +122,9 @@ function costurar(xmlsPorPagina, opts = {}) {
   const output = `<mxfile host="${esc(opts.host || 'panlabs-aws-diagrams')}" compressed="false">\n` +
     diagramas.join('\n') + '\n</mxfile>\n';
 
-  const erros = conferirXml(output);
+  const erros = checkXml(output);
   if (erros.length) { const e = new Error('a costura produziu XML mal formado'); e.erros = erros; throw e; }
   return output;
 }
 
-module.exports = { selar, costurar, ESQUEMA_SELO };
+module.exports = { sealInto, stitch, SEAL_SCHEMA };

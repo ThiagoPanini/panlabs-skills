@@ -16,17 +16,17 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..');
 
-const GEOMETRIA = [
+const GEOMETRY = [
   'x', 'y', 'w', 'h', 'cx', 'cy', 'dx', 'dy',
-  'width', 'height', 'largura', 'altura', 'tamanho', 'size',
+  'width', 'height', 'widthOf', 'altura', 'tamanho', 'size',
   'pos', 'posicao', 'position', 'coord', 'coordenada', 'ponto', 'pontos', 'point', 'points',
   'waypoint', 'waypoints', 'bend', 'bendpoints', 'offset', 'deslocamento',
   'top', 'left', 'right', 'bottom', 'topo', 'esquerda', 'direita', 'background',
-  'margin', 'margin', 'padding', 'recuo', 'spacing', 'espacamento', 'gap', 'calha', 'lane',
+  'margin', 'margin', 'padding', 'recuo', 'spacing', 'spacing', 'gap', 'lane', 'lane',
   'align', 'alinhamento', 'anchor', 'ancora', 'grid', 'grade', 'scale', 'escala',
-  'z', 'zorder', 'zindex', 'linha', 'coluna', 'row', 'col', 'column', 'eixo', 'axis',
+  'z', 'zorder', 'zindex', 'row', 'column', 'row', 'col', 'column', 'eixo', 'axis',
   'style', 'style', 'color', 'color', 'fill', 'stroke',
 ];
 
@@ -34,40 +34,40 @@ const normal = k => k.toLowerCase().replace(/[^a-z]/g, '');
 const falhas = [];
 
 // 1 e 2 · o esquema -----------------------------------------------------------
-const schema = JSON.parse(fs.readFileSync(path.join(RAIZ, 'session', 'schema.json'), 'utf8'));
+const schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'session', 'schema.json'), 'utf8'));
 const props = new Set();
-const semFechar = [];
+const unclosed = [];
 
-(function andar(no, caminho) {
+(function tier(no, caminho) {
   if (!no || typeof no !== 'object') return;
-  if (Array.isArray(no)) return no.forEach((v, i) => andar(v, `${caminho}[${i}]`));
+  if (Array.isArray(no)) return no.forEach((v, i) => tier(v, `${caminho}[${i}]`));
   if (no.properties) {
     for (const k of Object.keys(no.properties)) props.add(k);
     // `acordo.recorte` guarda a projecao aprovada tal como ela saiu: e dado, nao
     // esquema, e nao tem `properties` — cai fora desta regra por construcao.
-    if (no.additionalProperties !== false && no.type === 'object') semFechar.push(caminho || '(raiz)');
+    if (no.additionalProperties !== false && no.type === 'object') unclosed.push(caminho || '(raiz)');
   }
-  for (const [k, v] of Object.entries(no)) andar(v, `${caminho}/${k}`);
+  for (const [k, v] of Object.entries(no)) tier(v, `${caminho}/${k}`);
 })(schema, '');
 
 for (const p of props)
-  if (GEOMETRIA.includes(normal(p)))
+  if (GEOMETRY.includes(normal(p)))
     falhas.push(`session@1 declara a propriedade "${p}" — vocabulario de geometria`);
-for (const c of semFechar)
+for (const c of unclosed)
   falhas.push(`objeto sem additionalProperties:false em ${c} — da para contrabandear chave`);
 
 // 3 · os modelos do caso ------------------------------------------------------
-const dir = path.join(RAIZ, 'models', 'session');
+const dir = path.join(ROOT, 'models', 'session');
 const modelos = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
 for (const arq of modelos) {
   const bruto = JSON.parse(fs.readFileSync(path.join(dir, arq), 'utf8'));
-  (function varrer(no, caminho) {
+  (function sweep(no, caminho) {
     if (!no || typeof no !== 'object') return;
-    if (Array.isArray(no)) return no.forEach((v, i) => varrer(v, `${caminho}[${i}]`));
+    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${caminho}[${i}]`));
     for (const [k, v] of Object.entries(no)) {
       if (caminho.startsWith('dossier')) continue;      // opaco ao motor por contrato (#11)
-      if (GEOMETRIA.includes(normal(k))) falhas.push(`${arq}: chave "${k}" em ${caminho}`);
-      varrer(v, caminho ? `${caminho}.${k}` : k);
+      if (GEOMETRY.includes(normal(k))) falhas.push(`${arq}: chave "${k}" em ${caminho}`);
+      sweep(v, caminho ? `${caminho}.${k}` : k);
     }
   })(bruto, '');
 }
@@ -77,14 +77,14 @@ for (const arq of modelos) {
 // grande solto: coordenada de pagina vive na casa das centenas.
 for (const arq of modelos) {
   const bruto = JSON.parse(fs.readFileSync(path.join(dir, arq), 'utf8'));
-  (function varrer(no, caminho) {
+  (function sweep(no, caminho) {
     if (!no || typeof no !== 'object') return;
-    if (Array.isArray(no)) return no.forEach((v, i) => varrer(v, `${caminho}[${i}]`));
+    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${caminho}[${i}]`));
     for (const [k, v] of Object.entries(no)) {
       if (caminho.startsWith('dossier')) continue;
       if (typeof v === 'number' && Math.abs(v) > 100)
         falhas.push(`${arq}: numero ${v} em ${caminho}.${k} — grande demais para nao ser pixel`);
-      varrer(v, caminho ? `${caminho}.${k}` : k);
+      sweep(v, caminho ? `${caminho}.${k}` : k);
     }
   })(bruto, '');
 }

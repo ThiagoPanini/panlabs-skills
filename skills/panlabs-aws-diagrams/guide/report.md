@@ -7,7 +7,7 @@ O laudo sai **sempre**, em `relatorio.geometria` e no `--explain`. Bloquear é q
 node tools/check-geometry.cjs <modelo.json>          # o laudo, legível
 node tools/check-geometry.cjs <modelo.json> --json    # para ler no código
 node tools/check-geometry.cjs --examples              # o corpus inteiro
-node engine/generate.cjs <modelo.json> --gate veracidade # bloqueia se o desenho mentir
+node engine/generate.cjs <modelo.json> --gate truthfulness # bloqueia se o desenho mentir
 ```
 
 ## Guarda de veracidade, não linter de beleza

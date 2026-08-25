@@ -22,8 +22,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const PROTOTIPOS = path.join(RAIZ, 'prototypes');
+const ROOT = path.join(__dirname, '..');
+const PROTOTYPES = path.join(ROOT, 'prototypes');
 
 let falhas = 0;
 const ok = (cond, title, detail) => {
@@ -33,27 +33,27 @@ const ok = (cond, title, detail) => {
 
 async function main() {
   // carrega TUDO o que a skill publicada expõe, e roda o pipeline de verdade
-  const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
-  require(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
-  require(path.join(RAIZ, 'validator', 'gate.cjs'));
-  require(path.join(RAIZ, 'theme', 'theme.cjs'));
-  require(path.join(RAIZ, 'session', 'draw.cjs'));
-  require(path.join(RAIZ, 'session', 'open.cjs'));
-  require(path.join(RAIZ, 'session', 'publish.cjs'));
+  const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
+  require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
+  require(path.join(ROOT, 'validator', 'gate.cjs'));
+  require(path.join(ROOT, 'theme', 'theme.cjs'));
+  require(path.join(ROOT, 'session', 'draw.cjs'));
+  require(path.join(ROOT, 'session', 'open.cjs'));
+  require(path.join(ROOT, 'session', 'publish.cjs'));
 
-  const modelos = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).sort();
+  const modelos = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
   for (const m of modelos)
-    await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', m), 'utf8')));
+    await generate(JSON.parse(fs.readFileSync(path.join(ROOT, 'models', m), 'utf8')));
 
   const carregados = Object.keys(require.cache)
     .filter(f => !f.includes(`${path.sep}node_modules${path.sep}`))
     .filter(f => f !== __filename);
 
-  const doProto = carregados.filter(f => f.startsWith(PROTOTIPOS + path.sep));
+  const doProto = carregados.filter(f => f.startsWith(PROTOTYPES + path.sep));
   ok(doProto.length === 0, 'nenhum arquivo de prototypes/ foi carregado',
-    doProto.length ? doProto.map(f => path.relative(RAIZ, f)).join(', ') : `${carregados.length} módulos carregados`);
+    doProto.length ? doProto.map(f => path.relative(ROOT, f)).join(', ') : `${carregados.length} módulos carregados`);
 
-  const foraDaSkill = carregados.filter(f => !f.startsWith(RAIZ + path.sep));
+  const foraDaSkill = carregados.filter(f => !f.startsWith(ROOT + path.sep));
   ok(foraDaSkill.length === 0, 'nem nada de fora da árvore da skill (premissa 7)',
     foraDaSkill.length ? foraDaSkill.join(', ') : 'só Node e o que a skill embarca');
 
@@ -72,9 +72,9 @@ async function main() {
   const realFs = fs.readFileSync;
   fs.readFileSync = function (p, ...resto) { lidos.push(String(p)); return realFs.call(fs, p, ...resto); };
   try {
-    delete require.cache[require.resolve(path.join(RAIZ, 'catalog', 'aws-shapes.cjs'))];
-    require(path.join(RAIZ, 'catalog', 'aws-shapes.cjs')).carregar();
-    await gerar(JSON.parse(realFs.call(fs, path.join(RAIZ, 'models', 'web-multi-az.json'), 'utf8')),
+    delete require.cache[require.resolve(path.join(ROOT, 'catalog', 'aws-shapes.cjs'))];
+    require(path.join(ROOT, 'catalog', 'aws-shapes.cjs')).load();
+    await generate(JSON.parse(realFs.call(fs, path.join(ROOT, 'models', 'web-multi-az.json'), 'utf8')),
       { tema: 'corporate' });
   } finally { fs.readFileSync = realFs; }
   // e a espia tem de ter visto ALGUMA coisa — uma espia que não observa nada
@@ -82,9 +82,9 @@ async function main() {
   ok(lidos.length > 0, 'a espia de `readFileSync` observou leituras',
     `${new Set(lidos).size} arquivo(s) distintos`);
 
-  const dadosDoProto = lidos.filter(p => p.startsWith(PROTOTIPOS + path.sep));
+  const dadosDoProto = lidos.filter(p => p.startsWith(PROTOTYPES + path.sep));
   ok(dadosDoProto.length === 0, 'nenhum ARQUIVO DE DADOS veio de prototypes/',
-    dadosDoProto.length ? dadosDoProto.map(p => path.relative(RAIZ, p)).join(', ')
+    dadosDoProto.length ? dadosDoProto.map(p => path.relative(ROOT, p)).join(', ')
       : `${new Set(lidos).size} arquivo(s) lidos, todos na árvore`);
 
   // --------------------------------------------- a CLI, do jeito que o AC pede
@@ -95,8 +95,8 @@ async function main() {
   let cli = true;
   try {
     execFileSync(process.execPath,
-      [path.join(RAIZ, 'engine', 'generate.cjs'), path.join(RAIZ, 'models', 'web-multi-az.json'), '--output', output],
-      { stdio: 'ignore', cwd: RAIZ });
+      [path.join(ROOT, 'engine', 'generate.cjs'), path.join(ROOT, 'models', 'web-multi-az.json'), '--output', output],
+      { stdio: 'ignore', cwd: ROOT });
   } catch (e) { cli = false; }
   ok(cli && fs.existsSync(output) && fs.statSync(output).size > 0,
     'node engine/generate.cjs <modelo> --output <x> roda a partir da raiz da skill',

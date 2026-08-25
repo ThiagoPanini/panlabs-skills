@@ -17,14 +17,14 @@
  * capacidades, o modelo tecnico serve 11" — e nao em hash contra hash.
  */
 
-const { projetar, recorteDoAcordo } = require('./project.cjs');
-const { impressaoDoAcordo, canonicalizar } = require('./fingerprint.cjs');
+const { project, recorteDoAcordo } = require('./project.cjs');
+const { impressaoDoAcordo, canonicalize } = require('./fingerprint.cjs');
 
 /** Sela a aprovacao no dossie. Nao muda mais nada do modelo. */
-function aprovar(sessao, quem = {}) {
-  const { modelo } = projetar(sessao, 'logical');
-  const snapshot = recorteDoAcordo(modelo);
-  const output = JSON.parse(JSON.stringify(sessao));
+function approve(session, quem = {}) {
+  const { model } = project(session, 'logical');
+  const snapshot = recorteDoAcordo(model);
+  const output = JSON.parse(JSON.stringify(session));
   output.dossier = output.dossier || {};
   output.dossier.agreement = {
     view: 'logical',
@@ -45,24 +45,24 @@ function aprovar(sessao, quem = {}) {
  * certo — e nada garante que esteja. Com um IR, a resposta e uma projecao e uma
  * comparacao de strings.
  */
-function check(sessao) {
-  const agreement = sessao.dossier && sessao.dossier.agreement;
+function check(session) {
+  const agreement = session.dossier && session.dossier.agreement;
   if (!agreement) return { ok: false, motivo: 'sem acordo', diferencas: [] };
 
-  const { modelo } = projetar(sessao, 'logical');
-  const agora = recorteDoAcordo(modelo);
+  const { model } = project(session, 'logical');
+  const agora = recorteDoAcordo(model);
   const fingerprint = impressaoDoAcordo(agora);
   if (fingerprint === agreement.fingerprint) return { ok: true, fingerprint, diferencas: [] };
 
   return { ok: false, motivo: 'a projecao logica de hoje difere da aprovada', fingerprint,
-    esperada: agreement.fingerprint, diferencas: diferencaDoRecorte(agreement.snapshot, agora) };
+    esperada: agreement.fingerprint, diferencas: snapshotDiff(agreement.snapshot, agora) };
 }
 
 /** A diferenca no vocabulario da conversa, nao no do XML. */
-function diferencaDoRecorte(antes, depois) {
+function snapshotDiff(antes, depois) {
   const out = [];
-  const porId = l => new Map((l || []).map(x => [x.id, x]));
-  const a = porId(antes.nodes), d = porId(depois.nodes);
+  const byId = l => new Map((l || []).map(x => [x.id, x]));
+  const a = byId(antes.nodes), d = byId(depois.nodes);
 
   for (const [id, n] of a) if (!d.has(id))
     out.push({ o: 'capability', kind: 'sumiu', id, text: `"${n.label || id}" foi aprovada e o modelo tecnico nao a serve` });
@@ -75,9 +75,9 @@ function diferencaDoRecorte(antes, depois) {
     if (v.kind !== n.kind) out.push({ o: 'capability', kind: 'kind', id, text: `"${v.label || id}" mudou de tipo: ${v.kind} → ${n.kind}` });
   }
 
-  const chave = e => `${e.from}→${e.to}`;
-  const ea = new Map((antes.edges || []).map(e => [chave(e), e]));
-  const ed = new Map((depois.edges || []).map(e => [chave(e), e]));
+  const key = e => `${e.from}→${e.to}`;
+  const ea = new Map((antes.edges || []).map(e => [key(e), e]));
+  const ed = new Map((depois.edges || []).map(e => [key(e), e]));
   for (const [k, e] of ea) if (!ed.has(k)) out.push({ o: 'flow', kind: 'sumiu', id: k, text: `o fluxo ${k} ("${e.label || ''}") foi aprovado e nao existe mais` });
   for (const [k, e] of ed) if (!ea.has(k)) out.push({ o: 'flow', kind: 'apareceu', id: k, text: `o fluxo ${k} ("${e.label || ''}") nao estava na vista aprovada` });
   for (const [k, e] of ed) {
@@ -86,12 +86,12 @@ function diferencaDoRecorte(antes, depois) {
     if ((v.data || 'out') !== (e.data || 'out')) out.push({ o: 'flow', kind: 'sentido', id: k, text: `${k}: sentido do dado ${v.data || 'out'} → ${e.data || 'out'}` });
   }
 
-  const na = new Set((antes.notes || []).map(canonicalizar));
-  const nd = new Set((depois.notes || []).map(canonicalizar));
+  const na = new Set((antes.notes || []).map(canonicalize));
+  const nd = new Set((depois.notes || []).map(canonicalize));
   for (const n of na) if (!nd.has(n)) out.push({ o: 'note', kind: 'sumiu', id: n.slice(0, 40), text: `uma nota aprovada sumiu — se for a do achado recusado, o desenho volta a enganar calado (#15 §4)` });
   for (const n of nd) if (!na.has(n)) out.push({ o: 'note', kind: 'apareceu', id: n.slice(0, 40), text: 'nota nova na vista logica' });
 
   return out;
 }
 
-module.exports = { aprovar, check, diferencaDoRecorte };
+module.exports = { approve, check, snapshotDiff };

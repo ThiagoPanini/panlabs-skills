@@ -32,7 +32,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..');
 
 let falhas = 0;
 const ok = (cond, title, detail) => {
@@ -67,47 +67,47 @@ function esquemas(dir, fora = new Set(['prototypes', 'node_modules', 'output']))
   return findings;
 }
 
-const findings = esquemas(RAIZ);
+const findings = esquemas(ROOT);
 
 console.log('\n1 · cada contrato num arquivo só\n');
-const porId = new Map();
+const byId = new Map();
 for (const a of findings) {
-  if (!porId.has(a.id)) porId.set(a.id, []);
-  porId.get(a.id).push(path.relative(RAIZ, a.p));
+  if (!byId.has(a.id)) byId.set(a.id, []);
+  byId.get(a.id).push(path.relative(ROOT, a.p));
 }
-for (const [id, arquivos] of [...porId].sort())
+for (const [id, arquivos] of [...byId].sort())
   ok(arquivos.length === 1, `${id}`, arquivos.join(' + '));
-ok(porId.size === 4, `${porId.size} contratos distintos na árvore — os QUATRO do #37, nem mais nem menos`,
-  [...porId.keys()].sort().join(' · '));
+ok(byId.size === 4, `${byId.size} contratos distintos na árvore — os QUATRO do #37, nem mais nem menos`,
+  [...byId.keys()].sort().join(' · '));
 
 console.log('\n2 · o contrato do modelo mora na raiz da skill\n');
-const doModelo = porId.get('panlabs-aws-diagrams/model@1') || [];
+const doModelo = byId.get('panlabs-aws-diagrams/model@1') || [];
 ok(doModelo.length === 1 && doModelo[0] === 'schema.json',
   'panlabs-aws-diagrams/model@1 está em schema.json, na raiz',
   doModelo.join(', ') || 'não encontrado');
-ok(!fs.existsSync(path.join(RAIZ, 'engine', 'schema.json')),
+ok(!fs.existsSync(path.join(ROOT, 'engine', 'schema.json')),
   'e NÃO existe mais um schema.json dentro do motor');
 
 console.log('\n2b · o quarto contrato — elaboration@1 — mora ao lado de quem o consome\n');
-const daElaboracao = porId.get('panlabs-aws-diagrams/elaboration@1') || [];
-ok(daElaboracao.length === 1 && daElaboracao[0] === 'session/elaboration.schema.json',
+const fromElaboration = byId.get('panlabs-aws-diagrams/elaboration@1') || [];
+ok(fromElaboration.length === 1 && fromElaboration[0] === 'session/elaboration.schema.json',
   'panlabs-aws-diagrams/elaboration@1 está em session/elaboration.schema.json',
-  daElaboracao.join(', ') || 'não encontrado');
+  fromElaboration.join(', ') || 'não encontrado');
 
 console.log('\n3 · é esse arquivo que o motor carrega (medido)\n');
 {
-  const lidos = leiturasDoRequire(path.join(RAIZ, 'engine', 'generate.cjs'));
-  const target = path.join(RAIZ, 'schema.json');
+  const lidos = leiturasDoRequire(path.join(ROOT, 'engine', 'generate.cjs'));
+  const target = path.join(ROOT, 'schema.json');
   ok(lidos.includes(target), 'engine/generate.cjs abriu <raiz>/schema.json',
-    lidos.filter(p => p.endsWith('schema.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'none');
+    lidos.filter(p => p.endsWith('schema.json')).map(p => path.relative(ROOT, p)).join(', ') || 'none');
 }
 
 console.log('\n3b · e é esse arquivo que elaborate.cjs carrega para o delta (medido)\n');
 {
-  const lidos = leiturasDoRequire(path.join(RAIZ, 'session', 'elaborate.cjs'));
-  const target = path.join(RAIZ, 'session', 'elaboration.schema.json');
+  const lidos = leiturasDoRequire(path.join(ROOT, 'session', 'elaborate.cjs'));
+  const target = path.join(ROOT, 'session', 'elaboration.schema.json');
   ok(lidos.includes(target), 'session/elaborate.cjs abriu session/elaboration.schema.json',
-    lidos.filter(p => p.endsWith('.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'none');
+    lidos.filter(p => p.endsWith('.json')).map(p => path.relative(ROOT, p)).join(', ') || 'none');
 }
 
 console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela substituiu\n');
@@ -126,7 +126,7 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
     })(j, '');
     return out;
   };
-  const producao = props(JSON.parse(fs.readFileSync(path.join(RAIZ, 'schema.json'), 'utf8')));
+  const production = props(JSON.parse(fs.readFileSync(path.join(ROOT, 'schema.json'), 'utf8')));
   /**
    * ⚠️ LISTA CONGELADA, E ELA SUBSTITUIU UMA LEITURA DO GIT — #62.
    *
@@ -146,7 +146,7 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
    * exige é essa: o que está fora pode apontar para dentro, o que está dentro
    * não aponta para fora.
    */
-  const ANTIGAS = {
+  const FROZEN = {
     '#11': [
       'edge.data', 'edge.from', 'edge.id', 'edge.order', 'edge.to',
       'edge.protocol', 'edge.label', 'edges', 'dossier', 'schema',
@@ -176,16 +176,16 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
    * nada se perdeu depois de conferir menos. O piso é a contagem medida no dia
    * da extração; encolher a lista passa a ser vermelho.
    */
-  const PISO = { '#11': 39, '#13': 37 };
-  for (const [rot, antigas] of Object.entries(ANTIGAS)) {
-    ok(antigas.length >= PISO[rot], `a lista congelada do ${rot} não encolheu`,
-      `${antigas.length} de ${PISO[rot]} propriedades`);
-    const perdidas = antigas.filter(p => !producao.has(p));
+  const FLOOR = { '#11': 39, '#13': 37 };
+  for (const [rot, antigas] of Object.entries(FROZEN)) {
+    ok(antigas.length >= FLOOR[rot], `a lista congelada do ${rot} não encolheu`,
+      `${antigas.length} de ${FLOOR[rot]} propriedades`);
+    const perdidas = antigas.filter(p => !production.has(p));
     ok(perdidas.length === 0, `nenhuma propriedade do esquema do ${rot} se perdeu`,
       perdidas.length ? perdidas.join(', ') : `${antigas.length} propriedades conferidas`);
   }
   for (const nova of ['node.qualifier', 'node.ou', 'node.enables', 'node.layer'])
-    ok(producao.has(nova), `e o esquema único traz "${nova}"`);
+    ok(production.has(nova), `e o esquema único traz "${nova}"`);
 }
 
 console.log(falhas

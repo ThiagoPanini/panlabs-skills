@@ -16,16 +16,16 @@
  *   node tools/measure-ruler.cjs
  */
 
-const { razao, luminancia } = require('../engine/contrast.cjs');
-const cat = require('../catalog/aws-shapes.cjs').carregar();
+const { ratio, luminance } = require('../engine/contrast.cjs');
+const cat = require('../catalog/aws-shapes.cjs').load();
 const tema = require('../theme/theme.cjs');
 
 const cinza = g => '#' + Math.max(0, Math.min(255, g)).toString(16).padStart(2, '0').repeat(3).toUpperCase();
 
-function limites(color, target = 3) {
+function bounds(color, target = 3) {
   let light = null, dark = null;
-  for (let g = 255; g >= 0; g--) { if (razao(color, cinza(g)) < target) { light = g + 1; break; } }
-  for (let g = 0; g <= 255; g++) { if (razao(color, cinza(g)) < target) { dark = g - 1; break; } }
+  for (let g = 255; g >= 0; g--) { if (ratio(color, cinza(g)) < target) { light = g + 1; break; } }
+  for (let g = 0; g <= 255; g++) { if (ratio(color, cinza(g)) < target) { dark = g - 1; break; } }
   return { light: light === null ? 0 : light, dark: dark === null ? 255 : dark };
 }
 
@@ -42,10 +42,10 @@ function main() {
 
   console.log('\n=== 1. BORDA DE GRUPO vs. FUNDO NEUTRO (WCAG 1.4.11, alvo 3:1) ===\n');
   console.log('cor      vs branco  fundo claro mais ESCURO que passa   fundo escuro mais CLARO que passa   grupos');
-  const linhas = [...bordas.entries()].sort((a, b) => razao(a[0], '#FFFFFF') - razao(b[0], '#FFFFFF'));
+  const linhas = [...bordas.entries()].sort((a, b) => ratio(a[0], '#FFFFFF') - ratio(b[0], '#FFFFFF'));
   for (const [c, grupos] of linhas) {
-    const l = limites(c);
-    console.log(`${c}   ${razao(c, '#FFFFFF').toFixed(2).padStart(5)}   ` +
+    const l = bounds(c);
+    console.log(`${c}   ${ratio(c, '#FFFFFF').toFixed(2).padStart(5)}   ` +
       `${(l.light > 255 ? 'NENHUM' : cinza(l.light)).padEnd(30)} ` +
       `${(l.dark < 0 ? 'NENHUM' : cinza(l.dark)).padEnd(30)} ${grupos.slice(0, 2).join(', ')}`);
   }
@@ -53,12 +53,12 @@ function main() {
   // O AWS Cloud sai da conta do fundo escuro porque ele é justamente a cor que o
   // deck escuro INVERTE — medi-lo como se não invertesse tornaria a régua inútil.
   const semNuvem = linhas.filter(([c]) => c !== '#232F3E');
-  const teto = Math.max(...linhas.map(([c]) => limites(c).light));
-  const piso = Math.min(...semNuvem.map(([c]) => limites(c).dark));
-  console.log(`\n  → o fundo CLARO não pode ser mais escuro que ${cinza(teto)} (quem manda: ` +
-    linhas.filter(([c]) => limites(c).light === teto).map(([c]) => c).join(', ') + ')');
-  console.log(`  → o fundo ESCURO não pode ser mais claro que ${cinza(piso)} (quem manda: ` +
-    semNuvem.filter(([c]) => limites(c).dark === piso).map(([c]) => c).join(', ') +
+  const ceiling = Math.max(...linhas.map(([c]) => bounds(c).light));
+  const floor = Math.min(...semNuvem.map(([c]) => bounds(c).dark));
+  console.log(`\n  → o fundo CLARO não pode ser mais escuro que ${cinza(ceiling)} (quem manda: ` +
+    linhas.filter(([c]) => bounds(c).light === ceiling).map(([c]) => c).join(', ') + ')');
+  console.log(`  → o fundo ESCURO não pode ser mais claro que ${cinza(floor)} (quem manda: ` +
+    semNuvem.filter(([c]) => bounds(c).dark === floor).map(([c]) => c).join(', ') +
     ') — já com o AWS Cloud invertido, como manda o deck escuro');
   console.log('\n  Não existe faixa no meio. O "off-white corporativo" — #F7F8FA, #F2F3F5,');
   console.log('  #FAFAFA — cai fora do teto. A margem estética da casa não está no fundo.');
@@ -66,10 +66,10 @@ function main() {
   console.log('\n=== 2. O QUE O DECK ESCURO DA AWS MUDA, DERIVADO DA MEDIÇÃO ===\n');
   console.log('A AWS publica dois decks e o escuro muda a borda/ícone do AWS Cloud e os');
   console.log('callouts, nada mais (#5 §2.1 leitura 2). Medindo contra um fundo escuro:\n');
-  const dark = tema.PADRAO.dark.page.color;
+  const dark = tema.DEFAULT.dark.page.color;
   const reprovam = [];
   for (const [c, grupos] of linhas) {
-    const r = razao(c, dark);
+    const r = ratio(c, dark);
     const marca = r >= 3 ? ' ' : '✗';
     if (r < 3) reprovam.push(c);
     console.log(`  ${marca} ${c}  ${r.toFixed(2).padStart(5)}:1 sobre ${dark}   ${grupos.slice(0, 2).join(', ')}`);
@@ -85,9 +85,9 @@ function main() {
     fills.get(v.fill).push(k);
   }
   console.log('cor      vs branco  vs escuro  glifo branco sobre ela  categorias');
-  for (const [c, cats] of [...fills.entries()].sort((a, b) => razao(a[0], '#FFFFFF') - razao(b[0], '#FFFFFF')))
-    console.log(`${c}   ${razao(c, '#FFFFFF').toFixed(2).padStart(5)}     ${razao(c, dark).toFixed(2).padStart(5)}` +
-      `      ${razao(c, '#FFFFFF').toFixed(2).padStart(5)}                ${cats.slice(0, 3).join(', ')}`);
+  for (const [c, cats] of [...fills.entries()].sort((a, b) => ratio(a[0], '#FFFFFF') - ratio(b[0], '#FFFFFF')))
+    console.log(`${c}   ${ratio(c, '#FFFFFF').toFixed(2).padStart(5)}     ${ratio(c, dark).toFixed(2).padStart(5)}` +
+      `      ${ratio(c, '#FFFFFF').toFixed(2).padStart(5)}                ${cats.slice(0, 3).join(', ')}`);
   console.log('\n  O glifo é branco sobre o quadrado, então "vs branco" e "glifo" são a mesma');
   console.log('  conta — e é por isso que a paleta inteira encosta em 3:1: ela foi calibrada');
   console.log('  para o glifo branco caber, não para a página.');
@@ -99,36 +99,36 @@ function main() {
     porCategoria.set(s.palette, porCategoria.get(s.palette) + 1);
   }
   let reprovados = 0, total = 0;
-  const lista = [];
+  const list = [];
   for (const [pal, n] of porCategoria) {
     const fill = (cat.categorias()[pal] || {}).fill;
     total += n;
     if (!fill) continue;
     // as paletas monocromáticas são justamente as que a AWS entrega em Light/Dark;
     // o tema inverte e elas saem em branco. Fora da conta.
-    if (tema.PALETAS_MONO.has(pal)) continue;
-    const r = razao(fill, dark);
-    if (r < 3) { reprovados += n; lista.push(`${pal} (${fill}, ${r.toFixed(2)}:1, ${n} ícones)`); }
+    if (tema.MONO_PALETTES.has(pal)) continue;
+    const r = ratio(fill, dark);
+    if (r < 3) { reprovados += n; list.push(`${pal} (${fill}, ${r.toFixed(2)}:1, ${n} ícones)`); }
   }
-  if (lista.length) {
+  if (list.length) {
     console.log('  O deck escuro da AWS diz que a cor de categoria não muda. A medição');
     console.log('  discorda em duas categorias — e é por isso que o portão roda sobre o');
     console.log('  PLANO, não sobre o tema: se o diagrama não usa esses serviços, passa.\n');
-    for (const l of lista) console.log('  ✗ ' + l);
+    for (const l of list) console.log('  ✗ ' + l);
     console.log(`\n  → ${reprovados} de ${total} service icons ficam abaixo de 3:1 no fundo escuro.`);
   } else {
     console.log('  Nenhuma categoria reprova no fundo escuro.');
   }
 
   console.log('\n=== 5. VEREDITO POR TEMA ===\n');
-  for (const id of tema.listar()) {
-    let t; try { t = tema.carregar(id); } catch (e) { console.log(`  ${id.padEnd(14)} não carrega: ${e.message}`); continue; }
+  for (const id of tema.listAll()) {
+    let t; try { t = tema.load(id); } catch (e) { console.log(`  ${id.padEnd(14)} não carrega: ${e.message}`); continue; }
     const f = t.tokens.page.color;
     // aplica a inversão normativa antes de medir: é o que o tema de fato emite
-    const cores = linhas.map(([c]) => c === '#232F3E' ? t.normativo.cloud : c);
-    const pior = Math.min(...cores.map(c => razao(c, f)));
-    const quem = cores.find(c => razao(c, f) === pior);
-    const lum = luminancia(f);
+    const colors = linhas.map(([c]) => c === '#232F3E' ? t.normativo.cloud : c);
+    const pior = Math.min(...colors.map(c => ratio(c, f)));
+    const quem = colors.find(c => ratio(c, f) === pior);
+    const lum = luminance(f);
     const ok = pior >= 3;
     console.log(`  ${ok ? '✓' : '✗'} ${id.padEnd(14)} fundo ${f}  luminância ${lum.toFixed(4)}  ` +
       `pior borda de grupo ${pior.toFixed(2)}:1 (${quem})  ${ok ? '' : '← REPROVA'}`);
@@ -137,4 +137,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { limites, cinza };
+module.exports = { bounds, cinza };

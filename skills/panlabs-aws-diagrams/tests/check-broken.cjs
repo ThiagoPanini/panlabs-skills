@@ -11,17 +11,17 @@
  */
 
 const path = require('path');
-const { CASOS, CONTROLE } = require(path.join(__dirname, 'cases', 'broken.cjs'));
-const { validarGeometria } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
+const { CASES, CONTROL } = require(path.join(__dirname, 'cases', 'broken.cjs'));
+const { validateGeometry } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
 
 /** As checagens que devem passar num desenho geometricamente correto. */
-const DURAS = ['A3.1', 'A3.3', 'A3.5', 'A3.7', 'A4.1', 'A4.2', 'A4.3', 'A4.4', 'A5.5', 'A5.8', 'F1'];
+const HARD = ['A3.1', 'A3.3', 'A3.5', 'A3.7', 'A4.1', 'A4.2', 'A4.3', 'A4.4', 'A5.5', 'A5.8', 'F1'];
 
 let falhas = 0;
 
 console.log('  casos quebrados de propósito:\n');
-for (const caso of CASOS) {
-  const r = validarGeometria(caso.plano, { modelo: caso.modelo });
+for (const caso of CASES) {
+  const r = validateGeometry(caso.layoutPlan, { model: caso.model });
   const acusadas = new Set([...r.falhas, ...r.avisos].map(x => x.id));
   const faltando = caso.espera.filter(id => !acusadas.has(id));
   const ok = faltando.length === 0;
@@ -30,11 +30,11 @@ for (const caso of CASOS) {
   if (ok) {
     const quais = caso.espera.map(id => {
       const finding = [...r.falhas, ...r.avisos].find(x => x.id === id);
-      return `${id} ${finding.state === 'falha' ? 'reprovou' : 'avisou'}`;
+      return `${id} ${finding.state === 'failure' ? 'reprovou' : 'avisou'}`;
     });
     console.log(`      ${quais.join(', ')}`);
-    const primeira = [...r.falhas, ...r.avisos].find(x => caso.espera.includes(x.id) && x.occurrences.length);
-    if (primeira) console.log(`      → ${primeira.occurrences[0].o_que}`);
+    const first = [...r.falhas, ...r.avisos].find(x => caso.espera.includes(x.id) && x.occurrences.length);
+    if (first) console.log(`      → ${first.occurrences[0].o_que}`);
   } else {
     console.log(`      esperava ${faltando.join(', ')} e não veio; acusadas: ${[...acusadas].join(', ') || '(nenhuma)'}`);
   }
@@ -44,13 +44,13 @@ for (const caso of CASOS) {
 
 console.log('\n  controle positivo (mesmo vocabulário, geometria correta):\n');
 {
-  const r = validarGeometria(CONTROLE.plano, { modelo: CONTROLE.modelo });
+  const r = validateGeometry(CONTROL.layoutPlan, { model: CONTROL.model });
   const acusadas = new Set(r.falhas.map(x => x.id));
-  const indevidas = DURAS.filter(id => acusadas.has(id));
+  const indevidas = HARD.filter(id => acusadas.has(id));
   const ok = indevidas.length === 0;
   if (!ok) falhas++;
   console.log(`  ${ok ? '✓' : '✗'} nenhuma checagem dura acusa o desenho correto`);
-  if (ok) console.log(`      ${DURAS.length} checagens duras conferidas, ${r.resumo.ok} ok no total`);
+  if (ok) console.log(`      ${HARD.length} checagens duras conferidas, ${r.resumo.ok} ok no total`);
   else {
     console.log(`      acusaram sem motivo: ${indevidas.join(', ')}`);
     for (const id of indevidas) {
@@ -71,7 +71,7 @@ console.log('\n  controle positivo (mesmo vocabulário, geometria correta):\n');
 
 console.log('\n  cobertura:\n');
 {
-  const r = validarGeometria(CONTROLE.plano, { modelo: CONTROLE.modelo });
+  const r = validateGeometry(CONTROL.layoutPlan, { model: CONTROL.model });
   const ok = r.cobertura.naoRodaram.length === 0;
   if (!ok) falhas++;
   console.log(`  ${ok ? '✓' : '✗'} as ${r.cobertura.esperadas} checagens do validador rodaram`);
@@ -85,5 +85,5 @@ console.log('\n  cobertura:\n');
 
 console.log(falhas
   ? `\n  ✗ ${falhas} verificação(ões) falharam`
-  : `\n  ✓ o validador acusa os ${CASOS.length} defeitos e absolve o desenho correto.`);
+  : `\n  ✓ o validador acusa os ${CASES.length} defeitos e absolve o desenho correto.`);
 process.exit(falhas ? 1 : 0);

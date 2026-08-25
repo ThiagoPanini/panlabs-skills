@@ -45,11 +45,11 @@
  */
 
 const path = require('path');
-const { LIMIARES } = require(path.join(__dirname, 'index.cjs'));
+const { THRESHOLDS } = require(path.join(__dirname, 'index.cjs'));
 const color = require(path.join(__dirname, 'color.cjs'));
 const geo = require(path.join(__dirname, 'geometry.cjs'));
 
-const v = chave => LIMIARES[chave].valor;
+const v = key => THRESHOLDS[key].valor;
 
 /** Células que são moldura do documento, não conteúdo do diagrama. */
 const CHROME = new Set(['title', 'subtitle', 'notes', 'panlabs-modelo']);
@@ -64,7 +64,7 @@ const CHROME = new Set(['title', 'subtitle', 'notes', 'panlabs-modelo']);
  * (`text;html=1`), e valores como `points=[[0,0],[1,0]]` e `dashPattern=8 5`
  * carregam vírgula, colchete e espaço dentro do valor.
  */
-function lerEstilo(s) {
+function readStyle(s) {
   const fora = { _flags: [] };
   for (const parte of String(s || '').split(';')) {
     const t = parte.trim();
@@ -76,12 +76,12 @@ function lerEstilo(s) {
   return fora;
 }
 
-const num = (e, chave, padrao) => {
-  const x = parseFloat(e[chave]);
+const num = (e, key, padrao) => {
+  const x = parseFloat(e[key]);
   return Number.isFinite(x) ? x : padrao;
 };
 /** `none` e ausente são coisas diferentes de uma cor, e as duas viram `null`. */
-const corDe = (e, chave) => (color.ehCor(e[chave]) ? e[chave] : null);
+const corDe = (e, key) => (color.ehCor(e[key]) ? e[key] : null);
 
 // -------------------------------------------------------------------- rótulo
 
@@ -99,7 +99,7 @@ const corDe = (e, chave) => (color.ehCor(e[chave]) ? e[chave] : null);
  * motor RESERVA espaço e nunca CONFERE se a reserva bastou, e é a conferência
  * que A3.2, A3.3 e A3.4 fazem. A palavra final continua sendo do render (B7).
  */
-function caixaDeRotulo(caixa, label, style) {
+function labelBox(cellBox, label, style) {
   const text = String(label || '').replace(/<[^>]+>/g, '').trim();
   if (!text) return null;
 
@@ -127,8 +127,8 @@ function caixaDeRotulo(caixa, label, style) {
     // porque serializado o par vira `"grIcon":"..."`. A chave é que se testa.
     const recuo = 'grIcon' in style || style.spacingLeft ? num(style, 'spacingLeft', 30) : 8;
     return {
-      x: caixa.x + recuo, y: caixa.y,
-      w: Math.min(caixa.w - recuo, text.length * porCaractere),
+      x: cellBox.x + recuo, y: cellBox.y,
+      w: Math.min(cellBox.w - recuo, text.length * porCaractere),
       h: v('alturaDaFaixaDeTitulo'),
       onde: 'title',
     };
@@ -138,14 +138,14 @@ function caixaDeRotulo(caixa, label, style) {
   if (style.verticalLabelPosition === 'bottom') {
     const larg = Math.min(largMax, text.length * porCaractere);
     return {
-      x: caixa.x + (caixa.w - larg) / 2, y: caixa.y + caixa.h,
+      x: cellBox.x + (cellBox.w - larg) / 2, y: cellBox.y + cellBox.h,
       w: larg, h: Math.max(v('alturaMinimaDeRotulo'), quebra(largMax) * alturaLinha),
       onde: 'abaixo',
     };
   }
 
   // Rótulo interno: a caixa é a própria caixa do objeto.
-  return { x: caixa.x, y: caixa.y, w: caixa.w, h: caixa.h, onde: 'inside' };
+  return { x: cellBox.x, y: cellBox.y, w: cellBox.w, h: cellBox.h, onde: 'inside' };
 }
 
 // -------------------------------------------------------------------- aresta
@@ -163,65 +163,65 @@ function caixaDeRotulo(caixa, label, style) {
  * checagem reporta nesse caso — o que ela não faz é passar calada fingindo ter
  * conferido.
  */
-function pontaNoPerimetro(caixa, target) {
-  const c = geo.centro(caixa);
+function tipOnPerimeter(cellBox, target) {
+  const c = geo.centro(cellBox);
   const dx = target.x - c.x;
   const dy = target.y - c.y;
   if (Math.abs(dx) < geo.EPS && Math.abs(dy) < geo.EPS) return c;
-  const tx = Math.abs(dx) < geo.EPS ? Infinity : (caixa.w / 2) / Math.abs(dx);
-  const ty = Math.abs(dy) < geo.EPS ? Infinity : (caixa.h / 2) / Math.abs(dy);
+  const tx = Math.abs(dx) < geo.EPS ? Infinity : (cellBox.w / 2) / Math.abs(dx);
+  const ty = Math.abs(dy) < geo.EPS ? Infinity : (cellBox.h / 2) / Math.abs(dy);
   const t = Math.min(tx, ty);
   return { x: c.x + dx * t, y: c.y + dy * t };
 }
 
-function ancoraDeclarada(caixa, style, prefixo) {
+function declaredAnchor(cellBox, style, prefixo) {
   const ax = parseFloat(style[`${prefixo}X`]);
   const ay = parseFloat(style[`${prefixo}Y`]);
   if (!Number.isFinite(ax) || !Number.isFinite(ay)) return null;
-  return { x: caixa.x + ax * caixa.w, y: caixa.y + ay * caixa.h, declarada: true };
+  return { x: cellBox.x + ax * cellBox.w, y: cellBox.y + ay * cellBox.h, declared: true };
 }
 
 // --------------------------------------------------------------------- cena
 
-function criarCena(plano, opts = {}) {
-  const celulas = plano.celulas || [];
+function createScene(layoutPlan, opts = {}) {
+  const celulas = layoutPlan.celulas || [];
 
   // 1. o modelo semântico, que viaja dentro do próprio plano (#2 §round-trip)
-  let modelo = opts.modelo || null;
-  if (!modelo) {
-    const embutido = celulas.find(c => c.id === 'panlabs-modelo');
-    if (embutido && embutido.data && embutido.data.panlabsModelo) {
-      try { modelo = JSON.parse(embutido.data.panlabsModelo); } catch { modelo = null; }
+  let model = opts.model || null;
+  if (!model) {
+    const embedded = celulas.find(c => c.id === 'panlabs-modelo');
+    if (embedded && embedded.data && embedded.data.panlabsModelo) {
+      try { model = JSON.parse(embedded.data.panlabsModelo); } catch { model = null; }
     }
   }
 
-  const idsDeFaixa = new Set((modelo && modelo.bands || []).map(f => f.id));
-  const membrosDaFaixa = new Map((modelo && modelo.bands || []).map(f => [f.id, f.members || []]));
-  const noDoModelo = new Map((modelo && modelo.nodes || []).map(n => [n.id, n]));
+  const idsDeFaixa = new Set((model && model.bands || []).map(f => f.id));
+  const membrosDaFaixa = new Map((model && model.bands || []).map(f => [f.id, f.members || []]));
+  const noDoModelo = new Map((model && model.nodes || []).map(n => [n.id, n]));
 
   // 2. coordenada absoluta, resolvendo a cadeia de pais
-  const porId = new Map();
+  const byId = new Map();
   const absoluto = new Map();
-  for (const c of celulas) if (c.geo) porId.set(c.id, c);
+  for (const c of celulas) if (c.geo) byId.set(c.id, c);
 
   function abs(c) {
     if (absoluto.has(c.id)) return absoluto.get(c.id);
     let x = c.geo.x;
     let y = c.geo.y;
-    const pai = porId.get(c.pai);
-    if (pai) { const a = abs(pai); x += a.x; y += a.y; }
+    const parent = byId.get(c.parent);
+    if (parent) { const a = abs(parent); x += a.x; y += a.y; }
     const r = { x, y, w: c.geo.w, h: c.geo.h };
     absoluto.set(c.id, r);
     return r;
   }
 
   // 3. classificar. A ordem do laço é a ordem z (quem vem antes fica atrás).
-  const elementos = [];
+  const elements = [];
   celulas.forEach((c, z) => {
-    const style = lerEstilo(c.style);
+    const style = readStyle(c.style);
     if (c.kind === 'edge') {
-      elementos.push({
-        id: c.id, classe: 'edge', pai: c.pai, z, style, estiloBruto: c.style || '',
+      elements.push({
+        id: c.id, classe: 'edge', parent: c.parent, z, style, estiloBruto: c.style || '',
         label: c.label || '', from: c.from, to: c.to, dobras: c.pontos || [],
         // os mesmos campos que as caixas ganham: sem isto cada família reparseia
         // a style à mão, e A3.9 e A7.1 já divergiram no default de `fontSize`
@@ -234,22 +234,22 @@ function criarCena(plano, opts = {}) {
       return;
     }
     if (!c.geo) return;
-    const caixa = abs(c);
+    const cellBox = abs(c);
     const oculto = c.visivel === false;
     let classe;
-    if (oculto || CHROME.has(c.id)) classe = c.id === 'panlabs-modelo' || oculto ? 'oculto' : 'moldura';
+    if (oculto || CHROME.has(c.id)) classe = c.id === 'panlabs-modelo' || oculto ? 'oculto' : 'frame';
     else if (idsDeFaixa.has(c.id) || /^az-/.test(c.id)) classe = 'band';
     else if (style.container === '1') classe = 'group';
-    else if (style._flags.includes('text')) classe = 'moldura';
+    else if (style._flags.includes('text')) classe = 'frame';
     else classe = 'no';
 
-    elementos.push({
-      id: c.id, classe, pai: c.pai, z, caixa, style, estiloBruto: c.style || '',
+    elements.push({
+      id: c.id, classe, parent: c.parent, z, cellBox, style, estiloBruto: c.style || '',
       label: c.label || '',
       tipoSemantico: (noDoModelo.get(c.id) || {}).kind || null,
       noModelo: noDoModelo.get(c.id) || null,
       members: membrosDaFaixa.get(c.id) || null,
-      rotuloCaixa: caixa && !oculto ? caixaDeRotulo(caixa, c.label, style) : null,
+      rotuloCaixa: cellBox && !oculto ? labelBox(cellBox, c.label, style) : null,
       preenchimento: corDe(style, 'fillColor'),
       traco: corDe(style, 'strokeColor'),
       corDaFonte: corDe(style, 'fontColor') || '#000000',
@@ -259,43 +259,43 @@ function criarCena(plano, opts = {}) {
     });
   });
 
-  const from = classe => elementos.filter(e => e.classe === classe);
+  const from = classe => elements.filter(e => e.classe === classe);
   const nodes = from('no');
   const grupos = from('group');
   const bands = from('band');
-  const molduras = from('moldura');
+  const molduras = from('frame');
   const edges = from('edge');
-  const caixas = [...nodes, ...grupos, ...bands];
-  const porElemento = new Map(elementos.map(e => [e.id, e]));
+  const boxes = [...nodes, ...grupos, ...bands];
+  const byElement = new Map(elements.map(e => [e.id, e]));
 
   // 4. as faixas de AZ nascem do caminho da grade e não estão no modelo; os
   //    membros delas são os nós cuja subnet declara aquela zona.
   for (const f of bands) {
     if (f.members) continue;
     const zona = /^az-(.+)$/.exec(f.id);
-    if (!zona || !modelo) { f.members = null; continue; }
-    const subnets = new Set((modelo.nodes || []).filter(n => n.az === zona[1]).map(n => n.id));
-    f.members = (modelo.nodes || [])
+    if (!zona || !model) { f.members = null; continue; }
+    const subnets = new Set((model.nodes || []).filter(n => n.az === zona[1]).map(n => n.id));
+    f.members = (model.nodes || [])
       .filter(n => subnets.has(n.id) || subnets.has(n.inside))
       .map(n => n.id)
-      .filter(id => porElemento.has(id) && porElemento.get(id).classe === 'no');
+      .filter(id => byElement.has(id) && byElement.get(id).classe === 'no');
   }
 
   // 5. a árvore de contenção DECLARADA — só grupos e nós; faixa não é pai de ninguém
   const filhosDe = new Map();
   for (const e of [...nodes, ...grupos]) {
-    const pai = e.pai === '1' ? null : e.pai;
-    if (!filhosDe.has(pai)) filhosDe.set(pai, []);
-    filhosDe.get(pai).push(e);
+    const parent = e.parent === '1' ? null : e.parent;
+    if (!filhosDe.has(parent)) filhosDe.set(parent, []);
+    filhosDe.get(parent).push(e);
   }
   function ancestrais(id) {
     const output = [];
-    let atual = porElemento.get(id);
-    while (atual && atual.pai && atual.pai !== '1') {
-      const pai = porElemento.get(atual.pai);
-      if (!pai || output.includes(pai)) break;
-      output.push(pai);
-      atual = pai;
+    let atual = byElement.get(id);
+    while (atual && atual.parent && atual.parent !== '1') {
+      const parent = byElement.get(atual.parent);
+      if (!parent || output.includes(parent)) break;
+      output.push(parent);
+      atual = parent;
     }
     return output;
   }
@@ -303,17 +303,17 @@ function criarCena(plano, opts = {}) {
 
   // 6. as pontas das arestas, e a polilinha completa
   for (const a of edges) {
-    const origin = porElemento.get(a.from);
-    const destino = porElemento.get(a.to);
+    const origin = byElement.get(a.from);
+    const destino = byElement.get(a.to);
     if (!origin || !destino) { a.pontos = a.dobras.slice(); a.completa = false; continue; }
-    const rumoInicio = a.dobras[0] || geo.centro(destino.caixa);
-    const rumoFim = a.dobras[a.dobras.length - 1] || geo.centro(origin.caixa);
-    const inicio = ancoraDeclarada(origin.caixa, a.style, 'exit') || pontaNoPerimetro(origin.caixa, rumoInicio);
-    const fim = ancoraDeclarada(destino.caixa, a.style, 'entry') || pontaNoPerimetro(destino.caixa, rumoFim);
+    const rumoInicio = a.dobras[0] || geo.centro(destino.cellBox);
+    const rumoFim = a.dobras[a.dobras.length - 1] || geo.centro(origin.cellBox);
+    const inicio = declaredAnchor(origin.cellBox, a.style, 'exit') || tipOnPerimeter(origin.cellBox, rumoInicio);
+    const fim = declaredAnchor(destino.cellBox, a.style, 'entry') || tipOnPerimeter(destino.cellBox, rumoFim);
     a.pontos = [inicio, ...a.dobras, fim];
     a.completa = true;
-    a.ancorada = !!(inicio.declarada && fim.declarada);
-    a.comprimento = geo.comprimento(a.pontos);
+    a.ancorada = !!(inicio.declared && fim.declared);
+    a.polylineLength = geo.polylineLength(a.pontos);
     a.rotuloCaixa = a.label ? caixaDeRotuloDeAresta(a) : null;
   }
 
@@ -328,15 +328,15 @@ function criarCena(plano, opts = {}) {
   }
 
   function pontoNoMeio(pontos) {
-    const total = geo.comprimento(pontos);
-    let andado = 0;
+    const total = geo.polylineLength(pontos);
+    let walked = 0;
     for (let i = 0; i + 1 < pontos.length; i++) {
       const d = Math.hypot(pontos[i + 1].x - pontos[i].x, pontos[i + 1].y - pontos[i].y);
-      if (andado + d >= total / 2) {
-        const t = d < geo.EPS ? 0 : (total / 2 - andado) / d;
+      if (walked + d >= total / 2) {
+        const t = d < geo.EPS ? 0 : (total / 2 - walked) / d;
         return { x: pontos[i].x + t * (pontos[i + 1].x - pontos[i].x), y: pontos[i].y + t * (pontos[i + 1].y - pontos[i].y) };
       }
-      andado += d;
+      walked += d;
     }
     return pontos[0] || { x: 0, y: 0 };
   }
@@ -356,11 +356,11 @@ function criarCena(plano, opts = {}) {
    * embaixo, que é exatamente o que ela promete visualmente.
    */
   function fundoEfetivoEm(ponto, ateZ = Infinity) {
-    let background = plano.background || '#FFFFFF';
-    for (const e of caixas) {
+    let background = layoutPlan.background || '#FFFFFF';
+    for (const e of boxes) {
       if (e.z >= ateZ) continue;
       if (!e.preenchimento) continue;
-      const c = e.caixa;
+      const c = e.cellBox;
       if (ponto.x < c.x || ponto.x > geo.direita(c) || ponto.y < c.y || ponto.y > geo.baixo(c)) continue;
       background = color.compor(e.preenchimento, background, e.opacidade);
     }
@@ -388,9 +388,9 @@ function criarCena(plano, opts = {}) {
   function fundoDoRotulo(e) {
     const halo = corDe(e.style, 'labelBackgroundColor');
     if (halo) return halo;
-    const caixa = e.rotuloCaixa;
-    if (!caixa) return plano.background || '#FFFFFF';
-    return fundoEfetivoEm({ x: caixa.x + caixa.w / 2, y: caixa.y + caixa.h / 2 }, e.z + 1);
+    const cellBox = e.rotuloCaixa;
+    if (!cellBox) return layoutPlan.background || '#FFFFFF';
+    return fundoEfetivoEm({ x: cellBox.x + cellBox.w / 2, y: cellBox.y + cellBox.h / 2 }, e.z + 1);
   }
 
   // Grau de cada nó. Mora aqui porque A5.1 (c_max), A6.1 e A8.3 querem o mesmo
@@ -399,16 +399,16 @@ function criarCena(plano, opts = {}) {
   for (const a of edges) if (a.completa) for (const id of [a.from, a.to]) grau.set(id, (grau.get(id) || 0) + 1);
 
   return {
-    plano, modelo, grau,
-    canvas: { x: 0, y: 0, w: plano.larg, h: plano.alt },
-    background: plano.background || '#FFFFFF',
-    elementos, nodes, grupos, bands, molduras, edges, caixas,
-    porElemento, filhosDe, ancestrais, ehDescendente,
+    layoutPlan, model, grau,
+    canvas: { x: 0, y: 0, w: layoutPlan.larg, h: layoutPlan.alt },
+    background: layoutPlan.background || '#FFFFFF',
+    elements, nodes, grupos, bands, molduras, edges, boxes,
+    byElement, filhosDe, ancestrais, ehDescendente,
     fundoEfetivoEm, fundoDoRotulo, pontoNoMeio,
     // a legenda ainda não existe neste motor; a cena expõe o campo para que a
     // família A1 possa dizer "ausente" em vez de estourar
-    legend: plano.legend || [],
+    legend: layoutPlan.legend || [],
   };
 }
 
-module.exports = { criarCena, lerEstilo, caixaDeRotulo, pontaNoPerimetro };
+module.exports = { createScene, readStyle, labelBox, tipOnPerimeter };

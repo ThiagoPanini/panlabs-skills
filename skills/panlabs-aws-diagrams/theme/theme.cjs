@@ -25,10 +25,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const { contraEsquema } = require('../engine/validate.cjs');
-const { setChave } = require('../catalog/aws-shapes.cjs');
+const { againstSchema } = require('../engine/validate.cjs');
+const { setKey } = require('../catalog/aws-shapes.cjs');
 
-const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8'));
+const SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8'));
 const DIR = __dirname;
 
 /**
@@ -41,23 +41,23 @@ const DIR = __dirname;
  * categoria fica acima de 3:1 nos dois fundos. O draw.io tem uma variante só,
  * então quem inverte é o tema.
  */
-const PALETAS_MONO = new Set(['general_resources', 'illustrations']);
+const MONO_PALETTES = new Set(['general_resources', 'illustrations']);
 
 /**
  * O que o deck escuro da AWS muda, e nada além disso (#5 tabela 2.1 + N15):
  * a borda/ícone do `AWS Cloud` inverte, e os callouts invertem. As cores de
  * grupo são IDÊNTICAS nos dois decks.
  */
-const NORMATIVO = {
+const NORMATIVE = {
   light:  { cloud: '#232F3E', mono: '#232F3E', callout: { background: '#232F3E', ink: '#FFFFFF' } },
   dark: { cloud: '#FFFFFF', mono: '#FFFFFF', callout: { background: '#FFFFFF', ink: '#232F3E' } },
 };
 
 /** Quanto da cor normativa do grupo entra no tingimento derivado. */
-const TINGIMENTO = 0.10;
+const TINT = 0.10;
 
 /** Mistura linear em sRGB — não é composição perceptual; é o que o draw.io faz. */
-function misturar(color, background, p) {
+function mix(color, background, p) {
   const canais = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
   const [a, b] = [canais(color), canais(background)];
   return '#' + [0, 1, 2]
@@ -65,7 +65,7 @@ function misturar(color, background, p) {
     .join('').toUpperCase();
 }
 
-const PADRAO = {
+const DEFAULT = {
   light: {
     page: { color: '#FFFFFF', margin: 32 },
     group:  { tint: 'derived' },
@@ -103,22 +103,22 @@ const PADRAO = {
 
 // ------------------------------------------------------------------ carga
 
-function fundir(base, about) {
+function merge(base, about) {
   const out = {};
   for (const k of new Set([...Object.keys(base), ...Object.keys(about || {})])) {
     const a = base[k], b = (about || {})[k];
-    out[k] = (a && typeof a === 'object' && !Array.isArray(a)) ? fundir(a, b || {}) : (b === undefined ? a : b);
+    out[k] = (a && typeof a === 'object' && !Array.isArray(a)) ? merge(a, b || {}) : (b === undefined ? a : b);
   }
   return out;
 }
 
-function lerArquivo(idOuCaminho) {
+function readFile(idOuCaminho) {
   const p = idOuCaminho.endsWith('.json') ? idOuCaminho : path.join(DIR, idOuCaminho + '.json');
   if (!fs.existsSync(p)) {
-    const disponiveis = fs.readdirSync(DIR).filter(f => f.endsWith('.json') && f !== 'schema.json')
+    const available = fs.readdirSync(DIR).filter(f => f.endsWith('.json') && f !== 'schema.json')
       .map(f => f.replace(/\.json$/, ''));
     const e = new Error(`tema "${idOuCaminho}" não existe`);
-    e.erros = [`temas disponíveis: ${disponiveis.join(', ')}`];
+    e.erros = [`temas disponíveis: ${available.join(', ')}`];
     throw e;
   }
   return JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -129,10 +129,10 @@ function lerArquivo(idOuCaminho) {
  * `herda` permite um tema dizer só o delta — a mesma lógica de "espelho + delta"
  * que o #17 usou no catálogo, para que mexer no padrão não apague a variação.
  */
-function carregar(idOuCaminho = 'light', vistos = []) {
-  const bruto = lerArquivo(idOuCaminho);
+function load(idOuCaminho = 'light', vistos = []) {
+  const bruto = readFile(idOuCaminho);
 
-  const erros = contraEsquema(bruto, ESQUEMA, ESQUEMA);
+  const erros = againstSchema(bruto, SCHEMA, SCHEMA);
   if (erros.length) { const e = new Error(`tema "${idOuCaminho}" inválido`); e.erros = erros; throw e; }
 
   if (vistos.includes(bruto.id)) {
@@ -141,34 +141,34 @@ function carregar(idOuCaminho = 'light', vistos = []) {
     throw e;
   }
 
-  let base = PADRAO[bruto.background];
+  let base = DEFAULT[bruto.background];
   if (bruto.inherits) {
-    const pai = carregar(bruto.inherits, [...vistos, bruto.id]);
-    if (pai.background !== bruto.background) {
+    const parent = load(bruto.inherits, [...vistos, bruto.id]);
+    if (parent.background !== bruto.background) {
       const e = new Error(`tema "${bruto.id}" herda de "${bruto.inherits}", que tem outro fundo`);
-      e.erros = [`${bruto.background} != ${pai.background} — herdar através do interruptor normativo carregaria a tinta errada`];
+      e.erros = [`${bruto.background} != ${parent.background} — herdar através do interruptor normativo carregaria a tinta errada`];
       throw e;
     }
-    base = pai.tokens;
+    base = parent.tokens;
   }
 
   // `fundir` traz junto as chaves de identidade do arquivo; elas não são token e
   // não devem viajar dentro de `panlabsTema` fingindo que são. `fundo` fica: é o
   // interruptor normativo, e sem ele o payload não se reconstrói.
-  const { schema, id, label, because, inherits, ...tokens } = fundir(base, bruto);
-  return montar(bruto, tokens);
+  const { schema, id, label, because, inherits, ...tokens } = merge(base, bruto);
+  return build(bruto, tokens);
 }
 
 // -------------------------------------------------------- tokens -> style
 
 /** Aplica um mapa de chaves a uma style string preservando a ordem das demais. */
-function aplicar(style, chaves) {
+function apply(style, chaves) {
   let s = style;
-  for (const [k, v] of Object.entries(chaves)) if (v !== undefined && v !== null) s = setChave(s, k, v);
+  for (const [k, v] of Object.entries(chaves)) if (v !== undefined && v !== null) s = setKey(s, k, v);
   return s;
 }
 
-const FLUXO = {
+const FLOW = {
   solid: {},
   dashed: { dashed: 1, dashPattern: '8 5' },
   // #4 §2.6 mediu e o #11 confirmou: `flowAnimation` sobrevive a SVG e HTML,
@@ -176,8 +176,8 @@ const FLUXO = {
   animated: { dashed: 1, dashPattern: '8 5', flowAnimation: 1 },
 };
 
-function montar(bruto, t) {
-  const norm = NORMATIVO[t.background];
+function build(bruto, t) {
+  const norm = NORMATIVE[t.background];
   const g = n => Math.round(n * t.gap.base * t.gap.density);
 
   /**
@@ -201,7 +201,7 @@ function montar(bruto, t) {
     /** Folga em degraus da grade base, já com a densidade aplicada. */
     g,
     /** Calha: reserva de rótulo. NÃO leva densidade — ver o esquema. */
-    calha: n => Math.round(n * t.gap.base),
+    lane: n => Math.round(n * t.gap.base),
 
     /**
      * Grupo (container). O tema pinta APENAS a tinta do rótulo e a fonte.
@@ -240,12 +240,12 @@ function montar(bruto, t) {
       const fill = (/(?:^|;)fillColor=([^;]*)/.exec(style) || [])[1];
       if (fill && fill !== 'none') {
         chaves.fillColor = t.group.tint === 'none' ? 'none'
-          : misturar((/(?:^|;)strokeColor=(#[0-9A-Fa-f]{6})/.exec(style) || [])[1] || t.ink.strong,
-                     t.page.color, TINGIMENTO);
+          : mix((/(?:^|;)strokeColor=(#[0-9A-Fa-f]{6})/.exec(style) || [])[1] || t.ink.strong,
+                     t.page.color, TINT);
       }
       // a única cor de grupo que o deck escuro inverte (#5 §2.1 leitura 2)
       if (/^AWS Cloud/i.test(title || '')) { chaves.strokeColor = norm.cloud; chaves.fontColor = norm.cloud; }
-      return aplicar(style, chaves);
+      return apply(style, chaves);
     },
 
     /** Folha AWS: fonte e tinta. A cor do quadrado é da categoria — intocável. */
@@ -266,14 +266,14 @@ function montar(bruto, t) {
        *
        * Enquanto o motor e o validador rodavam separados, ninguém tinha visto.
        */
-      if (input && PALETAS_MONO.has(input.palette) && t.background === 'dark')
+      if (input && MONO_PALETTES.has(input.palette) && t.background === 'dark')
         chaves.fillColor = norm.mono;
-      return aplicar(style, chaves);
+      return apply(style, chaves);
     },
 
     /** Faixa derivada (AZ, Auto Scaling): halo no rótulo, que nasce sobre borda alheia. */
     band(style) {
-      return aplicar(style, {
+      return apply(style, {
         fontColor: t.ink.strong, fontFamily: t.text.family, fontSize: t.text.group,
         labelBackgroundColor: t.ink.halo,
       });
@@ -300,7 +300,7 @@ function montar(bruto, t) {
         labelBackgroundColor: t.ink.halo,
         ...(t.edge.corners > 0 ? { arcSize: t.edge.corners } : {}),
         ...(t.edge.jumps !== 'none' ? { jumpStyle: t.edge.jumps, jumpSize: 6 } : {}),
-        ...FLUXO[t.edge.flow],
+        ...FLOW[t.edge.flow],
         ...extra,
       };
       return Object.entries(base).map(([k, v]) => `${k}=${v}`).join(';') + ';';
@@ -348,7 +348,7 @@ function montar(bruto, t) {
       `fontFamily=${t.text.family};align=left;verticalAlign=middle;`,
 
     /** `E4`/`X3`: a linha do barramento. Sem ponta — quem tem ponta é o stub. */
-    barramento: () => `endArrow=none;html=1;strokeColor=${t.edge.color};` +
+    bus: () => `endArrow=none;html=1;strokeColor=${t.edge.color};` +
       `strokeWidth=${t.edge.thickness};`,
 
     /** O stub perpendicular que entra na conta, e a aresta agregada do `E3`. */
@@ -385,15 +385,15 @@ function montar(bruto, t) {
  * geometria se mexe — que é como a partição pintura/métrica deixa de ser
  * afirmação e vira checagem.
  */
-function comPatch(base, patch) {
-  const b = typeof base === 'string' ? carregar(base) : base;
-  const tokens = fundir(b.tokens, patch);
-  return montar({ id: b.id + '+patch', label: b.label, because: b.because }, tokens);
+function withPatch(base, patch) {
+  const b = typeof base === 'string' ? load(base) : base;
+  const tokens = merge(b.tokens, patch);
+  return build({ id: b.id + '+patch', label: b.label, because: b.because }, tokens);
 }
 
-function listar() {
+function listAll() {
   return fs.readdirSync(DIR).filter(f => f.endsWith('.json') && f !== 'schema.json')
     .map(f => f.replace(/\.json$/, '')).sort();
 }
 
-module.exports = { carregar, comPatch, listar, misturar, ESQUEMA, PADRAO, NORMATIVO, PALETAS_MONO, TINGIMENTO };
+module.exports = { load, withPatch, listAll, mix, SCHEMA, DEFAULT, NORMATIVE, MONO_PALETTES, TINT };

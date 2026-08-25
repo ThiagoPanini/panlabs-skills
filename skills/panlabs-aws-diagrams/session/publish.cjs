@@ -62,7 +62,7 @@
 
 const { reescreverSelos } = require('./fingerprint.cjs');
 
-const ESQUEMA_PUBLICADO = 'panlabs-aws-diagrams/published@1';
+const PUBLISHED_SCHEMA = 'panlabs-aws-diagrams/published@1';
 
 /**
  * A RÉGUA, EM DADOS — uma lista só, e é dela que saem as três coisas que
@@ -78,7 +78,7 @@ const ESQUEMA_PUBLICADO = 'panlabs-aws-diagrams/published@1';
  * `onde` é o caminho no dossiê; `campos` é o que sai de cada item; `filtro`
  * (quando existe) diz quais ITENS somem inteiros.
  */
-const DELIBERACAO = [
+const DELIBERATION = [
   { onde: 'candidates', filtro: c => c.state === 'discarded',
     campos: ['because', 'pays', 'buys', 'chooseIf', 'wrongIf', 'differsIn'],
     because: 'as candidatas descartadas somem; da escolhida sobra o que descreve o desenho' },
@@ -92,33 +92,33 @@ const DELIBERACAO = [
     because: 'nome de pessoa, e a deliberação da fase lógica' },
 ];
 
-const listaDe = (d, onde) => (Array.isArray(d[onde]) ? d[onde] : d[onde] ? [d[onde]] : []);
+const listOf = (d, onde) => (Array.isArray(d[onde]) ? d[onde] : d[onde] ? [d[onde]] : []);
 
 /** A sessão sem a deliberação. Função pura: devolve outra, não muta a de dentro. */
-function podar(sessao) {
-  const s = JSON.parse(JSON.stringify(sessao));
+function prune(session) {
+  const s = JSON.parse(JSON.stringify(session));
   const d = s.dossier;
   if (!d) return s;
 
-  for (const r of DELIBERACAO) {
+  for (const r of DELIBERATION) {
     if (d[r.onde] === undefined) continue;
-    const ehLista = Array.isArray(d[r.onde]);
-    let itens = listaDe(d, r.onde);
+    const isList = Array.isArray(d[r.onde]);
+    let itens = listOf(d, r.onde);
     if (r.filtro) itens = itens.filter(x => !r.filtro(x));
     // `estacionamento` some inteiro: o filtro dele casa com todo item
-    if (r.filtro && !itens.length && ehLista && r.onde === 'parking') { delete d[r.onde]; continue; }
+    if (r.filtro && !itens.length && isList && r.onde === 'parking') { delete d[r.onde]; continue; }
     for (const it of itens) for (const c of r.campos) delete it[c];
-    d[r.onde] = ehLista ? itens : itens[0];
+    d[r.onde] = isList ? itens : itens[0];
   }
   return s;
 }
 
 /** Quantos itens de deliberação uma sessão ainda carrega. Mesma lista da poda. */
-function contarDeliberacao(sessao) {
-  const d = (sessao && sessao.dossier) || {};
+function countDeliberation(session) {
+  const d = (session && session.dossier) || {};
   let n = 0;
-  for (const r of DELIBERACAO) {
-    for (const it of listaDe(d, r.onde)) {
+  for (const r of DELIBERATION) {
+    for (const it of listOf(d, r.onde)) {
       // um item que a régua manda embora INTEIRO conta uma vez, e não outra por
       // cada campo dentro dele — senão uma candidata descartada com `porque`
       // aparecia como dois itens
@@ -137,27 +137,27 @@ function contarDeliberacao(sessao) {
  * está vendo é o que saiu daqui. Tirá-las não protegeria nada e tiraria a única
  * garantia que a cópia ainda pode dar.
  */
-const PORQUE_PADRAO =
+const DEFAULT_BECAUSE =
   'copia publicada: a deliberacao da sessao (candidatas descartadas, motivo das recusas, ' +
   'estacionamento, quem aprovou) foi podada. Retome a partir do arquivo de trabalho.';
 
-function publicar(xml) {
+function publish(xml) {
   const r = reescreverSelos(xml, p => {
-    const selo = p.selo || {};
-    let sessao = null;
-    try { sessao = JSON.parse(selo.panlabsSessao); } catch (e) { sessao = null; }
+    const seal = p.seal || {};
+    let session = null;
+    try { session = JSON.parse(seal.panlabsSessao); } catch (e) { session = null; }
     return {
-      panlabsEsquema: ESQUEMA_PUBLICADO,
-      panlabsVista: selo.panlabsVista,
-      panlabsSemantica: selo.panlabsSemantica,
-      panlabsAparencia: selo.panlabsAparencia,
-      panlabsMotor: selo.panlabsMotor,
+      panlabsSchema: PUBLISHED_SCHEMA,
+      panlabsVista: seal.panlabsVista,
+      panlabsSemantica: seal.panlabsSemantica,
+      panlabsAparencia: seal.panlabsAparencia,
+      panlabsMotor: seal.panlabsMotor,
       panlabsRetomavel: 'nao',
-      panlabsPorque: PORQUE_PADRAO,
-      panlabsSessao: sessao ? JSON.stringify(podar(sessao)) : '',
+      panlabsPorque: DEFAULT_BECAUSE,
+      panlabsSessao: session ? JSON.stringify(prune(session)) : '',
     };
   });
-  if (r.paginas.every(p => !p.selo || !p.selo.panlabsSessao))
+  if (r.pages.every(p => !p.seal || !p.seal.panlabsSessao))
     throw new Error('nenhuma pagina traz selo de sessao — nao ha dossie para podar');
   return r.xml;
 }
@@ -167,7 +167,7 @@ function publicar(xml) {
  * o que fazer. Fica aqui e não em `save.cjs` porque quem sabe o que é
  * deliberação é este módulo — a régua mora num lugar só.
  */
-function avisoDeDossie(sessao) {
+function dossierWarning(session) {
   /**
    * Conta DELIBERAÇÃO PRESENTE, pela MESMA lista que a poda usa.
    *
@@ -179,7 +179,7 @@ function avisoDeDossie(sessao) {
    *     mas não o motivo);
    *   · contar por estado E por campo somava a mesma candidata duas vezes.
    */
-  const quantos = contarDeliberacao(sessao);
+  const quantos = countDeliberation(session);
   if (!quantos) return null;
   return `este arquivo carrega ${quantos} item(ns) de deliberacao no selo — candidata descartada, ` +
     'recusa com motivo, estacionamento ou quem aprovou. Legiveis em Extras > Editar diagrama. ' +
@@ -195,45 +195,45 @@ function main() {
   // primeira versão usava `args.find(a => !a.startsWith('--'))` e, com a flag
   // na frente, publicava o arquivo de SAÍDA.
   const args = process.argv.slice(2);
-  const iSaida = args.indexOf('--output');
-  if (iSaida >= 0 && args[iSaida + 1] === undefined) {
+  const iOutput = args.indexOf('--output');
+  if (iOutput >= 0 && args[iOutput + 1] === undefined) {
     console.error('--output precisa de um caminho');
     process.exit(2);
   }
-  // ⚠️ `i !== iSaida + 1` pula o valor de `--output` — mas com `iSaida = -1` ele
+  // ⚠️ `i !== iOutput + 1` pula o valor de `--output` — mas com `iOutput = -1` ele
   // pulava o ÍNDICE 0, que é justamente o argumento posicional da forma sem
   // `--output`. `node session/publish.cjs output/retail.drawio` respondia com o
   // texto de uso, o que faz a linha do README parecer errada quando quem está
   // errado é a guarda. Achado no #24, ao regerar a cópia publicada.
-  const input = args.find((a, i) => !a.startsWith('--') && !(iSaida >= 0 && i === iSaida + 1));
+  const input = args.find((a, i) => !a.startsWith('--') && !(iOutput >= 0 && i === iOutput + 1));
   if (!input) {
     console.error('uso: node session/publish.cjs <trabalho.drawio> [--output <copia>.drawio]');
     console.error('  Produz a copia que CIRCULA: sem candidatas descartadas, sem o motivo das');
     console.error('  recusas, sem estacionamento e sem quem aprovou. Ela NAO retoma a sessao.');
     process.exit(2);
   }
-  const output = iSaida >= 0 ? args[iSaida + 1] : input.replace(/\.drawio$/, '') + '.publicado.drawio';
+  const output = iOutput >= 0 ? args[iOutput + 1] : input.replace(/\.drawio$/, '') + '.published.drawio';
   const xml = fs.readFileSync(input, 'utf8');
   let copia;
-  try { copia = publicar(xml); }
+  try { copia = publish(xml); }
   catch (e) { console.error(`\n✗ ${e.message}`); for (const l of e.erros || []) console.error(`    · ${l}`); process.exit(1); }
 
-  let sessao = null;
+  let session = null;
   try {
-    sessao = JSON.parse(require('./fingerprint.cjs').lerPaginas(xml).paginas[0].selo.panlabsSessao);
+    session = JSON.parse(require('./fingerprint.cjs').readPages(xml).pages[0].seal.panlabsSessao);
   } catch (e) { /* sem selo legivel */ }
-  const antes = sessao ? contarDeliberacao(sessao) : 0;
+  const antes = session ? countDeliberation(session) : 0;
 
   fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
   fs.writeFileSync(output, copia);
   console.log(`  → ${output}  (${copia.length} bytes, era ${xml.length})`);
   console.log(antes
     ? `  podado: ${antes} item(ns) de deliberacao — ` +
-      DELIBERACAO.map(r => r.onde).join(', ')
+      DELIBERATION.map(r => r.onde).join(', ')
     : '  podado: nada — o arquivo ja nao trazia deliberacao');
   console.log('  esta copia NAO retoma a sessao. Guarde o arquivo de trabalho.');
 }
 
 if (require.main === module) main();
 
-module.exports = { publicar, podar, avisoDeDossie, contarDeliberacao, ESQUEMA_PUBLICADO, DELIBERACAO };
+module.exports = { publish, prune, dossierWarning, countDeliberation, PUBLISHED_SCHEMA, DELIBERATION };

@@ -33,12 +33,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
-const { validarGeometria } = require(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
-const { aprovar } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
-const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
-const { projetar } = require(path.join(RAIZ, 'session', 'project.cjs'));
+const ROOT = path.join(__dirname, '..');
+const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
+const { validateGeometry } = require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
+const { approve } = require(path.join(ROOT, 'session', 'agreement.cjs'));
+const { elaborate } = require(path.join(ROOT, 'session', 'elaborate.cjs'));
+const { project } = require(path.join(ROOT, 'session', 'project.cjs'));
 
 /**
  * A VISTA TÉCNICA NÃO É UM `models/*.json`.
@@ -49,21 +49,21 @@ const { projetar } = require(path.join(RAIZ, 'session', 'project.cjs'));
  * consertar, e foi por isso que a suíte do #14 ficou verde sobre um desenho
  * que a inspeção humana reprovou: ela media a projeção, não o traçado.
  */
-function vistaTecnica() {
-  const ler = f => JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', f), 'utf8'));
-  const aprovado = aprovar(ler('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
-  return projetar(elaborar(aprovado, ler('retail-elaboration.json')), 'technical').modelo;
+function technicalView() {
+  const read = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', f), 'utf8'));
+  const approved = approve(read('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
+  return project(elaborate(approved, read('retail-elaboration.json')), 'technical').model;
 }
 
 /** O orçamento do ticket, somado sobre TODAS as páginas da vista técnica. */
-const ORCAMENTO_TECNICA = {
+const TECHNICAL_BUDGET = {
   'A5.5': 0,   // tolerância zero — é veracidade, não gosto
   'A3.5': 0,   // a seta por cima do ícone que o humano viu
   'A3.4': 0,   // e a seta por cima do rótulo
 };
 
-function occurrences(laudo, id) {
-  const x = [...laudo.resultados, ...laudo.extras].find(r => r.id === id);
+function occurrences(report, id) {
+  const x = [...report.resultados, ...report.extras].find(r => r.id === id);
   return x ? { n: x.occurrences.length, state: x.state, det: x.occurrences.map(o => o.o_que) } : null;
 }
 
@@ -77,11 +77,11 @@ function occurrences(laudo, id) {
  * reduzidos ao mínimo que os distingue.
  */
 function primitiva() {
-  const { corredorLivre } = require(path.join(RAIZ, 'engine', 'layout.cjs'));
-  const caixa = (ini, fim, lo, hi) => ({ ini, fim, lo, hi });
+  const { corredorLivre } = require(path.join(ROOT, 'engine', 'layout.cjs'));
+  const cellBox = (ini, fim, lo, hi) => ({ ini, fim, lo, hi });
 
   // as três colunas do `web-flow-3-az`, na faixa que a perna atravessa
-  const grade = [caixa(48, 248, 0, 800), caixa(339, 539, 0, 800), caixa(630, 830, 0, 800)];
+  const grade = [cellBox(48, 248, 0, 800), cellBox(339, 539, 0, 800), cellBox(630, 830, 0, 800)];
 
   const casos = [
     { name: 'preferência já livre passa intacta',
@@ -91,7 +91,7 @@ function primitiva() {
     { name: 'e escolhe o vão do lado da origem, não o mais largo',
       r: corredorLivre([100, 300], grade, 350), espera: 293.5 },
     { name: 'obstáculo que não cruza a faixa não conta',
-      r: corredorLivre([0, 50], [caixa(339, 539, 100, 800)], 400), espera: 400 },
+      r: corredorLivre([0, 50], [cellBox(339, 539, 100, 800)], 400), espera: 400 },
     { name: 'rente à borda não é atravessar',
       r: corredorLivre([100, 300], grade, 539), espera: 539 },
     { name: 'sem obstáculo nenhum devolve a preferência',
@@ -99,9 +99,9 @@ function primitiva() {
     // a garantia que faz o retorno ser sempre um número: as margens externas
     // estão livres por construção, então a busca nunca volta de mãos vazias
     { name: 'tudo bloqueado sai pela margem mais perto',
-      r: corredorLivre([100, 300], [caixa(0, 1000, 0, 800)], 400), espera: -24 },
+      r: corredorLivre([100, 300], [cellBox(0, 1000, 0, 800)], 400), espera: -24 },
     { name: 'e pela margem da DIREITA quando a preferência está desse lado',
-      r: corredorLivre([100, 300], [caixa(0, 1000, 0, 800)], 900), espera: 1024 },
+      r: corredorLivre([100, 300], [cellBox(0, 1000, 0, 800)], 900), espera: 1024 },
   ];
 
   let falhou = 0;
@@ -119,18 +119,18 @@ async function main() {
 
   // ---------------------------------------------------- 1 · a veracidade, no corpus
   console.log('\n  A5.5 — aresta atravessando fronteira alheia (tolerância zero, todo o corpus)\n');
-  const corpus = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).sort();
+  const corpus = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
   const entradas = [
     ...corpus.map(f => ({ name: path.basename(f, '.json'),
-      modelo: JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', f), 'utf8')) })),
-    { name: 'vista técnica (sessão do #14)', modelo: vistaTecnica() },
+      model: JSON.parse(fs.readFileSync(path.join(ROOT, 'models', f), 'utf8')) })),
+    { name: 'vista técnica (sessão do #14)', model: technicalView() },
   ];
 
   let travessias = 0;
-  for (const { name, modelo } of entradas) {
-    const r = await gerar(modelo);
-    for (const p of [r.plano, ...r.paginas]) {
-      const a55 = occurrences(validarGeometria(p), 'A5.5');
+  for (const { name, model } of entradas) {
+    const r = await generate(model);
+    for (const p of [r.layoutPlan, ...r.pages]) {
+      const a55 = occurrences(validateGeometry(p), 'A5.5');
       if (!a55) { falhou = 1; console.log(`  ‼ ${name}: A5.5 não rodou`); continue; }
       if (!a55.n) continue;
       falhou = 1; travessias += a55.n;
@@ -151,25 +151,25 @@ async function main() {
   // deixou a suíte do #14 verde sobre um desenho reprovado a olho: o recorte da
   // medição não era o recorte da entrega.
   console.log('\n  a vista técnica do #14 — o desenho que a inspeção humana reprovou\n');
-  const rt = await gerar(vistaTecnica());
-  const paginas = [rt.plano, ...rt.paginas];
-  const laudos = paginas.map(p => ({ page: p.id, laudo: validarGeometria(p) }));
+  const rt = await generate(technicalView());
+  const pages = [rt.layoutPlan, ...rt.pages];
+  const laudos = pages.map(p => ({ page: p.id, report: validateGeometry(p) }));
 
-  for (const [id, teto] of Object.entries(ORCAMENTO_TECNICA)) {
+  for (const [id, ceiling] of Object.entries(TECHNICAL_BUDGET)) {
     let total = 0, faltou = false;
     const det = [];
-    for (const { page, laudo: l } of laudos) {
+    for (const { page, report: l } of laudos) {
       const x = occurrences(l, id);
       if (!x) { faltou = true; console.log(`  ‼ ${id} não rodou em "${page}"`); continue; }
       total += x.n;
       for (const o of x.det) det.push(`${page}: ${o}`);
     }
-    const ok = !faltou && total === teto;
+    const ok = !faltou && total === ceiling;
     if (!ok) falhou = 1;
-    console.log(`  ${ok ? '✓' : '✗'} ${id} ×${total} nas ${paginas.length} páginas  (orçamento ${teto})`);
+    console.log(`  ${ok ? '✓' : '✗'} ${id} ×${total} nas ${pages.length} páginas  (orçamento ${ceiling})`);
     if (!ok) for (const o of det.slice(0, 4)) console.log(`      · ${o}`);
   }
-  const laudo = laudos[0].laudo;   // `A5.1` é da consolidada — ver abaixo
+  const report = laudos[0].report;   // `A5.1` é da consolidada — ver abaixo
 
   /**
    * `A5.1` é a única do ticket que tem ORÇAMENTO em vez de tolerância zero, e a
@@ -178,11 +178,11 @@ async function main() {
    * o número aqui seria uma segunda cópia do limiar — e o #18 mediu o preço de
    * ter duas cópias de um limiar.
    */
-  const a51 = occurrences(laudo, 'A5.1');
-  const medida = [...laudo.resultados].find(r => r.id === 'A5.1');
-  const inside = a51 && a51.state !== 'falha';
+  const a51 = occurrences(report, 'A5.1');
+  const measured = [...report.resultados].find(r => r.id === 'A5.1');
+  const inside = a51 && a51.state !== 'failure';
   if (!inside) falhou = 1;
-  console.log(`  ${inside ? '✓' : '✗'} A5.1 ${medida ? `${medida.medida.cruzamentos} cruzamento(s), orçamento ${medida.medida.orcamento_de_falha}` : '—'}` +
+  console.log(`  ${inside ? '✓' : '✗'} A5.1 ${measured ? `${measured.measured.cruzamentos} cruzamento(s), orçamento ${measured.measured.orcamento_de_falha}` : '—'}` +
     ` → ${a51 ? a51.state : 'não rodou'}`);
 
   console.log(falhou

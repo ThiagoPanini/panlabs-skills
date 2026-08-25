@@ -26,14 +26,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const { contraEsquema } = require('../engine/validate.cjs');
+const { againstSchema } = require('../engine/validate.cjs');
 
-const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'theme', 'schema.json'), 'utf8'));
+const SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'theme', 'schema.json'), 'utf8'));
 
 const BASE = { schema: 'panlabs-aws-diagrams/theme@1', id: 'teste', label: 'Teste', background: 'light' };
 
 /** O que um tema NÃO pode dizer, e por quê. */
-const PROIBIDOS = [
+const FORBIDDEN = [
   { name: 'cor de borda de grupo', tema: { group: { edge: '#FF0000' } },
     because: 'a cor do grupo É a legenda — #5 §6.4' },
   { name: 'traço de grupo', tema: { group: { traco: 'solid' } },
@@ -65,38 +65,38 @@ const PROIBIDOS = [
 ];
 
 /** Chaves de style que o arquivo emitido não pode conter, venha de onde vier. */
-const CHAVES_PROIBIDAS = ['sketch=1', 'comic=1', 'glass=1', 'shadow=1', 'sketchStyle=',
+const FORBIDDEN_KEYS = ['sketch=1', 'comic=1', 'glass=1', 'shadow=1', 'sketchStyle=',
   'gradientColor=#', 'light-dark(', 'fontSource=', 'libavoidRouting=1'];
 
-function testarEntrada(schema) {
+function testInput(schema) {
   const passaram = [];
-  for (const caso of PROIBIDOS) {
-    const erros = contraEsquema({ ...BASE, ...caso.tema }, schema, schema);
+  for (const caso of FORBIDDEN) {
+    const erros = againstSchema({ ...BASE, ...caso.tema }, schema, schema);
     if (erros.length === 0) passaram.push(caso);
   }
   return passaram;
 }
 
-async function testarSaida() {
-  const { gerar } = require('../engine/generate.cjs');
+async function testOutput() {
+  const { generate } = require('../engine/generate.cjs');
   const temaMod = require('../theme/theme.cjs');
   const findings = [];
   for (const arquivo of fs.readdirSync(path.join(__dirname, '..', 'models')).filter(f => f.endsWith('.json'))) {
-    const modelo = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'models', arquivo), 'utf8'));
-    for (const id of temaMod.listar()) {
+    const model = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'models', arquivo), 'utf8'));
+    for (const id of temaMod.listAll()) {
       let r;
       // `forcar: true` desarma o portão de contraste, então qualquer exceção aqui
       // é defeito de verdade. Engolir com `continue` contaria como aprovado o
       // tema que nem chegou a gerar — e o cabeçalho deste arquivo diz que
       // checagem que não sabe falhar não prova nada.
       try {
-        r = await gerar(modelo, { tema: id, force: true });
+        r = await generate(model, { tema: id, force: true });
       } catch (e) {
         findings.push(`${arquivo} + tema ${id}: geração falhou (${e.message}) — não dá para conferir a saída`);
         continue;
       }
-      for (const chave of CHAVES_PROIBIDAS)
-        if (r.xml.includes(chave)) findings.push(`${arquivo} + tema ${id}: XML contém "${chave}"`);
+      for (const key of FORBIDDEN_KEYS)
+        if (r.xml.includes(key)) findings.push(`${arquivo} + tema ${id}: XML contém "${key}"`);
     }
   }
   return findings;
@@ -106,39 +106,39 @@ async function main() {
   let falhou = 0;
 
   console.log('ENTRADA — o esquema do tema recusa o token proibido');
-  const vazaram = testarEntrada(ESQUEMA);
-  for (const caso of PROIBIDOS)
+  const vazaram = testInput(SCHEMA);
+  for (const caso of FORBIDDEN)
     console.log(`  ${vazaram.includes(caso) ? '✗' : '✓'} ${caso.name.padEnd(38)} ${caso.because}`);
   if (vazaram.length) { console.log(`\n  ${vazaram.length} token(s) proibido(s) ACEITOS pelo esquema`); falhou = 1; }
 
   console.log('\nCONTROLE — injetando os tokens no esquema, a checagem TEM de acusar');
-  const sabotado = JSON.parse(JSON.stringify(ESQUEMA));
-  sabotado.properties.group = { type: 'object' };
-  sabotado.properties.categoria = { type: 'object' };
-  sabotado.properties.icone = { type: 'object' };
-  sabotado.properties.sketch = { type: 'boolean' };
-  sabotado.properties.glass = { type: 'boolean' };
-  sabotado.properties.sombra = { type: 'boolean' };
-  sabotado.properties.gradiente = { type: 'object' };
-  sabotado.properties.adaptiveColors = { type: 'string' };
-  sabotado.properties.math = { type: 'boolean' };
-  sabotado.properties.text.properties.family = { type: 'string' };
-  sabotado.properties.edge.properties.style = { type: 'string' };
-  const acusados = testarEntrada(sabotado);
-  const esperado = PROIBIDOS.length;
-  console.log(`  esquema sabotado aceita ${acusados.length} de ${esperado} tokens proibidos`);
-  if (acusados.length !== esperado) {
+  const sabotaged = JSON.parse(JSON.stringify(SCHEMA));
+  sabotaged.properties.group = { type: 'object' };
+  sabotaged.properties.categoria = { type: 'object' };
+  sabotaged.properties.icone = { type: 'object' };
+  sabotaged.properties.sketch = { type: 'boolean' };
+  sabotaged.properties.glass = { type: 'boolean' };
+  sabotaged.properties.sombra = { type: 'boolean' };
+  sabotaged.properties.gradiente = { type: 'object' };
+  sabotaged.properties.adaptiveColors = { type: 'string' };
+  sabotaged.properties.math = { type: 'boolean' };
+  sabotaged.properties.text.properties.family = { type: 'string' };
+  sabotaged.properties.edge.properties.style = { type: 'string' };
+  const acusados = testInput(sabotaged);
+  const expected = FORBIDDEN.length;
+  console.log(`  esquema sabotado aceita ${acusados.length} de ${expected} tokens proibidos`);
+  if (acusados.length !== expected) {
     console.log('  ✗ o controle NÃO reproduziu a violação — a checagem de entrada não prova o que diz');
-    for (const c of PROIBIDOS) if (!acusados.includes(c)) console.log(`      não reproduzido: ${c.name}`);
+    for (const c of FORBIDDEN) if (!acusados.includes(c)) console.log(`      não reproduzido: ${c.name}`);
     falhou = 1;
   } else {
     console.log('  ✓ controle reproduz — a checagem sabe falhar');
   }
 
   console.log('\nSAÍDA — o XML emitido não carrega chave proibida');
-  const findings = await testarSaida();
+  const findings = await testOutput();
   if (findings.length) { for (const a of findings) console.log('  ✗ ' + a); falhou = 1; }
-  else console.log(`  ✓ ${CHAVES_PROIBIDAS.length} chaves conferidas, nenhuma no XML de nenhum tema`);
+  else console.log(`  ✓ ${FORBIDDEN_KEYS.length} chaves conferidas, nenhuma no XML de nenhum tema`);
 
   console.log(falhou ? '\nVOCABULÁRIO VAZOU' : '\nvocabulário fechado');
   process.exit(falhou);

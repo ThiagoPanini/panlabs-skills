@@ -33,8 +33,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const MOTOR = path.join(__dirname, '..', 'engine');
-const MANIFESTO = path.join(__dirname, 'engine.manifest.json');
+const ENGINE = path.join(__dirname, '..', 'engine');
+const MANIFEST = path.join(__dirname, 'engine.manifest.json');
 
 // `vendor/` e o elkjs embarcado (1,6 MB) — hasheado igual, mas listado a parte
 // para o manifesto continuar legivel.
@@ -49,29 +49,29 @@ function arquivos(dir, base = dir) {
 }
 
 const atual = {};
-for (const rel of arquivos(MOTOR))
-  atual[rel] = crypto.createHash('sha256').update(fs.readFileSync(path.join(MOTOR, rel))).digest('hex').slice(0, 16);
+for (const rel of arquivos(ENGINE))
+  atual[rel] = crypto.createHash('sha256').update(fs.readFileSync(path.join(ENGINE, rel))).digest('hex').slice(0, 16);
 
 if (process.argv.includes('--write')) {
-  fs.writeFileSync(MANIFESTO, JSON.stringify(atual, null, 2) + '\n');
+  fs.writeFileSync(MANIFEST, JSON.stringify(atual, null, 2) + '\n');
   console.log(`  manifesto gravado: ${Object.keys(atual).length} arquivos do motor de producao`);
   process.exit(0);
 }
 
-if (!fs.existsSync(MANIFESTO)) {
+if (!fs.existsSync(MANIFEST)) {
   console.log('  manifesto ausente — rode com --write uma vez.');
   process.exit(1);
 }
-const esperado = JSON.parse(fs.readFileSync(MANIFESTO, 'utf8'));
+const expected = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
 
 const falhas = [];
-for (const [rel, h] of Object.entries(esperado)) {
+for (const [rel, h] of Object.entries(expected)) {
   if (atual[rel] === undefined) falhas.push(`sumiu: engine/${rel}`);
   else if (atual[rel] !== h) falhas.push(`MUDOU: engine/${rel}  (${h} → ${atual[rel]})`);
 }
-for (const rel of Object.keys(atual)) if (esperado[rel] === undefined) falhas.push(`novo: engine/${rel}`);
+for (const rel of Object.keys(atual)) if (expected[rel] === undefined) falhas.push(`novo: engine/${rel}`);
 
-console.log(`  arquivos do motor de producao conferidos: ${Object.keys(esperado).length}`);
+console.log(`  arquivos do motor de producao conferidos: ${Object.keys(expected).length}`);
 if (falhas.length) {
   console.log('\n  ✗ o motor mudou desde a ultima medicao da suite:');
   for (const f of falhas) console.log(`      · ${f}`);

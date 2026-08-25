@@ -57,15 +57,15 @@
  */
 
 const path = require('path');
-const { CATEGORIA_CAMADA, categoriaDoNo, chaveDePapel } = require(path.join(__dirname, '..', 'engine', 'layers.cjs'));
+const { CATEGORY_LAYER, categoriaDoNo, chaveDePapel } = require(path.join(__dirname, '..', 'engine', 'layers.cjs'));
 const { arvore, contaDe, travessias } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
 
-const CATALOGO = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
+const CATALOG = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
 let _cat = null;
-const catalogoPadrao = () => (_cat = _cat || require(CATALOGO).carregar());
+const defaultCatalog = () => (_cat = _cat || require(CATALOG).load());
 
 /** Guarda o que ele guarda: `dados` na tabela do #22 é exatamente "tem estado". */
-const ehStateful = (no, cat) => CATEGORIA_CAMADA[categoriaDoNo(no, cat)] === 'data';
+const ehStateful = (no, cat) => CATEGORY_LAYER[categoriaDoNo(no, cat)] === 'data';
 
 /** Saída controlada da rede: NAT, VPC endpoint, transit/internet gateway. */
 const ehEgresso = (no, cat) => categoriaDoNo(no, cat) === 'network_content_delivery';
@@ -74,7 +74,7 @@ const ehEgresso = (no, cat) => categoriaDoNo(no, cat) === 'network_content_deliv
 const ehAssincrono = (no, cat) => categoriaDoNo(no, cat) === 'application_integration';
 
 /** Quem computa — e portanto quem FALHA processando uma mensagem. */
-const ehComputacao = (no, cat) => ['compute', 'containers'].includes(categoriaDoNo(no, cat));
+const isCompute = (no, cat) => ['compute', 'containers'].includes(categoriaDoNo(no, cat));
 
 const finding = (rule, target, because) => ({ rule, target, because });
 const muda = (rule, because) => ({ rule, because });
@@ -82,10 +82,10 @@ const muda = (rule, because) => ({ rule, because });
 // ---------------------------------------------------------------- grafo
 
 /** Vizinhança NÃO dirigida sobre as folhas — o caminho existe nos dois sentidos. */
-function adjacencia(modelo) {
+function adjacency(model) {
   const adj = new Map();
   const toca = id => { if (!adj.has(id)) adj.set(id, new Set()); return adj.get(id); };
-  for (const a of modelo.edges || []) { toca(a.from).add(a.to); toca(a.to).add(a.from); }
+  for (const a of model.edges || []) { toca(a.from).add(a.to); toca(a.to).add(a.from); }
   return adj;
 }
 
@@ -147,24 +147,24 @@ function alcance(adj, raiz, sem = null) {
  *      ATRÁS do que foi reportado. Consertar o de fora não conserta os de
  *      dentro, e o texto diz isso em vez de escondê-lo.
  */
-const ORFAOS_MINIMOS = 2;
+const MIN_ORPHANS = 2;
 
-function regraSpof(modelo, ctx) {
-  const atores = modelo.nodes.filter(n => n.kind === 'actor');
-  const edges = modelo.edges || [];
+function regraSpof(model, ctx) {
+  const atores = model.nodes.filter(n => n.kind === 'actor');
+  const edges = model.edges || [];
   if (!atores.length || !edges.length)
     return { findings: [], muda: muda('spof', !atores.length
       ? 'nenhum ator: o modelo não afirma ninguém de fora, e sem fora não há caminho de entrada'
       : 'nenhuma aresta: é vista de inventário, e inventário não tem caminho para quebrar') };
 
-  const adj = adjacencia(modelo);
-  const membrosDeFaixa = new Set((modelo.bands || []).flatMap(f => f.members || []));
+  const adj = adjacency(model);
+  const membrosDeFaixa = new Set((model.bands || []).flatMap(f => f.members || []));
   const porServico = new Map();
-  for (const n of modelo.nodes) {
+  for (const n of model.nodes) {
     if (!n.service) continue;
     porServico.set(n.service, (porServico.get(n.service) || 0) + 1);
   }
-  const temPar = n => membrosDeFaixa.has(n.id) || (n.service && porServico.get(n.service) > 1);
+  const hasPair = n => membrosDeFaixa.has(n.id) || (n.service && porServico.get(n.service) > 1);
 
   const candidatos = [];
   const jaVisto = new Set();
@@ -172,24 +172,24 @@ function regraSpof(modelo, ctx) {
     const base = alcance(adj, actor.id);
     for (const cand of base) {
       if (jaVisto.has(cand)) continue;
-      const no = ctx.t.porId.get(cand);
+      const no = ctx.t.byId.get(cand);
       if (!no || no.kind === 'actor') continue;
-      if (temPar(no)) continue;
+      if (hasPair(no)) continue;
       const semEle = alcance(adj, actor.id, cand);
       // perdeu alguém além do próprio candidato: ele estava no meio do caminho
       const perdeu = new Set([...base].filter(x => x !== cand && !semEle.has(x)));
-      if (perdeu.size < ORFAOS_MINIMOS) continue;
+      if (perdeu.size < MIN_ORPHANS) continue;
       jaVisto.add(cand);
       candidatos.push({ id: cand, actor: actor.id, orfaos: perdeu });
     }
   }
 
   // ...e agora só os MAXIMAIS: cai quem tem os órfãos todos dentro dos de outro.
-  const contido = (a, b) => a.size < b.size && [...a].every(x => b.has(x));
-  const maximais = candidatos.filter(c => !candidatos.some(o => o !== c && contido(c.orfaos, o.orfaos)));
+  const contained = (a, b) => a.size < b.size && [...a].every(x => b.has(x));
+  const maximais = candidatos.filter(c => !candidatos.some(o => o !== c && contained(c.orfaos, o.orfaos)));
 
   const findings = maximais.map(c => {
-    const atras = candidatos.filter(o => o !== c && contido(o.orfaos, c.orfaos)).length;
+    const atras = candidatos.filter(o => o !== c && contained(o.orfaos, c.orfaos)).length;
     return finding('spof', c.id,
       `sem par, e é o único caminho de "${c.actor}" até ${c.orfaos.size} outros componentes` +
       (atras ? ` — e ${atras} deles também não tem par, atrás deste` : ''));
@@ -209,8 +209,8 @@ function regraSpof(modelo, ctx) {
  * LIMIAR: uma. E o sujeito é o que guarda estado, não qualquer nó: um Lambda em
  * AZ única não é achado, é como Lambda funciona.
  */
-function regraSingleAz(modelo, ctx) {
-  const subnets = modelo.nodes.filter(n => n.kind === 'subnet');
+function regraSingleAz(model, ctx) {
+  const subnets = model.nodes.filter(n => n.kind === 'subnet');
   const comAz = subnets.filter(s => s.az);
   if (!comAz.length)
     return { findings: [], muda: muda('single-az', 'nenhuma subnet declara `az`: o modelo não fala de zona') };
@@ -256,29 +256,29 @@ function regraSingleAz(modelo, ctx) {
  * não existir, não sobre ela ser suficiente. Dimensionar egresso é auditoria, e
  * auditoria formal está fora do escopo do mapa.
  */
-function regraEgresso(modelo, ctx) {
-  const privadas = modelo.nodes.filter(n => n.kind === 'subnet' && n.access === 'private'
+function regraEgresso(model, ctx) {
+  const privadas = model.nodes.filter(n => n.kind === 'subnet' && n.access === 'private'
     && (ctx.t.filhos.get(n.id) || []).length);
   if (!privadas.length)
     return { findings: [], muda: muda('egress-sem-controle',
       'nenhuma subnet privada com conteúdo: não há de onde sair') };
 
   const findings = [];
-  const jaVista = new Set();
+  const alreadySeen = new Set();
   for (const s of privadas) {
     const vpc = ctx.t.ancestrais(s).find(a => a.kind === 'vpc');
-    if (!vpc || jaVista.has(vpc.id)) continue;
-    const dentroDaVpc = modelo.nodes.filter(n => n === vpc || ctx.t.ancestrais(n).some(a => a.id === vpc.id));
+    if (!vpc || alreadySeen.has(vpc.id)) continue;
+    const dentroDaVpc = model.nodes.filter(n => n === vpc || ctx.t.ancestrais(n).some(a => a.id === vpc.id));
     if (dentroDaVpc.some(n => ehEgresso(n, ctx.cat))) continue;
     // ...ou LIGADA a uma: o atracamento no Transit Gateway da conta de rede
     const ids = new Set(dentroDaVpc.map(n => n.id));
-    const atracada = (modelo.edges || []).some(a => {
-      const [x, y] = [ctx.t.porId.get(a.from), ctx.t.porId.get(a.to)];
+    const docked = (model.edges || []).some(a => {
+      const [x, y] = [ctx.t.byId.get(a.from), ctx.t.byId.get(a.to)];
       if (!x || !y) return false;
       return (ids.has(x.id) && ehEgresso(y, ctx.cat)) || (ids.has(y.id) && ehEgresso(x, ctx.cat));
     });
-    if (atracada) continue;
-    jaVista.add(vpc.id);
+    if (docked) continue;
+    alreadySeen.add(vpc.id);
     findings.push(finding('egress-sem-controle', vpc.id,
       `a VPC tem subnet privada com conteúdo e nenhum NAT, endpoint ou gateway — ` +
       `a saída existe na conta e não está no desenho, ou não existe`));
@@ -293,8 +293,8 @@ function regraEgresso(modelo, ctx) {
  * assim que tem de ser: a estrutura sobre a qual a regra fala é a subnet
  * pública, e ela ou existe ou não.)
  */
-function regraDadoPublico(modelo, ctx) {
-  const publicas = modelo.nodes.filter(n => n.kind === 'subnet' && n.access === 'public');
+function regraDadoPublico(model, ctx) {
+  const publicas = model.nodes.filter(n => n.kind === 'subnet' && n.access === 'public');
   if (!publicas.length)
     return { findings: [], muda: muda('dado-em-subnet-publica', 'nenhuma subnet pública declarada') };
 
@@ -316,15 +316,15 @@ function regraDadoPublico(modelo, ctx) {
  * MEDIDA: a travessia tem um habilitador (`habilita`, o E9 do #6) numa das
  * pontas? Papel de IAM, política de bucket, política de event bus.
  */
-function regraConfianca(modelo, ctx) {
-  const contas = modelo.nodes.filter(n => n.kind === 'account');
-  const cruz = contas.length >= 2 ? travessias(modelo.edges || [], ctx.t) : [];
-  if (contas.length < 2 || !cruz.length)
-    return { findings: [], muda: muda('cross-account-sem-confianca', contas.length < 2
-      ? `${contas.length} conta(s): não há travessia possível`
-      : `${contas.length} contas e nenhuma travessia: é mapa de colocação, não afirma acesso`) };
+function regraConfianca(model, ctx) {
+  const accounts = model.nodes.filter(n => n.kind === 'account');
+  const cruz = accounts.length >= 2 ? travessias(model.edges || [], ctx.t) : [];
+  if (accounts.length < 2 || !cruz.length)
+    return { findings: [], muda: muda('cross-account-sem-confianca', accounts.length < 2
+      ? `${accounts.length} conta(s): não há travessia possível`
+      : `${accounts.length} contas e nenhuma travessia: é mapa de colocação, não afirma acesso`) };
 
-  const autorizados = new Set(modelo.nodes.filter(n => n.enables).map(n => n.enables));
+  const autorizados = new Set(model.nodes.filter(n => n.enables).map(n => n.enables));
   const findings = [];
   for (const a of cruz) {
     if (autorizados.has(a.from) || autorizados.has(a.to)) continue;
@@ -349,10 +349,10 @@ function regraConfianca(modelo, ctx) {
  * uma lista: não existe "lista de serviços que são DLQ", existe "o que recebe o
  * refugo de uma fila é outra fila".
  */
-function regraDlq(modelo, ctx) {
-  const edges = modelo.edges || [];
+function regraDlq(model, ctx) {
+  const edges = model.edges || [];
   const alimenta = edges.filter(a => {
-    const q = ctx.t.porId.get(a.from);
+    const q = ctx.t.byId.get(a.from);
     return q && ehAssincrono(q, ctx.cat);
   });
   if (!alimenta.length)
@@ -362,13 +362,13 @@ function regraDlq(modelo, ctx) {
   const findings = [];
   const jaVisto = new Set();
   for (const a of alimenta) {
-    const consumidor = ctx.t.porId.get(a.to);
-    const fila = ctx.t.porId.get(a.from);
-    if (!consumidor || !ehComputacao(consumidor, ctx.cat)) continue;
+    const consumidor = ctx.t.byId.get(a.to);
+    const fila = ctx.t.byId.get(a.from);
+    if (!consumidor || !isCompute(consumidor, ctx.cat)) continue;
     if (jaVisto.has(consumidor.id)) continue;
     const temDestinoDeFalha = edges.some(x => {
       if (x.from !== consumidor.id) return false;
-      const target = ctx.t.porId.get(x.to);
+      const target = ctx.t.byId.get(x.to);
       return target && target.id !== fila.id && target.service === fila.service;
     });
     if (temDestinoDeFalha) continue;
@@ -380,7 +380,7 @@ function regraDlq(modelo, ctx) {
   return { findings, muda: null };
 }
 
-const REGRAS = [regraSpof, regraSingleAz, regraEgresso, regraDadoPublico, regraConfianca, regraDlq];
+const RULES = [regraSpof, regraSingleAz, regraEgresso, regraDadoPublico, regraConfianca, regraDlq];
 
 /**
  * Os nomes, numa lista só — porque a régua e a CLI precisam da MESMA lista.
@@ -389,7 +389,7 @@ const REGRAS = [regraSpof, regraSingleAz, regraEgresso, regraDadoPublico, regraC
  * edições em três arquivos, com a chance de a régua passar a cobrar cinco
  * enquanto o módulo entrega seis. Uma lista, um lugar.
  */
-const NOMES = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publica',
+const NAMES = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publica',
   'cross-account-sem-confianca', 'assincrono-sem-dlq'];
 
 /**
@@ -418,24 +418,24 @@ function arquivosDoCorpus(raiz) {
  *
  * @returns {{achados: Array, mudas: Array, teto: number, dentroDoTeto: boolean}}
  */
-function revisar(modelo, opts = {}) {
-  const cat = opts.cat || catalogoPadrao();
-  const ctx = { cat, t: arvore(modelo) };
+function review(model, opts = {}) {
+  const cat = opts.cat || defaultCatalog();
+  const ctx = { cat, t: arvore(model) };
 
   const findings = [], mudas = [];
-  for (const rule of REGRAS) {
-    const r = rule(modelo, ctx);
+  for (const rule of RULES) {
+    const r = rule(model, ctx);
     findings.push(...r.findings);
     if (r.muda) mudas.push(r.muda);
   }
   findings.sort((a, b) => a.rule.localeCompare(b.rule) || String(a.target).localeCompare(String(b.target)));
 
   // O teto do critério de aprovação, calculado junto para não virar prosa.
-  const teto = Math.ceil(modelo.nodes.length / 4);
-  return { findings, mudas, teto, dentroDoTeto: findings.length <= teto };
+  const ceiling = Math.ceil(model.nodes.length / 4);
+  return { findings, mudas, ceiling, dentroDoTeto: findings.length <= ceiling };
 }
 
 module.exports = {
-  revisar, REGRAS, NOMES, arquivosDoCorpus, CORPUS_DIRS,
-  ehStateful, ehEgresso, ehAssincrono, ehComputacao,
+  review, RULES, NAMES, arquivosDoCorpus, CORPUS_DIRS,
+  ehStateful, ehEgresso, ehAssincrono, isCompute,
 };

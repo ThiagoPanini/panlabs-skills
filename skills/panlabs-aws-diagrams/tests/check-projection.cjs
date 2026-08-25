@@ -22,20 +22,20 @@
 const fs = require('fs');
 const path = require('path');
 
-const { aprovar, check } = require('../session/agreement.cjs');
-const { elaborar } = require('../session/elaborate.cjs');
-const { validar } = require('../session/validate.cjs');
-const { projetar } = require('../session/project.cjs');
+const { approve, check } = require('../session/agreement.cjs');
+const { elaborate } = require('../session/elaborate.cjs');
+const { validate } = require('../session/validate.cjs');
+const { project } = require('../session/project.cjs');
 
-const RAIZ = path.join(__dirname, '..');
-const clonar = o => JSON.parse(JSON.stringify(o));
+const ROOT = path.join(__dirname, '..');
+const clone = o => JSON.parse(JSON.stringify(o));
 const no = (m, id) => m.nodes.find(n => n.id === id);
 
 /**
  * Sete mutacoes que a checagem TEM de pegar. Todas sao coisas que um agente
  * distraido faz na fase tecnica achando que esta so detalhando.
  */
-const DEVE_QUEBRAR = [
+const MUST_BREAK = [
   { name: 'tirar o casaco logico de uma capacidade aprovada',
     faz: m => { delete no(m, 'tratar-falha').logical; no(m, 'tratar-falha').layer = 'technical'; } },
 
@@ -63,9 +63,9 @@ const DEVE_QUEBRAR = [
   // conversa, que e exatamente a mentira calada que este mapa persegue.
   { name: 'hub so-tecnico com 2 entradas e 2 saidas logicas',
     faz: m => {
-      m.edges.push({ id: 'x-in1', from: 'receber-arquivo', to: 'barramento' });
-      m.edges.push({ id: 'x-in2', from: 'reter-objeto', to: 'barramento' });
-      m.edges.push({ id: 'x-out', from: 'barramento', to: 'consultar' });
+      m.edges.push({ id: 'x-in1', from: 'receber-arquivo', to: 'bus' });
+      m.edges.push({ id: 'x-in2', from: 'reter-objeto', to: 'bus' });
+      m.edges.push({ id: 'x-out', from: 'bus', to: 'consultar' });
     },
     because: 'a contracao emitiria 4 arestas logicas com 3 afirmadas' },
 ];
@@ -74,7 +74,7 @@ const DEVE_QUEBRAR = [
  * Cinco mutacoes que sao elaboracao tecnica LEGITIMA. Se a checagem reclamar de
  * alguma, ela esta apertada demais e vira ruido que o usuario aprende a ignorar.
  */
-const NAO_PODE_QUEBRAR = [
+const MUST_NOT_BREAK = [
   { name: 'acrescentar infraestrutura (no so-tecnico)',
     faz: m => { m.nodes.push({ id: 'nat', layer: 'technical', inside: 'vpc-dados',
                              technical: { kind: 'service', service: 'nat gateway', label: 'NAT gateway' } }); } },
@@ -95,10 +95,10 @@ const NAO_PODE_QUEBRAR = [
 ];
 
 function main() {
-  const logical = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-logical.json'), 'utf8'));
-  const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
-  const aprovado = aprovar(logical, { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
-  const technical = elaborar(aprovado, elab);
+  const logical = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', 'retail-logical.json'), 'utf8'));
+  const elab = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
+  const approved = approve(logical, { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
+  const technical = elaborate(approved, elab);
 
   let falhas = 0;
 
@@ -108,8 +108,8 @@ function main() {
   console.log(`    a projecao logica do modelo tecnico bate com a aprovada .... ${base.ok ? '✓' : '✗'}`);
   if (!base.ok) { falhas++; for (const d of base.diferencas) console.log(`        · ${d.text}`); }
 
-  const pl = projetar(technical, 'logical').modelo;
-  const pt = projetar(technical, 'technical').modelo;
+  const pl = project(technical, 'logical').model;
+  const pt = project(technical, 'technical').model;
   console.log(`    vista logica projetada .................................... ${pl.nodes.length} nos, ${pl.edges.length} arestas`);
   console.log(`    vista tecnica projetada .................................. ${pt.nodes.length} nos, ${pt.edges.length} arestas`);
   console.log(`    o modelo de sessao tem ................................... ${technical.nodes.length} nos, ${technical.edges.length} arestas`);
@@ -124,33 +124,33 @@ function main() {
   // usar `logico.nota` — e ele parou —, uma checagem que so conta o que ja
   // existe passa contando zero. Verde por vacuidade e o modo de falhar que o
   // #17 pagou caro para aprender.
-  const comNota = clonar(technical);
+  const comNota = clone(technical);
   comNota.nodes.find(n => n.id === 'tratar-falha').logical.note = 'reprocessamento manual, por enquanto';
-  const notaProjetada = projetar(comNota, 'logical').modelo.nodes.find(n => n.id === 'tratar-falha').note;
+  const projectedNote = project(comNota, 'logical').model.nodes.find(n => n.id === 'tratar-falha').note;
   console.log(`    a nota do casaco logico chega na projecao ................. ` +
-    `${notaProjetada ? '✓' : '✗'}  (${notaProjetada ? `"${notaProjetada}"` : 'sumiu'})`);
-  if (!notaProjetada) falhas++;
+    `${projectedNote ? '✓' : '✗'}  (${projectedNote ? `"${projectedNote}"` : 'sumiu'})`);
+  if (!projectedNote) falhas++;
 
   // Duas arestas aprovadas DISTINTAS entre o mesmo par tem de sobreviver as
   // duas. A chave de deduplicacao ja foi so `de>para`, e nesse regime a segunda
   // sumia — nas DUAS pontas da comparacao do acordo, o que deixava a checagem
   // cega para a propria perda.
-  const paralelo = clonar(technical);
+  const paralelo = clone(technical);
   paralelo.edges.push({ id: 'a-confirma', from: 'receber-arquivo', to: 'guardar-bruto', label: 'confirma gravacao' });
-  const proj = projetar(paralelo, 'logical').modelo.edges
+  const proj = project(paralelo, 'logical').model.edges
     .filter(a => a.from === 'receber-arquivo' && a.to === 'guardar-bruto').length;
   console.log(`    duas arestas distintas no mesmo par sobrevivem ............ ${proj === 2 ? '✓' : '✗'}  (${proj} de 2)`);
   if (proj !== 2) falhas++;
 
   // ------------------------------------------------- 2. experimento de controle
   console.log('\n  2 · Experimento de controle — o que TEM de quebrar\n');
-  for (const mut of DEVE_QUEBRAR) {
-    const m = clonar(technical);
+  for (const mut of MUST_BREAK) {
+    const m = clone(technical);
     mut.faz(m);
     // Uma mutacao pode ser pega pelo validador ANTES da projecao. Vale igual —
     // as duas camadas existem para isso, e a checagem so falharia se NENHUMA
     // pegasse.
-    const v = validar(m);
+    const v = validate(m);
     let pego = !v.ok, via = 'validator';
     let r = null;
     if (!pego) { r = check(m); pego = !r.ok; via = 'agreement'; }
@@ -161,16 +161,16 @@ function main() {
   }
 
   console.log('\n  3 · Experimento de controle — o que NAO PODE quebrar\n');
-  for (const mut of NAO_PODE_QUEBRAR) {
-    const m = clonar(technical);
+  for (const mut of MUST_NOT_BREAK) {
+    const m = clone(technical);
     mut.faz(m);
-    const v = validar(m);
+    const v = validate(m);
     const r = v.ok ? check(m) : { ok: false, motivo: v.erros[0] };
     console.log(`    ${mut.name.padEnd(52)} ${r.ok ? '✓ passou' : '✗ QUEBROU'}`);
     if (!r.ok) { falhas++; console.log(`        · ${(r.motivo || '').slice(0, 110)}`); for (const d of r.diferencas || []) console.log(`        · ${d.text}`); }
   }
 
-  const total = DEVE_QUEBRAR.length + NAO_PODE_QUEBRAR.length;
+  const total = MUST_BREAK.length + MUST_NOT_BREAK.length;
   console.log(falhas
     ? `\n  ✗ ${falhas} falha(s) de ${total} — a checagem esta medindo outra coisa.\n`
     : `\n  ✓ ${total}/${total}. A checagem prende o que muda o acordo e deixa passar o que so o detalha.\n`);

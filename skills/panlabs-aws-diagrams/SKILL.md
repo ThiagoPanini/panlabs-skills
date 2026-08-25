@@ -148,7 +148,7 @@ que a resposta certa é aprovação nova, não desenho novo.
 - `conferir()` continua `ok` — a projeção lógica de hoje ainda é byte a byte a
   aprovada, mesmo depois de a fase técnica ter enfiado VPC e subnet entre a folha
   e a fronteira;
-- `node engine/generate.cjs <modelo> --gate veracidade` passa — nenhuma falha
+- `node engine/generate.cjs <modelo> --gate truthfulness` passa — nenhuma falha
   semântica, isto é, o desenho não afirma fronteira de rede que o modelo nega.
 
 ### 7 · Publique a cópia que circula
@@ -170,7 +170,7 @@ tomados**; fica o que é sobre a arquitetura desenhada.
 
 | | |
 |---|---|
-| `node engine/generate.cjs <m.json> --output x.drawio` | desenha. `--theme claro\|escuro\|corporativo` · `--flow solido\|tracejado\|animado` · `--gate nenhum\|veracidade\|falha\|estrito` · `--explain` |
+| `node engine/generate.cjs <m.json> --output x.drawio` | desenha. `--theme light\|dark\|corporate` · `--flow solid\|dashed\|animated` · `--gate none\|truthfulness\|failure\|strict` · `--explain` |
 | `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda o corpus, `--json` para ler no código |
 | `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas do passo 4. `--corpus` roda a régua inteira |
 | `node catalog/aws-shapes.cjs <nome>...` | resolve nome → shape, com as correções aplicadas |

@@ -21,12 +21,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const { abrir, diferir, politica, podeRegerar } = require('../session/open.cjs');
-const { desenhar } = require('../session/draw.cjs');
-const { lerPaginas } = require('../session/fingerprint.cjs');
+const { open, differ, policy, canRegenerate } = require('../session/open.cjs');
+const { draw } = require('../session/draw.cjs');
+const { readPages } = require('../session/fingerprint.cjs');
 
-const RAIZ = path.join(__dirname, '..');
-const ARQ = path.join(RAIZ, 'output', 'retail.drawio');
+const ROOT = path.join(__dirname, '..');
+const FILE = path.join(ROOT, 'output', 'retail.drawio');
 
 /**
  * Aplica uma troca na ULTIMA celula com este id — o arquivo tem duas paginas e o
@@ -46,12 +46,12 @@ function naUltimaCelula(xml, id, fn) {
   return xml.slice(0, m.index) + fn(m[0]) + xml.slice(m.index + m[0].length);
 }
 
-const SO_ARRASTOU = xml =>
+const ONLY_DRAGGED = xml =>
   naUltimaCelula(xml, 'reter-objeto', c => c.replace(/<mxGeometry x="(-?\d+)" y="(-?\d+)"/,
     (_, x, y) => `<mxGeometry x="${+x + 60}" y="${+y + 24}"`));
 
-const MEXEU_NO_CONTEUDO = xml => {
-  let x = SO_ARRASTOU(xml);
+const TOUCHED_CONTENT = xml => {
+  let x = ONLY_DRAGGED(xml);
   x = naUltimaCelula(x, 'tratar-falha', c => c.replace('value="SQS · fila de falha"', 'value="SQS · quarentena"'));
   // apagou o papel de leitura e a aresta que ia nele
   x = x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '');
@@ -67,19 +67,19 @@ const MEXEU_NO_CONTEUDO = xml => {
     '        </mxCell>\n') + x.slice(ultimo);
 };
 
-async function relatar(label, arquivo) {
+async function describe(label, arquivo) {
   console.log(`\n  ══ ${label}`);
-  const aberto = abrir(fs.readFileSync(arquivo, 'utf8'));
-  console.log(`     reconheci: ${aberto.comoReconheci.join(' · ')}`);
-  for (const p of aberto.paginas) {
-    const pol = politica(p.state);
+  const aberto = open(fs.readFileSync(arquivo, 'utf8'));
+  console.log(`     reconheci: ${aberto.howIRecognized.join(' · ')}`);
+  for (const p of aberto.pages) {
+    const pol = policy(p.state);
     console.log(`     pagina vista=${p.view}  →  ${p.state.toUpperCase()}`);
     console.log(`       ${pol.diga}`);
     if (p.state !== 'divergente') continue;
-    const pode = podeRegerar(aberto.sessao, p.view);
+    const pode = canRegenerate(aberto.session, p.view);
     if (!pode.pode) { console.log(`       ${pode.because}`); continue; }
-    const ref = await desenhar(aberto.sessao, p.view);
-    const d = diferir(p, lerPaginas(ref.xml).paginas[0].celulas);
+    const ref = await draw(aberto.session, p.view);
+    const d = differ(p, readPages(ref.xml).pages[0].celulas);
     console.log(`       ${d.findings.length} diferenca(s) — ${d.absorviveis} absorvivel(is), ${d.opacas} opaca(s):`);
     for (const a of d.findings)
       console.log(`         · ${String(a.kind).padEnd(14)} ${String(a.id).padEnd(20)} ` +
@@ -92,16 +92,16 @@ async function relatar(label, arquivo) {
 }
 
 async function main() {
-  if (!fs.existsSync(ARQ)) { console.error('  rode tools/approve.cjs e tools/resume.cjs antes.'); process.exit(1); }
-  const base = fs.readFileSync(ARQ, 'utf8');
+  if (!fs.existsSync(FILE)) { console.error('  rode tools/approve.cjs e tools/resume.cjs antes.'); process.exit(1); }
+  const base = fs.readFileSync(FILE, 'utf8');
 
-  const a = path.join(RAIZ, 'output', 'retail-so-remanejado.drawio');
-  const b = path.join(RAIZ, 'output', 'retail-editado-a-mao.drawio');
-  fs.writeFileSync(a, SO_ARRASTOU(base));
-  fs.writeFileSync(b, MEXEU_NO_CONTEUDO(base));
+  const a = path.join(ROOT, 'output', 'retail-so-remanejado.drawio');
+  const b = path.join(ROOT, 'output', 'retail-editado-a-mao.drawio');
+  fs.writeFileSync(a, ONLY_DRAGGED(base));
+  fs.writeFileSync(b, TOUCHED_CONTENT(base));
 
-  await relatar('O humano so ARRASTOU uma caixa', a);
-  await relatar('O humano MEXEU NO CONTEUDO', b);
+  await describe('O humano so ARRASTOU uma caixa', a);
+  await describe('O humano MEXEU NO CONTEUDO', b);
 
   console.log('\n  A diferenca entre os dois nao e de grau, e de resposta:');
   console.log('  no primeiro a skill segue e avisa que regerar apaga o ajuste dele;');

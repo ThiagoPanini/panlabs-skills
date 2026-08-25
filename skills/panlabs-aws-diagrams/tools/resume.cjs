@@ -38,17 +38,17 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
-const { abrir, diferir, politica, podeRegerar } = require(path.join(RAIZ, 'session', 'open.cjs'));
-const { briefing } = require(path.join(RAIZ, 'session', 'briefing.cjs'));
-const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
-const { validar } = require(path.join(RAIZ, 'session', 'validate.cjs'));
-const { check } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
-const { desenhar } = require(path.join(RAIZ, 'session', 'draw.cjs'));
-const { costurar } = require(path.join(RAIZ, 'session', 'save.cjs'));
-const { lerPaginas } = require(path.join(RAIZ, 'session', 'fingerprint.cjs'));
+const ROOT = path.join(__dirname, '..');
+const { open, differ, policy, canRegenerate } = require(path.join(ROOT, 'session', 'open.cjs'));
+const { briefing } = require(path.join(ROOT, 'session', 'briefing.cjs'));
+const { elaborate } = require(path.join(ROOT, 'session', 'elaborate.cjs'));
+const { validate } = require(path.join(ROOT, 'session', 'validate.cjs'));
+const { check } = require(path.join(ROOT, 'session', 'agreement.cjs'));
+const { draw } = require(path.join(ROOT, 'session', 'draw.cjs'));
+const { stitch } = require(path.join(ROOT, 'session', 'save.cjs'));
+const { readPages } = require(path.join(ROOT, 'session', 'fingerprint.cjs'));
 
-const AJUDA = `
+const HELP = `
   node tools/resume.cjs <arq.drawio> [opcoes]
 
     --delta <elaboracao.json>  aplica o delta da fase tecnica (passo 6 do arco).
@@ -80,19 +80,19 @@ function parse(args) {
 
 async function main() {
   const { opts, soltos } = parse(process.argv.slice(2));
-  if (opts.help || opts.h) { console.log(AJUDA); return; }
+  if (opts.help || opts.h) { console.log(HELP); return; }
 
-  const input = soltos[0] || path.join(RAIZ, 'output', 'retail.drawio');
+  const input = soltos[0] || path.join(ROOT, 'output', 'retail.drawio');
   // O default do delta so vale quando a ENTRADA tambem e a do corpus. Herdar o
   // delta do retail num arquivo qualquer aplicaria o casaco tecnico errado — e
   // `elaborar` recusaria pelo `sobre`, mas com uma mensagem que nao explica a
   // causa. Melhor nao chegar la.
   const delta = opts.delta
-    || (soltos.length === 0 ? path.join(RAIZ, 'models', 'session', 'retail-elaboration.json') : null);
+    || (soltos.length === 0 ? path.join(ROOT, 'models', 'session', 'retail-elaboration.json') : null);
 
   if (!fs.existsSync(input)) {
     console.error(`\n  ✗ nao achei ${input}`);
-    console.error(AJUDA);
+    console.error(HELP);
     process.exit(1);
   }
 
@@ -100,14 +100,14 @@ async function main() {
   console.log(`\n  RETOMAR · ${path.relative(process.cwd(), input)}`);
 
   // 1 e 2 -------------------------------------------------------------------
-  const aberto = abrir(xml);
-  if (!aberto.nosso) { console.error(`\n  ✗ ${aberto.because}`); process.exit(1); }
+  const aberto = open(xml);
+  if (!aberto.ours) { console.error(`\n  ✗ ${aberto.because}`); process.exit(1); }
 
-  const problema = aberto.paginas.filter(p => politica(p.state).bloqueia);
-  const remanejadas = aberto.paginas.filter(p => p.state === 'remanejado');
+  const problema = aberto.pages.filter(p => policy(p.state).bloqueia);
+  const remanejadas = aberto.pages.filter(p => p.state === 'remanejado');
 
   // 3 -----------------------------------------------------------------------
-  const acordoAntes = check(aberto.sessao);
+  const acordoAntes = check(aberto.session);
   for (const l of briefing(aberto, { agreement: acordoAntes })) console.log(l);
 
   // O bloqueio vem DEPOIS do briefing de proposito: mesmo quando nao da para
@@ -116,17 +116,17 @@ async function main() {
   if (problema.length) {
     console.log('\n  ┌─ DIVERGENCIA ' + '─'.repeat(49));
     for (const p of problema) {
-      console.log(`  │ pagina "${p.name || p.id}": ${politica(p.state).diga}`);
+      console.log(`  │ pagina "${p.name || p.id}": ${policy(p.state).diga}`);
       if (p.state !== 'divergente') continue;
-      const pode = podeRegerar(aberto.sessao, p.view);
+      const pode = canRegenerate(aberto.session, p.view);
       if (!pode.pode) { console.log(`  │   ${pode.because}`); continue; }
-      const ref = await desenhar(aberto.sessao, p.view);
+      const ref = await draw(aberto.session, p.view);
       // A referencia e a pagina de MESMO id — com 1+N paginas por vista, pegar
       // sempre a primeira compararia a vista consolidada contra uma de detalhe
       // e chamaria de "divergencia" a diferenca entre duas paginas distintas.
-      const paginasRef = lerPaginas(ref.xml).paginas;
+      const paginasRef = readPages(ref.xml).pages;
       const ref1 = paginasRef.find(x => x.id === p.id) || paginasRef[0];
-      const d = diferir(p, ref1.celulas);
+      const d = differ(p, ref1.celulas);
       console.log(`  │ ${d.findings.length} diferenca(s): ${d.absorviveis} que o modelo sabe expressar, ${d.opacas} que nao.`);
       for (const a of d.findings) {
         const onde = a.classe === 'absorvivel' ? `absorvivel → ${a.onde}` : 'opaca';
@@ -139,7 +139,7 @@ async function main() {
     process.exit(2);
   }
   for (const p of remanejadas)
-    console.log(`\n  ⚠ pagina "${p.name || p.id}": ${politica(p.state).diga}`);
+    console.log(`\n  ⚠ pagina "${p.name || p.id}": ${policy(p.state).diga}`);
 
   if (!acordoAntes.ok) { console.error(`\n  ✗ acordo: ${acordoAntes.motivo}`); process.exit(2); }
 
@@ -147,7 +147,7 @@ async function main() {
   // terceira sessao. O que ele nao e e motivo para reaplicar o delta: a
   // elaboracao ja aconteceu, e reaplicar so produziria "ja tinha casaco
   // tecnico" dez vezes.
-  if (aberto.sessao.stage === 'technical') {
+  if (aberto.session.stage === 'technical') {
     console.log('\n  Este arquivo ja foi elaborado — as duas vistas estao aqui dentro.');
     console.log('  Nada a fazer: o briefing acima e o estado das paginas ja e a retomada.\n');
     return;
@@ -166,12 +166,12 @@ async function main() {
   if (!fs.existsSync(delta)) { console.error(`\n  ✗ nao achei o delta ${delta}\n`); process.exit(1); }
 
   // 4 e 5 -------------------------------------------------------------------
-  const elaboracao = JSON.parse(fs.readFileSync(delta, 'utf8'));
-  const technical = elaborar(aberto.sessao, elaboracao);
-  console.log(`\n  elaborar    ${aberto.sessao.nodes.length} → ${technical.nodes.length} nos, ` +
-    `${aberto.sessao.edges.length} → ${technical.edges.length} arestas  (estagio=${technical.stage})`);
+  const elaboration = JSON.parse(fs.readFileSync(delta, 'utf8'));
+  const technical = elaborate(aberto.session, elaboration);
+  console.log(`\n  elaborar    ${aberto.session.nodes.length} → ${technical.nodes.length} nos, ` +
+    `${aberto.session.edges.length} → ${technical.edges.length} arestas  (estagio=${technical.stage})`);
 
-  const v = validar(technical);
+  const v = validate(technical);
   for (const a of v.avisos) console.log(`  ⚠ ${a}`);
   if (!v.ok) { console.error(`\n  ✗ modelo invalido (${v.fase})`); for (const e of v.erros) console.error(`      · ${e}`); process.exit(1); }
 
@@ -184,28 +184,28 @@ async function main() {
   }
 
   // 6 -----------------------------------------------------------------------
-  const rl = await desenhar(technical, 'logical');
-  const rt = await desenhar(technical, 'technical');
+  const rl = await draw(technical, 'logical');
+  const rt = await draw(technical, 'technical');
   for (const a of rt.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  console.log(`  desenhar    logica: ${rl.modelo.nodes.length} nos, ${rl.modelo.edges.length} arestas  ·  ` +
-    `tecnica: ${rt.modelo.nodes.length} nos, ${rt.modelo.edges.length} arestas (caminho "${rt.caminho}")`);
+  console.log(`  desenhar    logica: ${rl.model.nodes.length} nos, ${rl.model.edges.length} arestas  ·  ` +
+    `tecnica: ${rt.model.nodes.length} nos, ${rt.model.edges.length} arestas (caminho "${rt.caminho}")`);
   if (rt.trilha.colapsados.length)
     console.log(`              colapso: ${rt.trilha.colapsados.length} no(s) da vista tecnica reancoram na logica`);
   for (const c of rl.trilha.contraidas)
     console.log(`              contraiu ${c.from} → ${c.to} atraves de [${c.by.join(', ')}]  ("${c.label}")`);
 
   // A prova de que elaborar tecnicamente nao mexeu no desenho aprovado.
-  const antiga = aberto.paginas.find(p => p.view === 'logical');
-  const nova = lerPaginas(rl.xml).paginas.find(x => x.id === (antiga && antiga.id)) || lerPaginas(rl.xml).paginas[0];
-  const igual = antiga && antiga.selo.panlabsSemantica === nova.selo.panlabsSemantica
-    && antiga.selo.panlabsAparencia === nova.selo.panlabsAparencia;
+  const antiga = aberto.pages.find(p => p.view === 'logical');
+  const nova = readPages(rl.xml).pages.find(x => x.id === (antiga && antiga.id)) || readPages(rl.xml).pages[0];
+  const igual = antiga && antiga.seal.panlabsSemantica === nova.seal.panlabsSemantica
+    && antiga.seal.panlabsAparencia === nova.seal.panlabsAparencia;
   console.log(`  conferir    ${igual ? '✓' : '✗'} a pagina logica saiu identica a da aprovacao — nem um pixel do que foi aprovado mudou`);
   if (!igual) process.exitCode = 1;
 
-  const juntos = costurar([rl.xml, rt.xml]);
+  const juntos = stitch([rl.xml, rt.xml]);
   const output = opts.output || input;
   fs.writeFileSync(output, juntos);
-  const nPag = lerPaginas(juntos).paginas.length;
+  const nPag = readPages(juntos).pages.length;
   console.log(`\n  → ${path.relative(process.cwd(), output)}  (${juntos.length} bytes, ${nPag} paginas: ` +
     `1 logica + ${nPag - 1} da vista tecnica)`);
   console.log('    A vista aprovada e a tecnica no mesmo arquivo. Nao ha um segundo lugar para dessincronizar.\n');

@@ -25,23 +25,23 @@
  * bloqueio que dispara a toa e bloqueio que o usuario aprende a ignorar.
  */
 
-const { lerPaginas, impressaoSemantica, impressaoDeAparencia, diferenca, classificar } = require('./fingerprint.cjs');
-const { ESQUEMA_SELO } = require('./save.cjs');
-const { ESQUEMA_PUBLICADO } = require('./publish.cjs');
+const { readPages, impressaoSemantica, appearanceFingerprint, diferenca, classify } = require('./fingerprint.cjs');
+const { SEAL_SCHEMA } = require('./save.cjs');
+const { PUBLISHED_SCHEMA } = require('./publish.cjs');
 
 /**
  * @returns {{nosso, comoReconheci, host, paginas, sessao, conflitoDeCopias}}
  */
-function abrir(xml) {
-  const { host, paginas } = lerPaginas(xml);
-  const comoReconheci = [];
+function open(xml) {
+  const { host, pages } = readPages(xml);
+  const howIRecognized = [];
 
-  const comSelo = paginas.filter(p => p.selo && p.selo.panlabsEsquema);
-  if (comSelo.length) comoReconheci.push(`selo em ${comSelo.length}/${paginas.length} pagina(s)`);
+  const sealed = pages.filter(p => p.seal && p.seal.panlabsSchema);
+  if (sealed.length) howIRecognized.push(`selo em ${sealed.length}/${pages.length} pagina(s)`);
   // O `host` e a marca fraca: e atributo do APP, nao nosso, e quem gravar o
   // arquivo por ultimo escreve o proprio nome nele. Serve para explicar, nunca
   // para decidir. Medido em `tools/measure-host.cjs`.
-  if (host === 'panlabs-aws-diagrams') comoReconheci.push('host="panlabs-aws-diagrams" (marca fraca)');
+  if (host === 'panlabs-aws-diagrams') howIRecognized.push('host="panlabs-aws-diagrams" (marca fraca)');
 
   /**
    * A COPIA PUBLICADA se declara, e este e o ponto de ela se declarar.
@@ -51,54 +51,54 @@ function abrir(xml) {
    * onde a decisao do #23 quis falar. Um arquivo que perdeu a deliberacao de
    * proposito tem de dizer que perdeu, e dizer onde ela esta.
    */
-  const publicadas = comSelo.filter(p => p.selo.panlabsEsquema === ESQUEMA_PUBLICADO);
-  if (publicadas.length === comSelo.length && publicadas.length) {
-    comoReconheci.push(`copia PUBLICADA (${ESQUEMA_PUBLICADO}) — nao retoma`);
-    return { nosso: true, publicado: true, comoReconheci, host, paginas: [], sessao: null, conflitoDeCopias: null,
-      because: publicadas[0].selo.panlabsPorque ||
+  const publishedPages = sealed.filter(p => p.seal.panlabsSchema === PUBLISHED_SCHEMA);
+  if (publishedPages.length === sealed.length && publishedPages.length) {
+    howIRecognized.push(`copia PUBLICADA (${PUBLISHED_SCHEMA}) — nao retoma`);
+    return { ours: true, published: true, howIRecognized, host, pages: [], session: null, copyConflict: null,
+      because: publishedPages[0].seal.panlabsPorque ||
         'copia publicada: a deliberacao foi podada de proposito. Retome pelo arquivo de trabalho.' };
   }
-  if (publicadas.length)
-    comoReconheci.push(`⚠ ${publicadas.length} de ${comSelo.length} pagina(s) sao copia publicada — ` +
+  if (publishedPages.length)
+    howIRecognized.push(`⚠ ${publishedPages.length} de ${sealed.length} pagina(s) sao copia publicada — ` +
       'alguem colou pagina de uma copia dentro do arquivo de trabalho');
 
-  const fora = comSelo.filter(p => p.selo.panlabsEsquema !== ESQUEMA_SELO && p.selo.panlabsEsquema !== ESQUEMA_PUBLICADO);
+  const fora = sealed.filter(p => p.seal.panlabsSchema !== SEAL_SCHEMA && p.seal.panlabsSchema !== PUBLISHED_SCHEMA);
   if (fora.length)
-    comoReconheci.push(`⚠ ${fora.length} pagina(s) com esquema "${fora[0].selo.panlabsEsquema}", nao "${ESQUEMA_SELO}"`);
+    howIRecognized.push(`⚠ ${fora.length} pagina(s) com esquema "${fora[0].seal.panlabsSchema}", nao "${SEAL_SCHEMA}"`);
 
-  if (!comSelo.length)
-    return { nosso: false, comoReconheci, host, paginas: [], sessao: null, conflitoDeCopias: null,
+  if (!sealed.length)
+    return { ours: false, howIRecognized, host, pages: [], session: null, copyConflict: null,
       because: 'nenhuma pagina traz o selo — ou o arquivo nao e nosso, ou a pagina que o tinha foi apagada' };
 
   // As copias por pagina tem de concordar. Discordar so acontece se alguem
   // colou uma pagina de OUTRO arquivo aqui dentro — que e informacao, nao erro.
-  const copias = [...new Set(comSelo.map(p => p.selo.panlabsSessao))];
-  const conflitoDeCopias = copias.length > 1
-    ? { quantas: copias.length, paginas: comSelo.map(p => ({ page: p.id, view: p.selo.panlabsVista })) }
+  const copias = [...new Set(sealed.map(p => p.seal.panlabsSessao))];
+  const copyConflict = copias.length > 1
+    ? { quantas: copias.length, pages: sealed.map(p => ({ page: p.id, view: p.seal.panlabsVista })) }
     : null;
 
-  let sessao = null;
-  try { sessao = JSON.parse(comSelo[0].selo.panlabsSessao); }
-  catch (e) { return { nosso: true, comoReconheci, host, paginas: [], sessao: null, conflitoDeCopias,
+  let session = null;
+  try { session = JSON.parse(sealed[0].seal.panlabsSessao); }
+  catch (e) { return { ours: true, howIRecognized, host, pages: [], session: null, copyConflict,
     because: `o selo existe mas nao e JSON valido: ${e.message}` }; }
 
-  const analisadas = paginas.map(p => {
-    if (!p.selo || !p.selo.panlabsEsquema)
+  const analisadas = pages.map(p => {
+    if (!p.seal || !p.seal.panlabsSchema)
       return { ...p, view: null, state: 'sem-selo', because: 'pagina sem selo — acrescentada a mao, ou nossa e teve o selo apagado' };
     const semAgora = impressaoSemantica(p.celulas);
-    const apaAgora = impressaoDeAparencia(p.celulas);
-    const semBate = semAgora === p.selo.panlabsSemantica;
-    const apaBate = apaAgora === p.selo.panlabsAparencia;
+    const apaAgora = appearanceFingerprint(p.celulas);
+    const semBate = semAgora === p.seal.panlabsSemantica;
+    const apaBate = apaAgora === p.seal.panlabsAparencia;
     return {
       ...p,
-      view: p.selo.panlabsVista,
+      view: p.seal.panlabsVista,
       state: !semBate ? 'divergente' : apaBate ? 'intacto' : 'remanejado',
-      impressoes: { semAgora, apaAgora, semSelada: p.selo.panlabsSemantica, apaSelada: p.selo.panlabsAparencia },
-      motor: p.selo.panlabsMotor,
+      impressoes: { semAgora, apaAgora, semSelada: p.seal.panlabsSemantica, apaSelada: p.seal.panlabsAparencia },
+      engine: p.seal.panlabsMotor,
     };
   });
 
-  return { nosso: true, comoReconheci, host, paginas: analisadas, sessao, conflitoDeCopias, because: null };
+  return { ours: true, howIRecognized, host, pages: analisadas, session, copyConflict, because: null };
 }
 
 /**
@@ -109,8 +109,8 @@ function abrir(xml) {
  * que sai de `projetar` nesse caso fala de casaco, e quem esta lendo quer ouvir
  * falar do arquivo.
  */
-function podeRegerar(sessao, view) {
-  if (view === 'technical' && sessao.stage !== 'technical')
+function canRegenerate(session, view) {
+  if (view === 'technical' && session.stage !== 'technical')
     return { pode: false, because: 'a pagina diz ser a vista tecnica, mas o modelo selado esta no estagio logico — ' +
       'o selo e as paginas nao vieram da mesma gravacao.' };
   if (!view) return { pode: false, because: 'a pagina nao diz que vista ela e.' };
@@ -132,8 +132,8 @@ function podeRegerar(sessao, view) {
  * selo carrega `panlabsMotor` — a divergencia geometrica passa a ser explicavel
  * em vez de misteriosa.
  */
-function diferir(page, celulasDeReferencia) {
-  const findings = classificar(diferenca(celulasDeReferencia, page.celulas));
+function differ(page, celulasDeReferencia) {
+  const findings = classify(diferenca(celulasDeReferencia, page.celulas));
   const so = t => findings.filter(a => a.kind === t).length;
   return {
     findings,
@@ -155,7 +155,7 @@ function diferir(page, celulasDeReferencia) {
  * briefing, e um estado novo obrigaria a lembrar de dois lugares — este e o
  * unico que sabe o que cada estado significa.
  */
-function politica(state) {
+function policy(state) {
   switch (state) {
     case 'intacto':
       return { glifo: '✓', regerarEhSeguro: true, bloqueia: false,
@@ -172,4 +172,4 @@ function politica(state) {
   }
 }
 
-module.exports = { abrir, diferir, politica, podeRegerar };
+module.exports = { open, differ, policy, canRegenerate };

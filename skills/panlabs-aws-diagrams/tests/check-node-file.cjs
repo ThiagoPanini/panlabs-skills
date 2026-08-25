@@ -20,15 +20,15 @@
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..');
 
-const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
+const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
 /**
  * O que o ticket #22 espera ver, de cima para baixo, em cada modelo.
  * É a tabela do enunciado, mais os casos que este protótipo acrescentou.
  */
-const ESPERADO = {
+const EXPECTED = {
   'app-data': ['App subnet', 'Data subnet'],
   'web-data': ['Web subnet', 'Data subnet'],
   'ingest-core': ['Ingest subnet', 'Core subnet'],
@@ -63,14 +63,14 @@ function linhasDoArquivo(xml) {
   let falhas = 0;
   console.log('\n  ordem das linhas LIDA DO ARQUIVO EMITIDO\n');
 
-  for (const [name, esperado] of Object.entries(ESPERADO)) {
-    const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', `${name}.json`), 'utf8'));
-    const { xml } = await gerar(modelo);
-    const obtido = linhasDoArquivo(xml);
-    const ok = JSON.stringify(obtido) === JSON.stringify(esperado);
+  for (const [name, expected] of Object.entries(EXPECTED)) {
+    const model = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', `${name}.json`), 'utf8'));
+    const { xml } = await generate(model);
+    const got = linhasDoArquivo(xml);
+    const ok = JSON.stringify(got) === JSON.stringify(expected);
     if (!ok) falhas++;
-    console.log(`  ${ok ? '✓' : '✗'} ${name.padEnd(24)} ${obtido.join(' → ')}`);
-    if (!ok) console.log(`      esperado: ${esperado.join(' → ')}`);
+    console.log(`  ${ok ? '✓' : '✗'} ${name.padEnd(24)} ${got.join(' → ')}`);
+    if (!ok) console.log(`      esperado: ${expected.join(' → ')}`);
   }
 
   /**
@@ -78,14 +78,14 @@ function linhasDoArquivo(xml) {
    * tudo. Aqui a subnet de dados é declarada como borda — o desenho TEM de
    * inverter, e se não inverter é porque o arquivo não está sendo lido.
    */
-  const controle = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'web-data.json'), 'utf8'));
+  const controle = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'web-data.json'), 'utf8'));
   for (const n of controle.nodes) if (n.label === 'Data subnet') n.layer = 'edge';
-  const { xml } = await gerar(controle);
-  const invertido = linhasDoArquivo(xml);
-  const inverteu = JSON.stringify(invertido) === JSON.stringify(['Data subnet', 'Web subnet']);
+  const { xml } = await generate(controle);
+  const inverted = linhasDoArquivo(xml);
+  const inverteu = JSON.stringify(inverted) === JSON.stringify(['Data subnet', 'Web subnet']);
   if (!inverteu) falhas++;
   console.log(`\n  ${inverteu ? '✓' : '✗'} controle: declarar a Data subnet como "borda" inverte o desenho ` +
-    `— ${invertido.join(' → ')}`);
+    `— ${inverted.join(' → ')}`);
 
   console.log(falhas
     ? `\n  ✗ ${falhas} falha(s) — a ordem no arquivo não é a que a regra promete`

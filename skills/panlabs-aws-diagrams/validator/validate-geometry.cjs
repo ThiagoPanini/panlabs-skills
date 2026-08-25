@@ -42,11 +42,11 @@
  */
 
 const path = require('path');
-const { criarCena } = require(path.join(__dirname, 'scene.cjs'));
-const { CHECAGENS, DO_VALIDADOR, porId } = require(path.join(__dirname, 'index.cjs'));
+const { createScene } = require(path.join(__dirname, 'scene.cjs'));
+const { CHECKS, FROM_VALIDATOR, byId } = require(path.join(__dirname, 'index.cjs'));
 
 // A ordem é a do §Resumo de prioridade da rubrica, não a alfabética.
-const FAMILIAS = [
+const FAMILIES = [
   ['A3', require(path.join(__dirname, 'families', 'a3-overlap.cjs'))],
   ['A4', require(path.join(__dirname, 'families', 'a4-grouping.cjs'))],
   ['A1', require(path.join(__dirname, 'families', 'a1-completeness.cjs'))],
@@ -63,14 +63,14 @@ const extras = require(path.join(__dirname, 'families', 'extras.cjs'));
  * @param {object} [opts]  `{ modelo }` quando o plano não carrega o embutido
  * @returns {{ok, falhas, avisos, resultados, extras, resumo, cena, cobertura}}
  */
-function validarGeometria(plano, opts = {}) {
-  const cena = criarCena(plano, opts);
+function validateGeometry(layoutPlan, opts = {}) {
+  const scene = createScene(layoutPlan, opts);
 
   const resultados = [];
-  for (const [family, roda] of FAMILIAS) {
+  for (const [family, roda] of FAMILIES) {
     let obtidos;
     try {
-      obtidos = roda(cena);
+      obtidos = roda(scene);
     } catch (e) {
       // Uma família que estoura não pode derrubar as outras sete, e muito menos
       // sair calada: o erro vira falha reportada, com o id da família.
@@ -78,30 +78,30 @@ function validarGeometria(plano, opts = {}) {
         id: family, name: `família ${family}`, family, input: 'geometry',
         severidadeMaxima: 'fail', semantica: false, calibravel: false,
         state: 'erro', mensagem: `a família ${family} estourou: ${e.message}`,
-        medida: { pilha: String(e.stack || '').split('\n').slice(0, 3) }, occurrences: [],
+        measured: { pilha: String(e.stack || '').split('\n').slice(0, 3) }, occurrences: [],
       }];
     }
     resultados.push(...obtidos);
   }
 
-  const doValidador = DO_VALIDADOR.map(c => c.id);
+  const doValidador = FROM_VALIDATOR.map(c => c.id);
   const vistos = new Set(resultados.map(r => r.id));
   const naoRodaram = doValidador.filter(id => !vistos.has(id));
 
-  const achadosExtras = extras(cena);
+  const achadosExtras = extras(scene);
 
-  const falhas = [...resultados, ...achadosExtras].filter(r => r.state === 'falha' || r.state === 'erro');
-  const avisos = [...resultados, ...achadosExtras].filter(r => r.state === 'aviso');
+  const falhas = [...resultados, ...achadosExtras].filter(r => r.state === 'failure' || r.state === 'erro');
+  const avisos = [...resultados, ...achadosExtras].filter(r => r.state === 'warning');
   const semanticas = falhas.filter(r => r.semantica);
 
   const account = state => resultados.filter(r => r.state === state).length;
   const resumo = {
     total: resultados.length,
     ok: account('ok'),
-    aviso: account('aviso'),
-    falha: account('falha'),
+    warning: account('warning'),
+    failure: account('failure'),
     notApplicable: account('notApplicable'),
-    pulada: account('pulada'),
+    skipped: account('skipped'),
     erro: account('erro'),
     falhas_semanticas: semanticas.length,
     occurrences: [...resultados, ...achadosExtras].reduce((s, r) => s + r.occurrences.length, 0),
@@ -112,24 +112,24 @@ function validarGeometria(plano, opts = {}) {
     // um relatório incompleto que se diz verde é pior que um vermelho.
     ok: falhas.length === 0 && naoRodaram.length === 0,
     falhas, avisos, semanticas,
-    resultados, extras: achadosExtras, resumo, cena,
+    resultados, extras: achadosExtras, resumo, scene,
     cobertura: { esperadas: doValidador.length, rodaram: doValidador.length - naoRodaram.length, naoRodaram },
   };
 }
 
-const SIMBOLO = { ok: '✓', aviso: '⚠', falha: '✗', notApplicable: '·', pulada: '↷', erro: '‼' };
+const SYMBOL = { ok: '✓', warning: '⚠', failure: '✗', notApplicable: '·', skipped: '↷', erro: '‼' };
 
 /** O laudo em texto. `opts.tudo` mostra também o que passou. */
-function formatar(r, opts = {}) {
+function format(r, opts = {}) {
   const linhas = [];
-  const mostrar = x => opts.all || ['falha', 'aviso', 'erro'].includes(x.state);
+  const show = x => opts.all || ['failure', 'warning', 'erro'].includes(x.state);
 
   let familiaAtual = null;
   for (const x of [...r.resultados, ...r.extras]) {
-    if (!mostrar(x)) continue;
+    if (!show(x)) continue;
     if (x.family !== familiaAtual) { linhas.push(''); familiaAtual = x.family; }
-    const marca = x.semantica && x.state === 'falha' ? '  ← falha semântica' : '';
-    linhas.push(`  ${SIMBOLO[x.state] || '?'} ${x.id.padEnd(5)} ${x.name}${marca}`);
+    const marca = x.semantica && x.state === 'failure' ? '  ← falha semântica' : '';
+    linhas.push(`  ${SYMBOL[x.state] || '?'} ${x.id.padEnd(5)} ${x.name}${marca}`);
     if (x.mensagem) linhas.push(`        ${x.mensagem}`);
     for (const o of x.occurrences.slice(0, opts.occurrences || 5)) linhas.push(`        · ${o.o_que}`);
     if (x.occurrences.length > (opts.occurrences || 5))
@@ -138,8 +138,8 @@ function formatar(r, opts = {}) {
 
   const s = r.resumo;
   linhas.push('');
-  linhas.push(`  ${s.total} checagens: ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ` +
-    `${s.notApplicable} inaplicável · ${s.pulada} do render${s.erro ? ` · ${s.erro} erro` : ''}`);
+  linhas.push(`  ${s.total} checagens: ${s.ok} ok · ${s.warning} aviso · ${s.failure} falha · ` +
+    `${s.notApplicable} inaplicável · ${s.skipped} do render${s.erro ? ` · ${s.erro} erro` : ''}`);
   if (r.cobertura.naoRodaram.length)
     linhas.push(`  ‼ ${r.cobertura.naoRodaram.length} checagem(ns) do validador não rodaram: ${r.cobertura.naoRodaram.join(', ')}`);
   if (s.falhas_semanticas)
@@ -147,4 +147,4 @@ function formatar(r, opts = {}) {
   return linhas.join('\n');
 }
 
-module.exports = { validarGeometria, formatar, porId };
+module.exports = { validateGeometry, format, byId };

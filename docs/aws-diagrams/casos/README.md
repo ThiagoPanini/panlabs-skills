@@ -10,7 +10,7 @@ contra a própria fixture dele não mede nada.*
 | | caso | gênero | caminho | entrada | falhas | semânticas | veredito |
 |---|---|---|---|---|---|---|---|
 | 1 | [Rede de clínicas · prontuário](01-telemedicina/) | `T1` | grade | `modelo@1` | 11 | **0** | desenha, com sobreposição de rótulo |
-| 2 | [Marketplace de ingressos](02-ingressos/) | `T4` | grade | `modelo@1` | 10 | **1** ⛔ | **acha defeito**: faixa engole não-membro ([#31](https://github.com/ThiagoPanini/panlabs-skills/issues/31)) |
+| 2 | [Marketplace de ingressos](02-ingressos/) | `T4` | grade | `modelo@1` | 10 | **0** | achou defeito, **corrigido**: faixa engolia não-membro ([#31](https://github.com/ThiagoPanini/panlabs-skills/issues/31), ver `corpus.md` §14) |
 | 3 | [Cooperativa · telemetria de silos](03-silos/) | `L2`→`T3` | ELK | `sessao@1` · **arco inteiro** | 6 / 7 | **0** | os 7 passos fecham |
 | 4 | [Banco digital · segregação](04-banco-digital/) | `L1`→`T5` | contas | `sessao@1` · **arco inteiro** | 6 / 14 | **1** ⛔ | **acha defeito**: `A5.5` para ator externo ([#32](https://github.com/ThiagoPanini/panlabs-skills/issues/32)) |
 | 5 | [Rede de farmácias · vista lógica](05-farmacias-logica/) | `L1` | ELK | `modelo@1` | 5 | **0** | o mais limpo do lote |
@@ -41,7 +41,8 @@ nova, não um desenho novo."* Foi um erro meu, e a skill pegou.
 
 **Quatro defeitos, e três deles só o olho ou o caso novo achavam.** Estão nos
 tickets [#30](https://github.com/ThiagoPanini/panlabs-skills/issues/30),
-[#31](https://github.com/ThiagoPanini/panlabs-skills/issues/31),
+[#31](https://github.com/ThiagoPanini/panlabs-skills/issues/31) (**corrigido** —
+ver `corpus.md` §14),
 [#32](https://github.com/ThiagoPanini/panlabs-skills/issues/32) e
 [#33](https://github.com/ThiagoPanini/panlabs-skills/issues/33). O
 [#30](https://github.com/ThiagoPanini/panlabs-skills/issues/30) é o mais caro: a

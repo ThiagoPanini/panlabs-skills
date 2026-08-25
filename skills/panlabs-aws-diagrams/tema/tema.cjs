@@ -279,6 +279,16 @@ function montar(bruto, t) {
       });
     },
 
+    /**
+     * Faixa DEGRADADA (#31): quando a caixa da união abraçaria um não-membro
+     * junto dos membros, a faixa para de afirmar contenção — não existe caixa
+     * que abrace só quem é dela sem também abraçar quem não é. Mesmo recurso
+     * do rótulo de OU (`ou()`, algumas linhas abaixo): par texto solto, sem
+     * forma, no lugar onde a caixa desenharia a borda.
+     */
+    faixaRotulo: () => `text;html=1;fontSize=${t.texto.grupo};fontStyle=1;fontColor=${t.tinta.forte};` +
+      `fontFamily=${t.texto.familia};align=left;verticalAlign=middle;`,
+
     /** Aresta. N9/A11 do #5: a seta oficial é SEMPRE sólida — tracejado paga dívida. */
     aresta(extra = {}) {
       const base = {

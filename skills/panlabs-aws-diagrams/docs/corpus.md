@@ -481,3 +481,30 @@ longa de serviços gerenciados e **nenhuma árvore de rede abaixo da região** �
 é um caminho que o corpus não tinha, então o caso vale. Mas a frase que o
 justificava estava errada, e corrigi-la em silêncio seria exatamente o que a
 Parte 1 existe para impedir.
+
+## § 14 · #31 — a faixa degrada em vez de mentir
+
+`web-fluxo-3-az` (§8) exercita o Auto Scaling group com membros **contíguos**:
+nada mais mora nas subnets que ele une. O caso de uso 2
+(`docs/aws-diagrams/casos/02-ingressos/`) rodou o caso frequente que faltava —
+dois membros em AZs distintas e um terceiro serviço (`fraude-a`, antifraude) na
+MESMA subnet de um deles. Na grade, a caixa da faixa é a união das subnets
+inteiras dos membros, não do ícone de cada um, então o vizinho caía dentro por
+construção. `F1` recusava um desenho verdadeiro, e as duas correções óbvias
+— mover o vizinho, ou pôr o vizinho na faixa — mentem sobre rede ou sobre
+escalonamento.
+
+A correção: quando a união abraçaria um não-membro, a faixa **degrada** — para
+de ser caixa e vira o mesmo recurso do rótulo de OU (`tema.faixaRotulo`), texto
+solto sem forma, na calha que já estava reservada para o rótulo dela
+(`motor/planejar.cjs`, `engoleNaoMembro`). Sem caixa não há o que `F1` meça, e o
+desenho para de afirmar o que o modelo nega — sem o layout aprender a
+restrição de contiguidade, que fica fora de propósito (a decisão está no
+[#31](https://github.com/ThiagoPanini/panlabs-skills/issues/31)).
+
+`web-asg-com-vizinho` entra no corpus como `T4`: a mesma forma mínima do
+`web-fluxo-3-az`, com o vizinho que faltava. `F1 = ok`, 0 semânticas.
+
+`modelo/recusa/faixa-que-mente.json` continua recusado — ele usa o caminho ELK
+(uma AZ só), que esta correção não toca de propósito: é o corpo de prova do
+portão, e tem de continuar mentindo.

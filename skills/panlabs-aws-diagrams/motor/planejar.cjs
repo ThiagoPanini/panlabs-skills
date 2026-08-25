@@ -12,6 +12,7 @@
 
 const dispor = require('./dispor.cjs');
 const { AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, calhaDaFaixa, folgas } = dispor;
+const { FOLHAS } = require('./validar.cjs');
 
 /**
  * A altura de uma linha do bloco de título, em função do corpo dela.
@@ -315,6 +316,50 @@ function planoDeElk(modelo, d, res, layout, opts = {}) {
 
 // ---------------------------------------------------------- caminho B (grade)
 
+/**
+ * A caixa absoluta (relativa à nuvem) de cada subnet e de cada filho dela —
+ * um mapa só, para os dois lugares do caminho B que precisam da mesma conta:
+ * `arestasNaGrade` para as barreiras de desvio, e o #31 para saber se a caixa
+ * de uma faixa abraçaria um ponto que não é dela.
+ */
+function posicoesDaGrade(modelo, g) {
+  const abs = new Map();
+  for (const s of modelo.nos.filter(n => n.tipo === 'subnet')) {
+    const p = g.pos.get(s.id);
+    if (!p) continue;
+    abs.set(s.id, p);
+    for (const filho of g.intra.get(s.id).filhos || []) {
+      const meta = g.caixas.get(filho.id);
+      abs.set(filho.id, { x: p.x + filho.x, y: p.y + filho.y, w: meta.formaW, h: meta.formaH });
+    }
+  }
+  return abs;
+}
+
+/**
+ * #31 — A CAIXA DA UNIÃO ABRAÇA A SUBNET INTEIRA DE CADA MEMBRO, NÃO SÓ O
+ * ÍCONE DELE. A grade só sabe posicionar no grão da subnet (`g.pos`); ela não
+ * tem outro jeito de dizer "onde está o membro" a não ser "onde está a subnet
+ * que o contém". Então um Auto Scaling group com dois membros em AZs
+ * diferentes é a UNIÃO de duas subnets inteiras — e qualquer outro serviço
+ * que more numa dessas subnets (o caso frequente: um Lambda de antifraude do
+ * lado do ECS que escala) está, por construção, dentro da caixa.
+ *
+ * Não existe conserto de roteamento aqui (ver o ticket): a caixa É a união, a
+ * união É as subnets inteiras. O que dá para responder é SE isso aconteceria
+ * — antes de desenhar a caixa — e degradar em vez de desenhar a mentira.
+ */
+function engoleNaoMembro(modelo, posGrade, f, x1, y1, x2, y2) {
+  const membros = new Set(f.membros);
+  for (const n of modelo.nos) {
+    if (!FOLHAS.has(n.tipo) || membros.has(n.id)) continue;
+    const caixa = posGrade.get(n.id);
+    if (!caixa) continue;
+    if (caixa.x < x2 && caixa.x + caixa.w > x1 && caixa.y < y2 && caixa.y + caixa.h > y1) return true;
+  }
+  return false;
+}
+
 function planoDeGrade(modelo, d, res, g, opts = {}) {
   const mo = moldura(res);
   const p = pintura(res);
@@ -400,13 +445,32 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
   }
 
   // 3. faixas de membros por cima
+  const posGrade = d.faixas.length ? posicoesDaGrade(modelo, g) : null;
   for (const f of d.faixas) {
     const cel = f.membros
       .map(id => { const n = d.t.porId.get(id); return d.t.ancestrais(n).find(a => a.tipo === 'subnet') || n; })
       .map(s => g.pos.get(s.id)).filter(Boolean);
     if (cel.length < 2) continue;
     const x1 = Math.min(...cel.map(m => m.x)) - 10, x2 = Math.max(...cel.map(m => m.x + m.w)) + 10;
-    const y1 = Math.min(...cel.map(m => m.y)) - (g.calhas.get(f.id) || g.BAND_LANE), y2 = Math.max(...cel.map(m => m.y + m.h)) + 10;
+    const calha = g.calhas.get(f.id) || g.BAND_LANE;
+    const y1 = Math.min(...cel.map(m => m.y)) - calha, y2 = Math.max(...cel.map(m => m.y + m.h)) + 10;
+
+    // #31 — a caixa varreria um não-membro: ela DEGRADA. Para de afirmar
+    // contenção (não há caixa que abrace só os membros sem também abraçar
+    // quem não é) e vira o mesmo recurso do rótulo de OU — texto solto, sem
+    // forma —, ancorado no canto onde a caixa desenharia a borda. A calha já
+    // estava reservada ali para o rótulo da própria caixa (`dispor.cjs`), então
+    // o texto solto não pede espaço novo a ninguém.
+    if (engoleNaoMembro(modelo, posGrade, f, x1, y1, x2, y2)) {
+      const texto = f.rotulo || '';
+      plano.celulas.push({
+        tipo: 'vertice', id: `${f.id}-degradada`, pai: idNuvem, rotulo: texto,
+        style: res.tema.faixaRotulo(),
+        geo: { x: x1, y: y1, w: Math.max(40, res.larguraDoTexto(texto) + 8), h: calha },
+      });
+      continue;
+    }
+
     plano.celulas.push({
       tipo: 'vertice', id: f.id, pai: idNuvem, rotulo: f.rotulo || '', style: res.faixa(f).style,
       geo: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
@@ -464,16 +528,7 @@ function arestasNaGrade(plano, modelo, d, res, g, opts) {
   const mo = moldura(res);
   const daGradeParaPagina = paraPagina({ x: mo.x, y: mo.topo });
 
-  const abs = new Map();
-  for (const s of modelo.nos.filter(n => n.tipo === 'subnet')) {
-    const p = g.pos.get(s.id);
-    if (!p) continue;
-    abs.set(s.id, p);
-    for (const filho of g.intra.get(s.id).filhos || []) {
-      const meta = g.caixas.get(filho.id);
-      abs.set(filho.id, { x: p.x + filho.x, y: p.y + filho.y, w: meta.formaW, h: meta.formaH });
-    }
-  }
+  const abs = posicoesDaGrade(modelo, g);
 
   const subnetDe = id => {
     const n = d.t.porId.get(id);

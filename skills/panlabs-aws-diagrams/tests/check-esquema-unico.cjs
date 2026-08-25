@@ -10,11 +10,12 @@
  * `qualificador`. Nesse estado o contrato do sistema depende de qual cópia o
  * `require` alcançou primeiro, que é a definição de não ter contrato.
  *
- * A consolidação não colapsa tudo num arquivo só, e vale dizer por quê: os outros
- * dois `esquema.json` da árvore declaram `$id` DIFERENTES — `tema@1` é o
- * vocabulário fechado do #13, `sessao@1` é o modelo de sessão do #14. São
+ * A consolidação não colapsa tudo num arquivo só, e vale dizer por quê: os
+ * outros três `esquema.json` da árvore declaram `$id` DIFERENTES — `tema@1` é o
+ * vocabulário fechado do #13, `sessao@1` é o modelo de sessão do #14,
+ * `elaboracao@1` é o delta da fase técnica do #14, sem esquema até o #37. São
  * contratos distintos de camadas distintas. Juntá-los produziria um arquivo que
- * mistura três públicos e não teria um dono.
+ * mistura públicos e não teria um dono.
  *
  * Então a regra que esta checagem trava é a mais forte que continua verdadeira:
  *
@@ -23,7 +24,9 @@
  *      motor — ele é o que o agente escreve, e o motor é só o primeiro leitor;
  *   3. quem carrega o esquema carrega ESSE arquivo (medido, não afirmado);
  *   4. o `modelo@1` é superconjunto dos dois que ele substituiu — nenhuma
- *      propriedade do #11 nem do #13 se perdeu na fusão.
+ *      propriedade do #11 nem do #13 se perdeu na fusão;
+ *   5. os QUATRO contratos existem, e nenhum é a exceção que só o exemplo do
+ *      corpus descreve — o #37 fechou o `elaboracao@1` que faltava.
  */
 
 const fs = require('fs');
@@ -38,6 +41,18 @@ const ok = (cond, titulo, detalhe) => {
   console.log(`  ${cond ? '✓' : '✗'} ${titulo}${detalhe ? `  — ${detalhe}` : ''}`);
   if (!cond) falhas++;
 };
+
+/** Os caminhos que um `require(modulo)` abre via `fs.readFileSync`, medidos de verdade. */
+function leiturasDoRequire(modulo) {
+  const lidos = [];
+  const real = fs.readFileSync;
+  fs.readFileSync = function (p, ...r) { lidos.push(String(p)); return real.call(fs, p, ...r); };
+  try {
+    delete require.cache[require.resolve(modulo)];
+    require(modulo);
+  } finally { fs.readFileSync = real; }
+  return lidos;
+}
 
 /** Todo .json da árvore de produção que se declare um JSON Schema. */
 function esquemas(dir, fora = new Set(['prototypes', 'node_modules', 'saida'])) {
@@ -64,7 +79,7 @@ for (const a of achados) {
 }
 for (const [id, arquivos] of [...porId].sort())
   ok(arquivos.length === 1, `${id}`, arquivos.join(' + '));
-ok(porId.size >= 3, `${porId.size} contratos distintos na árvore`,
+ok(porId.size === 4, `${porId.size} contratos distintos na árvore — os QUATRO do #37, nem mais nem menos`,
   [...porId.keys()].sort().join(' · '));
 
 console.log('\n2 · o contrato do modelo mora na raiz da skill\n');
@@ -75,18 +90,26 @@ ok(doModelo.length === 1 && doModelo[0] === 'esquema.json',
 ok(!fs.existsSync(path.join(RAIZ, 'motor', 'esquema.json')),
   'e NÃO existe mais um esquema.json dentro do motor');
 
+console.log('\n2b · o quarto contrato — elaboracao@1 — mora ao lado de quem o consome\n');
+const daElaboracao = porId.get('panlabs-aws-diagrams/elaboracao@1') || [];
+ok(daElaboracao.length === 1 && daElaboracao[0] === 'sessao/esquema-elaboracao.json',
+  'panlabs-aws-diagrams/elaboracao@1 está em sessao/esquema-elaboracao.json',
+  daElaboracao.join(', ') || 'não encontrado');
+
 console.log('\n3 · é esse arquivo que o motor carrega (medido)\n');
 {
-  const lidos = [];
-  const real = fs.readFileSync;
-  fs.readFileSync = function (p, ...r) { lidos.push(String(p)); return real.call(fs, p, ...r); };
-  try {
-    delete require.cache[require.resolve(path.join(RAIZ, 'motor', 'gerar.cjs'))];
-    require(path.join(RAIZ, 'motor', 'gerar.cjs'));
-  } finally { fs.readFileSync = real; }
+  const lidos = leiturasDoRequire(path.join(RAIZ, 'motor', 'gerar.cjs'));
   const alvo = path.join(RAIZ, 'esquema.json');
   ok(lidos.includes(alvo), 'motor/gerar.cjs abriu <raiz>/esquema.json',
     lidos.filter(p => p.endsWith('esquema.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'nenhum');
+}
+
+console.log('\n3b · e é esse arquivo que elaborar.cjs carrega para o delta (medido)\n');
+{
+  const lidos = leiturasDoRequire(path.join(RAIZ, 'sessao', 'elaborar.cjs'));
+  const alvo = path.join(RAIZ, 'sessao', 'esquema-elaboracao.json');
+  ok(lidos.includes(alvo), 'sessao/elaborar.cjs abriu sessao/esquema-elaboracao.json',
+    lidos.filter(p => p.endsWith('.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'nenhum');
 }
 
 console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela substituiu\n');

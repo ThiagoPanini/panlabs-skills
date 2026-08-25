@@ -49,6 +49,7 @@ passo() {
 
 echo "════ camada 0 · a árvore ════"
 passo "contrato único (um \$id, um arquivo)"        node "$AQUI/check-esquema-unico.cjs"
+passo "paridade modelo@1 × casaco técnico (#37)"   node "$AQUI/check-paridade-tecnica.cjs"
 passo "produção não alcança prototypes/"           node "$AQUI/check-sem-prototipo.cjs"
 # O teto de 30 MB e DURO e so aparece na hora do upload. Medi-lo aqui e o que
 # impede a arvore de voltar a 29 MB sem ninguem perceber — foi onde ela estava.

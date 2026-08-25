@@ -41,9 +41,10 @@ como a primeira marca no contador dele, para quem for conferir depois.
 ### O gatilho mede quebra; a dor é deriva
 
 Essa é a razão inteira de ele não ter disparado, e ela não é acidente de calibragem: **o
-gatilho escuta um sinal que esta classe de defeito não emite.** Deriva de skill não deixa
-nada vermelho. A árvore não quebra. Os quatro casos que este repositório já tem
-documentados aterrissaram **verdes**:
+gatilho escuta um sinal que esta classe de defeito não emite.** O caso acima ao menos
+acendeu vermelho em algum lugar — a suíte da skill. Deriva de skill não acende em lugar
+nenhum: a árvore não quebra, e os quatro casos que este repositório já tem documentados
+aterrissaram **verdes**:
 
 | o que entrou | o que o repositório mediu |
 | --- | --- |

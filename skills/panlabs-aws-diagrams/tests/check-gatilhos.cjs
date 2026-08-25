@@ -4,10 +4,9 @@
  * Os gatilhos de multi-conta, isolados dos pixels.
  *
  * Mesmo formato do `gatilho-az.js` do #19: cada caso é uma arquitetura mínima
- * cuja resposta certa é sabida de antemão pela pesquisa (`docs/research/
- * aws-multi-account-diagrams.md`), e a regra tem de acertar todos. Rodar isto
- * é mais barato que renderizar, e é onde a DECISÃO do ticket vive — o desenho
- * é consequência.
+ * cuja resposta certa é sabida de antemão pela pesquisa de multi-conta que
+ * originou o #12, e a regra tem de acertar todos. Rodar isto é mais barato que
+ * renderizar, e é onde a DECISÃO do ticket vive — o desenho é consequência.
  *
  *   node tools/check-gatilhos.cjs
  */

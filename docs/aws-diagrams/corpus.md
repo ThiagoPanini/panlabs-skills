@@ -485,8 +485,9 @@ Parte 1 existe para impedir.
 ## § 14 · #31 — a faixa degrada em vez de mentir
 
 `web-fluxo-3-az` (§8) exercita o Auto Scaling group com membros **contíguos**:
-nada mais mora nas subnets que ele une. O caso de uso 2
-(`docs/aws-diagrams/casos/02-ingressos/`) rodou o caso frequente que faltava —
+nada mais mora nas subnets que ele une. O caso de uso 2 do marketplace de
+ingressos (a bateria da [`auditoria.md`](auditoria.md); os artefatos saíram no
+#62) rodou o caso frequente que faltava —
 dois membros em AZs distintas e um terceiro serviço (`fraude-a`, antifraude) na
 MESMA subnet de um deles. Na grade, a caixa da faixa é a união das subnets
 inteiras dos membros, não do ícone de cada um, então o vizinho caía dentro por

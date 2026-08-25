@@ -1,7 +1,0 @@
-{
-  "esquema": "panlabs-aws-diagrams/tema@1",
-  "id": "escuro",
-  "rotulo": "Escuro",
-  "porque": "Não é invenção da casa: a AWS publica DOIS decks (#5 F2/F3), e o escuro muda exatamente duas coisas — a borda/ícone do AWS Cloud inverte e os callouts invertem. Medir a paleta contra a WCAG chega na mesma lista: num fundo escuro as 8 cores de grupo ficam entre 3,1 e 5,5:1, e só `#232F3E` desaba para 1,23. O deck escuro é a edição mínima que a acessibilidade exige.",
-  "fundo": "escuro"
-}

@@ -24,7 +24,7 @@ const path = require('path');
 const { CHECAGENS, LIMIARES, porId, SEVERIDADES, INSUMOS } = require(
   path.join(__dirname, '..', 'validador', 'indice.cjs'));
 
-// Os 62 ids de (A), lidos da rubrica em docs/research/architecture-diagram-quality-rubric.md.
+// Os 62 ids de (A), congelados da rubrica de qualidade que originou o validador.
 const DA_RUBRICA = [
   'A1.1', 'A1.2', 'A1.3', 'A1.4', 'A1.5', 'A1.6', 'A1.7', 'A1.8', 'A1.9', 'A1.10', 'A1.11', 'A1.12',
   'A2.1', 'A2.2', 'A2.3', 'A2.4', 'A2.5', 'A2.6', 'A2.7', 'A2.8', 'A2.9', 'A2.10', 'A2.11',

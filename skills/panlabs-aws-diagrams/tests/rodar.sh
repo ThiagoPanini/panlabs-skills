@@ -155,7 +155,8 @@ echo
 echo "════ camada 7 · o app (dependência de desenvolvimento) ════"
 if [ ! -x "$DRAWIO" ]; then
   echo "   draw.io headless não encontrado em $DRAWIO — camada 7 pulada."
-  echo "   (ver docs/research/drawio-headless-rendering-wsl2.md)"
+  echo "   (dependência de desenvolvimento: draw.io Desktop AppImage + xvfb;"
+  echo "    tools/drawio.cjs é quem sabe onde o binário mora)"
 else
   passo "impressão: 10 edições humanas × 3 esquemas" node "$AQUI/check-impressao.cjs" "$DRAWIO"
   passo "round-trip do modelo pelo codec do app"     node "$AQUI/check-roundtrip-modelo.cjs" "$DRAWIO"

@@ -1149,33 +1149,49 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
     faixaTopo += 1;
     const yCanal = topoDaFileira - 26 - (faixaTopo - 1) * 30;
 
+    // as barras que NENHUMA perna deste desvio pode atravessar — todo nó que
+    // não é ancestral nem descendente das duas pontas da própria aresta.
+    // Movida para antes da descida (#32): a descida perto do forasteiro
+    // precisa da mesma varredura que já servia só a subida.
+    const meu = parentela(d, [a.de, a.para]);
+    const barras = [...abs].filter(([id]) => !meu.has(id)).map(([, b]) => caixaEmX(b));
+
     /**
-     * A CAIXA DE REFERÊNCIA DA DESCIDA é a de QUEM `dst` REALMENTE É — não
-     * sempre `alvoConta` (#32).
+     * A REFERÊNCIA DA DESCIDA é a de QUEM `dst` REALMENTE É — não sempre
+     * `alvoConta` (#32).
      *
      * Quando é a conta que entra em cena por fora (`cliente → ALB` numa conta
      * que não é a primeira), `dst` mora dentro de `alvoConta`, e as duas
-     * coincidem: descer rente à borda da conta pousa rente ao próprio `dst`.
+     * coincidem: descer rente à borda da conta pousa rente ao próprio `dst`,
+     * e `ladoLivre` mede uma banda real — a de `alvoConta` — em busca de um
+     * irmão que não é de `dst`.
+     *
      * Mas quando é o ATOR que está do lado de `dst` (uma conta do meio manda
      * para fora, #32), `alvoConta` é a conta de ORIGEM — `dst` não mora nela,
      * e ancorar ali mede uma fronteira que não é a dele: a descida para bem
-     * perto da conta de origem e o resto da linha, invisível para este código,
-     * atravessa quem estiver entre ela e o ator. A referência certa é a
-     * própria caixa de `dst` — o forasteiro fica sempre à esquerda de toda a
-     * fileira (#5 O19), então `ladoLivre` rodando sobre a coluna dele mede a
-     * fronteira que de fato importa.
+     * perto da conta de origem e o resto da linha, invisível para este
+     * código, atravessa quem estiver entre ela e o ator. E `ladoLivre` não
+     * serve aqui nem chamado sobre a caixa do próprio `dst`: sem uma SEGUNDA
+     * caixa para comparar, a banda que ele mede colapsa a um ponto e a busca
+     * vira fachada. O forasteiro fica sempre à esquerda de toda a fileira
+     * (#5 O19) — a preferência é o meio do vão até a primeira conta, mas
+     * VARRIDA por `corredorLivre` contra as mesmas barras da subida, não
+     * tomada de bandeja: é a mesma alavanca do #24, só do outro lado da
+     * canaleta.
      */
     const dstEhForasteiro = !cb;
-    const cB = dstEhForasteiro ? { ...dst, id: a.para } : { ...abs.get(alvoConta), id: alvoConta };
-    const ladoD = ladoLivre(dst, o, cB, abs, d, a.para);
-    // do lado do forasteiro não há conta vizinha para ancorar: o ponto seguro
-    // é o meio do vão até a primeira conta da fileira, não meia calha inteira
-    // fora de `dst` — CALHA mede o vão ENTRE contas, e o vão até a margem do
-    // forasteiro é outro número.
-    const primeiraConta = abs.get(g.ordem[0].id);
-    const xd = ladoD.lado === 'esquerda'
-      ? cB.x - g.CALHA / 2
-      : dstEhForasteiro ? (cB.x + cB.w + primeiraConta.x) / 2 : cB.x + cB.w + g.CALHA / 2;
+    let xd, entraPelaDireita;
+    if (dstEhForasteiro) {
+      const primeiraConta = abs.get(g.ordem[0].id);
+      const prefDst = (dst.x + dst.w + primeiraConta.x) / 2;
+      xd = dispor.corredorLivre([yCanal, y1], barras, prefDst, g.CALHA / 2);
+      entraPelaDireita = xd >= dst.x + dst.w / 2;
+    } else {
+      const cB = { ...abs.get(alvoConta), id: alvoConta };
+      const ladoD = ladoLivre(dst, o, cB, abs, d, a.para);
+      xd = ladoD.lado === 'esquerda' ? cB.x - g.CALHA / 2 : cB.x + cB.w + g.CALHA / 2;
+      entraPelaDireita = ladoD.lado !== 'esquerda';
+    }
 
     /**
      * A SUBIDA SAI PELO LADO, E POR UM VÃO — duas coisas, e as duas medidas.
@@ -1202,8 +1218,6 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
      * na primeira conta — `A5.1` sobe de 1 para 2. Rente à borda não atravessa
      * ninguém, e é o que a rubrica prefere.
      */
-    const meu = parentela(d, [a.de, a.para]);
-    const barras = [...abs].filter(([id]) => !meu.has(id)).map(([, b]) => caixaEmX(b));
     const direita = xd >= o.x + o.w / 2;
     const xSobe = dispor.corredorLivre([yCanal, y0], barras, direita ? o.x + o.w : o.x, g.CALHA / 2);
     // o lado de saída sai do corredor ESCOLHIDO, não do desejado: se o vão livre
@@ -1217,7 +1231,7 @@ function arestasDeFora(plano, d, res, g, abs, opts) {
       rotulo: rotuloDaAresta(a),
       style: estiloAresta(a, {
         saida: { x: saiPelaDireita ? 1 : 0, y: 0.5 },
-        entrada: { x: ladoD.lado === 'esquerda' ? 0 : 1, y: 0.5 },
+        entrada: { x: entraPelaDireita ? 1 : 0, y: 0.5 },
       }, res.tema),
       // a dobra em `y0` só existe quando o corredor SAIU de cima da borda: sem
       // isso ela coincide com a ponta e vira um segmento de comprimento zero,

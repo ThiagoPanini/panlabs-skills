@@ -20,3 +20,6 @@
 # resultado de eval mora em workspace irmao, nunca dentro do pacote que o
 # usuario instala.
 skills/panlabs-aws-diagrams/saida/
+
+.claude/settings.local.json
+tmp/

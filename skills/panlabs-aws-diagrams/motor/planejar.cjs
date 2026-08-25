@@ -330,7 +330,7 @@ function posicoesDaGrade(modelo, g) {
     abs.set(s.id, p);
     for (const filho of g.intra.get(s.id).filhos || []) {
       const meta = g.caixas.get(filho.id);
-      abs.set(filho.id, { x: p.x + filho.x, y: p.y + filho.y, w: meta.formaW, h: meta.formaH });
+      abs.set(filho.id, { x: p.x + filho.x, y: p.y + filho.y, w: meta.caixaW || meta.formaW, h: meta.formaH });
     }
   }
   return abs;
@@ -438,7 +438,7 @@ function planoDeGrade(modelo, d, res, g, opts = {}) {
         const meta = g.caixas.get(filho.id);
         plano.celulas.push({
           tipo: 'vertice', id: filho.id, pai: s.id, rotulo: meta.rotulo, style: meta.style,
-          geo: { x: filho.x, y: filho.y, w: meta.formaW, h: meta.formaH },
+          geo: { x: filho.x, y: filho.y, w: meta.caixaW || meta.formaW, h: meta.formaH },
         });
       }
     }

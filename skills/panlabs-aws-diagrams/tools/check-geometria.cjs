@@ -8,9 +8,14 @@
  *   node tools/check-geometria.cjs ... --tudo            mostra também o que passou
  *   node tools/check-geometria.cjs ... --json            laudo em JSON
  *   node tools/check-geometria.cjs ... --estrito         aviso também reprova
+ *   node tools/check-geometria.cjs ... --tema <nome>     avalia com este tema (padrão: claro)
  *
  * O código de saída é 1 quando há falha — é o que permite pendurar isto num
  * portão de CI. Com `--estrito`, aviso conta como falha.
+ *
+ * SEM `--tema`, o laudo sempre avaliou o tema padrão — e é cego para o que só
+ * outro tema liga (#33), como `texto.qualificador`. `--tema` existe para o
+ * laudo poder ver o mesmo que `--tema` liga em `motor/gerar.cjs`.
  *
  * A entrada é um MODELO, não um `.drawio`: o validador lê o `plano`, que é a
  * costura interna do motor (pós-`planejar`, pré-`emitir`), e é ali que a
@@ -31,11 +36,13 @@ async function main() {
   const json = args.includes('--json');
   const estrito = args.includes('--estrito');
   const exemplos = args.includes('--exemplos');
-  let entradas = args.filter(a => !a.startsWith('--'));
+  const iTema = args.indexOf('--tema');
+  const nomeTema = iTema >= 0 ? args[iTema + 1] : 'claro';
+  let entradas = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--tema');
 
   if (exemplos) entradas = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).map(f => path.join(RAIZ, 'modelo', f));
   if (!entradas.length) {
-    console.error('uso: node check-geometria.cjs <modelo.json> [...] | --exemplos  [--tudo] [--json] [--estrito]');
+    console.error('uso: node check-geometria.cjs <modelo.json> [...] | --exemplos  [--tudo] [--json] [--estrito] [--tema <nome>]');
     process.exit(2);
   }
 
@@ -53,7 +60,7 @@ async function main() {
     const nome = path.basename(entrada, '.json');
     let r;
     try {
-      r = await gerar(JSON.parse(fs.readFileSync(entrada, 'utf8')));
+      r = await gerar(JSON.parse(fs.readFileSync(entrada, 'utf8')), { tema: nomeTema });
     } catch (erro) {
       console.error(`\n✗ ${nome}: o motor não gerou — ${erro.message}`);
       for (const linha of erro.erros || []) console.error(`    · ${linha}`);

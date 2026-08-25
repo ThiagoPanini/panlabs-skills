@@ -132,35 +132,6 @@ async function gerar(modelo, opts = {}) {
 
   const res = resolverMod.criar(tema, opts.catalogo);
 
-  /**
-   * ⚠️ O QUALIFICADOR QUE NAO CABE, DITO EM VOZ ALTA.
-   *
-   * `ROTULO_W` e FIXO em 120 px de proposito — a caixa do layout e a caixa do
-   * icone, e e isso que mantem a ancora da aresta alinhada (ver o comentario em
-   * `resolver.cjs`). A consequencia e que qualificador comprido VAZA a celula, e
-   * o #29 mediu o estrago: com `texto.qualificador` ligado, o corporativo
-   * escreveu "as 40 unidades entram por aqui" comecando FORA da pagina, e as 62
-   * checagens reportaram exatamente as MESMAS 11 falhas com ele ligado e
-   * desligado. Nenhuma mede a largura renderizada do qualificador.
-   *
-   * Isto aqui nao conserta o vazamento — o conserto e caixa de largura variavel,
-   * que e outra arquitetura. Conserta o SILENCIO, que e o que a skill inteira
-   * recusa em todo lugar: omitir em silencio e o diagrama que mente por ausencia.
-   * O agente encurta o texto, ou desliga o token, sabendo por que.
-   */
-  if (tema.tokens && tema.tokens.texto && tema.tokens.texto.qualificador) {
-    const LARGURA = resolverMod.ROTULO_W;
-    const vazam = modelo.nos
-      .filter(n => n.qualificador)
-      .map(n => ({ id: n.id, texto: n.qualificador, px: res.larguraDoTexto(n.qualificador) }))
-      .filter(x => x.px > LARGURA);
-    if (vazam.length)
-      relatorio.avisos.push(
-        `qualificador maior que a celula (${LARGURA} px) em ${vazam.length} no(s) — vai vazar no desenho, ` +
-        `e nenhuma das 62 checagens mede isto: ` +
-        vazam.map(x => `${x.id} (${x.px}px)`).join(', '));
-  }
-
   const d = derivar(modelo, { cat: res.cat });
   marco('derivar', { faixasAz: d.az.desenhar, porque: d.az.porque, azs: d.az.azs });
 

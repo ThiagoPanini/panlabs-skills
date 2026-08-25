@@ -316,7 +316,7 @@ das 62.
 ## 5. A privacidade do dossiê
 
 O ⚠️ que o mapa carregava sem veredito. Decisão e razão em
-[`sessao/publicar.cjs`](../sessao/publicar.cjs); em uma frase:
+[`sessao/publicar.cjs`](../../skills/panlabs-aws-diagrams/sessao/publicar.cjs); em uma frase:
 
 > **O arquivo que retoma e o arquivo que circula não são o mesmo arquivo.**
 > `desenhar` continua gravando o dossiê inteiro — é o arquivo de trabalho.

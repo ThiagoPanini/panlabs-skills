@@ -43,7 +43,6 @@ classe, e o motor era estruturalmente cego ao defeito que o fallback do #21
 existe para evitar. Ela entra **armada e calada** — medida em malha completa de
 3 a 6 zonas, `F2` = 0 nas quatro. O que ela compra é a regressão: no dia em que
 uma mudança de roteamento reintroduzir o cruzamento, o portão `veracidade` barra.
-Medido em malha completa de 3 a 6 zonas.
 
 ## As oito famílias
 

@@ -68,7 +68,7 @@ o round-trip parar de devolver o modelo idêntico.
 `background` no `<mxGraphModel>` é a **única** alavanca determinística de fundo.
 `sketch=1` quebra os stencils AWS4. `strokeColor` pinta o **glifo**. `flowAnimation`
 sobrevive a SVG e HTML, **nunca a PNG**. Tema só sobrevive **assado célula a
-célula**. Detalhes operacionais em [`visual.md`](visual.md).
+célula**. Detalhes operacionais em [`guia/visual.md`](../../skills/panlabs-aws-diagrams/guia/visual.md).
 
 ### Catálogo de shapes
 
@@ -160,7 +160,7 @@ nem função objetivo.
 **Achado contra a rubrica: ela modela uma árvore de contenção só, e o motor
 desenha duas coisas.** Daí `F1` e `F2`, fora das 62 de propósito — o índice é o
 contrato com a rubrica, e uma checagem a mais o quebraria. A distinção que a
-sustenta está em [`modelo.md`](modelo.md) e [`laudo.md`](laudo.md).
+sustenta está em [`guia/modelo.md`](../../skills/panlabs-aws-diagrams/guia/modelo.md) e [`guia/laudo.md`](../../skills/panlabs-aws-diagrams/guia/laudo.md).
 
 | | pergunta da faixa | espelho de |
 |---|---|---|
@@ -226,7 +226,7 @@ didáticas, e na SRA real há **zero** caixas de AZ.
 
 **A conta é container; a OU é dimensão** — pelo fato bruto de `AWS account` estar
 na lista fechada de group icons e `Organizational unit` não estar. A mecânica que
-daí decorre está em [`modelo.md`](modelo.md).
+daí decorre está em [`guia/modelo.md`](../../skills/panlabs-aws-diagrams/guia/modelo.md).
 
 **O diagrama multi-conta carro-chefe da AWS tem ZERO conectores.** A AWS resolve o
 espaguete **não desenhando a aresta**. Dois modos derivados do modelo, nunca
@@ -263,7 +263,7 @@ silenciosa, **inconferível**.
 
 **Vocabulário fechado, e a camada normativa é indizível.** **A margem estética da
 casa não está no fundo** — é régua, não gosto. **O tema não é downstream do
-layout**: 10 dos 27 tokens são métrica. Ver [`visual.md`](visual.md).
+layout**: 10 dos 27 tokens são métrica. Ver [`guia/visual.md`](../../skills/panlabs-aws-diagrams/guia/visual.md).
 
 Uma correção do próprio autor foi **retirada no retorno, e o erro é o achado**: o
 tingimento de subnet tinha sido zerado citando a convenção, mas a ressalva da
@@ -294,7 +294,7 @@ CAÍRAM** na recertificação. A **tese** sobrevive e agora é testada de verdad
 vez de por congelamento.
 
 *Reabre se:* o selo passar a doer. Medido em 65% dos bytes num arquivo de 5
-páginas — ver [`visual.md`](visual.md) para o caminho de saída, que **não** é
+páginas — ver [`guia/visual.md`](../../skills/panlabs-aws-diagrams/guia/visual.md) para o caminho de saída, que **não** é
 sidecar.
 
 ### A árvore de produção
@@ -311,7 +311,7 @@ de teste. A revisão da própria consolidação achou o mesmo padrão um nível 
 
 > **Suíte verde por metade não é suíte verde.**
 
-Registro completo em [`../docs/recertificacao.md`](../docs/recertificacao.md); a
+Registro completo em [`recertificacao.md`](recertificacao.md); a
 medição roda em `tools/medir-candidatos.sh`.
 
 ### Roteamento de aresta
@@ -324,8 +324,8 @@ a nota presa a nó entrando no layout.
 
 Sete causas medidas, e uma oitava **que nenhuma checagem pegou** — um toco de linha
 pendurado, que só o olho viu. A conta paga de propósito é `A5.7`, em
-[`laudo.md`](laudo.md). Laudo completo em
-[`../docs/roteamento.md`](../docs/roteamento.md).
+[`guia/laudo.md`](../../skills/panlabs-aws-diagrams/guia/laudo.md). Laudo completo em
+[`roteamento.md`](roteamento.md).
 
 ### Renderização headless
 
@@ -363,7 +363,7 @@ idênticas. Logo não era decisão de layout, era de **vocabulário e audiência
 
 *Reabre se:* a dívida de legenda for paga, ou `modelo@1` ganhar `data`/`versao`/
 `autor` — aí o piso encolhe e o critério tem de ser reescrito. Protocolo em
-[`sabatina.md`](sabatina.md).
+[`guia/sabatina.md`](../../skills/panlabs-aws-diagrams/guia/sabatina.md).
 
 ### A revisão de lacunas
 
@@ -412,7 +412,7 @@ ponto de conflito — sem entrevista dedicada.
 
 *Reabre se:* aparecer material corporativo real. Todo o contrato foi projetado e
 validado contra um pack **sintético**. Contrato em
-[`context-pack.md`](context-pack.md).
+[`guia/context-pack.md`](../../skills/panlabs-aws-diagrams/guia/context-pack.md).
 
 ## Fora de escopo, e por quê
 
@@ -445,7 +445,7 @@ guarda de veracidade do conteúdo.
   eixo, e nenhum limiar dele foi calibrado contra desenho profissional. O #6 já
   dizia isso do lado das contas: a AWS suprime por **espaguete**, não por mentira.
 - **O ciclo de refino pós-execução** — a primeira volta aconteceu no #26 e produziu
-  o §13 de [`../docs/corpus.md`](../docs/corpus.md). O que ainda não existe é o
+  o §13 de [`corpus.md`](corpus.md). O que ainda não existe é o
   **ciclo**: quem lê aquele §13, quando, e o que faz um item sair de lá. Depende de
   execução contra arquitetura de cliente, não sintética.
 - **O denominador do teto de achados.** Achado escala com **superfície** de
@@ -480,8 +480,8 @@ guarda de veracidade do conteúdo.
   `check-esquema-unico.cjs` varre os três arquivos de esquema que existem, e um
   contrato sem arquivo passa por baixo. O agente escreve esse delta em toda sessão
   técnica, então é a superfície não validada de maior uso. A forma está em
-  [`modelo.md`](modelo.md); o conserto é um quarto `esquema.json`.
-- **O context pack é contrato, não código.** Ver [`context-pack.md`](context-pack.md).
+  [`guia/modelo.md`](../../skills/panlabs-aws-diagrams/guia/modelo.md); o conserto é um quarto `esquema.json`.
+- **O context pack é contrato, não código.** Ver [`guia/context-pack.md`](../../skills/panlabs-aws-diagrams/guia/context-pack.md).
 - **`A3.7` acusa em 8 de 20**: o caminho da grade dimensiona a largura só pela
   nuvem. (Era 8 de 15 antes do corpus do #26 crescer — os cinco modelos novos não
   passam pela grade, então o numerador não se moveu.)

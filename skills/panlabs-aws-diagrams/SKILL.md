@@ -219,7 +219,6 @@ estáticas verdes com o ícone errado no desenho.
 | a empresa tiver premissas de arquitetura, ou não tiver | [`guia/context-pack.md`](guia/context-pack.md) |
 | o laudo acusar, ou o portão barrar | [`guia/laudo.md`](guia/laudo.md) |
 | pedirem fundo escuro, cor da casa, fluxo animado ou uma cópia para circular | [`guia/visual.md`](guia/visual.md) |
-| for mudar uma regra, ou quiser saber por que ela é assim | [`guia/decisoes.md`](guia/decisoes.md) |
 
 Os contratos são a fonte da verdade e estão versionados — leia o arquivo, não uma
 cópia dele: [`esquema.json`](esquema.json) (`modelo@1`, o que o agente escreve),

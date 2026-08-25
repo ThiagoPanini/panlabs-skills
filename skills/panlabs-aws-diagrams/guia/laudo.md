@@ -43,7 +43,7 @@ classe, e o motor era estruturalmente cego ao defeito que o fallback do #21
 existe para evitar. Ela entra **armada e calada** — medida em malha completa de
 3 a 6 zonas, `F2` = 0 nas quatro. O que ela compra é a regressão: no dia em que
 uma mudança de roteamento reintroduzir o cruzamento, o portão `veracidade` barra.
-Ver [`../docs/corpus.md`](../docs/corpus.md).
+Medido em malha completa de 3 a 6 zonas.
 
 ## As oito famílias
 
@@ -126,7 +126,7 @@ motivo é dívida registrada, não defeito do seu modelo:
 | `A3.9` | ⚠ 35/35 | `calibravel` — o limiar é default de engenharia |
 | `A4.5` | ⚠ 33/35 | padding de grupo uniforme |
 | `A7.4` | ⚠ 32/35 | `calibravel`, idem |
-| `A7.2` | ✗ 21/35 | o quadrado do ícone de serviço fica em **2,71:1** contra o tingimento de subnet. O portão de contraste do tema **avisa** (trata como área); este validador **reprova** (trata como traço). As duas leituras convivem — ver `../docs/recertificacao.md` §4 |
+| `A7.2` | ✗ 21/35 | o quadrado do ícone de serviço fica em **2,71:1** contra o tingimento de subnet. O portão de contraste do tema **avisa** (trata como área); este validador **reprova** (trata como traço). As duas leituras convivem |
 | `A3.7` | ✗ 8/20 modelos | o caminho da grade dimensiona a largura só pela nuvem, e o desenho estoura o canvas. Contado em modelos porque é o CAMINHO que decide, e o caminho é do modelo |
 | `A1.5` `A1.12` | ✗ sempre que houver **nota com `sobre`** | ver abaixo |
 
@@ -165,7 +165,7 @@ a seguir **o dado** e a seta de uma consulta aponta para trás — que é o que 
 A troca foi *seta cosmética* por *ordem de leitura verdadeira*. Antes, a seta
 ficava bonita e a fileira de contas saía lida de trás para frente.
 
-Não "conserte" `A5.7` invertendo `dados`. Ver `../docs/roteamento.md` §6.
+Não "conserte" `A5.7` invertendo `dados`.
 
 ## Quando algo acusa de verdade
 

@@ -7,8 +7,8 @@
  * conserta calado) e deixou o LIMIAR aberto, com o número que o motivava: as
  * regras do protótipo dispararam **4 achados num modelo de 3 nós**.
  *
- * O critério de aprovação está em `docs/corpus.md` §4.2, e foi escrito ANTES
- * destas regras existirem. Este arquivo é ele, executável.
+ * O critério de aprovação foi escrito ANTES destas regras existirem. Este
+ * arquivo é ele, executável.
  *
  *   L1  toda regra tem pré-condição escrita, e cala onde o modelo não afirma
  *       a estrutura sobre a qual ela fala  →  conferido por `mudas[]` existir
@@ -45,8 +45,8 @@ const RAIZ = path.join(__dirname, '..');
  * entrada"*), e a entrada foi apagada. É a mesma trajetória da quarentena do #23,
  * que o #24 fez expirar do mesmo jeito.
  *
- * A observação sobre o denominador continua valendo e continua registrada em
- * `docs/corpus.md` — ela só não tem mais nenhum modelo do corpus para provar.
+ * A observação sobre o denominador continua valendo e continua registrada —
+ * ela só não tem mais nenhum modelo do corpus para provar.
  */
 const FORA_DO_TETO = {};
 

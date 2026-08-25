@@ -430,7 +430,7 @@ function revisar(modelo, opts = {}) {
   }
   achados.sort((a, b) => a.regra.localeCompare(b.regra) || String(a.alvo).localeCompare(String(b.alvo)));
 
-  // O teto do §4.2 de `docs/corpus.md`, calculado junto para não virar prosa.
+  // O teto do critério de aprovação, calculado junto para não virar prosa.
   const teto = Math.ceil(modelo.nos.length / 4);
   return { achados, mudas, teto, dentroDoTeto: achados.length <= teto };
 }

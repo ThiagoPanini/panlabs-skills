@@ -11,8 +11,7 @@
 #
 # ⚠️ ISTO É ARQUEOLOGIA, e por isso é ferramenta e não checagem da suíte. Depende
 # de `prototypes/` existir no ref pedido. Quando os protótipos saírem da árvore, o
-# script avisa e sai limpo — a pergunta que ele responde já terá sido respondida,
-# e a resposta está em `docs/recertificacao.md`.
+# script avisa e sai limpo — a pergunta que ele responde já terá sido respondida.
 #
 # O ANCESTRAL COMUM é `daf4bc4` e o número não foi escolhido: é o commit em que o
 # #13 forkou o motor. Achado assim, e conferível:
@@ -32,8 +31,8 @@ BASE="daf4bc4"
 
 if ! git -C "$REPO" cat-file -e "$REF:$P/q13/motor/dispor.cjs" 2>/dev/null; then
   echo "  os protótipos não existem em '$REF' — não há o que medir."
-  echo "  (é o estado esperado depois que eles saírem da árvore; a medição está"
-  echo "   registrada em docs/recertificacao.md)"
+  echo "  (é o estado esperado depois que eles saírem da árvore; a medição já"
+  echo "   foi feita e registrada)"
   exit 0
 fi
 
@@ -151,4 +150,4 @@ printf '  %-16s %10s %10s\n' TOTAL "$soma_t" "$soma_m"
 echo
 echo "  Leitura: o candidato com MENOS vermelhos é o tronco; o delta MENOR é o que"
 echo "  se enxerta. As duas colunas apontam para o mesmo lado, e é isso que faz a"
-echo "  decisão ser medida em vez de argumentada. Registro em docs/recertificacao.md."
+echo "  decisão ser medida em vez de argumentada."

@@ -81,7 +81,7 @@ async function main() {
   if (naoGerou) console.log(`  modelos que um dos motores não gerou:              ${naoGerou}`);
   console.log('\n  Leitura: falha semântica é o desenho MENTINDO (tolerância zero). Mudança na');
   console.log('  contagem total é achado do #18 sobre a escala nova, não regressão — o');
-  console.log('  `check-bons.cjs` separa os dois eixos, e a `docs/recertificacao.md` registra.\n');
+  console.log('  `check-bons.cjs` separa os dois eixos.\n');
   return 0;
 }
 

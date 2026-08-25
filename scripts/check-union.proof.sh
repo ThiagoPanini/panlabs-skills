@@ -37,6 +37,8 @@ scaffold() { # build a repo with a base, a "theirs" side and a "mine" side
   printf 'line 1\nline 2\nline 3\nline 4\nline 5\n' > long.txt
   echo "# adr one" > docs/adr/0001-first.md
   echo "old rule" > guide/old.md
+  # a relative link that is CORRECT here and breaks the moment the file moves
+  echo "the rule cites [a](../a.txt)" > guide/rule.md
   echo "points at [old](guide/old.md)" > SKILL.md
   echo "untouched" > alone.txt
   git add -A && git commit -qm base
@@ -99,9 +101,35 @@ git switch -q main
 out="$(bash scripts/check-union.sh theirs mine 2>&1)"; code=$?
 expect "two-ref mode, from a third branch" red "long.txt" "$out" "$code"
 
+# ── 6 . SELF-DANGLING ─────────────────────────────────────────────────────────
+# `git mv` moves bytes and rewrites nothing. `guide/rule.md` cites `../a.txt`,
+# correct from `guide/`; moved to `docs/deep/`, the same text points at
+# `docs/a.txt`, which never existed. One branch, no other side, no conflict --
+# and check 3 is blind to it by construction. This is the real defect that
+# landed on this repo's main and was caught by a human review, not by a check.
+scaffold selfdangling
+git switch -qc theirs
+echo theirs >> a.txt && git commit -qam theirs
+git switch -qc mine main
+mkdir -p docs/deep && git mv guide/rule.md docs/deep/rule.md && git commit -qm "mine moves its own file"
+out="$(bash scripts/check-union.sh theirs 2>&1)"; code=$?
+expect "self-dangling failed" red "docs/a.txt" "$out" "$code"
+
+# ── 7 . THE SELF-DANGLING CONTROL ─────────────────────────────────────────────
+# The same move WITH the link fixed must pass, or the check is just "no moves".
+scaffold selfdangling-fixed
+git switch -qc theirs
+echo theirs >> a.txt && git commit -qam theirs
+git switch -qc mine main
+mkdir -p docs/deep && git mv guide/rule.md docs/deep/rule.md
+echo "the rule cites [a](../../a.txt)" > docs/deep/rule.md
+git commit -qam "mine moves its own file AND fixes the link"
+out="$(bash scripts/check-union.sh theirs 2>&1)"; code=$?
+expect "self-dangling cleared when the link is fixed" green "union green" "$out" "$code"
+
 echo
 if [ "$failed" -ne 0 ]; then
   echo "PROOF RED - the ruler does not measure what it claims to."
   exit 1
 fi
-echo "proof green - the three silent collisions turn red, and the clean one passes."
+echo "proof green - the four silent collisions turn red, and the clean ones pass."

@@ -106,6 +106,37 @@ else
   echo "   . none"
 fi
 
+# ── 4 . SELF-DANGLING ─────────────────────────────────────────────────────────
+# The rename I did myself, breaking the relative links INSIDE the file I moved.
+# `git mv a/x.md b/c/x.md` moves the bytes and rewrites nothing: a `../y` inside
+# x.md silently retargets. Check 3 cannot see this — it only knows what the OTHER
+# side moved. Measured on this repo: `docs/aws-diagrams/recertificacao.md` landed
+# pointing at `docs/sessao/publicar.cjs`, which never existed, and a human review
+# caught it. That is the review this check replaces.
+printf '\n-- self-dangling (a relative link of mine that resolves to nothing)\n'
+: > "$TMP/selfdangling"
+while IFS= read -r f; do
+  case "$f" in *.md) ;; *) continue ;; esac
+  git cat-file -e "$MINE:$f" 2> /dev/null || continue
+  dir="$(dirname "$f")"
+  git show "$MINE:$f" 2> /dev/null \
+    | grep -oE '\]\([^)]+\)' | sed -e 's/^](//' -e 's/)$//' -e 's/[[:space:]].*$//' -e 's/#.*$//' \
+    | while IFS= read -r link; do
+        [ -n "$link" ] || continue
+        case "$link" in http*|mailto:*|\<*|/*) continue ;; esac
+        target="$(realpath -m --relative-to="$ROOT" "$ROOT/$dir/$link" 2> /dev/null)" || continue
+        git cat-file -e "$MINE:$target" 2> /dev/null \
+          || printf '%s -> %s (resolve: %s)\n' "$f" "$link" "$target" >> "$TMP/selfdangling"
+      done
+done < "$TMP/mine"
+if [ -s "$TMP/selfdangling" ]; then
+  printf '   x %s link(s):\n' "$(wc -l < "$TMP/selfdangling")"
+  sed 's/^/       /' "$TMP/selfdangling"
+  failed=1
+else
+  echo "   . none"
+fi
+
 echo
 if [ "$failed" -ne 0 ]; then
   echo "UNION RED - the clean merge would lie. Before landing:"

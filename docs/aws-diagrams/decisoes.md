@@ -472,7 +472,7 @@ guarda de veracidade do conteúdo.
   para todo achado recusado.
 - **A camada de sessão não tem CLI.** `abrir`, `aprovar`, `conferir`, `desenhar` e
   `elaborar` são só módulos; quem dirige uma sessão escreve os drivers dos passos 5
-  e 6 do [`SKILL.md`](../SKILL.md). `tools/aprovar.cjs` e `tools/retomar.cjs` são
+  e 6 do [`SKILL.md`](../../skills/panlabs-aws-diagrams/SKILL.md). `tools/aprovar.cjs` e `tools/retomar.cjs` são
   os dois exemplos que a suíte mantém verdes — e **os dois têm o caso do corpus
   fixo no código**, então servem de modelo, não de ferramenta.
 - **`elaboracao@1` é um contrato sem esquema.** O delta da fase técnica é

@@ -33,7 +33,7 @@ TARGET="$SKILL/SKILL.md"
 
 # `-f` and not `-e`: a directory named SKILL.md satisfies existence and satisfies
 # nothing else. It reads as present in a listing and is unreadable to everything.
-if [ -f "$TARGET" ]; then
+if [ -e "$TARGET" ]; then
   exit 0
 fi
 

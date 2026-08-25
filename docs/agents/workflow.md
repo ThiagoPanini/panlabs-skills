@@ -381,11 +381,15 @@ por isso nunca chega a este gatilho. Se ele disparar um dia, `check-union.sh` ma
 suíte da skill viram um workflow de PR; quem o disparar lê antes a nota de estado do
 ADR, porque essa régua saiu da árvore em `db1ff34`.
 
-**E nada disso está ligado ainda.** O harness é a
-[#67](https://github.com/ThiagoPanini/panlabs-skills/issues/67), as famílias de
-checagem são os tickets do mapa
-[#66](https://github.com/ThiagoPanini/panlabs-skills/issues/66), e a esteira que os
-transforma em portão é a
-[#72](https://github.com/ThiagoPanini/panlabs-skills/issues/72) — que esperava por
-este ADR para não ligar antes de a doutrina parar de contradizê-la. Enquanto elas não
-aterrissarem, o que existe aqui é **a decisão, não a tranca**.
+**O comando existe; a tranca ainda não.** O harness já está de pé — a
+[#67](https://github.com/ThiagoPanini/panlabs-skills/issues/67) aterrissou
+`scripts/check-skills.sh`, que descobre skill por varredura, carrega uma família de
+checagem por arquivo sob `scripts/checks/`, imprime as regras vigentes com `--list` e
+tem prova ao lado de cada uma. As famílias que faltam são os tickets do mapa
+[#66](https://github.com/ThiagoPanini/panlabs-skills/issues/66).
+
+O que **não** existe é a esteira: a
+[#72](https://github.com/ThiagoPanini/panlabs-skills/issues/72), que esperava por este
+ADR para não ligar antes de a doutrina parar de contradizê-la. Enquanto ela não
+aterrissar, o portão de estrutura está na mesma situação da união descrita lá em cima —
+**a única coisa que o roda é você rodar.**

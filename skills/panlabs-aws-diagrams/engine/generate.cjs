@@ -257,7 +257,7 @@ async function generate(model, opts = {}) {
    */
   const level = opts.gate || 'none';
   if (!(level in LEVELS)) {
-    const e = new Error(`nível de portão desconhecido: "${level}"`);
+    const e = new Error(`unknown gate level: "${level}"`);
     e.erros = [`níveis: ${Object.keys(LEVELS).join(', ')}`];
     throw e;
   }

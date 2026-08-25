@@ -1,53 +1,53 @@
 'use strict';
 /**
- * O portão — a decisão 2 do ticket #18, em código e não em prosa.
+ * The gate — decision 2 of ticket #18, in code rather than prose.
  *
- * `validarGeometria` devolve um laudo e não decide nada; quem transforma laudo
- * em barreira é esta função, e ela existe separada por um motivo: julgar e
- * bloquear são políticas diferentes. Um relatório de revisão quer o laudo
- * inteiro; um pipeline de publicação quer parar. Misturar os dois obrigaria a
- * escolher um dos comportamentos para todo mundo.
+ * `validateGeometry` returns a report and decides nothing; what turns a report
+ * into a barrier is this function, and it lives apart for a reason: judging and
+ * blocking are different policies. A review report wants the whole report; a
+ * publishing pipeline wants to stop. Mixing the two would force one behaviour on
+ * everybody.
  *
- * ONDE ENCAIXA. No pipeline do #11 —
+ * WHERE IT FITS. In the #11 pipeline —
  *
- *     carregar › VALIDAR › resolver › derivar › dispor › planejar › emitir › conferir
- *                                                        ^^^^^^^^^^
- *                                                        aqui, entre os dois
+ *     load › VALIDATE › resolve › derive › layout › plan › emit › check
+ *                                                  ^^^^^^^^^^
+ *                                                  here, between the two
  *
- * — é o único ponto onde a geometria já existe e o XML ainda não.
+ * — it is the only point where the geometry already exists and the XML does not.
  *
- * ✅ O ENXERTO ESTÁ APLICADO desde a consolidação do #23. Quando o #18 fechou, o
- * motor ainda era protótipo de outro ticket e mexer nele de fora misturaria duas
- * fronteiras de decisão; a árvore de produção acabou com essa separação.
+ * ✅ THE GRAFT IS IN PLACE since the #23 consolidation. When #18 closed, the
+ * engine was still another ticket's prototype and touching it from outside would
+ * have mixed two decision boundaries; the production tree ended that separation.
  *
- * Como ele entra em `engine/generate.cjs`, e por que assim:
+ * How it enters `engine/generate.cjs`, and why this way:
  *
- *   O LAUDO SAI SEMPRE, em `relatorio.geometria`, e uma falha SEMÂNTICA vira
- *   aviso mesmo sem ninguém pedir portão. Um portão que só existe quando alguém
- *   pede é um portão que ninguém sabe que existe.
+ *   THE REPORT ALWAYS COMES OUT, in `relatorio.geometria`, and a SEMANTIC
+ *   failure becomes a warning even with nobody asking for a gate. A gate that
+ *   only exists when someone asks is a gate nobody knows about.
  *
- *   BLOQUEAR É OPT-IN (`--gate <nível>`, default `nenhum`) — e isto é o que
- *   esta seção já dizia com outras palavras: `veracidade` é o default de um
- *   portão de PUBLICAÇÃO. Publicar e desenhar não são o mesmo ato, e recusar
- *   desenhar tem hora.
+ *   BLOCKING IS OPT-IN (`--gate <level>`, default `none`) — and this is what
+ *   this section already said in other words: `truthfulness` is the default of a
+ *   PUBLISHING gate. Publishing and drawing are not the same act, and refusing to
+ *   draw has its moment.
  *
- * O QUE ELE NÃO FAZ. Não corrige, não reposiciona, não pede novo layout. A
- * justificativa está em `validate-geometry.cjs`: um laço de correção comandado
- * pelo validador é um segundo otimizador competindo com o ELK, sem gradiente e
- * sem função objetivo, porque o B9 da rubrica proíbe combinar as 62 num score.
- * Quem corrige é `align.cjs`, que tem as alavancas na mão.
+ * WHAT IT DOES NOT DO. It does not correct, reposition, or ask for a new layout.
+ * The reasoning is in `validate-geometry.cjs`: a correction loop driven by the
+ * validator is a second optimiser competing with ELK, with no gradient and no
+ * objective function, because B9 of the rubric forbids combining the 62 into a
+ * score. Correcting is `align.cjs`'s job — it has the levers in hand.
  */
 
 const path = require('path');
 const { validateGeometry, format } = require(path.join(__dirname, 'validate-geometry.cjs'));
 
 /**
- * Níveis de bloqueio, do mais frouxo ao mais apertado.
+ * Blocking levels, from loosest to tightest.
  *
- * `veracidade` é o default recomendado para um portão de publicação, e é o
- * único que separa as duas coisas que o #18 insiste em não confundir: um
- * diagrama INCOMPLETO (sem legenda, sem metadados) ainda é verdadeiro e pode
- * ir para a parede; um diagrama que MENTE sobre a fronteira de rede, não.
+ * `truthfulness` is the recommended default for a publishing gate, and it is the
+ * only one that separates the two things #18 insists on not confusing: an
+ * INCOMPLETE diagram (no legend, no metadata) is still true and may go on the
+ * wall; a diagram that LIES about a network boundary may not.
  */
 const LEVELS = {
   none: () => false,
@@ -57,47 +57,47 @@ const LEVELS = {
 };
 
 /**
- * Mede o plano e, conforme o nível, deixa passar ou lança.
+ * Measures the plan and, per the level, lets it through or throws.
  *
- * @param {object} plano                o plano do motor, pós-`planejar`
+ * @param {object} layoutPlan           the engine plan, post-`plan`
  * @param {object} [opts]
- * @param {string} [opts.nivel]         `nenhum` | `veracidade` | `falha` | `estrito`
- * @param {boolean} [opts.bloquear]     atalho: `true` vira nível `falha`
- * @param {object} [opts.modelo]        quando o plano não carrega o embutido
- * @returns {object} o laudo, quando passa
- * @throws {Error} com `.erros` (linhas legíveis) e `.laudo`, quando barra
+ * @param {string} [opts.level]         `none` | `truthfulness` | `failure` | `strict`
+ * @param {boolean} [opts.bloquear]     shortcut: `true` means level `failure`
+ * @param {object} [opts.modelo]        when the plan does not carry the embedded one
+ * @returns {object} the report, when it passes
+ * @throws {Error} with `.erros` (readable lines) and `.report`, when it blocks
  */
 function gate(layoutPlan, opts = {}) {
   const report = validateGeometry(layoutPlan, opts);
   const level = opts.level || (opts.bloquear ? 'failure' : 'none');
-  const barra = LEVELS[level];
-  if (!barra) throw new Error(`nível de portão desconhecido: "${level}" (use ${Object.keys(LEVELS).join(', ')})`);
+  const blocks = LEVELS[level];
+  if (!blocks) throw new Error(`unknown gate level: "${level}" (use ${Object.keys(LEVELS).join(', ')})`);
 
-  // Um laudo incompleto nunca passa, em nenhum nível: se uma checagem que devia
-  // rodar não rodou, o verde não quer dizer nada — e é justamente no dia em que
-  // alguém quebra uma família que o portão precisa não estar mentindo.
-  const incompleto = report.cobertura.naoRodaram.length > 0 || report.resultados.some(r => r.state === 'erro');
+  // An incomplete report never passes, at any level: if a check that should have
+  // run did not, green means nothing — and it is precisely on the day someone
+  // breaks a family that the gate must not be lying.
+  const incomplete = report.cobertura.naoRodaram.length > 0 || report.resultados.some(r => r.state === 'erro');
 
-  if (!barra(report) && !incompleto) return report;
+  if (!blocks(report) && !incomplete) return report;
 
-  const linhas = [];
-  if (incompleto) {
+  const lines = [];
+  if (incomplete) {
     if (report.cobertura.naoRodaram.length)
-      linhas.push(`checagens que não rodaram: ${report.cobertura.naoRodaram.join(', ')}`);
-    for (const r of report.resultados.filter(x => x.state === 'erro')) linhas.push(r.mensagem);
+      lines.push(`checks that did not run: ${report.cobertura.naoRodaram.join(', ')}`);
+    for (const r of report.resultados.filter(x => x.state === 'erro')) lines.push(r.mensagem);
   }
   for (const r of [...report.semanticas, ...report.falhas.filter(f => !f.semantica)]) {
-    linhas.push(`${r.id} ${r.name}${r.semantica ? ' (o desenho afirma o que o modelo nega)' : ''}: ${r.mensagem}`);
-    for (const o of r.occurrences.slice(0, 3)) linhas.push(`    · ${o.o_que}`);
+    lines.push(`${r.id} ${r.name}${r.semantica ? ' (the drawing asserts what the model denies)' : ''}: ${r.mensagem}`);
+    for (const o of r.occurrences.slice(0, 3)) lines.push(`    · ${o.o_que}`);
   }
-  if (level === 'strict') for (const r of report.avisos) linhas.push(`${r.id} ${r.name}: ${r.mensagem}`);
+  if (level === 'strict') for (const r of report.avisos) lines.push(`${r.id} ${r.name}: ${r.mensagem}`);
 
-  const erro = new Error(incompleto
-    ? 'laudo geométrico incompleto — há checagem que não rodou'
-    : `geometria reprovada no portão "${level}"`);
-  erro.erros = linhas;
-  erro.report = report;
-  throw erro;
+  const error = new Error(incomplete
+    ? 'incomplete geometry report — some check did not run'
+    : `geometry rejected at gate "${level}"`);
+  error.erros = lines;
+  error.report = report;
+  throw error;
 }
 
 module.exports = { gate, LEVELS, format };

@@ -1,27 +1,28 @@
 'use strict';
 /**
- * O acordo — a aprovacao da vista logica virada fato conferivel.
+ * The agreement — approval of the logical view turned into a checkable fact.
  *
- * A premissa 2 do #1 poe a aprovacao ENTRE as duas fases, e chama a progressao
- * de coracao do produto. O que este arquivo faz e recusar que essa aprovacao
- * seja um booleano.
+ * Assumption 2 of #1 puts approval BETWEEN the two phases, and calls the
+ * progression the heart of the product. What this file does is refuse to let
+ * that approval be a boolean.
  *
- *   `aprovado: true` sobrevive a tudo. Voce aprova a vista logica, a sessao
- *   seguinte elabora tecnicamente, alguem acrescenta uma capacidade que nunca
- *   foi discutida, e o booleano continua dizendo sim. O diagrama tecnico sai com
- *   o carimbo de aprovado por cima de uma arquitetura que ninguem aprovou.
+ *   `approved: true` survives anything. You approve the logical view, the next
+ *   session elaborates it technically, someone adds a capability that was never
+ *   discussed, and the boolean keeps saying yes. The technical diagram comes out
+ *   stamped approved over an architecture nobody approved.
  *
- * O acordo guarda o RECORTE da projecao logica aprovada. Reconferir e reprojetar
- * o modelo de hoje e comparar. Se bate, a elaboracao tecnica e fiel; se nao
- * bate, a diferenca sai no vocabulario da conversa — "voce aprovou 12
- * capacidades, o modelo tecnico serve 11" — e nao em hash contra hash.
+ * The agreement keeps the SNAPSHOT of the approved logical projection. Rechecking
+ * means reprojecting today's model and comparing. If it matches, the technical
+ * elaboration is faithful; if it does not, the difference comes out in the
+ * vocabulary of the conversation — "you approved 12 capabilities, the technical
+ * model serves 11" — and not as hash against hash.
  */
 
 const { project, recorteDoAcordo } = require('./project.cjs');
 const { impressaoDoAcordo, canonicalize } = require('./fingerprint.cjs');
 
-/** Sela a aprovacao no dossie. Nao muda mais nada do modelo. */
-function approve(session, quem = {}) {
+/** Seals the approval into the dossier. Changes nothing else in the model. */
+function approve(session, who = {}) {
   const { model } = project(session, 'logical');
   const snapshot = recorteDoAcordo(model);
   const output = JSON.parse(JSON.stringify(session));
@@ -30,66 +31,66 @@ function approve(session, quem = {}) {
     view: 'logical',
     fingerprint: impressaoDoAcordo(snapshot),
     snapshot,
-    ...(quem.at ? { at: quem.at } : {}),
-    ...(quem.by ? { by: quem.by } : {}),
-    ...(quem.candidate ? { candidate: quem.candidate } : {}),
+    ...(who.at ? { at: who.at } : {}),
+    ...(who.by ? { by: who.by } : {}),
+    ...(who.candidate ? { candidate: who.candidate } : {}),
   };
   return output;
 }
 
 /**
- * O modelo de hoje ainda serve o que foi aprovado?
+ * Does today's model still serve what was approved?
  *
- * Esta e a rastreabilidade que o #14 temia perder ao usar um IR so. Com dois
- * modelos ligados por mapeamento, responder isto exige que o mapeamento esteja
- * certo — e nada garante que esteja. Com um IR, a resposta e uma projecao e uma
- * comparacao de strings.
+ * This is the traceability #14 feared losing by using a single IR. With two
+ * models linked by a mapping, answering this requires the mapping to be right —
+ * and nothing guarantees it is. With one IR, the answer is a projection and a
+ * string comparison.
  */
 function check(session) {
   const agreement = session.dossier && session.dossier.agreement;
-  if (!agreement) return { ok: false, motivo: 'sem acordo', diferencas: [] };
+  if (!agreement) return { ok: false, motivo: 'no agreement', diferencas: [] };
 
   const { model } = project(session, 'logical');
-  const agora = recorteDoAcordo(model);
-  const fingerprint = impressaoDoAcordo(agora);
+  const now = recorteDoAcordo(model);
+  const fingerprint = impressaoDoAcordo(now);
   if (fingerprint === agreement.fingerprint) return { ok: true, fingerprint, diferencas: [] };
 
-  return { ok: false, motivo: 'a projecao logica de hoje difere da aprovada', fingerprint,
-    esperada: agreement.fingerprint, diferencas: snapshotDiff(agreement.snapshot, agora) };
+  return { ok: false, motivo: "today's logical projection differs from the approved one", fingerprint,
+    esperada: agreement.fingerprint, diferencas: snapshotDiff(agreement.snapshot, now) };
 }
 
-/** A diferenca no vocabulario da conversa, nao no do XML. */
-function snapshotDiff(antes, depois) {
+/** The difference in the vocabulary of the conversation, not that of the XML. */
+function snapshotDiff(before, after) {
   const out = [];
   const byId = l => new Map((l || []).map(x => [x.id, x]));
-  const a = byId(antes.nodes), d = byId(depois.nodes);
+  const a = byId(before.nodes), d = byId(after.nodes);
 
   for (const [id, n] of a) if (!d.has(id))
-    out.push({ o: 'capability', kind: 'sumiu', id, text: `"${n.label || id}" foi aprovada e o modelo tecnico nao a serve` });
+    out.push({ o: 'capability', kind: 'gone', id, text: `"${n.label || id}" was approved and the technical model does not serve it` });
   for (const [id, n] of d) if (!a.has(id))
-    out.push({ o: 'capability', kind: 'apareceu', id, text: `"${n.label || id}" nao estava na vista aprovada` });
+    out.push({ o: 'capability', kind: 'appeared', id, text: `"${n.label || id}" was not in the approved view` });
   for (const [id, n] of d) {
     const v = a.get(id); if (!v) continue;
-    if (v.label !== n.label) out.push({ o: 'capability', kind: 'label', id, text: `"${v.label}" virou "${n.label}"` });
-    if (v.inside !== n.inside) out.push({ o: 'capability', kind: 'fronteira', id, text: `"${v.label || id}" mudou de fronteira: ${v.inside || '(raiz)'} → ${n.inside || '(raiz)'}` });
-    if (v.kind !== n.kind) out.push({ o: 'capability', kind: 'kind', id, text: `"${v.label || id}" mudou de tipo: ${v.kind} → ${n.kind}` });
+    if (v.label !== n.label) out.push({ o: 'capability', kind: 'label', id, text: `"${v.label}" became "${n.label}"` });
+    if (v.inside !== n.inside) out.push({ o: 'capability', kind: 'boundary', id, text: `"${v.label || id}" changed boundary: ${v.inside || '(root)'} → ${n.inside || '(root)'}` });
+    if (v.kind !== n.kind) out.push({ o: 'capability', kind: 'kind', id, text: `"${v.label || id}" changed kind: ${v.kind} → ${n.kind}` });
   }
 
   const key = e => `${e.from}→${e.to}`;
-  const ea = new Map((antes.edges || []).map(e => [key(e), e]));
-  const ed = new Map((depois.edges || []).map(e => [key(e), e]));
-  for (const [k, e] of ea) if (!ed.has(k)) out.push({ o: 'flow', kind: 'sumiu', id: k, text: `o fluxo ${k} ("${e.label || ''}") foi aprovado e nao existe mais` });
-  for (const [k, e] of ed) if (!ea.has(k)) out.push({ o: 'flow', kind: 'apareceu', id: k, text: `o fluxo ${k} ("${e.label || ''}") nao estava na vista aprovada` });
+  const ea = new Map((before.edges || []).map(e => [key(e), e]));
+  const ed = new Map((after.edges || []).map(e => [key(e), e]));
+  for (const [k, e] of ea) if (!ed.has(k)) out.push({ o: 'flow', kind: 'gone', id: k, text: `flow ${k} ("${e.label || ''}") was approved and no longer exists` });
+  for (const [k, e] of ed) if (!ea.has(k)) out.push({ o: 'flow', kind: 'appeared', id: k, text: `flow ${k} ("${e.label || ''}") was not in the approved view` });
   for (const [k, e] of ed) {
     const v = ea.get(k); if (!v) continue;
-    if (v.label !== e.label) out.push({ o: 'flow', kind: 'label', id: k, text: `${k}: "${v.label}" virou "${e.label}"` });
-    if ((v.data || 'out') !== (e.data || 'out')) out.push({ o: 'flow', kind: 'sentido', id: k, text: `${k}: sentido do dado ${v.data || 'out'} → ${e.data || 'out'}` });
+    if (v.label !== e.label) out.push({ o: 'flow', kind: 'label', id: k, text: `${k}: "${v.label}" became "${e.label}"` });
+    if ((v.data || 'out') !== (e.data || 'out')) out.push({ o: 'flow', kind: 'direction', id: k, text: `${k}: data direction ${v.data || 'out'} → ${e.data || 'out'}` });
   }
 
-  const na = new Set((antes.notes || []).map(canonicalize));
-  const nd = new Set((depois.notes || []).map(canonicalize));
-  for (const n of na) if (!nd.has(n)) out.push({ o: 'note', kind: 'sumiu', id: n.slice(0, 40), text: `uma nota aprovada sumiu — se for a do achado recusado, o desenho volta a enganar calado (#15 §4)` });
-  for (const n of nd) if (!na.has(n)) out.push({ o: 'note', kind: 'apareceu', id: n.slice(0, 40), text: 'nota nova na vista logica' });
+  const na = new Set((before.notes || []).map(canonicalize));
+  const nd = new Set((after.notes || []).map(canonicalize));
+  for (const n of na) if (!nd.has(n)) out.push({ o: 'note', kind: 'gone', id: n.slice(0, 40), text: `an approved note is gone — if it was the rejected-finding one, the drawing goes back to misleading in silence (#15 §4)` });
+  for (const n of nd) if (!na.has(n)) out.push({ o: 'note', kind: 'appeared', id: n.slice(0, 40), text: 'new note on the logical view' });
 
   return out;
 }

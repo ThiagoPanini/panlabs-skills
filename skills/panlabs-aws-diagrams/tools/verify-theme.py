@@ -1,41 +1,40 @@
 #!/usr/bin/env python3
-"""Confere NO PIXEL que o tema chegou no render — não só na style string.
+"""Checks AT THE PIXEL that the theme reached the render — not just the style string.
 
     python3 tools/verify-theme.py output/themes/a-light.png light
     python3 tools/verify-theme.py --all
 
-A lição que obriga esta ferramenta é do #17: 24 checagens estáticas estavam
-verdes quando o PNG revelou o SageMaker saindo com o ícone errado. Style string
-correta não é render correto.
+The lesson that forces this tool is #17's: 24 static checks were green when the
+PNG revealed SageMaker coming out with the wrong icon. A correct style string is
+not a correct render.
 
-Cada tema vira uma lista de afirmações de cor, e cada afirmação é ou PRESENTE
-(a cor tem de aparecer, acima de um piso de pixels) ou AUSENTE (a cor não pode
-aparecer em lugar nenhum). As ausências são as mais informativas: são a prova
-de que uma decisão do #13 de fato sobrescreveu o catálogo.
+Each theme becomes a list of colour assertions, and each assertion is either
+PRESENT (the colour must appear, above a pixel floor) or ABSENT (the colour must
+not appear anywhere). The absences are the most informative: they are the proof
+that a #13 decision did in fact override the catalog.
 """
-import json
 import sys
-from collections import Counter
 from pathlib import Path
 
 from PIL import Image
 
-# Duas tolerâncias, e a assimetria é o ponto.
+# Two tolerances, and the asymmetry is the point.
 #
-# PRESENÇA aceita ±10 por canal, porque a cor pedida chega ao PNG rodeada de
-# antialias e o miolo pode variar um pouco.
+# PRESENCE accepts ±10 per channel, because the requested colour reaches the PNG
+# surrounded by antialias and the core may vary a little.
 #
-# AUSÊNCIA exige ±3, e um piso de área. Com ±10 a checagem acusava #232F3E "presente"
-# no render escuro — 13.909 px. Localizando os pixels, eram ~80 pontos ESPARSOS
-# espalhados de x=30 a x=2584: a franja de antialias de texto branco sobre fundo
-# escuro passa por ali no caminho. Uma cor que de fato está no desenho forma
-# REGIÃO; antialias forma poeira. O piso de área é o que separa as duas.
-TOL_PRESENTE = 10
-TOL_AUSENTE = 3
-PISO_PRESENTE = 40      # pixels mínimos para chamar de "cor presente"
-PISO_AUSENTE = 400      # abaixo disto é poeira de antialias, não região
+# ABSENCE demands ±3, plus an area floor. At ±10 the check reported #232F3E as
+# "present" in the dark render — 13,909 px. Locating the pixels, they were ~80
+# SPARSE points spread from x=30 to x=2584: the antialias fringe of white text on
+# a dark background passes through there on the way. A colour that really is in
+# the drawing forms a REGION; antialias forms dust. The area floor is what
+# separates the two.
+PRESENT_TOL = 10
+ABSENT_TOL = 3
+PRESENT_FLOOR = 40      # minimum pixels to call a colour "present"
+ABSENT_FLOOR = 400      # below this it is antialias dust, not a region
 
-AQUI = Path(__file__).resolve().parent.parent
+HERE = Path(__file__).resolve().parent.parent
 
 
 def hex2rgb(h):
@@ -43,8 +42,8 @@ def hex2rgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def contar(img, alvo, tol=TOL_PRESENTE):
-    a = hex2rgb(alvo)
+def count(img, target, tol=PRESENT_TOL):
+    a = hex2rgb(target)
     n = 0
     for (c, px) in img.getcolors(maxcolors=1 << 24) or []:
         if all(abs(px[i] - a[i]) <= tol for i in range(3)):
@@ -52,99 +51,102 @@ def contar(img, alvo, tol=TOL_PRESENTE):
     return n
 
 
-def dominante(img):
-    cores = img.getcolors(maxcolors=1 << 24) or []
-    c, px = max(cores, key=lambda t: t[0])
+def dominant(img):
+    colors = img.getcolors(maxcolors=1 << 24) or []
+    c, px = max(colors, key=lambda t: t[0])
     return '#%02X%02X%02X' % px[:3], c / (img.width * img.height)
 
 
-# As afirmações que não dependem do tema — são decisões do #13 contra o catálogo.
-UNIVERSAIS = [
-    ('ausente', '#AAB7B8', 'rótulo cinza do VPC: o catálogo entrega, o tema sobrescreve (2,06:1 no branco)'),
-    ('ausente', '#248814', 'rótulo verde-escuro da Public subnet: idem'),
-    # NÃO afirme aqui que o tingimento FIXO do draw.io (#E6F6F7) está ausente.
-    # A afirmação seria INDECIDÍVEL, e por um motivo que é justamente o achado: o
-    # valor derivado no tema claro é #E6F6F6 — um único degrau de azul de distância.
-    # Nenhuma tolerância de pixel separa os dois, porque eles são a mesma cor.
-    # Uma afirmação que não sabe falhar não vale mais do que uma checagem que não
-    # sabe falhar. Onde ela DECIDE é no tema escuro, e é lá que ela mora.
+# The assertions that do not depend on the theme — they are #13 decisions against
+# the catalog.
+UNIVERSAL = [
+    ('absent', '#AAB7B8', 'gray VPC label: the catalog delivers it, the theme overrides it (2.06:1 on white)'),
+    ('absent', '#248814', 'dark green Public subnet label: same'),
+    # Do NOT assert here that draw.io's FIXED tint (#E6F6F7) is absent. The
+    # assertion would be UNDECIDABLE, and for a reason that is precisely the
+    # finding: the value derived in the light theme is #E6F6F6 — a single step of
+    # blue away. No pixel tolerance separates the two, because they are the same
+    # colour. An assertion that cannot fail is worth no more than a check that
+    # cannot fail. Where it DOES decide is in the dark theme, and that is where it
+    # lives.
 ]
 
-POR_TEMA = {
-    'claro':       [('presente', '#E6F6F6', 'tingimento derivado da Private subnet — 10% de #00A4A6 sobre branco'),
-                    ('presente', '#F2F6E8', 'tingimento derivado da Public subnet — 10% de #7AA116, idêntico ao do draw.io'),
-                    ('presente', '#FFFFFF', 'fundo da página'),
-                    ('presente', '#232F3E', 'tinta forte / borda do AWS Cloud'),
-                    ('presente', '#ED7100', 'quadrado do Lambda — cor de categoria intocada'),
-                    ('presente', '#8C4FFF', 'borda do VPC — cor normativa intocada')],
-    'escuro':      [('presente', '#1C1C1C', 'fundo da página, neutro e mais escuro (retorno do #13)'),
-                    ('presente', '#192A2A', 'tingimento derivado no escuro: a MESMA regra, outro fundo'),
-                    ('presente', '#FFFFFF', 'tinta forte / AWS Cloud invertido, como no deck escuro'),
-                    ('ausente',  '#161E2D', 'o azul-noite anterior: substituído, não pode sobrar'),
-                    ('ausente',  '#E6F6F7', 'o tingimento FIXO do draw.io: aqui a derivação DECIDE, e some'),
-                    ('presente', '#ED7100', 'cor de categoria NÃO muda entre os decks'),
-                    ('presente', '#8C4FFF', 'borda do VPC NÃO muda entre os decks'),
-                    ('ausente',  '#232F3E', 'squid ink: 1,23:1 no fundo escuro — tem de ter sumido inteiro')],
-    'corporativo': [('presente', '#FFFFFF', 'fundo — a régua não deixa off-white'),
-                    ('presente', '#545B64', 'seta na tinta dos templates AWS do draw.io'),
-                    ('presente', '#ED7100', 'cor de categoria intocada')],
-    'armadilha':   [('presente', '#F2F3F5', 'o off-white que o portão reprova'),
-                    ('presente', '#AAB7B8', 'a tinta pálida que o portão reprova')],
-    # vista lógica: pré-serviços, então a paleta AWS quase não aparece — o que
-    # aparece é a caixa da casa, e é a única prova visual de que os tokens
-    # `bloco.*` chegam no render
-    'logica':      [('presente', '#FFFFFF', 'fundo e preenchimento do bloco'),
-                    ('presente', '#232F3E', 'borda do bloco na tinta forte do tema'),
-                    ('ausente',  '#8C4FFF', 'nenhuma cor de categoria: não há serviço nomeado')],
-    # o indizível: prova que o remendo bruto chegou, e que a legenda por cor sumiu.
-    # `#8C4FFF` fica de fora de propósito: o remendo troca `strokeColor` (a borda do
-    # VPC) e não `fillColor`, então o roxo continua legítimo no quadrado do API
-    # Gateway — mesma cor, outro papel. É exatamente o que a cor-como-legenda perde.
-    'indizivel':   [('presente', '#1B6AC9', 'o azul da casa injetado à mão nas TRÊS fronteiras'),
-                    ('ausente',  '#00A4A6', 'teal de Region e Private subnet: apagado'),
-                    ('ausente',  '#7AA116', 'verde de Public subnet: apagado')],
+PER_THEME = {
+    'light':       [('present', '#E6F6F6', 'tint derived from Private subnet — 10% of #00A4A6 over white'),
+                    ('present', '#F2F6E8', "tint derived from Public subnet — 10% of #7AA116, identical to draw.io's"),
+                    ('present', '#FFFFFF', 'page background'),
+                    ('present', '#232F3E', 'strong ink / AWS Cloud border'),
+                    ('present', '#ED7100', 'the Lambda square — category colour untouched'),
+                    ('present', '#8C4FFF', 'VPC border — normative colour untouched')],
+    'dark':        [('present', '#1C1C1C', 'page background, neutral and darker (the #13 turn)'),
+                    ('present', '#192A2A', 'tint derived in the dark: the SAME rule, another background'),
+                    ('present', '#FFFFFF', 'strong ink / AWS Cloud inverted, as in the dark deck'),
+                    ('absent',  '#161E2D', 'the previous night blue: replaced, must not remain'),
+                    ('absent',  '#E6F6F7', "draw.io's FIXED tint: here the derivation DECIDES, and it goes"),
+                    ('present', '#ED7100', 'category colour does NOT change between decks'),
+                    ('present', '#8C4FFF', 'VPC border does NOT change between decks'),
+                    ('absent',  '#232F3E', 'squid ink: 1.23:1 on the dark background — must be entirely gone')],
+    'corporate':   [('present', '#FFFFFF', 'background — the ruler allows no off-white'),
+                    ('present', '#545B64', "arrow in the ink of draw.io's AWS templates"),
+                    ('present', '#ED7100', 'category colour untouched')],
+    'trap':        [('present', '#F2F3F5', 'the off-white the gate rejects'),
+                    ('present', '#AAB7B8', 'the pale ink the gate rejects')],
+    # logical view: pre-services, so the AWS palette barely shows — what shows is
+    # the house box, and it is the only visual proof that the `block.*` tokens
+    # reach the render
+    'logical':     [('present', '#FFFFFF', 'background and block fill'),
+                    ('present', '#232F3E', "block border in the theme's strong ink"),
+                    ('absent',  '#8C4FFF', 'no category colour: there is no named service')],
+    # the unspeakable: proof that the raw patch landed, and that the colour legend
+    # is gone. `#8C4FFF` is left out on purpose: the patch swaps `strokeColor` (the
+    # VPC border) and not `fillColor`, so the purple remains legitimate on the API
+    # Gateway square — same colour, another role. That is exactly what
+    # colour-as-legend loses.
+    'unspeakable': [('present', '#1B6AC9', 'the house blue injected by hand into ALL THREE boundaries'),
+                    ('absent',  '#00A4A6', 'teal of Region and Private subnet: erased'),
+                    ('absent',  '#7AA116', 'green of Public subnet: erased')],
 }
 
-# esses dois existem para violar as universais; não as aplicamos neles
-SEM_UNIVERSAIS = {'armadilha', 'indizivel'}
+# these two exist to violate the universals; we do not apply them here
+WITHOUT_UNIVERSAL = {'trap', 'unspeakable'}
 
 
-def verificar(png, tema):
+def verify(png, theme):
     img = Image.open(png).convert('RGB')
-    afirmacoes = list(POR_TEMA.get(tema, []))
-    if tema not in SEM_UNIVERSAIS:
-        afirmacoes += UNIVERSAIS
-    dom, frac = dominante(img)
-    print(f'\n{png.name}  ({img.width}×{img.height}, dominante {dom} em {frac:.0%})')
-    falhou = 0
-    for modo, cor, porque in afirmacoes:
-        presente = modo == 'presente'
-        n = contar(img, cor, TOL_PRESENTE if presente else TOL_AUSENTE)
-        ok = (n >= PISO_PRESENTE) if presente else (n < PISO_AUSENTE)
+    assertions = list(PER_THEME.get(theme, []))
+    if theme not in WITHOUT_UNIVERSAL:
+        assertions += UNIVERSAL
+    dom, frac = dominant(img)
+    print(f'\n{png.name}  ({img.width}×{img.height}, dominant {dom} at {frac:.0%})')
+    failed = 0
+    for mode, color, because in assertions:
+        present = mode == 'present'
+        n = count(img, color, PRESENT_TOL if present else ABSENT_TOL)
+        ok = (n >= PRESENT_FLOOR) if present else (n < ABSENT_FLOOR)
         if not ok:
-            falhou = 1
-        print(f'  {"✓" if ok else "✗"} {modo:8} {cor}  {n:>8} px   {porque}')
-    return falhou
+            failed = 1
+        print(f'  {"✓" if ok else "✗"} {mode:8} {color}  {n:>8} px   {because}')
+    return failed
 
 
 def main():
     if '--all' in sys.argv:
-        mapa = {'a-light': 'light', 'b-dark': 'dark',
-                'c-corporate': 'corporate', 'd-trap': 'trap',
-                'e-unspeakable': 'unspeakable', 'g-logical-view': 'logical'}
-        falhou = 0
-        for nome, tema in mapa.items():
-            png = AQUI / 'output' / 'themes' / f'{nome}.png'
+        mapping = {'a-light': 'light', 'b-dark': 'dark',
+                   'c-corporate': 'corporate', 'd-trap': 'trap',
+                   'e-unspeakable': 'unspeakable', 'g-logical-view': 'logical'}
+        failed = 0
+        for name, theme in mapping.items():
+            png = HERE / 'output' / 'themes' / f'{name}.png'
             if not png.exists():
-                print(f'\n{png.name} não existe — render pulado (premissa 8)')
+                print(f'\n{png.name} does not exist — render skipped (assumption 8)')
                 continue
-            falhou |= verificar(png, tema)
-        print('\nVERIFICAÇÃO DE PIXEL VERMELHA' if falhou else '\nverificação de pixel verde')
-        sys.exit(falhou)
+            failed |= verify(png, theme)
+        print('\nPIXEL VERIFICATION RED' if failed else '\npixel verification green')
+        sys.exit(failed)
 
     if len(sys.argv) < 3:
         sys.exit(__doc__)
-    sys.exit(verificar(Path(sys.argv[1]), sys.argv[2]))
+    sys.exit(verify(Path(sys.argv[1]), sys.argv[2]))
 
 
 if __name__ == '__main__':

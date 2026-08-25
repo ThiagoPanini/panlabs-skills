@@ -1,106 +1,107 @@
 'use strict';
 /**
- * O briefing — como a sessao seguinte "recupera o contexto da conversa
- * anterior", que e uma das perguntas literais do #14.
+ * The briefing — how the next session "recovers the context of the previous
+ * conversation", which is one of #14's literal questions.
  *
- * A resposta que NAO serve e guardar a transcricao. Transcricao e cara, envelhece
- * mal e obriga a proxima sessao a reler uma conversa para descobrir tres fatos.
- * O que se recupera e o DOSSIE, e o briefing e ele renderizado: o que ficou
- * decidido, o que foi recusado e por que, o que esta estacionado esperando a
- * fase tecnica, e se o acordo ainda vale.
+ * The answer that does NOT work is keeping the transcript. A transcript is
+ * expensive, ages badly, and forces the next session to reread a conversation to
+ * discover three facts. What gets recovered is the DOSSIER, and the briefing is
+ * that dossier rendered: what was decided, what was rejected and why, what is
+ * parked waiting for the technical phase, and whether the agreement still holds.
  *
- * Isto e o que o agente le ao reabrir o arquivo. Nao e log de execucao — e o
- * lugar de onde ele retoma a conversa sem pedir ao usuario que repita nada.
+ * This is what the agent reads when reopening the file. It is not an execution
+ * log — it is the place it resumes the conversation from, without asking the user
+ * to repeat anything.
  */
 
 const { policy } = require('./open.cjs');
 
-const cabeca = t => ['', `  ${t}`, `  ${'─'.repeat(Math.max(8, t.length))}`];
+const head = t => ['', `  ${t}`, `  ${'─'.repeat(Math.max(8, t.length))}`];
 
-function briefing(aberto, extra = {}) {
+function briefing(opened, extra = {}) {
   const L = [];
-  const s = aberto.session;
+  const s = opened.session;
 
-  L.push('', '  ┌─ RETOMADA ' + '─'.repeat(52));
-  if (!aberto.ours) {
-    L.push(`  │ Este arquivo nao e meu: ${aberto.because}`);
+  L.push('', '  ┌─ RESUMING ' + '─'.repeat(52));
+  if (!opened.ours) {
+    L.push(`  │ This file is not mine: ${opened.because}`);
     L.push('  └' + '─'.repeat(63));
     return L;
   }
-  L.push(`  │ Reconheci por: ${aberto.howIRecognized.join(' · ')}`);
-  L.push(`  │ Caso: ${s.title}`);
-  L.push(`  │ Estagio do modelo: ${s.stage}   ·   ${s.nodes.length} nos, ${(s.edges || []).length} arestas`);
+  L.push(`  │ Recognized by: ${opened.howIRecognized.join(' · ')}`);
+  L.push(`  │ Case: ${s.title}`);
+  L.push(`  │ Model stage: ${s.stage}   ·   ${s.nodes.length} nodes, ${(s.edges || []).length} edges`);
   L.push('  └' + '─'.repeat(63));
 
-  // ------------------------------------------------------- estado das paginas
-  L.push(...cabeca('Paginas e o que o humano fez com elas'));
-  for (const p of aberto.pages) {
-    const marca = policy(p.state).glifo;
-    L.push(`    ${marca} ${String(p.name || p.id).padEnd(34)} vista=${p.view || '—'}  ${p.state}`);
+  // ---------------------------------------------------------- page states
+  L.push(...head('Pages, and what the human did to them'));
+  for (const p of opened.pages) {
+    const mark = policy(p.state).glifo;
+    L.push(`    ${mark} ${String(p.name || p.id).padEnd(34)} view=${p.view || '—'}  ${p.state}`);
     if (p.because) L.push(`        ${p.because}`);
   }
-  if (aberto.copyConflict)
-    L.push(`    ⚠ as paginas trazem ${aberto.copyConflict.quantas} copias DIFERENTES do modelo — ` +
-      'alguem colou aqui uma pagina de outro arquivo.');
+  if (opened.copyConflict)
+    L.push(`    ⚠ the pages carry ${opened.copyConflict.quantas} DIFFERENT copies of the model — ` +
+      'someone pasted a page from another file in here.');
 
-  // -------------------------------------------------------------- o acordo
+  // ------------------------------------------------------------ the agreement
   const agreement = s.dossier && s.dossier.agreement;
-  L.push(...cabeca('O acordo'));
+  L.push(...head('The agreement'));
   if (!agreement) {
-    L.push('    (nenhum) — a vista logica ainda nao foi aprovada. A fase tecnica nao comeca.');
+    L.push('    (none) — the logical view has not been approved. The technical phase does not start.');
   } else {
-    L.push(`    aprovado ${agreement.at || '(sem data)'}${agreement.by ? ' por ' + agreement.by : ''}` +
-      `${agreement.candidate ? ', candidata ' + agreement.candidate : ''}`);
-    L.push(`    cobre ${agreement.snapshot.nodes.length} capacidades, ${agreement.snapshot.edges.length} fluxos, ${agreement.snapshot.notes.length} nota(s)`);
+    L.push(`    approved ${agreement.at || '(no date)'}${agreement.by ? ' by ' + agreement.by : ''}` +
+      `${agreement.candidate ? ', candidate ' + agreement.candidate : ''}`);
+    L.push(`    covers ${agreement.snapshot.nodes.length} capabilities, ${agreement.snapshot.edges.length} flows, ${agreement.snapshot.notes.length} note(s)`);
     if (extra.agreement)
       L.push(extra.agreement.ok
-        ? '    ✓ a projecao logica de hoje ainda bate com a aprovada'
+        ? "    ✓ today's logical projection still matches the approved one"
         : `    ✗ ${extra.agreement.motivo}`);
     for (const d of (extra.agreement && extra.agreement.diferencas) || []) L.push(`        · ${d.text}`);
   }
 
-  // ---------------------------------------------------------- as candidatas
+  // ------------------------------------------------------------ the candidates
   const d = s.dossier || {};
   if (d.candidates && d.candidates.length) {
-    L.push(...cabeca('Candidatas — a escolhida e as descartadas'));
+    L.push(...head('Candidates — the chosen one and the discarded ones'));
     for (const c of d.candidates) {
-      const marca = c.state === 'chosen' ? '►' : '·';
-      L.push(`    ${marca} ${c.name}${c.differsIn ? `   (difere em ${c.differsIn.join(', ')})` : ''}`);
+      const mark = c.state === 'chosen' ? '►' : '·';
+      L.push(`    ${mark} ${c.name}${c.differsIn ? `   (differs in ${c.differsIn.join(', ')})` : ''}`);
       L.push(`        E1–E5: ${c.tuple.join(' | ')}`);
       if (c.because) L.push(`        ${c.because}`);
     }
-    L.push('    As descartadas ficam para nao serem repropostas, e para responder "por que nao a B?".');
+    L.push('    The discarded ones stay so they are not re-proposed, and to answer "why not B?".');
   }
 
-  // ------------------------------------------------------------- os achados
+  // -------------------------------------------------------------- the findings
   if (d.findings && d.findings.length) {
-    L.push(...cabeca('Revisao de lacunas — o que foi aceito e o que foi recusado'));
+    L.push(...head('Gap review — what was accepted and what was rejected'));
     for (const a of d.findings) {
-      const marca = { accepted: '+', rejected: '✗', resolved: '✓' }[a.state] || '·';
-      L.push(`    ${marca} ${String(a.rule).padEnd(28)} ${a.target || ''}  ${a.note || ''}`);
+      const mark = { accepted: '+', rejected: '✗', resolved: '✓' }[a.state] || '·';
+      L.push(`    ${mark} ${String(a.rule).padEnd(28)} ${a.target || ''}  ${a.note || ''}`);
     }
-    const recusados = d.findings.filter(a => a.state === 'rejected');
-    if (recusados.length)
-      L.push(`    ${recusados.length} recusa(s) viajam ate o desenho como nota — e assim que "SPOF conhecido e aceito" sobrevive.`);
+    const rejected = d.findings.filter(a => a.state === 'rejected');
+    if (rejected.length)
+      L.push(`    ${rejected.length} rejection(s) travel to the drawing as a note — that is how "known and accepted SPOF" survives.`);
   }
 
-  // -------------------------------------------------------- o estacionamento
+  // --------------------------------------------------------------- the parking
   if (d.parking && d.parking.length) {
-    L.push(...cabeca('Estacionamento — nomes de servico ditos cedo demais'));
+    L.push(...head('Parking — service names said too early'));
     for (const e of d.parking)
       L.push(`    ${e.state === 'returned' ? '↩' : '⏸'} ${String(e.name).padEnd(12)} → ${e.capability || ''}   ${e.note || ''}`);
-    const parados = d.parking.filter(e => e.state === 'parked');
-    if (parados.length)
-      L.push(`    ${parados.length} esperando a fase tecnica: voltam como SUGESTAO inferida contra a capacidade, para confirmar.`);
+    const parked = d.parking.filter(e => e.state === 'parked');
+    if (parked.length)
+      L.push(`    ${parked.length} waiting for the technical phase: they come back as an inferred SUGGESTION against the capability, to confirm.`);
   }
 
-  // ------------------------------------------------------------------ fatos
+  // ----------------------------------------------------------------- the facts
   if (d.facts && d.facts.length) {
-    const inferidos = d.facts.filter(f => f.provenance === 'inferred');
-    const naoConfirmados = d.facts.filter(f => !f.confirmed);
-    L.push(...cabeca('Fatos'));
-    L.push(`    ${d.facts.length} fatos · ${inferidos.length} inferido(s) · ${naoConfirmados.length} ainda sem confirmacao`);
-    for (const f of naoConfirmados) L.push(`    ⚠ nao confirmado: ${f.fact}`);
+    const inferred = d.facts.filter(f => f.provenance === 'inferred');
+    const unconfirmed = d.facts.filter(f => !f.confirmed);
+    L.push(...head('Facts'));
+    L.push(`    ${d.facts.length} facts · ${inferred.length} inferred · ${unconfirmed.length} still unconfirmed`);
+    for (const f of unconfirmed) L.push(`    ⚠ unconfirmed: ${f.fact}`);
   }
 
   return L;

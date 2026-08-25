@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * M1 — ONDE, dentro de um `.drawio`, um metadado sobrevive?
+ * M1 — WHERE, inside a `.drawio`, does a piece of metadata survive?
  *
- *   node tools/measure-host.cjs [binario-drawio]
+ *   node tools/measure-host.cjs [drawio-binary]
  *
- * O #2 provou por leitura de codigo que atributo de `<object>` faz round-trip, e
- * o #11 confirmou com o binario. Nenhum dos dois testou as ALTERNATIVAS — e o
- * #14 poe tres opcoes de persistencia na mesa, entao a escolha merece medicao em
- * vez de heranca.
+ * #2 proved by reading code that an `<object>` attribute round-trips, and #11
+ * confirmed it with the binary. Neither tested the ALTERNATIVES — and #14 puts
+ * three persistence options on the table, so the choice deserves a measurement
+ * rather than an inheritance.
  *
- * Sete hospedeiros candidatos, o mesmo payload em todos, um round-trip pelo
- * codec do proprio app (`drawio -x -f xml`, que decodifica e re-serializa). O
- * que voltar, serve. O que sumir, nao.
+ * Seven candidate hosts, the same payload in all of them, one round-trip through
+ * the app's own codec (`drawio -x -f xml`, which decodes and re-serialises).
+ * Whatever comes back, works. Whatever vanishes, does not.
  *
- * Mede tambem duas coisas que so aparecem com mais de uma pagina:
- *   · o metadado sobrevive na SEGUNDA pagina, ou so na primeira?
- *   · o `host` do `<mxfile>` sobrevive? (e a marca de reconhecimento fraca)
+ * It also measures two things that only show up with more than one page:
+ *   · does the metadata survive on the SECOND page, or only on the first?
+ *   · does the `<mxfile>` `host` survive? (it is the weak recognition mark)
  */
 
 const fs = require('fs');
@@ -28,10 +28,10 @@ const { sweep, acharTodos } = require('../session/fingerprint.cjs');
 
 const { binary } = require(path.join(__dirname, 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'hospedeiro-'));
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'host-'));
 
-// Payload com as armadilhas que o #2 §7 nomeia: quebra de linha, tab, aspas,
-// `&`, `<` — tudo que a normalizacao de atributo do XML costuma comer.
+// Payload carrying the traps #2 §7 names: newline, tab, quotes, `&`, `<` —
+// everything XML attribute normalisation tends to eat.
 const LOAD = 'linha1\nlinha2\ttab "aspas" & <tag> ç ã 100%';
 
 const FILE_PATH = `<mxfile host="panlabs-aws-diagrams" compressed="false" mxfileAttr="${escape(LOAD)}">
@@ -77,92 +77,92 @@ function escape(s) {
     .replace(/\n/g, '&#xa;').replace(/\t/g, '&#x9;').replace(/\r/g, '&#xd;');
 }
 
-/** Procura o atributo em qualquer elemento da arvore. */
-function locate(raiz, attr) {
-  const pilha = [raiz];
-  while (pilha.length) {
-    const n = pilha.pop();
+/** Looks for the attribute on any element of the tree. */
+function locate(root, attr) {
+  const stack = [root];
+  while (stack.length) {
+    const n = stack.pop();
     if (n.attrs && n.attrs[attr] !== undefined) return { valor: n.attrs[attr], at: n.name };
-    for (const f of n.filhos || []) pilha.push(f);
+    for (const f of n.filhos || []) stack.push(f);
   }
   return null;
 }
 
 const HOSTS = [
-  ['mxfileAttr', 'atributo no <mxfile>'],
-  ['diagramAttr', 'atributo no <diagram>'],
-  ['modelAttr', 'atributo no <mxGraphModel>'],
-  ['camadaAttr', '<object> envolvendo a CAMADA (id=1)'],
-  ['objectAttr', '<object> em celula oculta'],
-  ['userObjectAttr', '<UserObject> em celula oculta'],
-  ['segundaPaginaAttr', '<object> oculto na SEGUNDA pagina'],
+  ['mxfileAttr', 'attribute on <mxfile>'],
+  ['diagramAttr', 'attribute on <diagram>'],
+  ['modelAttr', 'attribute on <mxGraphModel>'],
+  ['camadaAttr', '<object> wrapping the LAYER (id=1)'],
+  ['objectAttr', '<object> on a hidden cell'],
+  ['userObjectAttr', '<UserObject> on a hidden cell'],
+  ['segundaPaginaAttr', 'hidden <object> on the SECOND page'],
 ];
 
 function main() {
-  const input = path.join(TMP, 'sonda.drawio');
+  const input = path.join(TMP, 'probe.drawio');
   fs.writeFileSync(input, FILE_PATH);
 
   if (!fs.existsSync(DRAWIO)) {
-    console.log(`  draw.io headless ausente em ${DRAWIO} — esta medicao PRECISA do app e nao roda sem ele.`);
-    console.log('  (o resto da suite roda em qualquer maquina; ver premissa 8 do #1)');
+    console.log(`  draw.io headless missing at ${DRAWIO} — this measurement NEEDS the app and does not run without it.`);
+    console.log('  (the rest of the suite runs on any machine; see assumption 8 of #1)');
     return 0;
   }
 
-  // O app morrer nao e falha desta medicao — e a maquina. Nesta aqui, sob
-  // pressao de memoria, o electron e morto sem mensagem e o `execFileSync`
-  // estoura; deixar estourar transforma uma maquina carregada num vermelho que
-  // nao fala do codigo. Duas tentativas, e depois disso a medicao se declara
-  // impossivel em vez de reprovada.
-  const output = path.join(TMP, 'volta.drawio');
-  let bruto = null;
-  for (let tentativa = 1; tentativa <= 2 && bruto === null; tentativa++) {
+  // The app dying is not a failure of this measurement — it is the machine. On
+  // this one, under memory pressure, electron is killed with no message and
+  // `execFileSync` throws; letting it throw turns a loaded machine into a red
+  // that says nothing about the code. Two attempts, and after that the
+  // measurement declares itself impossible rather than failed.
+  const output = path.join(TMP, 'back.drawio');
+  let raw = null;
+  for (let attempt = 1; attempt <= 2 && raw === null; attempt++) {
     try {
       execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, input],
         { stdio: ['ignore', 'ignore', 'ignore'] });
-      bruto = fs.readFileSync(output, 'utf8');
+      raw = fs.readFileSync(output, 'utf8');
     } catch (e) {
-      console.log(`  tentativa ${tentativa}: o app nao exportou (${e.status === undefined ? e.message : 'saiu com ' + e.status}).`);
+      console.log(`  attempt ${attempt}: the app did not export (${e.status === undefined ? e.message : 'exited with ' + e.status}).`);
     }
   }
-  if (bruto === null) {
-    console.log('  O draw.io headless existe mas nao conseguiu exportar — nesta maquina isso e\n' +
-      '  pressao de memoria, nao resultado. Medicao nao realizada.');
+  if (raw === null) {
+    console.log('  draw.io headless exists but could not export — on this machine that is\n' +
+      '  memory pressure, not a result. Measurement not performed.');
     fs.rmSync(TMP, { recursive: true, force: true });
     return 0;
   }
-  const depois = sweep(bruto);
+  const after = sweep(raw);
 
-  console.log('\n  Round-trip pelo codec do proprio draw.io (-x -f xml)\n');
-  console.log('    hospedeiro                              sobreviveu  intacto');
+  console.log("\n  Round-trip through draw.io's own codec (-x -f xml)\n");
+  console.log('    host                                    survived    intact');
   console.log('    ' + '─'.repeat(66));
   const outcome = [];
   for (const [attr, name] of HOSTS) {
-    const finding = locate(depois, attr);
-    const intacto = finding ? finding.valor === LOAD : false;
-    outcome.push({ attr, name, sobreviveu: !!finding, intacto });
-    console.log(`    ${name.padEnd(40)} ${(finding ? 'sim' : 'NAO').padEnd(11)} ${finding ? (intacto ? 'sim' : 'ALTERADO') : '—'}`);
+    const finding = locate(after, attr);
+    const intact = finding ? finding.valor === LOAD : false;
+    outcome.push({ attr, name, survived: !!finding, intact });
+    console.log(`    ${name.padEnd(40)} ${(finding ? 'yes' : 'NO').padEnd(11)} ${finding ? (intact ? 'yes' : 'ALTERED') : '—'}`);
   }
 
-  const mx = acharTodos(depois, 'mxfile')[0];
-  const pages = acharTodos(depois, 'diagram');
+  const mx = acharTodos(after, 'mxfile')[0];
+  const pages = acharTodos(after, 'diagram');
   console.log('');
-  console.log(`    host= voltou como ................. ${JSON.stringify(mx && mx.attrs.host)}`);
-  console.log(`    paginas depois do round-trip ...... ${pages.length}`);
+  console.log(`    host= came back as ................ ${JSON.stringify(mx && mx.attrs.host)}`);
+  console.log(`    pages after the round-trip ........ ${pages.length}`);
 
-  const vencedores = outcome.filter(r => r.sobreviveu && r.intacto);
-  console.log(`\n  ${vencedores.length}/${HOSTS.length} hospedeiros preservam o payload byte a byte.`);
-  for (const r of outcome.filter(r => !r.sobreviveu || !r.intacto))
+  const winners = outcome.filter(r => r.survived && r.intact);
+  console.log(`\n  ${winners.length}/${HOSTS.length} hosts preserve the payload byte for byte.`);
+  for (const r of outcome.filter(r => !r.survived || !r.intact))
     console.log(`    ✗ ${r.name}`);
 
-  // O selo tem de estar num hospedeiro que sobreviveu; e o que a decisao usa.
+  // The seal has to live in a host that survived; that is what the decision uses.
   const chosen = outcome.find(r => r.attr === 'objectAttr');
-  const segunda = outcome.find(r => r.attr === 'segundaPaginaAttr');
+  const second = outcome.find(r => r.attr === 'segundaPaginaAttr');
   console.log('');
-  console.log(`  Decisao: o selo vive em ${chosen.sobreviveu && chosen.intacto ? '<object> oculto — CONFIRMADO' : '??? — o hospedeiro escolhido NAO sobreviveu'}.`);
-  console.log(`  Copia por pagina: ${segunda.sobreviveu && segunda.intacto ? 'viavel — a segunda pagina preserva igual' : 'INVIAVEL — so a primeira pagina preserva'}.`);
+  console.log(`  Decision: the seal lives in ${chosen.survived && chosen.intact ? 'a hidden <object> — CONFIRMED' : '??? — the chosen host did NOT survive'}.`);
+  console.log(`  Copy per page: ${second.survived && second.intact ? 'viable — the second page preserves it the same' : 'NOT VIABLE — only the first page preserves it'}.`);
 
   fs.rmSync(TMP, { recursive: true, force: true });
-  return (chosen.sobreviveu && chosen.intacto) ? 0 : 1;
+  return (chosen.survived && chosen.intact) ? 0 : 1;
 }
 
 process.exit(main());

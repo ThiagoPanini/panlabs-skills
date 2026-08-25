@@ -1,19 +1,20 @@
 'use strict';
 /**
- * A costura entre a camada de sessao e o motor.
+ * The stitch between the session layer and the engine.
  *
- * Sao quatro linhas de codigo e elas sao a prova do ticket #14:
+ * It is four lines of code and they are the proof of ticket #14:
  *
- *   projetar  ->  gerar (o motor, sem saber que existem duas vistas)  ->  selar
+ *   project  ->  generate (the engine, not knowing two views exist)  ->  seal
  *
- * O motor recebe um `model@1` de UMA vista e nao sabe que existem duas. Nao
- * precisou saber: a diferenca entre as vistas foi resolvida antes de ele ser
- * chamado — e continua sendo verdade depois que o motor cresceu com o #12, o #13
- * e o #22, o que e o teste real da tese. `tests/check-engine-untouched.cjs` congela
- * os bytes do motor de PRODUCAO para que a proxima mudanca nele seja deliberada.
+ * The engine receives a `model@1` of ONE view and does not know two exist. It
+ * never needed to: the difference between the views was settled before it was
+ * called — and that stayed true after the engine grew with #12, #13 and #22,
+ * which is the real test of the thesis. `tests/check-engine-untouched.cjs`
+ * freezes the bytes of the PRODUCTION engine so that the next change to it is a
+ * deliberate one.
  *
- * ⚠️ O que MUDOU na recertificacao do #23: `gerar` pode devolver 1+N paginas
- * (consolidada + uma por conta, `D2` do #6). `selar` sela todas.
+ * ⚠️ What CHANGED in the #23 recertification: `generate` may return 1+N pages
+ * (the consolidated one plus one per account, `D2` of #6). `seal` seals them all.
  */
 
 const path = require('path');
@@ -27,8 +28,9 @@ async function draw(session, view, opts = {}) {
   const { model, trilha } = project(session, view);
   const r = await generate(model, opts);
   const xml = sealInto(r.xml, session, view, { engine: opts.engine });
-  // Aviso de uma linha, no padrao do #16: avisa, nunca bloqueia, e nomeia a
-  // saida. Vai no relatorio e nao no stdout porque quem imprime e a CLI.
+  // A one-line warning, in the style of #16: it warns, never blocks, and names
+  // the way out. It goes into the report and not to stdout because printing is
+  // the CLI's job.
   const warning = dossierWarning(session);
   if (warning) r.relatorio.avisos.push(warning);
   return { xml, model, trilha, relatorio: r.relatorio, caminho: r.caminho, tema: r.tema };

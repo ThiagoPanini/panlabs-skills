@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# Renderiza vários .drawio, LIMPANDO o ambiente entre um e outro.
+# Renders several .drawio files, CLEANING the environment between one and the next.
 #
-# A limpeza entre renders não é higiene opcional: um render abortado deixa
-# processo vivo, e o próximo render herda uma máquina saturada e falha por
-# motivo alheio ao arquivo. Sem isso, as medições não são comparáveis.
+# Cleaning between renders is not optional hygiene: an aborted render leaves a
+# live process behind, and the next render inherits a saturated machine and fails
+# for a reason that has nothing to do with the file. Without it, the measurements
+# are not comparable.
 #
 #   tools/render-batch.sh a.drawio b.drawio ...
 set -uo pipefail
-AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-falhou=0
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+failed=0
 
 for d in "$@"; do
-  "$AQUI/clean-render.sh" >/dev/null 2>&1
+  "$HERE/clean-render.sh" >/dev/null 2>&1
   png="${d%.drawio}.png"
-  if "$AQUI/render.sh" "$d" "$png" 2>&1 | tail -3; then :; else falhou=1; fi
+  if "$HERE/render.sh" "$d" "$png" 2>&1 | tail -3; then :; else failed=1; fi
 done
 
-"$AQUI/clean-render.sh" >/dev/null 2>&1
-exit "$falhou"
+"$HERE/clean-render.sh" >/dev/null 2>&1
+exit "$failed"

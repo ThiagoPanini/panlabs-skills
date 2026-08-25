@@ -1,51 +1,51 @@
 'use strict';
 /**
- * O validador geométrico — a fachada.
+ * The geometry validator — the facade.
  *
- *   const { validarGeometria } = require('./validator/validate-geometry.cjs');
- *   const r = validarGeometria(plano);
+ *   const { validateGeometry } = require('./validator/validate-geometry.cjs');
+ *   const r = validateGeometry(layoutPlan);
  *   if (!r.ok) console.error(r.falhas.map(f => f.mensagem));
  *
- * A ordem das famílias é a do §Resumo de prioridade de implementação da rubrica
- * — A3+A4, A1, A5, A7, A2, A6, A8 — e não é decorativa: quem lê o relatório de
- * cima para baixo encontra primeiro as falhas duras e semanticamente graves, e
- * só depois o ajuste fino de limiar mole.
+ * The order of the families is the one from the rubric's §Implementation priority
+ * summary — A3+A4, A1, A5, A7, A2, A6, A8 — and it is not decorative: whoever
+ * reads the report top to bottom meets the hard, semantically grave failures
+ * first, and only then the fine tuning of a soft threshold.
  *
  * ------------------------------------------------------------------------
- * A função é PURA, e isso é a decisão 2 do ticket #18
+ * The function is PURE, and that is decision 2 of ticket #18
  * ------------------------------------------------------------------------
  *
- * O validador é um PORTÃO, não um otimizador. Roda depois de `planejar` e antes
- * de `emitir` — o único ponto do pipeline onde a geometria já existe e o XML
- * ainda não — e devolve um laudo. Ele não reposiciona nada.
+ * The validator is a GATE, not an optimiser. It runs after `plan` and before
+ * `emit` — the only point of the pipeline where the geometry already exists and
+ * the XML does not — and returns a report. It repositions nothing.
  *
- * A tentação é o contrário: detectou sobreposição, mande o layout tentar de
- * novo com outros parâmetros. Contra isso há um argumento e um precedente.
+ * The temptation is the opposite: overlap detected, tell the layout to try again
+ * with other parameters. Against that there is an argument and a precedent.
  *
- *   O argumento: um laço de correção comandado pelo validador é um SEGUNDO
- *   otimizador, competindo com o ELK, sem gradiente e sem função objetivo. As
- *   62 checagens não formam um alvo minimizável — B9 da rubrica é explícito ao
- *   proibir combiná-las num score único, e sem escalar não há o que descer.
- *   Um laço desses ou não converge, ou converge para o que a última checagem
- *   por acaso empurrou.
+ *   The argument: a correction loop driven by the validator is a SECOND
+ *   optimiser, competing with ELK, with no gradient and no objective function.
+ *   The 62 checks do not form a minimisable target — B9 of the rubric is explicit
+ *   in forbidding their combination into a single score, and with no slope there
+ *   is nothing to descend. Such a loop either does not converge, or converges to
+ *   whatever the last check happened to push.
  *
- *   O precedente: o motor JÁ corrige, e no lugar certo. `align.cjs` faz
- *   `temSobreposicao` → `refitar` → `rerrotear` e DESFAZ a passada quando ela
- *   piora. Isso funciona porque acontece dentro do passo que tem os parâmetros
- *   na mão e sabe o que está trocando. O validador não tem nem uma coisa nem
- *   outra: ele vê o resultado, não as alavancas.
+ *   The precedent: the engine ALREADY corrects, and in the right place.
+ *   `align.cjs` does `hasOverlap` → `refit` → `reroute` and UNDOES the pass when
+ *   it makes things worse. That works because it happens inside the step that has
+ *   the parameters in hand and knows what it is trading. The validator has
+ *   neither: it sees the result, not the levers.
  *
- * Então a divisão é: quem corrige é `dispor`/`alinhar`, com o conhecimento
- * local; quem julga é este módulo, sem poder de escrita. Se uma checagem
- * reprovar sistematicamente, o conserto é ensinar a alavanca ao passo que a
- * tem — não dar poder de layout a quem só sabe medir.
+ * So the division is: correcting belongs to `layout`/`align`, with the local
+ * knowledge; judging belongs to this module, with no write power. If a check
+ * fails systematically, the fix is to teach the lever to the step that holds it —
+ * not to give layout power to the one that only knows how to measure.
  */
 
 const path = require('path');
 const { createScene } = require(path.join(__dirname, 'scene.cjs'));
 const { CHECKS, FROM_VALIDATOR, byId } = require(path.join(__dirname, 'index.cjs'));
 
-// A ordem é a do §Resumo de prioridade da rubrica, não a alfabética.
+// The order is the rubric's §Priority summary, not the alphabetical one.
 const FAMILIES = [
   ['A3', require(path.join(__dirname, 'families', 'a3-overlap.cjs'))],
   ['A4', require(path.join(__dirname, 'families', 'a4-grouping.cjs'))],
@@ -59,92 +59,92 @@ const FAMILIES = [
 const extras = require(path.join(__dirname, 'families', 'extras.cjs'));
 
 /**
- * @param {object} plano   o plano do motor (pós-`planejar`, pré-`emitir`)
- * @param {object} [opts]  `{ modelo }` quando o plano não carrega o embutido
- * @returns {{ok, falhas, avisos, resultados, extras, resumo, cena, cobertura}}
+ * @param {object} layoutPlan   the engine plan (post-`plan`, pre-`emit`)
+ * @param {object} [opts]       `{ modelo }` when the plan does not carry the embedded one
+ * @returns {{ok, falhas, avisos, resultados, extras, resumo, scene, cobertura}}
  */
 function validateGeometry(layoutPlan, opts = {}) {
   const scene = createScene(layoutPlan, opts);
 
   const resultados = [];
-  for (const [family, roda] of FAMILIES) {
-    let obtidos;
+  for (const [family, run] of FAMILIES) {
+    let got;
     try {
-      obtidos = roda(scene);
+      got = run(scene);
     } catch (e) {
-      // Uma família que estoura não pode derrubar as outras sete, e muito menos
-      // sair calada: o erro vira falha reportada, com o id da família.
-      obtidos = [{
-        id: family, name: `família ${family}`, family, input: 'geometry',
+      // A family that blows up must not take the other seven down, and much less
+      // go silent: the error becomes a reported failure, carrying the family id.
+      got = [{
+        id: family, name: `family ${family}`, family, input: 'geometry',
         severidadeMaxima: 'fail', semantica: false, calibravel: false,
-        state: 'erro', mensagem: `a família ${family} estourou: ${e.message}`,
+        state: 'erro', mensagem: `family ${family} blew up: ${e.message}`,
         measured: { pilha: String(e.stack || '').split('\n').slice(0, 3) }, occurrences: [],
       }];
     }
-    resultados.push(...obtidos);
+    resultados.push(...got);
   }
 
-  const doValidador = FROM_VALIDATOR.map(c => c.id);
-  const vistos = new Set(resultados.map(r => r.id));
-  const naoRodaram = doValidador.filter(id => !vistos.has(id));
+  const fromValidator = FROM_VALIDATOR.map(c => c.id);
+  const seen = new Set(resultados.map(r => r.id));
+  const naoRodaram = fromValidator.filter(id => !seen.has(id));
 
-  const achadosExtras = extras(scene);
+  const extraFindings = extras(scene);
 
-  const falhas = [...resultados, ...achadosExtras].filter(r => r.state === 'failure' || r.state === 'erro');
-  const avisos = [...resultados, ...achadosExtras].filter(r => r.state === 'warning');
+  const falhas = [...resultados, ...extraFindings].filter(r => r.state === 'failure' || r.state === 'erro');
+  const avisos = [...resultados, ...extraFindings].filter(r => r.state === 'warning');
   const semanticas = falhas.filter(r => r.semantica);
 
-  const account = state => resultados.filter(r => r.state === state).length;
+  const count = state => resultados.filter(r => r.state === state).length;
   const resumo = {
     total: resultados.length,
-    ok: account('ok'),
-    warning: account('warning'),
-    failure: account('failure'),
-    notApplicable: account('notApplicable'),
-    skipped: account('skipped'),
-    erro: account('erro'),
+    ok: count('ok'),
+    warning: count('warning'),
+    failure: count('failure'),
+    notApplicable: count('notApplicable'),
+    skipped: count('skipped'),
+    erro: count('erro'),
     falhas_semanticas: semanticas.length,
-    occurrences: [...resultados, ...achadosExtras].reduce((s, r) => s + r.occurrences.length, 0),
+    occurrences: [...resultados, ...extraFindings].reduce((s, r) => s + r.occurrences.length, 0),
   };
 
   return {
-    // Uma checagem que deveria ter rodado e não rodou reprova o laudo inteiro:
-    // um relatório incompleto que se diz verde é pior que um vermelho.
+    // A check that should have run and did not fails the whole report: an
+    // incomplete report calling itself green is worse than a red one.
     ok: falhas.length === 0 && naoRodaram.length === 0,
     falhas, avisos, semanticas,
-    resultados, extras: achadosExtras, resumo, scene,
-    cobertura: { esperadas: doValidador.length, rodaram: doValidador.length - naoRodaram.length, naoRodaram },
+    resultados, extras: extraFindings, resumo, scene,
+    cobertura: { esperadas: fromValidator.length, rodaram: fromValidator.length - naoRodaram.length, naoRodaram },
   };
 }
 
 const SYMBOL = { ok: '✓', warning: '⚠', failure: '✗', notApplicable: '·', skipped: '↷', erro: '‼' };
 
-/** O laudo em texto. `opts.tudo` mostra também o que passou. */
+/** The report as text. `opts.all` also shows what passed. */
 function format(r, opts = {}) {
-  const linhas = [];
+  const lines = [];
   const show = x => opts.all || ['failure', 'warning', 'erro'].includes(x.state);
 
-  let familiaAtual = null;
+  let currentFamily = null;
   for (const x of [...r.resultados, ...r.extras]) {
     if (!show(x)) continue;
-    if (x.family !== familiaAtual) { linhas.push(''); familiaAtual = x.family; }
-    const marca = x.semantica && x.state === 'failure' ? '  ← falha semântica' : '';
-    linhas.push(`  ${SYMBOL[x.state] || '?'} ${x.id.padEnd(5)} ${x.name}${marca}`);
-    if (x.mensagem) linhas.push(`        ${x.mensagem}`);
-    for (const o of x.occurrences.slice(0, opts.occurrences || 5)) linhas.push(`        · ${o.o_que}`);
+    if (x.family !== currentFamily) { lines.push(''); currentFamily = x.family; }
+    const mark = x.semantica && x.state === 'failure' ? '  ← semantic failure' : '';
+    lines.push(`  ${SYMBOL[x.state] || '?'} ${x.id.padEnd(5)} ${x.name}${mark}`);
+    if (x.mensagem) lines.push(`        ${x.mensagem}`);
+    for (const o of x.occurrences.slice(0, opts.occurrences || 5)) lines.push(`        · ${o.o_que}`);
     if (x.occurrences.length > (opts.occurrences || 5))
-      linhas.push(`        · … e mais ${x.occurrences.length - (opts.occurrences || 5)}`);
+      lines.push(`        · … and ${x.occurrences.length - (opts.occurrences || 5)} more`);
   }
 
   const s = r.resumo;
-  linhas.push('');
-  linhas.push(`  ${s.total} checagens: ${s.ok} ok · ${s.warning} aviso · ${s.failure} falha · ` +
-    `${s.notApplicable} inaplicável · ${s.skipped} do render${s.erro ? ` · ${s.erro} erro` : ''}`);
+  lines.push('');
+  lines.push(`  ${s.total} checks: ${s.ok} ok · ${s.warning} warning · ${s.failure} failure · ` +
+    `${s.notApplicable} not applicable · ${s.skipped} from render${s.erro ? ` · ${s.erro} error` : ''}`);
   if (r.cobertura.naoRodaram.length)
-    linhas.push(`  ‼ ${r.cobertura.naoRodaram.length} checagem(ns) do validador não rodaram: ${r.cobertura.naoRodaram.join(', ')}`);
+    lines.push(`  ‼ ${r.cobertura.naoRodaram.length} validator check(s) did not run: ${r.cobertura.naoRodaram.join(', ')}`);
   if (s.falhas_semanticas)
-    linhas.push(`  ✗ ${s.falhas_semanticas} falha(s) SEMÂNTICA(s) — o desenho afirma o que o modelo nega`);
-  return linhas.join('\n');
+    lines.push(`  ✗ ${s.falhas_semanticas} SEMANTIC failure(s) — the drawing asserts what the model denies`);
+  return lines.join('\n');
 }
 
 module.exports = { validateGeometry, format, byId };

@@ -2,48 +2,32 @@
 
 ## O código é em inglês, a prosa é português
 
-**Todo artefato de código aqui é inglês** — nome de arquivo, nome de diretório,
-identificador, variável, função, comentário, e mensagem que o programa imprime.
-Idioma misto produz identificador híbrido (`checkEsquemaUnico`, `RAIZ`,
-`--conferir`), e aí a fronteira entre os dois idiomas deixa de morar numa camada e
-passa a morar em cada assinatura.
+**Todo artefato de código aqui é inglês** — nome de arquivo, nome de diretório, identificador, variável, função, comentário, e mensagem que o programa imprime. Idioma misto produz identificador híbrido (`checkEsquemaUnico`, `RAIZ`, `--conferir`), e aí a fronteira entre os dois idiomas deixa de morar numa camada e passa a morar em cada assinatura.
 
-**Prosa não é código.** Mensagem de commit, ticket, PR, ADR, este arquivo e
-`docs/agents/` são português.
+**Prosa não é código.** Mensagem de commit, ticket, PR, ADR, este arquivo e `docs/agents/` são português.
 
 Escapa uma coisa só: **interface alheia, grafada como o dono a grafa.**
 
-> **Dívida conhecida, e ela é grande.** A árvore de `skills/panlabs-aws-diagrams/`
-> nasceu mista — `tests/`, `tools/`, `catalog/`, `docs/` e `agents/` em inglês;
-> `modelo/`, `motor/`, `sessao/`, `tema/`, `guia/` e `validador/` em português, com
-> 81 dos 539 arquivos rastreados sob eles, mais os nomes portugueses dentro dos
-> diretórios ingleses (`rodar.sh`, `check-arco.cjs`, `check-lacunas.cjs`). A regra
-> **vale para código novo a partir de agora**; a conversão do que existe é um
-> `movimento-de-terra` (ver `docs/agents/workflow.md`) e por isso roda sozinha,
-> depois que a fila atual esvaziar.
+> **Dívida conhecida, e ela é grande.** A árvore de `skills/panlabs-aws-diagrams/` nasceu mista — `tests/`, `tools/`, `catalog/`, `docs/` e `agents/` em inglês; `modelo/`, `motor/`, `sessao/`, `tema/`, `guia/` e `validador/` em português, com 81 dos 539 arquivos rastreados sob eles, mais os nomes portugueses dentro dos diretórios ingleses (`rodar.sh`, `check-arco.cjs`, `check-lacunas.cjs`). A regra **vale para código novo a partir de agora**; a conversão do que existe é um `movimento-de-terra` (ver `docs/agents/workflow.md`) e por isso roda sozinha, depois que a fila atual esvaziar.
+
+## Markdown não leva quebra de linha rígida
+
+**Parágrafo, item de lista e citação são cada um UMA linha física**, por mais longos que fiquem. Não quebre prosa em 80, 90 ou qualquer coluna.
+
+A quebra gravada no arquivo não aparece para quem lê — o renderizador rearranja tudo de novo. Ela só aparece nas duas horas em que atrapalha: quando alguém vai **editar a frase** e quando alguém vai **ler o diff**, onde um ajuste de uma palavra repinta o parágrafo inteiro de vermelho e verde e esconde o que de fato mudou.
+
+Vale para todo `.md` deste repo **e para corpo de issue, comentário e PR** — o mesmo texto, o mesmo problema. Bloco de código, tabela, título e regra horizontal não são prosa: ficam exatamente como estão.
 
 ## Sessões paralelas — leia antes da primeira escrita
 
-Várias sessões trabalham aqui ao mesmo tempo, um ticket cada. A doutrina inteira
-está em [`docs/agents/workflow.md`](docs/agents/workflow.md); estas quatro regras
-são as que você precisa **antes** de editar qualquer coisa.
+Várias sessões trabalham aqui ao mesmo tempo, um ticket cada. A doutrina inteira está em [`docs/agents/workflow.md`](docs/agents/workflow.md); estas quatro regras são as que você precisa **antes** de editar qualquer coisa.
 
-- **Declare o território primeiro.** `gh issue edit <n> --add-assignee @me`, e um
-  comentário com os caminhos que o ticket **possui** e os que ele só **acrescenta**.
-  Dois tickets cujas posses se cruzam não rodam ao mesmo tempo — pegue outro ticket.
-- **Rode a união antes de aterrissar.** `scripts/check-union.sh` compara o seu
-  diff com o que entrou na `origin/main` enquanto você trabalhava. O git só reprova
-  uma das quatro colisões de trabalho paralelo; as outras três mergeiam verdes, e é
-  essa régua que as pega. (`scripts/check-union.proof.sh` prova que ela mede.)
-- **Registro é append-only.** `SKILL.md`, `tests/rodar.sh` e este arquivo são listas
-  ordenadas — acrescente no **fim** da seção, nunca no meio.
-- **Ticket que move ou apaga caminho rastreado roda sozinho** (rótulo
-  `movimento-de-terra`). Nada mais aterrissa enquanto ele estiver aberto.
+- **Declare o território primeiro.** `gh issue edit <n> --add-assignee @me`, e um comentário com os caminhos que o ticket **possui** e os que ele só **acrescenta**. Dois tickets cujas posses se cruzam não rodam ao mesmo tempo — pegue outro ticket.
+- **Rode a união antes de aterrissar.** Compare o seu diff com o que entrou na `origin/main` enquanto você trabalhava — os dois `git diff --name-only` estão em [`docs/agents/workflow.md`](docs/agents/workflow.md). O git só reprova uma das quatro colisões de trabalho paralelo; as outras três mergeiam verdes, e essa comparação é o que as pega.
+- **Registro é append-only.** `SKILL.md`, `tests/rodar.sh` e este arquivo são listas ordenadas — acrescente no **fim** da seção, nunca no meio.
+- **Ticket que move ou apaga caminho rastreado roda sozinho** (rótulo `movimento-de-terra`). Nada mais aterrissa enquanto ele estiver aberto.
 
-**Terminar é o código estar na `main`** — não numa branch, não num PR aberto: união
-verde → suíte da skill verde contra o rebase → `gh pr merge --squash` → o commit
-aparecendo em `git log origin/main`. A `main` local nunca recebe commit; ela só
-fast-forwarda.
+**Terminar é o código estar na `main`** — não numa branch, não num PR aberto: união verde → suíte da skill verde contra o rebase → `gh pr merge --squash` → o commit aparecendo em `git log origin/main`. A `main` local nunca recebe commit; ela só fast-forwarda.
 
 ## Agent skills
 
@@ -63,5 +47,4 @@ Single-context — `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agen
 
 Território, a régua da união, e a aterrissagem na `main`. See `docs/agents/workflow.md`.
 
-_(As três seções acima estão em inglês porque são gabaritos herdados. A prosa deste
-repo é português — ver `docs/agents/workflow.md`; traduzi-las é dívida conhecida.)_
+_(As três seções acima estão em inglês porque são gabaritos herdados. A prosa deste repo é português — ver `docs/agents/workflow.md`; traduzi-las é dívida conhecida.)_

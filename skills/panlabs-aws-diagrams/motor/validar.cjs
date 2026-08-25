@@ -81,9 +81,20 @@ function contraEsquema(dado, esq, raiz, caminho = '') {
         if (k in dado) erros.push(...contraEsquema(dado[k], sub, raiz, caminho ? `${caminho}.${k}` : k));
     }
 
+    // `patternProperties` — chave que casa com um padrão vale como declarada, e o
+    // valor dela é validado contra o sub-esquema do padrão. Sem isto, um esquema
+    // fechado só sabe ENUMERAR, e enumerar comentário livre é contradição: foi o
+    // que reprovou `_conferir` num artefato de caso que o `_`, `_reparenta` e
+    // `_refina` da lista não cobriam.
+    const padroes = Object.entries(esq.patternProperties || {}).map(([p, sub]) => [new RegExp(p), sub]);
+    for (const [re, sub] of padroes)
+      for (const k of Object.keys(dado))
+        if (re.test(k) && !(esq.properties && k in esq.properties))
+          erros.push(...contraEsquema(dado[k], sub, raiz, caminho ? `${caminho}.${k}` : k));
+
     if (esq.additionalProperties === false && esq.properties) {
       for (const k of Object.keys(dado))
-        if (!(k in esq.properties) && !RESERVADO.has(k))
+        if (!(k in esq.properties) && !RESERVADO.has(k) && !padroes.some(([re]) => re.test(k)))
           erros.push(`${onde}: propriedade desconhecida "${k}"` + sugestao(k, Object.keys(esq.properties)));
     }
   }

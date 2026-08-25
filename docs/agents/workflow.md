@@ -7,9 +7,10 @@ e como cada uma termina com o seu código na `main`.
 /wayfinder  →  /to-spec  →  /to-tickets  →  território  →  worktree  →  união verde  →  PR  →  main
 ```
 
-Prosa aqui é português — ticket, commit, ADR e `docs/agents/`. É a língua de tudo
-que o autor deste repo escreveu; os três arquivos em inglês ao lado deste são
-gabaritos herdados, não convenção.
+**Este arquivo é prosa, e prosa aqui é português.** Código é inglês — nome de
+arquivo, identificador, comentário e mensagem impressa. A regra inteira, com a
+dívida que ela declara, está no `CLAUDE.md` § O código é em inglês. É por isso que
+`scripts/check-union.sh` tem nome e saída em inglês enquanto este documento não.
 
 ## As quatro colisões, e o git só vê uma
 
@@ -60,33 +61,36 @@ própria árvore; ninguém rodou a união. E o conserto tem a mesma forma: fazer
 união rodar, no único lugar onde as duas árvores existem, **antes** da segunda
 aterrissar.
 
-`scripts/conferir-uniao.sh` é isso. Ele não descobre nada que um humano não pudesse
+`scripts/check-union.sh` é isso. Ele não descobre nada que um humano não pudesse
 ver — descobre **antes do merge**, que é a única diferença que importa depois que
 ele aconteceu. Rodado agora, nesta branch:
 
-```
-$ scripts/conferir-uniao.sh
-════ a união · skill/q25 × origin/main ════
-   base 3718c38 · o outro lado andou 12 commit(s), 379 arquivo(s)
+Ele aceita **duas** refs — `check-union.sh [DELES] [MEU]`, com `MEU` valendo `HEAD`
+— e é isso que deixa a pergunta *estas duas branches abertas colidem?* ser feita de
+uma terceira branch, que é de onde ela normalmente se faz. Rodado assim contra os
+dois PRs abertos hoje, #48 e #52:
 
-── interseção (o mesmo arquivo dos dois lados)
-   ✗ 3 arquivo(s):
-       skills/panlabs-aws-diagrams/motor/gerar.cjs
-       skills/panlabs-aws-diagrams/motor/planejar.cjs
-       skills/panlabs-aws-diagrams/tests/motor.manifesto.json
 ```
+$ scripts/check-union.sh origin/issue-36-registro-fora-da-skill origin/issue-37-quatro-contratos
+==== the union . origin/issue-37-quatro-contratos x origin/issue-36-registro-fora-da-skill ====
+   base c70ec0e . the other side moved 2 commit(s), 20 file(s)
 
-Ele aceita uma segunda ref (`scripts/conferir-uniao.sh <outra-branch>`), e aí
-responde a outra pergunta com a mesma conta: *estas duas branches abertas colidem?*
+-- overlap (the same file from both sides)
+   x 1 file(s):
+       skills/panlabs-aws-diagrams/SKILL.md
+
+UNION RED - the clean merge would lie.
+```
 
 **E ele prova que mede antes de ser usado como régua.**
-`scripts/conferir-uniao.prova.sh` planta as três colisões num repo descartável e
-exige vermelho em cada uma, mais um controle de território disjunto que tem de
-passar. As três checagens passariam por vacuidade se a consulta estivesse errada, e
-nenhuma delas dispara na árvore real com frequência suficiente para ser vista
-falhar por acidente — checagem só vista verde é documentação. O caso da interseção
-ainda assevera a premissa: **o git mergeia aquele par sem conflito**, e é por isso
-que a régua precisa existir.
+`scripts/check-union.proof.sh` planta as três colisões num repo descartável e exige
+vermelho em cada uma, mais um controle de território disjunto que tem de passar e o
+modo de duas refs medido de uma terceira branch — cinco casos, cinco verdes. As
+três checagens passariam por vacuidade se a consulta estivesse errada, e nenhuma
+delas dispara na árvore real com frequência suficiente para ser vista falhar por
+acidente — **checagem só vista verde é documentação**. O caso da interseção ainda
+assevera a premissa antes de medir: *o git mergeia aquele par sem conflito* — e é
+por isso que a régua precisa existir.
 
 ## Um ticket, um worktree, uma branch
 
@@ -120,12 +124,12 @@ acréscimo: skills/panlabs-aws-diagrams/SKILL.md, skills/panlabs-aws-diagrams/te
 | **fora** | tudo que não foi declarado. Encostou? É quebra de escopo: pare e diga. |
 
 **Dois tickets cujas posses se cruzam não rodam ao mesmo tempo.** Essa é a regra
-que resolve o problema; o `conferir-uniao.sh` é a rede embaixo dela. Antes de abrir
+que resolve o problema; o `check-union.sh` é a rede embaixo dela. Antes de abrir
 a sessão, olhe quem já está de pé:
 
 ```bash
 gh issue list --state open --label ready-for-agent --json number,title,assignees,comments
-scripts/conferir-uniao.sh <branch-da-outra-sessão>    # se a outra já tem branch
+scripts/check-union.sh <branch-da-outra-sessão>    # se a outra já tem branch
 ```
 
 Achou cruzamento? **Não negocie o diff — pegue outro ticket.** A fila tem treze.
@@ -182,7 +186,7 @@ exatamente no check que ele deveria fazer falhar.
 O requisito é que **toda implementação termine com o código na `main`** — não numa
 branch, não num PR aberto.
 
-1. `scripts/conferir-uniao.sh` — verde. Vermelho? `git rebase origin/main`, e de novo.
+1. `scripts/check-union.sh` — verde. Vermelho? `git rebase origin/main`, e de novo.
 2. `skills/<skill>/tests/rodar.sh` — verde **contra o resultado do rebase**, não contra a sua branch.
 3. `gh pr create --fill --draft` no primeiro push; o corpo se escreve no fim, por quem tem o ticket na mão. `gh pr create` não é idempotente — a guarda é `gh pr list --head "$BRANCH" --state open`.
 4. `gh pr ready` e `gh pr merge --squash`. Squash porque a `main` guarda **um commit por ticket**: é o que torna um revert uma operação e não uma arqueologia.
@@ -207,6 +211,59 @@ trabalho, e o histórico já guarda os dois nomes que essa prática deixa:
 `a2a08ae Reconcilia com o PR #29, que mergeou a mesma branch na origin` e
 `331b61c Traz para a main os 9 commits do #26 que ficaram na branch`.
 
+## A primeira rodada não seguiu isto, e é ela que calibra as regras
+
+Treze minutos de 2026-08-25, e os quatro PRs da manhã:
+
+| hora | PR | branch | o que aconteceu |
+| --- | --- | --- | --- |
+| 11:28 | #48 | `issue-36-registro-fora-da-skill` | aberto |
+| 11:31 | #49 | `feat/33-caixa-de-folha-mede-rotulo` | aberto **e mergeado 32 s depois** |
+| 11:38 | #51 | `issue-50-doutrina-trabalho-paralelo` | este documento, aberto |
+| 11:41 | #52 | `issue-37-quatro-contratos` | aberto como draft |
+
+**Não seguiram, e não tinham como.** #48 e #49 são anteriores a este arquivo; o #52
+veio quatro minutos depois dele — mas o #51 ainda está aberto. **Doutrina que não
+está na `main` não está em vigor**, e a regra que este documento grava sobre si
+mesmo é a que ele grava sobre todo mundo: terminar é estar na `main`.
+
+Território declarado: **nenhum**. As issues #36 e #37 não têm um comentário sequer.
+O #49 estreou um quinto esquema de nome de branch (`feat/33-…`) e foi mergeado 32
+segundos depois de aberto — menos tempo do que a suíte da skill leva para rodar.
+
+E o que a régua mede nos três, agora:
+
+| par | interseção | o git | a regra que ela toca |
+| --- | --- | --- | --- |
+| #48 × #52 | `SKILL.md` | mergeia limpo | registro append-only |
+| #48 × `main` | `tests/motor.manifesto.json` | mergeia limpo | derivado se regenera |
+| #52 × `main` | `tests/rodar.sh` | mergeia limpo | registro append-only |
+
+Três interseções, três regras deste arquivo, uma para cada — **as regras foram
+escritas contra o que a primeira rodada de fato fez**, e não contra um risco
+imaginado.
+
+### E a união, rodada de verdade, deu verde
+
+A árvore mergeada de #48 com a `main` foi materializada e a suíte inteira rodou
+contra ela: **43 checks, 43 verdes**, camada 7 inclusive. O manifesto derivado
+sobreviveu porque #49 mexeu em `gerar/planejar/resolver` e #48 em `dispor` — linhas
+independentes. Isso é resultado, não alívio: foi **sorte de linha**, e duas branches
+que tocassem o mesmo `.cjs` produziriam um manifesto verde apontando para um motor
+que não existe. A regra continua sendo regenerar, e não conferir se deu certo desta
+vez.
+
+**Mas repare no que esse verde não cobre.** A colisão que sobra — #48 × #52 em
+`SKILL.md` — é **invisível para os 43**: a única ocorrência da string `SKILL.md` em
+toda a árvore de `tests/` é um comentário no cabeçalho do `check-arco.cjs`. A suíte
+mede o motor; o `SKILL.md` é a porta de entrada da skill, o único arquivo que todo
+ticket edita, e **nada o verifica**.
+
+É exatamente por isso que a régua da união não é a suíte com outro nome. A suíte
+responde *o motor ainda funciona?*; a união responde *duas edições que ninguém leu
+juntas viraram um documento coerente?*. Rodar só a primeira e concluir que está
+tudo bem é a lição do #23 acontecendo de novo, um andar acima.
+
 ## Duas armadilhas de worktree
 
 - **O stash é compartilhado** entre todos os worktrees, e outra sessão pode estar
@@ -229,5 +286,5 @@ preço, e o preço é exatamente este — **a única coisa que roda a união é 
 rodar.**
 
 **O gatilho para reabrir**, se um dia doer mais do que o portão custaria: dois
-merges verdes que quebraram a árvore no mesmo mês. Aí `conferir-uniao.sh` mais a
+merges verdes que quebraram a árvore no mesmo mês. Aí `check-union.sh` mais a
 suíte da skill viram um workflow de PR, e esta seção vira ADR.

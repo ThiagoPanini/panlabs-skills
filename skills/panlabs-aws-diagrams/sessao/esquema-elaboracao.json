@@ -5,6 +5,12 @@
   "description": "NÃO é um segundo modelo. É o que a fase técnica ACRESCENTA ao `sessao@1` que a sessão anterior aprovou — sessao/elaborar.cjs aplica este delta e devolve outro `sessao@1`. Nenhum campo daqui alcança um casaco lógico: a fase técnica não inventa capacidade, e essa regra é gramática (esquema fechado), não disciplina de quem escreve. A forma está descrita em guia/modelo.md; o corpus tem dois exemplos completos em modelo/sessao/*-elaboracao.json.\n\nOs mapas (`casacos`, `dentro`, `refina`, `arestasCasaco`) ficam com valor `object` solto: as chaves são ids de nó/aresta aprovados, imprevisíveis aqui. A forma de cada valor — em particular a de um casaco técnico — é validada de novo, junto com o resto do modelo fundido, por sessao/validar.cjs contra `sessao@1` (que TEM `casacoTecnico` fechado). Duplicar aquele fechamento aqui seria uma terceira cópia da mesma decisão — e cada cópia é mais um lugar para as três divergirem em silêncio, que é a classe de defeito que este próprio ticket existe para fechar (ver tests/check-paridade-tecnica.cjs).",
   "type": "object",
   "additionalProperties": false,
+  "patternProperties": {
+    "^_": {
+      "type": "string",
+      "description": "Comentário livre, em QUALQUER chave iniciada por `_`. elaborar.cjs não lê nenhuma delas. Isto é padrão e não lista de propósito: a versão anterior enumerava as quatro que existiam dentro da skill e reprovava `_conferir`, que só aparecia num artefato de caso fora dela — o esquema foi escrito a partir do que dava para ver, e o que não dava para ver quebrou. Comentário livre não tem vocabulário fechado; se tivesse, não seria livre."
+    }
+  },
   "required": ["esquema", "sobre"],
   "properties": {
     "esquema": { "const": "panlabs-aws-diagrams/elaboracao@1" },

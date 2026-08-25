@@ -1,0 +1,63 @@
+# THE CONVEYOR -- the gate run by the server instead of by whoever remembered.
+#
+# ONE IMPLEMENTATION, TWO DOORS. Nothing here reimplements a check. This file
+# calls `scripts/check-skills.sh`, the same command anyone runs on their own
+# machine, and `scripts/check-skills.proof.sh`, the same proof. The day the
+# server and the workstation disagree is the day the gate measures something
+# nobody can reproduce locally -- and the only way to reach that day is to let a
+# rule be written twice. So it is written once, here and there.
+#
+# WHY EVERY PUSH AND EVERY PULL REQUEST, and not pull requests alone. The house
+# doctrine ends work on `main`; nothing stops a direct push there, and a
+# conveyor wired to pull requests only would leave that road unmeasured. On
+# `main` a red run blocks nothing -- the commit already landed -- but it is loud,
+# and loud is the entire point.
+#
+# The two triggers overlap on a branch that has a pull request open, and the
+# duplicate is deliberate: they do not measure the same tree. A `push` run
+# checks out what was pushed. A `pull_request` run checks out the MERGE RESULT,
+# which is what would actually land. A branch that is green on its own and red
+# once merged is exactly the failure this repository keeps writing down, and
+# only the second run can see it.
+#
+# WHY THE PROOF RIDES ALONG. A check that has only ever been seen green is
+# documentation -- that sentence is the load-bearing beam of `scripts/proof.sh`,
+# and it does not stop being true one floor up. A proof no server ever runs is
+# itself only ever seen green. Both jobs are gates; there is no warning tier
+# here, the same as everywhere else in this harness.
+name: skills
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    # This name is the required status check on `main`. Renaming the job renames
+    # the check, and the branch ruleset goes on waiting for a context that no
+    # longer reports -- which reads, in the merge box, as a gate that never
+    # finishes rather than one that was turned off.
+    name: check-skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: the rules in force
+        run: scripts/check-skills.sh --list
+
+      - name: every skill against every family
+        run: scripts/check-skills.sh
+
+  proof:
+    name: check-skills-proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: every planted defect must turn red
+        run: scripts/check-skills.proof.sh

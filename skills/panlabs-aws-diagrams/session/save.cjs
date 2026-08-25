@@ -21,7 +21,7 @@
  * Duas paginas em vez de dois arquivos e o mesmo argumento um nivel acima.
  *
  * O modelo e escrito em TODA pagina, nao so na primeira. Custa bytes (medido em
- * `tools/medir-hospedeiro.cjs`) e compra uma coisa concreta: apagar uma pagina e
+ * `tools/measure-host.cjs`) e compra uma coisa concreta: apagar uma pagina e
  * a operacao mais banal do mundo no draw.io, e com uma copia so ela apaga a
  * sessao inteira junto. Copias divergentes viram, elas proprias, sinal de
  * divergencia na leitura.
@@ -34,18 +34,18 @@
 
 const path = require('path');
 
-const MOTOR_DIR = path.join(__dirname, '..', 'motor');
-const { esc, conferirXml } = require(path.join(MOTOR_DIR, 'emitir.cjs'));
-const { impressaoSemantica, impressaoDeAparencia, reescreverSelos } = require('./impressao.cjs');
+const MOTOR_DIR = path.join(__dirname, '..', 'engine');
+const { esc, conferirXml } = require(path.join(MOTOR_DIR, 'emit.cjs'));
+const { impressaoSemantica, impressaoDeAparencia, reescreverSelos } = require('./fingerprint.cjs');
 
-/** Marca de reconhecimento. Ver `abrir.cjs` para por que nao basta o `host`. */
-const ESQUEMA_SELO = 'panlabs-aws-diagrams/sessao@1';
+/** Marca de reconhecimento. Ver `open.cjs` para por que nao basta o `host`. */
+const ESQUEMA_SELO = 'panlabs-aws-diagrams/session@1';
 
 /**
  * Quem desenhou. Era `'q11'` — o nome do PROTOTIPO — enquanto o motor morava
  * dentro de `prototypes/`. Na arvore de producao o motor nao tem mais numero de
  * ticket: ele e o motor, e o que o selo precisa dizer e "foi este binario", nao
- * "foi o experimento tal". O `abrir.cjs` usa este campo so para explicar
+ * "foi o experimento tal". O `open.cjs` usa este campo so para explicar
  * divergencia geometrica que nao veio de edicao humana.
  */
 const MOTOR = 'panlabs-aws-diagrams/motor@1';
@@ -53,12 +53,12 @@ const MOTOR = 'panlabs-aws-diagrams/motor@1';
 /**
  * Troca a celula de metadados que o motor do #11 emitiu pelo selo da sessao.
  *
- * O motor grava ali o `modelo@1` que ele proprio recebeu — que, aqui, e uma
+ * O motor grava ali o `model@1` que ele proprio recebeu — que, aqui, e uma
  * PROJECAO. Guardar a projecao seria guardar a saida em vez da fonte: a sessao
  * seguinte precisa do modelo de sessao, com os dois casacos e o dossie, ou nao
  * ha o que retomar.
  */
-function selar(xml, sessao, vista, opts = {}) {
+function selar(xml, sessao, view, opts = {}) {
   /**
    * ⚠️ UMA CHAMADA DO MOTOR PODE DEVOLVER N PAGINAS — e ate a recertificacao do
    * #23 esta funcao dizia `selar espera uma pagina, veio N` e morria.
@@ -76,17 +76,17 @@ function selar(xml, sessao, vista, opts = {}) {
    * detalhe, nao a consolidada.
    *
    * As IMPRESSOES sao por pagina, nao do arquivo: elas respondem "o humano mexeu
-   * NESTA pagina?", e o `abrir.cjs` ja classificava pagina a pagina.
+   * NESTA pagina?", e o `open.cjs` ja classificava pagina a pagina.
    */
   // O motor emite a celula do modelo por ultimo em CADA pagina, na mesma ordem
   // das paginas — entao a n-esima ocorrencia e a da n-esima pagina. Quem anda
   // pelas ocorrencias, confere a contagem e o XML de volta e `reescreverSelos`
-  // (impressao.cjs); a armadilha do #19 — XML mal formado renderiza TRUNCADO com
+  // (fingerprint.cjs); a armadilha do #19 — XML mal formado renderiza TRUNCADO com
   // codigo 0 — esta guardada la, e o selo e justamente o lugar onde texto
   // arbitrario do usuario entra num atributo.
   return reescreverSelos(xml, p => ({
     panlabsEsquema: ESQUEMA_SELO,
-    panlabsVista: vista,
+    panlabsVista: view,
     panlabsSemantica: impressaoSemantica(p.celulas),
     panlabsAparencia: impressaoDeAparencia(p.celulas),
     panlabsMotor: opts.motor || MOTOR,
@@ -99,7 +99,7 @@ function selar(xml, sessao, vista, opts = {}) {
  *
  * Cada entrada chega de uma execucao independente do motor. Costurar aqui em vez
  * de ensinar o motor a servir as duas vistas e de proposito: o motor renderiza
- * UMA vista, e quem sabe que existem duas e esta camada. Ver `projetar.cjs`.
+ * UMA vista, e quem sabe que existem duas e esta camada. Ver `project.cjs`.
  *
  * ⚠️ Uma execucao NAO e mais uma pagina. Desde o #12 a vista tecnica de um modelo
  * multi-conta ja chega aqui com 1+N `<diagram>` dentro — a consolidada mais uma
@@ -110,9 +110,9 @@ function selar(xml, sessao, vista, opts = {}) {
  */
 function costurar(xmlsPorPagina, opts = {}) {
   const diagramas = xmlsPorPagina.flatMap(xml => {
-    const achados = [...xml.matchAll(/[ \t]*<diagram\b[\s\S]*?<\/diagram>/g)].map(m => m[0]);
-    if (!achados.length) throw new Error('XML sem <diagram> para costurar');
-    return achados;
+    const findings = [...xml.matchAll(/[ \t]*<diagram\b[\s\S]*?<\/diagram>/g)].map(m => m[0]);
+    if (!findings.length) throw new Error('XML sem <diagram> para costurar');
+    return findings;
   });
 
   const ids = diagramas.map(d => /<diagram id="([^"]*)"/.exec(d)?.[1]);

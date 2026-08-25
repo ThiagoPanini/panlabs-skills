@@ -26,10 +26,10 @@ const MAX_PASSES = 4;
 
 /** Índice plano da saída do ELK, com posição absoluta e ponteiro para o pai. */
 function indexar(saida) {
-  const nos = new Map();
+  const nodes = new Map();
   (function andar(n, paiId, ox, oy) {
     for (const c of n.children || []) {
-      nos.set(c.id, {
+      nodes.set(c.id, {
         no: c, paiId,
         x: ox + c.x, y: oy + c.y, w: c.width, h: c.height,
         folha: !(c.children && c.children.length),
@@ -37,16 +37,16 @@ function indexar(saida) {
       andar(c, c.id, ox + c.x, oy + c.y);
     }
   })(saida, null, 0, 0);
-  return nos;
+  return nodes;
 }
 
 const cy = r => r.y + r.h / 2;
 
 /** Irmãos que compartilham a mesma coluna (mesmo x) dentro do mesmo pai. */
-function coluna(nos, alvo) {
-  const a = nos.get(alvo);
+function coluna(nodes, target) {
+  const a = nodes.get(target);
   const out = [];
-  for (const [id, r] of nos) if (r.paiId === a.paiId && r.folha && Math.abs(r.x - a.x) < 1) out.push(id);
+  for (const [id, r] of nodes) if (r.paiId === a.paiId && r.folha && Math.abs(r.x - a.x) < 1) out.push(id);
   return out;
 }
 
@@ -61,7 +61,7 @@ function coluna(nos, alvo) {
  * `cy(u) − cy(v)` e é negativo com a mesma frequência — aí a coluna sobe, e
  * subir sem guarda passa por cima da faixa de título do container.
  *
- * O `eventos-fanout` do corpus do #26 faz exatamente isso: três encaixes
+ * O `events-fanout` do corpus do #26 faz exatamente isso: três encaixes
  * seguidos de −13, −27 e −6 px empurram a coluna das filas mortas 46 px acima do
  * lugar dela, e `dlq-estoque` acaba 7 px ACIMA do topo da própria região. O
  * desenho passa a afirmar que a fila morta não está na região — que é `A4.4`,
@@ -74,9 +74,9 @@ function coluna(nos, alvo) {
  * crescer resolve quem passa do pé, nunca quem sai pelo topo.
  */
 function temSobreposicao(saida, paddings) {
-  const nos = indexar(saida);
+  const nodes = indexar(saida);
   const porPai = new Map();
-  for (const [id, r] of nos) {
+  for (const [id, r] of nodes) {
     if (!porPai.has(r.paiId)) porPai.set(r.paiId, []);
     porPai.get(r.paiId).push({ id, ...r });
   }
@@ -87,7 +87,7 @@ function temSobreposicao(saida, paddings) {
         if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) return `${a.id}×${b.id}`;
       }
     if (paiId === null) continue;
-    const p = nos.get(paiId);
+    const p = nodes.get(paiId);
     const pad = paddings.get(paiId) || { top: 0, left: 0, bottom: 0, right: 0 };
     for (const c of irmaos) {
       if (c.y + c.h > p.y + p.h - pad.bottom + 0.5) return `${c.id} estoura ${paiId}`;
@@ -134,12 +134,12 @@ function alinhar(saida, paddings) {
   const aplicados = [], desfeitos = [];
 
   for (let passe = 0; passe < MAX_PASSES; passe++) {
-    const nos = indexar(saida);
+    const nodes = indexar(saida);
 
     // candidatos: aresta entre duas folhas, quase alinhadas, em colunas distintas
     const cands = [];
     for (const e of saida.edges || []) {
-      const u = nos.get(e.sources[0]), v = nos.get(e.targets[0]);
+      const u = nodes.get(e.sources[0]), v = nodes.get(e.targets[0]);
       if (!u || !v || !u.folha || !v.folha) continue;
       if (Math.abs(u.x - v.x) < 1) continue;                 // mesma coluna: não é faixa
       const delta = cy(u) - cy(v);
@@ -150,9 +150,9 @@ function alinhar(saida, paddings) {
     const { e, delta } = cands[0];
 
     // mover a coluna inteira do alvo, preservando os vãos internos dela
-    const alvos = coluna(nos, e.targets[0]);
-    const antes = alvos.map(id => ({ id, y: nos.get(id).no.y }));
-    for (const id of alvos) nos.get(id).no.y += delta;
+    const alvos = coluna(nodes, e.targets[0]);
+    const antes = alvos.map(id => ({ id, y: nodes.get(id).no.y }));
+    for (const id of alvos) nodes.get(id).no.y += delta;
 
     const alturasAntes = [];
     (function guarda(n) { alturasAntes.push([n, n.width, n.height]); for (const c of n.children || []) guarda(c); })(saida);
@@ -160,9 +160,9 @@ function alinhar(saida, paddings) {
 
     const problema = temSobreposicao(saida, paddings);
     if (problema) {
-      for (const a of antes) nos.get(a.id).no.y = a.y;
+      for (const a of antes) nodes.get(a.id).no.y = a.y;
       for (const [n, w, h] of alturasAntes) { n.width = w; n.height = h; }
-      desfeitos.push({ aresta: e.id, delta: Math.round(delta), porque: problema });
+      desfeitos.push({ aresta: e.id, delta: Math.round(delta), because: problema });
       break;                       // um encaixe que não cabe encerra o passe
     }
 

@@ -2,31 +2,31 @@
 'use strict';
 /**
  * UM contrato, UM arquivo — o critério de aceite que o #23 escreve como "um único
- * `esquema.json`".
+ * `schema.json`".
  *
- * O que ele estava nomeando: quatro arquivos chamados `esquema.json` na árvore,
- * dois deles declarando o MESMO `$id` (`panlabs-aws-diagrams/modelo@1`) com
+ * O que ele estava nomeando: quatro arquivos chamados `schema.json` na árvore,
+ * dois deles declarando o MESMO `$id` (`panlabs-aws-diagrams/model@1`) com
  * conteúdo divergente — o do #11, com `ou` e `habilita`, e o do #13, com
  * `qualificador`. Nesse estado o contrato do sistema depende de qual cópia o
  * `require` alcançou primeiro, que é a definição de não ter contrato.
  *
  * A consolidação não colapsa tudo num arquivo só, e vale dizer por quê: os
- * outros três `esquema.json` da árvore declaram `$id` DIFERENTES — `tema@1` é o
- * vocabulário fechado do #13, `sessao@1` é o modelo de sessão do #14,
- * `elaboracao@1` é o delta da fase técnica do #14, sem esquema até o #37. São
+ * outros três `schema.json` da árvore declaram `$id` DIFERENTES — `theme@1` é o
+ * vocabulário fechado do #13, `session@1` é o modelo de sessão do #14,
+ * `elaboration@1` é o delta da fase técnica do #14, sem esquema até o #37. São
  * contratos distintos de camadas distintas. Juntá-los produziria um arquivo que
  * mistura públicos e não teria um dono.
  *
  * Então a regra que esta checagem trava é a mais forte que continua verdadeira:
  *
  *   1. cada `$id` aparece em EXATAMENTE UM arquivo da árvore de produção;
- *   2. o contrato do modelo (`modelo@1`) mora na RAIZ da skill, não dentro do
+ *   2. o contrato do modelo (`model@1`) mora na RAIZ da skill, não dentro do
  *      motor — ele é o que o agente escreve, e o motor é só o primeiro leitor;
  *   3. quem carrega o esquema carrega ESSE arquivo (medido, não afirmado);
- *   4. o `modelo@1` é superconjunto dos dois que ele substituiu — nenhuma
+ *   4. o `model@1` é superconjunto dos dois que ele substituiu — nenhuma
  *      propriedade do #11 nem do #13 se perdeu na fusão;
  *   5. os QUATRO contratos existem, e nenhum é a exceção que só o exemplo do
- *      corpus descreve — o #37 fechou o `elaboracao@1` que faltava.
+ *      corpus descreve — o #37 fechou o `elaboration@1` que faltava.
  */
 
 const fs = require('fs');
@@ -35,8 +35,8 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 
 let falhas = 0;
-const ok = (cond, titulo, detalhe) => {
-  console.log(`  ${cond ? '✓' : '✗'} ${titulo}${detalhe ? `  — ${detalhe}` : ''}`);
+const ok = (cond, title, detail) => {
+  console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
   if (!cond) falhas++;
 };
 
@@ -54,24 +54,24 @@ function leiturasDoRequire(modulo) {
 
 /** Todo .json da árvore de produção que se declare um JSON Schema. */
 function esquemas(dir, fora = new Set(['prototypes', 'node_modules', 'saida'])) {
-  const achados = [];
+  const findings = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (fora.has(e.name)) continue;
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) { achados.push(...esquemas(p, fora)); continue; }
+    if (e.isDirectory()) { findings.push(...esquemas(p, fora)); continue; }
     if (!e.name.endsWith('.json')) continue;
     let j;
     try { j = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (err) { continue; }
-    if (j && typeof j === 'object' && j.$schema && j.$id) achados.push({ p, id: j.$id, j });
+    if (j && typeof j === 'object' && j.$schema && j.$id) findings.push({ p, id: j.$id, j });
   }
-  return achados;
+  return findings;
 }
 
-const achados = esquemas(RAIZ);
+const findings = esquemas(RAIZ);
 
 console.log('\n1 · cada contrato num arquivo só\n');
 const porId = new Map();
-for (const a of achados) {
+for (const a of findings) {
   if (!porId.has(a.id)) porId.set(a.id, []);
   porId.get(a.id).push(path.relative(RAIZ, a.p));
 }
@@ -81,33 +81,33 @@ ok(porId.size === 4, `${porId.size} contratos distintos na árvore — os QUATRO
   [...porId.keys()].sort().join(' · '));
 
 console.log('\n2 · o contrato do modelo mora na raiz da skill\n');
-const doModelo = porId.get('panlabs-aws-diagrams/modelo@1') || [];
-ok(doModelo.length === 1 && doModelo[0] === 'esquema.json',
-  'panlabs-aws-diagrams/modelo@1 está em esquema.json, na raiz',
+const doModelo = porId.get('panlabs-aws-diagrams/model@1') || [];
+ok(doModelo.length === 1 && doModelo[0] === 'schema.json',
+  'panlabs-aws-diagrams/model@1 está em schema.json, na raiz',
   doModelo.join(', ') || 'não encontrado');
-ok(!fs.existsSync(path.join(RAIZ, 'motor', 'esquema.json')),
-  'e NÃO existe mais um esquema.json dentro do motor');
+ok(!fs.existsSync(path.join(RAIZ, 'engine', 'schema.json')),
+  'e NÃO existe mais um schema.json dentro do motor');
 
-console.log('\n2b · o quarto contrato — elaboracao@1 — mora ao lado de quem o consome\n');
-const daElaboracao = porId.get('panlabs-aws-diagrams/elaboracao@1') || [];
-ok(daElaboracao.length === 1 && daElaboracao[0] === 'sessao/esquema-elaboracao.json',
-  'panlabs-aws-diagrams/elaboracao@1 está em sessao/esquema-elaboracao.json',
+console.log('\n2b · o quarto contrato — elaboration@1 — mora ao lado de quem o consome\n');
+const daElaboracao = porId.get('panlabs-aws-diagrams/elaboration@1') || [];
+ok(daElaboracao.length === 1 && daElaboracao[0] === 'session/elaboration.schema.json',
+  'panlabs-aws-diagrams/elaboration@1 está em session/elaboration.schema.json',
   daElaboracao.join(', ') || 'não encontrado');
 
 console.log('\n3 · é esse arquivo que o motor carrega (medido)\n');
 {
-  const lidos = leiturasDoRequire(path.join(RAIZ, 'motor', 'gerar.cjs'));
-  const alvo = path.join(RAIZ, 'esquema.json');
-  ok(lidos.includes(alvo), 'motor/gerar.cjs abriu <raiz>/esquema.json',
-    lidos.filter(p => p.endsWith('esquema.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'nenhum');
+  const lidos = leiturasDoRequire(path.join(RAIZ, 'engine', 'generate.cjs'));
+  const target = path.join(RAIZ, 'schema.json');
+  ok(lidos.includes(target), 'engine/generate.cjs abriu <raiz>/schema.json',
+    lidos.filter(p => p.endsWith('schema.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'none');
 }
 
-console.log('\n3b · e é esse arquivo que elaborar.cjs carrega para o delta (medido)\n');
+console.log('\n3b · e é esse arquivo que elaborate.cjs carrega para o delta (medido)\n');
 {
-  const lidos = leiturasDoRequire(path.join(RAIZ, 'sessao', 'elaborar.cjs'));
-  const alvo = path.join(RAIZ, 'sessao', 'esquema-elaboracao.json');
-  ok(lidos.includes(alvo), 'sessao/elaborar.cjs abriu sessao/esquema-elaboracao.json',
-    lidos.filter(p => p.endsWith('.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'nenhum');
+  const lidos = leiturasDoRequire(path.join(RAIZ, 'session', 'elaborate.cjs'));
+  const target = path.join(RAIZ, 'session', 'elaboration.schema.json');
+  ok(lidos.includes(target), 'session/elaborate.cjs abriu session/elaboration.schema.json',
+    lidos.filter(p => p.endsWith('.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'none');
 }
 
 console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela substituiu\n');
@@ -126,7 +126,7 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
     })(j, '');
     return out;
   };
-  const producao = props(JSON.parse(fs.readFileSync(path.join(RAIZ, 'esquema.json'), 'utf8')));
+  const producao = props(JSON.parse(fs.readFileSync(path.join(RAIZ, 'schema.json'), 'utf8')));
   /**
    * ⚠️ LISTA CONGELADA, E ELA SUBSTITUIU UMA LEITURA DO GIT — #62.
    *
@@ -148,22 +148,22 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
    */
   const ANTIGAS = {
     '#11': [
-      'aresta.dados', 'aresta.de', 'aresta.id', 'aresta.ordem', 'aresta.para',
-      'aresta.protocolo', 'aresta.rotulo', 'arestas', 'dossie', 'esquema',
-      'faixa.id', 'faixa.membros', 'faixa.rotulo', 'faixa.tipo', 'faixas',
-      'genero', 'id', 'no.acesso', 'no.az', 'no.camada', 'no.cidr', 'no.conta',
-      'no.dentro', 'no.habilita', 'no.id', 'no.nota', 'no.ou', 'no.rotulo',
-      'no.servico', 'no.tipo', 'nos', 'nota.id', 'nota.origem', 'nota.sobre',
-      'nota.texto', 'notas', 'subtitulo', 'titulo', 'vista',
+      'edge.data', 'edge.from', 'edge.id', 'edge.order', 'edge.to',
+      'edge.protocol', 'edge.label', 'edges', 'dossier', 'schema',
+      'band.id', 'band.members', 'band.label', 'band.kind', 'bands',
+      'genre', 'id', 'node.access', 'node.az', 'node.layer', 'node.cidr', 'node.account',
+      'node.inside', 'node.enables', 'node.id', 'node.note', 'node.ou', 'node.label',
+      'node.service', 'node.kind', 'nodes', 'note.id', 'note.origin', 'note.about',
+      'note.text', 'notes', 'subtitle', 'title', 'view',
     ],
     '#13': [
-      'aresta.dados', 'aresta.de', 'aresta.id', 'aresta.ordem', 'aresta.para',
-      'aresta.protocolo', 'aresta.rotulo', 'arestas', 'dossie', 'esquema',
-      'faixa.id', 'faixa.membros', 'faixa.rotulo', 'faixa.tipo', 'faixas',
-      'genero', 'id', 'no.acesso', 'no.az', 'no.cidr', 'no.conta', 'no.dentro',
-      'no.id', 'no.nota', 'no.qualificador', 'no.rotulo', 'no.servico',
-      'no.tipo', 'nos', 'nota.id', 'nota.origem', 'nota.sobre', 'nota.texto',
-      'notas', 'subtitulo', 'titulo', 'vista',
+      'edge.data', 'edge.from', 'edge.id', 'edge.order', 'edge.to',
+      'edge.protocol', 'edge.label', 'edges', 'dossier', 'schema',
+      'band.id', 'band.members', 'band.label', 'band.kind', 'bands',
+      'genre', 'id', 'node.access', 'node.az', 'node.cidr', 'node.account', 'node.inside',
+      'node.id', 'node.note', 'node.qualifier', 'node.label', 'node.service',
+      'node.kind', 'nodes', 'note.id', 'note.origin', 'note.about', 'note.text',
+      'notes', 'subtitle', 'title', 'view',
     ],
   };
   /**
@@ -184,7 +184,7 @@ console.log('\n4 · a fusão não perdeu propriedade dos dois esquemas que ela s
     ok(perdidas.length === 0, `nenhuma propriedade do esquema do ${rot} se perdeu`,
       perdidas.length ? perdidas.join(', ') : `${antigas.length} propriedades conferidas`);
   }
-  for (const nova of ['no.qualificador', 'no.ou', 'no.habilita', 'no.camada'])
+  for (const nova of ['node.qualifier', 'node.ou', 'node.enables', 'node.layer'])
     ok(producao.has(nova), `e o esquema único traz "${nova}"`);
 }
 

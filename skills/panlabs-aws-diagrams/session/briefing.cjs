@@ -13,7 +13,7 @@
  * lugar de onde ele retoma a conversa sem pedir ao usuario que repita nada.
  */
 
-const { politica } = require('./abrir.cjs');
+const { politica } = require('./open.cjs');
 
 const cabeca = t => ['', `  ${t}`, `  ${'─'.repeat(Math.max(8, t.length))}`];
 
@@ -23,84 +23,84 @@ function briefing(aberto, extra = {}) {
 
   L.push('', '  ┌─ RETOMADA ' + '─'.repeat(52));
   if (!aberto.nosso) {
-    L.push(`  │ Este arquivo nao e meu: ${aberto.porque}`);
+    L.push(`  │ Este arquivo nao e meu: ${aberto.because}`);
     L.push('  └' + '─'.repeat(63));
     return L;
   }
   L.push(`  │ Reconheci por: ${aberto.comoReconheci.join(' · ')}`);
-  L.push(`  │ Caso: ${s.titulo}`);
-  L.push(`  │ Estagio do modelo: ${s.estagio}   ·   ${s.nos.length} nos, ${(s.arestas || []).length} arestas`);
+  L.push(`  │ Caso: ${s.title}`);
+  L.push(`  │ Estagio do modelo: ${s.stage}   ·   ${s.nodes.length} nos, ${(s.edges || []).length} arestas`);
   L.push('  └' + '─'.repeat(63));
 
   // ------------------------------------------------------- estado das paginas
   L.push(...cabeca('Paginas e o que o humano fez com elas'));
   for (const p of aberto.paginas) {
-    const marca = politica(p.estado).glifo;
-    L.push(`    ${marca} ${String(p.nome || p.id).padEnd(34)} vista=${p.vista || '—'}  ${p.estado}`);
-    if (p.porque) L.push(`        ${p.porque}`);
+    const marca = politica(p.state).glifo;
+    L.push(`    ${marca} ${String(p.name || p.id).padEnd(34)} vista=${p.view || '—'}  ${p.state}`);
+    if (p.because) L.push(`        ${p.because}`);
   }
   if (aberto.conflitoDeCopias)
     L.push(`    ⚠ as paginas trazem ${aberto.conflitoDeCopias.quantas} copias DIFERENTES do modelo — ` +
       'alguem colou aqui uma pagina de outro arquivo.');
 
   // -------------------------------------------------------------- o acordo
-  const acordo = s.dossie && s.dossie.acordo;
+  const agreement = s.dossier && s.dossier.agreement;
   L.push(...cabeca('O acordo'));
-  if (!acordo) {
+  if (!agreement) {
     L.push('    (nenhum) — a vista logica ainda nao foi aprovada. A fase tecnica nao comeca.');
   } else {
-    L.push(`    aprovado ${acordo.em || '(sem data)'}${acordo.por ? ' por ' + acordo.por : ''}` +
-      `${acordo.candidata ? ', candidata ' + acordo.candidata : ''}`);
-    L.push(`    cobre ${acordo.recorte.nos.length} capacidades, ${acordo.recorte.arestas.length} fluxos, ${acordo.recorte.notas.length} nota(s)`);
-    if (extra.acordo)
-      L.push(extra.acordo.ok
+    L.push(`    aprovado ${agreement.at || '(sem data)'}${agreement.by ? ' por ' + agreement.by : ''}` +
+      `${agreement.candidate ? ', candidata ' + agreement.candidate : ''}`);
+    L.push(`    cobre ${agreement.snapshot.nodes.length} capacidades, ${agreement.snapshot.edges.length} fluxos, ${agreement.snapshot.notes.length} nota(s)`);
+    if (extra.agreement)
+      L.push(extra.agreement.ok
         ? '    ✓ a projecao logica de hoje ainda bate com a aprovada'
-        : `    ✗ ${extra.acordo.motivo}`);
-    for (const d of (extra.acordo && extra.acordo.diferencas) || []) L.push(`        · ${d.texto}`);
+        : `    ✗ ${extra.agreement.motivo}`);
+    for (const d of (extra.agreement && extra.agreement.diferencas) || []) L.push(`        · ${d.text}`);
   }
 
   // ---------------------------------------------------------- as candidatas
-  const d = s.dossie || {};
-  if (d.candidatas && d.candidatas.length) {
+  const d = s.dossier || {};
+  if (d.candidates && d.candidates.length) {
     L.push(...cabeca('Candidatas — a escolhida e as descartadas'));
-    for (const c of d.candidatas) {
-      const marca = c.estado === 'escolhida' ? '►' : '·';
-      L.push(`    ${marca} ${c.nome}${c.difereEm ? `   (difere em ${c.difereEm.join(', ')})` : ''}`);
-      L.push(`        E1–E5: ${c.tupla.join(' | ')}`);
-      if (c.porque) L.push(`        ${c.porque}`);
+    for (const c of d.candidates) {
+      const marca = c.state === 'chosen' ? '►' : '·';
+      L.push(`    ${marca} ${c.name}${c.differsIn ? `   (difere em ${c.differsIn.join(', ')})` : ''}`);
+      L.push(`        E1–E5: ${c.tuple.join(' | ')}`);
+      if (c.because) L.push(`        ${c.because}`);
     }
     L.push('    As descartadas ficam para nao serem repropostas, e para responder "por que nao a B?".');
   }
 
   // ------------------------------------------------------------- os achados
-  if (d.achados && d.achados.length) {
+  if (d.findings && d.findings.length) {
     L.push(...cabeca('Revisao de lacunas — o que foi aceito e o que foi recusado'));
-    for (const a of d.achados) {
-      const marca = { aceito: '+', recusado: '✗', resolvido: '✓' }[a.estado] || '·';
-      L.push(`    ${marca} ${String(a.regra).padEnd(28)} ${a.alvo || ''}  ${a.nota || ''}`);
+    for (const a of d.findings) {
+      const marca = { accepted: '+', rejected: '✗', resolved: '✓' }[a.state] || '·';
+      L.push(`    ${marca} ${String(a.rule).padEnd(28)} ${a.target || ''}  ${a.note || ''}`);
     }
-    const recusados = d.achados.filter(a => a.estado === 'recusado');
+    const recusados = d.findings.filter(a => a.state === 'rejected');
     if (recusados.length)
       L.push(`    ${recusados.length} recusa(s) viajam ate o desenho como nota — e assim que "SPOF conhecido e aceito" sobrevive.`);
   }
 
   // -------------------------------------------------------- o estacionamento
-  if (d.estacionamento && d.estacionamento.length) {
+  if (d.parking && d.parking.length) {
     L.push(...cabeca('Estacionamento — nomes de servico ditos cedo demais'));
-    for (const e of d.estacionamento)
-      L.push(`    ${e.estado === 'devolvido' ? '↩' : '⏸'} ${String(e.nome).padEnd(12)} → ${e.capacidade || ''}   ${e.nota || ''}`);
-    const parados = d.estacionamento.filter(e => e.estado === 'estacionado');
+    for (const e of d.parking)
+      L.push(`    ${e.state === 'returned' ? '↩' : '⏸'} ${String(e.name).padEnd(12)} → ${e.capability || ''}   ${e.note || ''}`);
+    const parados = d.parking.filter(e => e.state === 'parked');
     if (parados.length)
       L.push(`    ${parados.length} esperando a fase tecnica: voltam como SUGESTAO inferida contra a capacidade, para confirmar.`);
   }
 
   // ------------------------------------------------------------------ fatos
-  if (d.fatos && d.fatos.length) {
-    const inferidos = d.fatos.filter(f => f.procedencia === 'inferido');
-    const naoConfirmados = d.fatos.filter(f => !f.confirmado);
+  if (d.facts && d.facts.length) {
+    const inferidos = d.facts.filter(f => f.provenance === 'inferred');
+    const naoConfirmados = d.facts.filter(f => !f.confirmed);
     L.push(...cabeca('Fatos'));
-    L.push(`    ${d.fatos.length} fatos · ${inferidos.length} inferido(s) · ${naoConfirmados.length} ainda sem confirmacao`);
-    for (const f of naoConfirmados) L.push(`    ⚠ nao confirmado: ${f.fato}`);
+    L.push(`    ${d.facts.length} fatos · ${inferidos.length} inferido(s) · ${naoConfirmados.length} ainda sem confirmacao`);
+    for (const f of naoConfirmados) L.push(`    ⚠ nao confirmado: ${f.fact}`);
   }
 
   return L;

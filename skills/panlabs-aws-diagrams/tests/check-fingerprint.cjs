@@ -3,7 +3,7 @@
 /**
  * M2 — que granularidade de impressao serve para detectar edicao humana?
  *
- *   node tools/medir-impressao.cjs [binario-drawio]
+ *   node tools/medir-fingerprint.cjs [binario-drawio]
  *
  * O reflexo e guardar um hash do arquivo. A medicao existe para mostrar que ele
  * nao serve, e por dois motivos distintos:
@@ -27,10 +27,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
-const { lerPaginas, impressaoSemantica, impressaoDeAparencia } = require('../sessao/impressao.cjs');
-const { aprovar } = require('../sessao/acordo.cjs');
-const { elaborar } = require('../sessao/elaborar.cjs');
-const { desenhar } = require('../sessao/desenhar.cjs');
+const { lerPaginas, impressaoSemantica, impressaoDeAparencia } = require('../session/fingerprint.cjs');
+const { aprovar } = require('../session/agreement.cjs');
+const { elaborar } = require('../session/elaborate.cjs');
+const { desenhar } = require('../session/draw.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
@@ -41,7 +41,7 @@ const DRAWIO = binario(process.argv[2]);
 /**
  * Troca dentro da PRIMEIRA celula com este id. Aqui a base e uma pagina so, entao
  * primeira e unica — o nome diz "primeira" mesmo assim, porque existe um irmao
- * deste helper em `demo-divergencia.cjs` que casa a ULTIMA, e dois helpers com o
+ * deste helper em `demo-divergence.cjs` que casa a ULTIMA, e dois helpers com o
  * mesmo nome e semanticas opostas e o jeito mais barato de plantar um bug.
  */
 function naPrimeiraCelula(xml, id, fn) {
@@ -52,45 +52,45 @@ function naPrimeiraCelula(xml, id, fn) {
 }
 
 const EDICOES = [
-  { nome: 'salvar sem editar nada', esperado: 'intacto', app: true,
-    porque: 'o codec do proprio app reescreve o arquivo; ninguem editou' },
+  { name: 'salvar sem editar nada', esperado: 'intacto', app: true,
+    because: 'o codec do proprio app reescreve o arquivo; ninguem editou' },
 
-  { nome: 'arrastar uma caixa', esperado: 'remanejado',
+  { name: 'arrastar uma caixa', esperado: 'remanejado',
     // Ancorar em `<mxGeometry x=` e obrigatorio: um `/x="(\d+)"/` solto casa
     // dentro de `vertex="1"` e a edicao vira outra coisa. Custou uma rodada.
     faz: x => naPrimeiraCelula(x, 'processar-na-chegada',
       c => c.replace(/<mxGeometry x="(-?\d+)"/, (_, v) => `<mxGeometry x="${+v + 40}"`)) },
 
-  { nome: 'trocar a fonte de um rotulo', esperado: 'remanejado',
-    faz: x => naPrimeiraCelula(x, 'titulo', c => c.replace('fontSize=19', 'fontSize=15')) },
+  { name: 'trocar a fonte de um rotulo', esperado: 'remanejado',
+    faz: x => naPrimeiraCelula(x, 'title', c => c.replace('fontSize=19', 'fontSize=15')) },
 
-  { nome: 'recolher um container', esperado: 'remanejado',
+  { name: 'recolher um container', esperado: 'remanejado',
     faz: x => naPrimeiraCelula(x, 'vpc-dados', c => c.replace('<mxCell id="vpc-dados"', '<mxCell id="vpc-dados" collapsed="1"')) },
 
-  { nome: 'reordenar celulas (ordem z)', esperado: 'remanejado',
+  { name: 'reordenar celulas (ordem z)', esperado: 'remanejado',
     faz: x => {
       const re = /( *<mxCell id="tratar-falha"[\s\S]*?<\/mxCell>\n)/;
-      const bloco = re.exec(x)[1];
-      return x.replace(re, '').replace(/( *<mxCell id="loja")/, bloco + '$1');
+      const block = re.exec(x)[1];
+      return x.replace(re, '').replace(/( *<mxCell id="loja")/, block + '$1');
     } },
 
-  { nome: 'repintar subnet privada de publica', esperado: 'divergente', controle: true,
+  { name: 'repintar subnet privada de publica', esperado: 'divergente', controle: true,
     faz: x => naPrimeiraCelula(x, 'sub-app', c => c.replace('#00A4A6', '#7AA116').replace('#E6F6F7', '#F2F6E8')),
-    porque: 'mesma forma, mesmo grIcon — a fronteira publica/privada so existe no hex' },
+    because: 'mesma forma, mesmo grIcon — a fronteira publica/privada so existe no hex' },
 
-  { nome: 'renomear um servico', esperado: 'divergente',
+  { name: 'renomear um servico', esperado: 'divergente',
     faz: x => naPrimeiraCelula(x, 'reter-objeto', c => c.replace('value="S3 · zona curada"', 'value="S3 · arquivo morto"')) },
 
-  { nome: 'apagar um no', esperado: 'divergente',
+  { name: 'apagar um no', esperado: 'divergente',
     faz: x => x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '') },
 
-  { nome: 'acrescentar um no', esperado: 'divergente',
+  { name: 'acrescentar um no', esperado: 'divergente',
     faz: x => x.replace('      </root>',
       '        <mxCell id="caixa-do-humano" value="Firewall" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">\n' +
       '          <mxGeometry x="10" y="10" width="80" height="40" as="geometry"/>\n' +
       '        </mxCell>\n      </root>') },
 
-  { nome: 'trocar o icone de um servico', esperado: 'divergente',
+  { name: 'trocar o icone de um servico', esperado: 'divergente',
     faz: x => naPrimeiraCelula(x, 'processar-na-chegada', c => c.replace(/resIcon=mxgraph\.aws4\.\w+/, 'resIcon=mxgraph.aws4.ec2')) },
 ];
 
@@ -100,12 +100,12 @@ const shaArquivo = s => 'sha256:' + crypto.createHash('sha256').update(s, 'utf8'
 
 const ESQUEMAS = [
   {
-    nome: 'hash do arquivo inteiro',
+    name: 'hash do arquivo inteiro',
     selar: xml => ({ arquivo: shaArquivo(xml) }),
     ler: (xml, selo) => shaArquivo(xml) === selo.arquivo ? 'intacto' : 'divergente',
   },
   {
-    nome: 'semantica SEM cor + aparencia',
+    name: 'semantica SEM cor + aparencia',
     selar: xml => { const c = lerPaginas(xml).paginas[0].celulas;
       return { s: impressaoSemantica(c, { comCor: false }), a: impressaoDeAparencia(c) }; },
     ler: (xml, selo) => { const c = lerPaginas(xml).paginas[0].celulas;
@@ -113,7 +113,7 @@ const ESQUEMAS = [
       return impressaoDeAparencia(c) === selo.a ? 'intacto' : 'remanejado'; },
   },
   {
-    nome: 'semantica COM cor + aparencia  ← adotado',
+    name: 'semantica COM cor + aparencia  ← adotado',
     selar: xml => { const c = lerPaginas(xml).paginas[0].celulas;
       return { s: impressaoSemantica(c), a: impressaoDeAparencia(c) }; },
     ler: (xml, selo) => { const c = lerPaginas(xml).paginas[0].celulas;
@@ -125,10 +125,10 @@ const ESQUEMAS = [
 // ------------------------------------------------------------------ medida
 
 async function main() {
-  const logico = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'sessao', 'varejo-logica.json'), 'utf8'));
-  const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'sessao', 'varejo-elaboracao.json'), 'utf8'));
-  const tecnico = elaborar(aprovar(logico, { em: '2026-08-21' }), elab);
-  const base = (await desenhar(tecnico, 'tecnica')).xml;
+  const logical = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-logical.json'), 'utf8'));
+  const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
+  const technical = elaborar(aprovar(logical, { em: '2026-08-21' }), elab);
+  const base = (await desenhar(technical, 'technical')).xml;
 
   const temApp = fs.existsSync(DRAWIO);
   const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'impressao-'));
@@ -149,7 +149,7 @@ async function main() {
       bytesDoCodec = { antes: base.length, depois: depois.length, iguais: base === depois };
     } else {
       depois = ed.faz(base);
-      if (depois === base) throw new Error(`a edicao "${ed.nome}" nao mudou nada — o teste seria vazio`);
+      if (depois === base) throw new Error(`a edicao "${ed.name}" nao mudou nada — o teste seria vazio`);
     }
     linhas.push({ ed, veredictos: ESQUEMAS.map((e, i) => e.ler(depois, selos[i])) });
   }
@@ -163,21 +163,21 @@ async function main() {
 
   const erros = ESQUEMAS.map(() => 0);
   for (const l of linhas) {
-    if (l.pulou) { console.log(`    ${l.ed.nome.padEnd(larg)}${'(precisa do app — pulada)'}`); continue; }
+    if (l.pulou) { console.log(`    ${l.ed.name.padEnd(larg)}${'(precisa do app — pulada)'}`); continue; }
     const marcas = l.veredictos.map((v, i) => {
       const ok = v === l.ed.esperado;
       if (!ok) erros[i]++;
       return (ok ? '✓' : '✗').padEnd(6);
     });
-    console.log(`    ${l.ed.nome.padEnd(larg)}${l.ed.esperado.padEnd(13)}${marcas.join('')}`);
+    console.log(`    ${l.ed.name.padEnd(larg)}${l.ed.esperado.padEnd(13)}${marcas.join('')}`);
     for (const [i, v] of l.veredictos.entries())
-      if (v !== l.ed.esperado) console.log(`      └ [${i + 1}] disse "${v}"${l.ed.porque ? ' — ' + l.ed.porque : ''}`);
+      if (v !== l.ed.esperado) console.log(`      └ [${i + 1}] disse "${v}"${l.ed.because ? ' — ' + l.ed.because : ''}`);
   }
 
   console.log('');
   for (const [i, e] of ESQUEMAS.entries()) {
     const total = linhas.filter(l => !l.pulou).length;
-    console.log(`    [${i + 1}] ${e.nome.padEnd(38)} ${total - erros[i]}/${total} certo(s)`);
+    console.log(`    [${i + 1}] ${e.name.padEnd(38)} ${total - erros[i]}/${total} certo(s)`);
   }
 
   if (bytesDoCodec)

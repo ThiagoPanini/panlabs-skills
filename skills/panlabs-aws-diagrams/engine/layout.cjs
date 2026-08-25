@@ -18,9 +18,9 @@
  */
 
 const ELK = require('./vendor/elk.bundled.js');
-const { alinhar } = require('./alinhar.cjs');
-const camadasMod = require('./camadas.cjs');
-const { CONTEINERES, FOLHAS } = require('./validar.cjs');
+const { alinhar } = require('./align.cjs');
+const camadasMod = require('./layers.cjs');
+const { CONTEINERES, FOLHAS } = require('./validate.cjs');
 
 // ---- as quatro calhas do #19 -------------------------------------------------
 //
@@ -73,7 +73,7 @@ const VAZIO_ALT = 56;
  * conteúdo para empurrar contra a borda.
  */
 function caixaVazia(no, c, res) {
-  const precisaTitulo = res.larguraDoRotuloDeGrupo(no.rotulo || '') + (c.recuoTitulo || 8) + 16;
+  const precisaTitulo = res.larguraDoRotuloDeGrupo(no.label || '') + (c.recuoTitulo || 8) + 16;
   return {
     id: no.id,
     width: Math.max(VAZIO_LARG, Math.ceil(precisaTitulo)),
@@ -196,9 +196,9 @@ const OPCOES_RAIZ = {
 
 /** O texto que a aresta vai de fato mostrar — é dele que sai a largura reservada. */
 function textoDaAresta(a) {
-  const base = a.rotulo || '';
-  if (a.ordem === undefined) return base;
-  return base ? `${a.ordem}. ${base}` : String(a.ordem);
+  const base = a.label || '';
+  if (a.order === undefined) return base;
+  return base ? `${a.order}. ${base}` : String(a.order);
 }
 
 /**
@@ -223,9 +223,9 @@ function textoDaAresta(a) {
  * seria layout que muda por gosto do gerador.
  */
 function sentidoDeLeitura(a) {
-  return a.dados === 'volta'
-    ? { de: a.para, para: a.de, revertida: true }
-    : { de: a.de, para: a.para, revertida: false };
+  return a.data === 'back'
+    ? { from: a.to, to: a.from, revertida: true }
+    : { from: a.from, to: a.to, revertida: false };
 }
 
 /**
@@ -275,7 +275,7 @@ function desreverter(saida, revertidas) {
  * `o` e `dst` são as caixas do ÍCONE, não as do container. Num grid 3×3 o
  * ponto médio entre dois ícones de colunas vizinhas cai DENTRO de uma das
  * colunas, e a perna desce por dentro da subnet da linha do meio. Foi assim
- * que o `web-fluxo-3-az` acumulou `A5.5` ×2: duas gravações de EC2 em raias
+ * que o `web-flow-3-az` acumulou `A5.5` ×2: duas gravações de EC2 em raias
  * diferentes descendo por dentro do grupo "app-a", de onde não saem nem para
  * onde vão. Medido, não deduzido — a perna estava em x=538 e "app-a" ia até
  * x=539.
@@ -304,7 +304,7 @@ function desreverter(saida, revertidas) {
  * @param {number} [margem]          quanto respirar ao sair para fora de tudo
  * @returns {number} a coordenada da perna
  */
-function corredorLivre(faixa, obstaculos, perto, margem = 24) {
+function corredorLivre(faixa, obstaculos, perto, margin = 24) {
   const lo = Math.min(faixa[0], faixa[1]);
   const hi = Math.max(faixa[0], faixa[1]);
 
@@ -321,15 +321,15 @@ function corredorLivre(faixa, obstaculos, perto, margem = 24) {
   }
   // encostar na borda não é atravessar: a perna que corre RENTE à caixa não
   // entra nela, e é exatamente isso que uma calha é
-  const dentro = c => unidos.some(([i, f]) => c > i && c < f);
-  if (!dentro(perto)) return perto;
+  const inside = c => unidos.some(([i, f]) => c > i && c < f);
+  if (!inside(perto)) return perto;
 
   // Os candidatos: as duas margens externas e o meio de cada vão. Como os
   // bloqueios já vêm unidos, dois vizinhos nunca se tocam — todo meio de vão é
   // estritamente livre, e por isso a busca sempre termina com resposta.
-  const vaos = [unidos[0][0] - margem];
+  const vaos = [unidos[0][0] - margin];
   for (let k = 0; k + 1 < unidos.length; k++) vaos.push((unidos[k][1] + unidos[k + 1][0]) / 2);
-  vaos.push(unidos[unidos.length - 1][1] + margem);
+  vaos.push(unidos[unidos.length - 1][1] + margin);
 
   return vaos.reduce((a, b) => (Math.abs(b - perto) < Math.abs(a - perto) ? b : a));
 }
@@ -370,7 +370,7 @@ function corredorLivre(faixa, obstaculos, perto, margem = 24) {
 function folhaComRotulo(id, f) {
   return {
     id, width: f.caixaW || f.formaW, height: f.formaH,
-    labels: [{ id: `${id}-rot`, text: f.rotulo || '', width: f.rotuloW || 0, height: f.rotuloH || 0 }],
+    labels: [{ id: `${id}-rot`, text: f.label || '', width: f.rotuloW || 0, height: f.rotuloH || 0 }],
     layoutOptions: { 'elk.nodeLabels.placement': '[H_CENTER,V_BOTTOM,OUTSIDE]' },
   };
 }
@@ -414,18 +414,18 @@ function idDaNota(n, i) { return n.id || `nota-${i}`; }
 
 function notasPorPai(modelo, d, res, caixas) {
   const porPai = new Map();
-  for (const [i, n] of (modelo.notas || []).entries()) {
-    if (n.sobre === undefined) continue;
-    const alvo = d.t.porId.get(n.sobre);
-    if (!alvo) continue;                        // nota órfã — `validar.cjs` já reclama dela
+  for (const [i, n] of (modelo.notes || []).entries()) {
+    if (n.about === undefined) continue;
+    const target = d.t.porId.get(n.about);
+    if (!target) continue;                        // nota órfã — `validate.cjs` já reclama dela
     const id = idDaNota(n, i);
-    const linhas = res.linhasDoRotulo(n.texto, NOTA_LARG - 16);
+    const linhas = res.linhasDoRotulo(n.text, NOTA_LARG - 16);
     const caixa = {
-      container: false, nota: true, rotulo: n.texto, style: res.tema.nota(),
+      container: false, note: true, label: n.text, style: res.tema.note(),
       formaW: NOTA_LARG, formaH: Math.max(NOTA_ALT_MIN, 12 + linhas * 16),
     };
     caixas.set(id, caixa);
-    const pai = alvo.dentro || null;
+    const pai = target.inside || null;
     if (!porPai.has(pai)) porPai.set(pai, []);
     porPai.get(pai).push({ id, width: caixa.formaW, height: caixa.formaH });
   }
@@ -467,10 +467,10 @@ function montarElk(modelo, d, res, medir) {
 
   // pré-resolve as folhas para saber de quanto rótulo o layout precisa fugir
   let rotuloMax = 0, transbordo = 0;
-  for (const no of modelo.nos) {
+  for (const no of modelo.nodes) {
     // FOLHA é o tipo, não "quem não tem filho" — ver `caixaVazia`. O teste por
     // contagem de filhos mandava toda subnet vazia para `res.folha()`.
-    if (!FOLHAS.has(no.tipo)) continue;
+    if (!FOLHAS.has(no.kind)) continue;
     const f = res.folha(no);
     rotuloMax = Math.max(rotuloMax, f.rotuloH);
     // quanto o texto passa de cada lado do ícone — é isso que precisa caber no
@@ -490,23 +490,23 @@ function montarElk(modelo, d, res, medir) {
     'elk.layered.spacing.nodeNodeBetweenLayers': String(FOLGA.PAD + Math.ceil(2 * transbordo)),
   };
 
-  const notas = notasPorPai(modelo, d, res, caixas);
+  const notes = notasPorPai(modelo, d, res, caixas);
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
     // a nota presa a um filho deste container é filha DELE — ver `notasPorPai`
-    const minhasNotas = notas.get(no.id) || [];
-    if (CONTEINERES.has(no.tipo)) {
+    const minhasNotas = notes.get(no.id) || [];
+    if (CONTEINERES.has(no.kind)) {
       const c = res.container(no);
       caixas.set(no.id, { container: true, ...c });
       if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
       // o rótulo da folha transborda a caixa dela PARA OS LADOS, e o container
       // tem de reservar isso — a reserva de BAIXO passou a ser do ELK
       // (`folhaComRotulo`). "tem folha" é sobre TIPO, igual a `caixaVazia`.
-      const temFolha = kids.some(k => FOLHAS.has(k.tipo));
-      const folga = temFolha ? Math.ceil(transbordo) : 0;
+      const temFolha = kids.some(k => FOLHAS.has(k.kind));
+      const gap = temFolha ? Math.ceil(transbordo) : 0;
       const pad = {
-        top: c.tituloH + FOLGA.PAD, left: FOLGA.PAD + folga,
-        bottom: FOLGA.PAD, right: FOLGA.PAD + folga + (medir.get(no.id) || 0),
+        top: c.tituloH + FOLGA.PAD, left: FOLGA.PAD + gap,
+        bottom: FOLGA.PAD, right: FOLGA.PAD + gap + (medir.get(no.id) || 0),
       };
       paddings.set(no.id, pad);
       return {
@@ -527,12 +527,12 @@ function montarElk(modelo, d, res, medir) {
   const grafo = {
     id: 'root',
     layoutOptions: { ...OPCOES_RAIZ, ...espacamento },
-    children: [...d.t.raizes.map(paraElk), ...(notas.get(null) || [])],
+    children: [...d.t.raizes.map(paraElk), ...(notes.get(null) || [])],
     // O rótulo da aresta vai JUNTO. Sem ele o ELK aproxima os nós até o vão
     // ficar menor que o texto, e o texto cai em cima do ícone vizinho — que é
     // `A3.2` da rubrica (#8), a falha que ela prevê para gerador automático.
     // Entregando o rótulo, o vão passa a ser calculado para caber nele.
-    edges: d.arestas.map(a => {
+    edges: d.edges.map(a => {
       const txt = textoDaAresta(a);
       // o LAYOUT lê o dado (`sentidoDeLeitura`); a SETA continua a do modelo,
       // e `desreverter` devolve a aresta ao sentido dela antes de qualquer
@@ -540,7 +540,7 @@ function montarElk(modelo, d, res, medir) {
       const s = sentidoDeLeitura(a);
       if (s.revertida) revertidas.add(a.id);
       return {
-        id: a.id, sources: [s.de], targets: [s.para],
+        id: a.id, sources: [s.from], targets: [s.to],
         ...(txt ? { labels: [{ id: a.id + '-rot', text: txt, width: res.larguraDaAresta(txt) + 8, height: 14 }] } : {}),
       };
     }),
@@ -556,10 +556,10 @@ function montarElk(modelo, d, res, medir) {
  */
 function deficitDeTitulo(no, caixa, larguraObtida, res) {
   if (!caixa || !caixa.container) return 0;
-  const texto = no.rotulo || '';
-  if (!texto) return 0;
+  const text = no.label || '';
+  if (!text) return 0;
   // o rótulo de grupo tem corpo próprio (`texto.grupo`), que pode diferir do de folha
-  const precisa = res.larguraDoRotuloDeGrupo(texto) + (caixa.recuoTitulo || 8) + 16;
+  const precisa = res.larguraDoRotuloDeGrupo(text) + (caixa.recuoTitulo || 8) + 16;
   return Math.max(0, Math.ceil(precisa - larguraObtida));
 }
 
@@ -615,10 +615,10 @@ async function porElk(modelo, d, res) {
  * nessa direção.
  */
 function eixoDaGrade(modelo) {
-  const numerado = (modelo.arestas || []).some(a => a.ordem !== undefined);
+  const numerado = (modelo.edges || []).some(a => a.order !== undefined);
   return {
     eixo: numerado ? 'raia' : 'coluna',
-    porque: numerado
+    because: numerado
       ? 'há passo numerado — a dimensão ordenada fica com a horizontal (#21)'
       : 'sem passo numerado — a AZ fica com a coluna, como no deck (#21)',
   };
@@ -642,11 +642,11 @@ function ordemDeRaias(modelo, d, subnets) {
   const zonaDo = id => {
     const n = d.t.porId.get(id);
     if (!n) return null;
-    const s = n.tipo === 'subnet' ? n : d.t.ancestrais(n).find(a => a.tipo === 'subnet');
+    const s = n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet');
     return s ? s.az : null;
   };
-  const cruzam = (modelo.arestas || [])
-    .map(a => [zonaDo(a.de), zonaDo(a.para)])
+  const cruzam = (modelo.edges || [])
+    .map(a => [zonaDo(a.from), zonaDo(a.to)])
     .filter(([x, y]) => x && y && x !== y);
   if (!cruzam.length) return { zonas, custo: 0, varridas: 0 };
 
@@ -714,11 +714,11 @@ async function porGrade(modelo, d, res) {
 
   const elk = new ELK();
   const caixas = new Map();
-  const { eixo, porque: porqueEixo } = eixoDaGrade(modelo);
+  const { eixo, because: porqueEixo } = eixoDaGrade(modelo);
   const raia = eixo === 'raia';
 
-  const vpcs = modelo.nos.filter(n => n.tipo === 'vpc');
-  const subnets = modelo.nos.filter(n => n.tipo === 'subnet');
+  const vpcs = modelo.nodes.filter(n => n.kind === 'vpc');
+  const subnets = modelo.nodes.filter(n => n.kind === 'subnet');
 
   // 1. cada subnet é layoutada isolada, para saber de que tamanho ela precisa
   const intra = new Map();
@@ -745,11 +745,11 @@ async function porGrade(modelo, d, res) {
     intra.set(s.id, { w: r.width, h: r.height, filhos: r.children });
   }
 
-  // A chave de papel é UMA — a do `camadas.cjs`. Ela era construída aqui e lá,
+  // A chave de papel é UMA — a do `layers.cjs`. Ela era construída aqui e lá,
   // com a mesma expressão escrita duas vezes; duas definições de "papel" seriam
   // duas grades, e a que decide a camada tem de ser a mesma que vira linha.
   const papel = s => camadasMod.chaveDePapel(s, d.t);
-  const vpcDe = s => (d.t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id;
+  const vpcDe = s => (d.t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id;
 
   const varreduraRaias = ordemDeRaias(modelo, d, subnets);
   const zonas = varreduraRaias.zonas;
@@ -776,7 +776,7 @@ async function porGrade(modelo, d, res) {
    * O #22 fechou o placeholder que ficou aberto aqui. O desempate do meio era
    * alfabético e acertava `App · Data` por coincidência; agora quem manda é a
    * camada que o papel ocupa, lida do que as subnets dele guardam
-   * (`camadas.cjs`). O alfabeto continua no fim e mudou de função: não carrega
+   * (`layers.cjs`). O alfabeto continua no fim e mudou de função: não carrega
    * mais significado, só fecha a ordem total que o determinismo exige.
    *
    * Nenhum papel chega aqui sem camada — a recusa lá em cima já barrou.
@@ -793,7 +793,7 @@ async function porGrade(modelo, d, res) {
   const porChave = camadasMod.papeisDeSubnet(modelo, d.t, d.camadas);
   const ordemDe = chave => {
     const p = porChave.get(chave) || {};
-    return [camadasMod.ordemDeAcesso(p.acesso), camadasMod.ordemDeCamada(p.camada), p.rotulo || ''];
+    return [camadasMod.ordemDeAcesso(p.access), camadasMod.ordemDeCamada(p.layer), p.label || ''];
   };
   for (const lista of papeisPorVpc.values())
     lista.sort((a, b) => {
@@ -818,7 +818,7 @@ async function porGrade(modelo, d, res) {
    * cair em cima do ícone vizinho"), só que aqui não há ELK para entregar: quem
    * reserva é a grade.
    */
-  const larguraDoRotulo = Math.max(0, ...d.arestas.map(a => res.larguraDaAresta(textoDaAresta(a))));
+  const larguraDoRotulo = Math.max(0, ...d.edges.map(a => res.larguraDaAresta(textoDaAresta(a))));
   const GAP_T = raia ? FOLGA.ROW_GAP : FOLGA.COL_GAP;
   const GAP_P = raia ? Math.max(FOLGA.ROW_GAP, larguraDoRotulo + 24) : FOLGA.ROW_GAP;
 
@@ -843,24 +843,24 @@ async function porGrade(modelo, d, res) {
   const calhas = new Map();
   const porLinha = new Map();      // vpc -> Map(linha de papel -> [{calha, zonas}])
   const porRaia = new Map();       // índice da raia -> calha acumulada
-  for (const f of (modelo.faixas || [])) {
+  for (const f of (modelo.bands || [])) {
     const calha = calhaDaFaixa(res.faixa(f).style);
     calhas.set(f.id, calha);
-    const membros = f.membros.map(m => {
-      const s = d.t.ancestrais(d.t.porId.get(m)).find(a => a.tipo === 'subnet') || d.t.porId.get(m);
+    const members = f.members.map(m => {
+      const s = d.t.ancestrais(d.t.porId.get(m)).find(a => a.kind === 'subnet') || d.t.porId.get(m);
       const v = vpcDe(s);
       return { v, az: s.az, idx: papeisPorVpc.get(v) ? papeisPorVpc.get(v).indexOf(papel(s)) : -1 };
     }).filter(x => x.idx >= 0);
 
     if (raia) {
-      const idxs = membros.map(l => zonas.indexOf(l.az)).filter(i => i >= 0);
+      const idxs = members.map(l => zonas.indexOf(l.az)).filter(i => i >= 0);
       if (!idxs.length) continue;
       const primeira = Math.min(...idxs);
       porRaia.set(primeira, Math.max(porRaia.get(primeira) || 0, calha));
       continue;
     }
-    for (const v of new Set(membros.map(l => l.v))) {
-      const meus = membros.filter(l => l.v === v);
+    for (const v of new Set(members.map(l => l.v))) {
+      const meus = members.filter(l => l.v === v);
       const primeira = Math.min(...meus.map(l => l.idx));
       if (!porLinha.has(v)) porLinha.set(v, new Map());
       const mapa = porLinha.get(v);
@@ -1033,9 +1033,9 @@ function permutar(xs) {
 function ordemDeContas(contas, cruz, modo) {
   const canonica = [...contas].sort((a, b) =>
     rankOu(a.ou) - rankOu(b.ou) ||
-    String(a.rotulo || a.id).localeCompare(String(b.rotulo || b.id), 'pt'));
+    String(a.label || a.id).localeCompare(String(b.label || b.id), 'pt'));
 
-  if (modo !== 'integracao' || !cruz.length) return { ordem: canonica, custo: null, varridas: 0 };
+  if (modo !== 'integracao' || !cruz.length) return { order: canonica, custo: null, varridas: 0 };
 
   const custoDe = (perm) => {
     const pos = new Map(perm.map((c, i) => [c.id, i]));
@@ -1043,10 +1043,10 @@ function ordemDeContas(contas, cruz, modo) {
     for (const a of cruz) {
       // A CONTRAMÃO É DO DADO, NÃO DA SETA — `sentidoDeLeitura`. `X5` fala do
       // fluxo primário, e numa travessia de polling quem flui é a resposta:
-      // `de` é só quem abriu a conversa. Medindo pela seta, a fileira do varejo
+      // `de` é só quem abriu a conversa. Medindo pela seta, a fileira do retail
       // saía `analytics | dados | lojas` — o desenho inteiro lido de trás para
       // frente porque duas consultas apontam para a origem do dado.
-      const rev = a.dados === 'volta';
+      const rev = a.data === 'back';
       const i = pos.get(rev ? a.contaPara : a.contaDe);
       const j = pos.get(rev ? a.contaDe : a.contaPara);
       if (i === undefined || j === undefined) continue;
@@ -1083,7 +1083,7 @@ function ordemDeContas(contas, cruz, modo) {
     if (!melhor || c < melhor.custo || (c === melhor.custo && inv < melhor.inv))
       melhor = { perm, custo: c, inv };
   }
-  return { ordem: melhor.perm, custo: melhor.custo, inversoes: melhor.inv, varridas: todas.length };
+  return { order: melhor.perm, custo: melhor.custo, inversoes: melhor.inv, varridas: todas.length };
 }
 
 /**
@@ -1097,7 +1097,7 @@ function ordemDeContas(contas, cruz, modo) {
  * então nada precisa ser esticado depois (que é o contorno que o #7 propõe e
  * que pode encostar num irmão).
  */
-async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Map(), notas = new Map()) {
+async function layoutDaConta(elk, account, d, res, caixas, metrica, medir = new Map(), notes = new Map()) {
   const FOLGA = folgas(res.tema);
   const espacamento = {
     ...espacamentoDe(FOLGA),
@@ -1107,18 +1107,18 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
 
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
-    const minhasNotas = notas.get(no.id) || [];              // ver `notasPorPai`
-    if (CONTEINERES.has(no.tipo)) {
+    const minhasNotas = notes.get(no.id) || [];              // ver `notasPorPai`
+    if (CONTEINERES.has(no.kind)) {
       const c = res.container(no);
       caixas.set(no.id, { container: true, ...c });
       if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
-      const temFolha = kids.some(k => FOLHAS.has(k.tipo));   // por TIPO — ver `caixaVazia`
-      const folga = temFolha ? Math.ceil(metrica.transbordo) : 0;
+      const temFolha = kids.some(k => FOLHAS.has(k.kind));   // por TIPO — ver `caixaVazia`
+      const gap = temFolha ? Math.ceil(metrica.transbordo) : 0;
       return {
         id: no.id,
         layoutOptions: {
-          'elk.padding': `[top=${c.tituloH + FOLGA.PAD},left=${FOLGA.PAD + folga},` +
-            `bottom=${FOLGA.PAD},right=${FOLGA.PAD + folga + (medir.get(no.id) || 0)}]`,
+          'elk.padding': `[top=${c.tituloH + FOLGA.PAD},left=${FOLGA.PAD + gap},` +
+            `bottom=${FOLGA.PAD},right=${FOLGA.PAD + gap + (medir.get(no.id) || 0)}]`,
           ...espacamento,
         },
         children: [...kids.map(paraElk), ...minhasNotas],
@@ -1129,19 +1129,19 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
     return folhaComRotulo(no.id, f);
   };
 
-  const cC = res.container(conta);
-  caixas.set(conta.id, { container: true, ...cC });
-  const folgaConta = d.t.filhos.get(conta.id).some(k => FOLHAS.has(k.tipo))
+  const cC = res.container(account);
+  caixas.set(account.id, { container: true, ...cC });
+  const folgaConta = d.t.filhos.get(account.id).some(k => FOLHAS.has(k.kind))
     ? metrica.transbordo : 0;                              // por TIPO — ver `caixaVazia`
 
   // só as arestas cujas DUAS pontas moram nesta conta — a travessia é do motor
-  const dentro = new Set();
-  (function marcar(id) { dentro.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(conta.id);
-  const internas = d.arestas.filter(a => dentro.has(a.de) && dentro.has(a.para));
+  const inside = new Set();
+  (function marcar(id) { inside.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(account.id);
+  const internas = d.edges.filter(a => inside.has(a.from) && inside.has(a.to));
   const revertidas = new Set();
 
   const grafo = {
-    id: conta.id,
+    id: account.id,
     layoutOptions: {
       ...OPCOES_RAIZ,
       'elk.json.edgeCoords': 'CONTAINER',   // dentro da conta, o espaço é o da conta
@@ -1149,16 +1149,16 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
       // dentro: o rótulo da folha é desenhado centrado sob o ícone e mais largo
       // que ele, então sem isto "IAM Identity Center" encosta na borda magenta
       'elk.padding': `[top=${cC.tituloH + FOLGA.PAD},left=${FOLGA.PAD + folgaConta},` +
-        `bottom=${FOLGA.PAD},right=${FOLGA.PAD + folgaConta + (medir.get(conta.id) || 0)}]`,
+        `bottom=${FOLGA.PAD},right=${FOLGA.PAD + folgaConta + (medir.get(account.id) || 0)}]`,
       ...espacamento,
     },
-    children: [...d.t.filhos.get(conta.id).map(paraElk), ...(notas.get(conta.id) || [])],
+    children: [...d.t.filhos.get(account.id).map(paraElk), ...(notes.get(account.id) || [])],
     edges: internas.map(a => {
       const txt = textoDaAresta(a);
       const s = sentidoDeLeitura(a);                       // o dado manda no layout
       if (s.revertida) revertidas.add(a.id);
       return {
-        id: a.id, sources: [s.de], targets: [s.para],
+        id: a.id, sources: [s.from], targets: [s.to],
         ...(txt ? { labels: [{ id: a.id + '-rot', text: txt, width: res.larguraDaAresta(txt) + 8, height: 14 }] } : {}),
       };
     }),
@@ -1169,8 +1169,8 @@ async function layoutDaConta(elk, conta, d, res, caixas, metrica, medir = new Ma
 /** As duas medidas de rótulo que todo caminho precisa antes de montar grafo nenhum. */
 function metricaDeRotulo(modelo, d, res) {
   let rotuloMax = 0, transbordo = 0;
-  for (const no of modelo.nos) {
-    if (!FOLHAS.has(no.tipo)) continue;              // ver `caixaVazia`
+  for (const no of modelo.nodes) {
+    if (!FOLHAS.has(no.kind)) continue;              // ver `caixaVazia`
     const f = res.folha(no);
     rotuloMax = Math.max(rotuloMax, f.rotuloH);
     transbordo = Math.max(transbordo, Math.max(0, ((f.rotuloW || 0) - f.formaW) / 2));
@@ -1185,8 +1185,8 @@ async function porContas(modelo, d, res) {
   // a nota presa a um nó entra no ELK da CONTA dele — ver `notasPorPai`. A que
   // fala de um nó fora de conta nenhuma não tem ELK onde entrar (a fileira de
   // contas é grade do motor), e `planejar` a coloca no offset de sempre.
-  const notas = notasPorPai(modelo, d, res, caixas);
-  const contas = modelo.nos.filter(n => n.tipo === 'conta');
+  const notes = notasPorPai(modelo, d, res, caixas);
+  const contas = modelo.nodes.filter(n => n.kind === 'account');
   const modo = d.modo.modo;
 
   // 1. cada conta é layoutada isolada, para saber de que tamanho ela precisa (S4)
@@ -1194,7 +1194,7 @@ async function porContas(modelo, d, res) {
   for (const c of contas) {
     let medir = new Map(), r = null;
     for (let passada = 0; passada < 2; passada++) {
-      r = await layoutDaConta(elk, c, d, res, caixas, metrica, medir, notas);
+      r = await layoutDaConta(elk, c, d, res, caixas, metrica, medir, notes);
       const proximo = new Map();
       const def = deficitDeTitulo(c, caixas.get(c.id), r.width, res);
       if (def > 0) proximo.set(c.id, def);
@@ -1213,7 +1213,7 @@ async function porContas(modelo, d, res) {
   }
 
   // 2. a ordem ao longo do eixo — varrida na integração, canônica no inventário
-  const { ordem, custo, varridas } = ordemDeContas(contas, d.travessias, modo);
+  const { order, custo, varridas } = ordemDeContas(contas, d.travessias, modo);
 
   // `X6`: a conta que é hub ganha ênfase de borda, os spokes ficam finos. Só
   // marca quem DOMINA — empate não tem hub, e uma ênfase que não distingue é
@@ -1241,8 +1241,8 @@ async function porContas(modelo, d, res) {
 
   if (modo === 'integracao') {
     let x = 0;
-    const alt = Math.max(...ordem.map(c => interno.get(c.id).height));
-    ordem.forEach((c, i) => {
+    const alt = Math.max(...order.map(c => interno.get(c.id).height));
+    order.forEach((c, i) => {
       const g = interno.get(c.id);
       if (i > 0) x += CALHA;
       // `S5` transposto: numa COLUNA as contas são left-aligned na origem; numa
@@ -1252,11 +1252,11 @@ async function porContas(modelo, d, res) {
       x += g.width;
     });
     larguraTotal = x; alturaTotal = alt;
-    colunas.push({ ou: null, contas: ordem.map(c => c.id) });
+    colunas.push({ ou: null, contas: order.map(c => c.id) });
   } else {
     // agrupa em colunas por OU, preservando a ordem canônica já calculada
     let atual = null;
-    for (const c of ordem) {
+    for (const c of order) {
       const chave = c.ou || null;
       if (!atual || atual.ou !== chave) { atual = { ou: chave, contas: [] }; colunas.push(atual); }
       atual.contas.push(c.id);
@@ -1280,7 +1280,7 @@ async function porContas(modelo, d, res) {
   }
 
   return {
-    pos, interno, caixas, ordem, colunas, modo, hub,
+    pos, interno, caixas, order, colunas, modo, hub,
     largura: larguraTotal, altura: alturaTotal,
     varredura: { custo, varridas },
     metrica, GAP_IRMA, GAP_OU, CALHA, OU_LANE,

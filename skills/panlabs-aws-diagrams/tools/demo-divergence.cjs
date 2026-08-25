@@ -6,7 +6,7 @@
  *   > O que acontece quando o humano editou o `.drawio` a mao entre as duas
  *   > sessoes — o modelo ainda vale? A skill detecta divergencia?
  *
- *   node tools/demo-divergencia.cjs
+ *   node tools/demo-divergence.cjs
  *
  * Faz o que um humano faz de verdade num diagrama que recebeu: arrasta uma
  * caixa, renomeia um servico que estava com o nome errado, apaga um que nao
@@ -14,19 +14,19 @@
  *
  * Sao dois arquivos de saida, e a diferenca entre eles e a decisao deste ticket:
  *
- *   saida/varejo-so-remanejado.drawio   — so arrastou. O modelo continua valendo.
- *   saida/varejo-editado-a-mao.drawio   — mexeu no conteudo. O modelo virou mentira.
+ *   output/retail-so-remanejado.drawio   — so arrastou. O modelo continua valendo.
+ *   output/retail-editado-a-mao.drawio   — mexeu no conteudo. O modelo virou mentira.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const { abrir, diferir, politica, podeRegerar } = require('../sessao/abrir.cjs');
-const { desenhar } = require('../sessao/desenhar.cjs');
-const { lerPaginas } = require('../sessao/impressao.cjs');
+const { abrir, diferir, politica, podeRegerar } = require('../session/open.cjs');
+const { desenhar } = require('../session/draw.cjs');
+const { lerPaginas } = require('../session/fingerprint.cjs');
 
 const RAIZ = path.join(__dirname, '..');
-const ARQ = path.join(RAIZ, 'saida', 'varejo.drawio');
+const ARQ = path.join(RAIZ, 'output', 'retail.drawio');
 
 /**
  * Aplica uma troca na ULTIMA celula com este id — o arquivo tem duas paginas e o
@@ -67,22 +67,22 @@ const MEXEU_NO_CONTEUDO = xml => {
     '        </mxCell>\n') + x.slice(ultimo);
 };
 
-async function relatar(rotulo, arquivo) {
-  console.log(`\n  ══ ${rotulo}`);
+async function relatar(label, arquivo) {
+  console.log(`\n  ══ ${label}`);
   const aberto = abrir(fs.readFileSync(arquivo, 'utf8'));
   console.log(`     reconheci: ${aberto.comoReconheci.join(' · ')}`);
   for (const p of aberto.paginas) {
-    const pol = politica(p.estado);
-    console.log(`     pagina vista=${p.vista}  →  ${p.estado.toUpperCase()}`);
+    const pol = politica(p.state);
+    console.log(`     pagina vista=${p.view}  →  ${p.state.toUpperCase()}`);
     console.log(`       ${pol.diga}`);
-    if (p.estado !== 'divergente') continue;
-    const pode = podeRegerar(aberto.sessao, p.vista);
-    if (!pode.pode) { console.log(`       ${pode.porque}`); continue; }
-    const ref = await desenhar(aberto.sessao, p.vista);
+    if (p.state !== 'divergente') continue;
+    const pode = podeRegerar(aberto.sessao, p.view);
+    if (!pode.pode) { console.log(`       ${pode.because}`); continue; }
+    const ref = await desenhar(aberto.sessao, p.view);
     const d = diferir(p, lerPaginas(ref.xml).paginas[0].celulas);
-    console.log(`       ${d.achados.length} diferenca(s) — ${d.absorviveis} absorvivel(is), ${d.opacas} opaca(s):`);
-    for (const a of d.achados)
-      console.log(`         · ${String(a.tipo).padEnd(14)} ${String(a.id).padEnd(20)} ` +
+    console.log(`       ${d.findings.length} diferenca(s) — ${d.absorviveis} absorvivel(is), ${d.opacas} opaca(s):`);
+    for (const a of d.findings)
+      console.log(`         · ${String(a.kind).padEnd(14)} ${String(a.id).padEnd(20)} ` +
         `${a.era !== undefined && a.virou !== undefined
             ? `"${String(a.era).slice(0, 24)}" → "${String(a.virou).slice(0, 24)}"`
             : a.era !== undefined ? `era "${String(a.era).slice(0, 32)}"`
@@ -92,11 +92,11 @@ async function relatar(rotulo, arquivo) {
 }
 
 async function main() {
-  if (!fs.existsSync(ARQ)) { console.error('  rode tools/aprovar.cjs e tools/retomar.cjs antes.'); process.exit(1); }
+  if (!fs.existsSync(ARQ)) { console.error('  rode tools/approve.cjs e tools/resume.cjs antes.'); process.exit(1); }
   const base = fs.readFileSync(ARQ, 'utf8');
 
-  const a = path.join(RAIZ, 'saida', 'varejo-so-remanejado.drawio');
-  const b = path.join(RAIZ, 'saida', 'varejo-editado-a-mao.drawio');
+  const a = path.join(RAIZ, 'output', 'retail-so-remanejado.drawio');
+  const b = path.join(RAIZ, 'output', 'retail-editado-a-mao.drawio');
   fs.writeFileSync(a, SO_ARRASTOU(base));
   fs.writeFileSync(b, MEXEU_NO_CONTEUDO(base));
 

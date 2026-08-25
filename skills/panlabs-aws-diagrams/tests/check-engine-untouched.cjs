@@ -3,8 +3,8 @@
 /**
  * O motor nao muda sem que alguem decida que muda.
  *
- *   node tests/check-motor-intocado.cjs            # confere
- *   node tests/check-motor-intocado.cjs --gravar   # regrava o manifesto
+ *   node tests/check-engine-untouched.cjs            # confere
+ *   node tests/check-engine-untouched.cjs --gravar   # regrava o manifesto
  *
  * ⚠️ ESTE MANIFESTO MUDOU DE AFIRMACAO na recertificacao do #23, e vale dizer o
  * que ele afirmava antes.
@@ -16,7 +16,7 @@
  * `main` antes deste ticket (o proprio #22 registrou).
  *
  * A TESE do #14 sobrevive, e agora ela e testada de verdade em vez de por
- * congelamento: `check-projecao.cjs` passa 12/12 contra um motor que cresceu
+ * congelamento: `check-projection.cjs` passa 12/12 contra um motor que cresceu
  * tres vezes. Servir as duas vistas continua sendo problema de PROJECAO.
  *
  * O que este arquivo passa a afirmar e mais modesto e continua util: os 12
@@ -33,8 +33,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const MOTOR = path.join(__dirname, '..', 'motor');
-const MANIFESTO = path.join(__dirname, 'motor.manifesto.json');
+const MOTOR = path.join(__dirname, '..', 'engine');
+const MANIFESTO = path.join(__dirname, 'engine.manifest.json');
 
 // `vendor/` e o elkjs embarcado (1,6 MB) — hasheado igual, mas listado a parte
 // para o manifesto continuar legivel.

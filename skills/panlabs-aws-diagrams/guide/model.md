@@ -1,7 +1,7 @@
 # Escrever o modelo
 
 O esquema é a fonte da verdade e carrega a razão de cada campo na própria
-`description` — **leia [`../esquema.json`](../esquema.json)**, não uma cópia dele.
+`description` — **leia [`../schema.json`](../schema.json)**, não uma cópia dele.
 Este arquivo é só o que o esquema não consegue dizer sobre si mesmo. Comando aqui
 roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
@@ -15,7 +15,7 @@ coordenada.
 
 A escolha é deliberada: regra que depende de disciplina se perde na terceira
 sessão; **ausência de palavra, não**. É o mesmo movimento do vocabulário de tema,
-e é conferido mecanicamente por `tests/check-fronteira-modelo.cjs`, validado com
+e é conferido mecanicamente por `tests/check-model-boundary.cjs`, validado com
 experimento de controle — injetando `x` no esquema, tirando um
 `additionalProperties: false` e pondo `posicao` num modelo, a checagem acusa as
 três e sai vermelha.
@@ -27,25 +27,25 @@ falta) ou o **tema** (a métrica), nunca a geometria.
 
 | `$id` | esquema | escreva este quando |
 |---|---|---|
-| `modelo@1` | [`../esquema.json`](../esquema.json) | você tem **uma** vista e quer o `.drawio` — é o que o motor come |
-| `sessao@1` | [`../sessao/esquema.json`](../sessao/esquema.json) | a conversa tem as **duas** vistas, um acordo e um dossiê para atravessar sessões |
-| `tema@1` | [`../tema/esquema.json`](../tema/esquema.json) | você está configurando identidade visual — ver [`visual.md`](visual.md) |
-| `elaboracao@1` | [`../sessao/esquema-elaboracao.json`](../sessao/esquema-elaboracao.json) | você está na fase técnica e vai aplicar um delta sobre o modelo aprovado |
+| `model@1` | [`../schema.json`](../schema.json) | você tem **uma** vista e quer o `.drawio` — é o que o motor come |
+| `session@1` | [`../session/schema.json`](../session/schema.json) | a conversa tem as **duas** vistas, um acordo e um dossiê para atravessar sessões |
+| `theme@1` | [`../theme/schema.json`](../theme/schema.json) | você está configurando identidade visual — ver [`visual.md`](visual.md) |
+| `elaboration@1` | [`../session/elaboration.schema.json`](../session/elaboration.schema.json) | você está na fase técnica e vai aplicar um delta sobre o modelo aprovado |
 
-`sessao@1` **não** é o que o motor come: ele projeta para `modelo@1`. A diferença
+`session@1` **não** é o que o motor come: ele projeta para `model@1`. A diferença
 entre a vista lógica e a técnica não é outro modelo, é outro **casaco** sobre os
 mesmos nós, mais os nós que só a camada técnica tem.
 
 ### O delta de elaboração
 
-`elaboracao@1` tem esquema próprio —
-[`../sessao/esquema-elaboracao.json`](../sessao/esquema-elaboracao.json) — desde o
+`elaboration@1` tem esquema próprio —
+[`../session/elaboration.schema.json`](../session/elaboration.schema.json) — desde o
 #37. `elaborar()` valida a FORMA do delta contra ele antes de aplicar qualquer
-regra de domínio, e `tests/check-esquema-unico.cjs` o varre junto dos outros três.
+regra de domínio, e `tests/check-single-schema.cjs` o varre junto dos outros três.
 Os mapas (`casacos`, `dentro`, `refina`, `arestasCasaco`) ficam com valor solto no
 esquema — as chaves são ids imprevisíveis aqui, e a forma de cada valor (em
 particular a de um casaco técnico) é conferida de novo, já fundida no modelo
-inteiro, por `sessao/validar.cjs` contra `sessao@1`.
+inteiro, por `session/validate.cjs` contra `session@1`.
 
 Ele não é um segundo modelo — é o que a fase técnica **acrescenta** ao que a
 sessão anterior aprovou. Campos, todos opcionais além de `esquema` e `sobre`:
@@ -110,7 +110,7 @@ confiança do diagrama, e é a resposta que satisfaz *"o rótulo bate com a
 intenção"* sem olho humano.
 
 `dados: "volta"` é **semântico e o layout obedece**: o eixo passa a seguir o dado,
-não a seta. A consequência foi paga de propósito — ver [`laudo.md`](laudo.md)
+não a seta. A consequência foi paga de propósito — ver [`report.md`](report.md)
 sobre `A5.7`.
 
 ### 3 · Dimensão não é container

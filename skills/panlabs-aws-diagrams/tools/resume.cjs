@@ -4,8 +4,8 @@
  * PASSOS 1 E 6 DO ARCO — retoma um `.drawio` gravado e, se voce mandar um delta,
  * elabora a vista tecnica por cima do que foi aprovado.
  *
- *   node tools/retomar.cjs <arq.drawio>                          so o briefing
- *   node tools/retomar.cjs <arq.drawio> --delta <elaboracao.json> [--saida y.drawio]
+ *   node tools/resume.cjs <arq.drawio>                          so o briefing
+ *   node tools/resume.cjs <arq.drawio> --delta <elaboracao.json> [--saida y.drawio]
  *
  * Sao os dois passos no mesmo comando porque sao a mesma leitura: reconhecer o
  * arquivo, classificar as paginas e devolver o briefing e o passo 1; aplicar o
@@ -28,10 +28,10 @@
  * esta certo.
  *
  * ⚠️ ATE O #29 O PASSO 6 NAO TINHA COMANDO. O `SKILL.md` mandava o agente gravar
- * um driver de vinte linhas na raiz da skill — ver o cabecalho de `aprovar.cjs`
+ * um driver de vinte linhas na raiz da skill — ver o cabecalho de `approve.cjs`
  * para os tres motivos de isso ter sido desfeito.
  *
- * Sem argumento nenhum ele roda o caso do corpus (`varejo`), que e o que a
+ * Sem argumento nenhum ele roda o caso do corpus (`retail`), que e o que a
  * camada 6 da suite exercita.
  */
 
@@ -39,24 +39,24 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const { abrir, diferir, politica, podeRegerar } = require(path.join(RAIZ, 'sessao', 'abrir.cjs'));
-const { briefing } = require(path.join(RAIZ, 'sessao', 'briefing.cjs'));
-const { elaborar } = require(path.join(RAIZ, 'sessao', 'elaborar.cjs'));
-const { validar } = require(path.join(RAIZ, 'sessao', 'validar.cjs'));
-const { conferir } = require(path.join(RAIZ, 'sessao', 'acordo.cjs'));
-const { desenhar } = require(path.join(RAIZ, 'sessao', 'desenhar.cjs'));
-const { costurar } = require(path.join(RAIZ, 'sessao', 'gravar.cjs'));
-const { lerPaginas } = require(path.join(RAIZ, 'sessao', 'impressao.cjs'));
+const { abrir, diferir, politica, podeRegerar } = require(path.join(RAIZ, 'session', 'open.cjs'));
+const { briefing } = require(path.join(RAIZ, 'session', 'briefing.cjs'));
+const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
+const { validar } = require(path.join(RAIZ, 'session', 'validate.cjs'));
+const { conferir } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
+const { desenhar } = require(path.join(RAIZ, 'session', 'draw.cjs'));
+const { costurar } = require(path.join(RAIZ, 'session', 'save.cjs'));
+const { lerPaginas } = require(path.join(RAIZ, 'session', 'fingerprint.cjs'));
 
 const AJUDA = `
-  node tools/retomar.cjs <arq.drawio> [opcoes]
+  node tools/resume.cjs <arq.drawio> [opcoes]
 
     --delta <elaboracao.json>  aplica o delta da fase tecnica (passo 6 do arco).
                                Sem ele, o comando so imprime o briefing (passo 1).
     --saida <y.drawio>         onde gravar as duas vistas   (default: o proprio arquivo)
 
-  Sem argumento nenhum, roda o caso do corpus (saida/varejo.drawio com
-  modelo/sessao/varejo-elaboracao.json).
+  Sem argumento nenhum, roda o caso do corpus (output/retail.drawio com
+  models/session/retail-elaboration.json).
 
   Codigos de saida:
     0  tudo certo
@@ -71,9 +71,9 @@ function parse(args) {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (!a.startsWith('--')) { soltos.push(a); continue; }
-    const nome = a.slice(2);
-    if (COM_VALOR.includes(nome)) { opts[nome] = args[++i]; continue; }
-    opts[nome] = true;
+    const name = a.slice(2);
+    if (COM_VALOR.includes(name)) { opts[name] = args[++i]; continue; }
+    opts[name] = true;
   }
   return { opts, soltos };
 }
@@ -82,13 +82,13 @@ async function main() {
   const { opts, soltos } = parse(process.argv.slice(2));
   if (opts.help || opts.h) { console.log(AJUDA); return; }
 
-  const entrada = soltos[0] || path.join(RAIZ, 'saida', 'varejo.drawio');
+  const entrada = soltos[0] || path.join(RAIZ, 'output', 'retail.drawio');
   // O default do delta so vale quando a ENTRADA tambem e a do corpus. Herdar o
-  // delta do varejo num arquivo qualquer aplicaria o casaco tecnico errado — e
+  // delta do retail num arquivo qualquer aplicaria o casaco tecnico errado — e
   // `elaborar` recusaria pelo `sobre`, mas com uma mensagem que nao explica a
   // causa. Melhor nao chegar la.
   const delta = opts.delta
-    || (soltos.length === 0 ? path.join(RAIZ, 'modelo', 'sessao', 'varejo-elaboracao.json') : null);
+    || (soltos.length === 0 ? path.join(RAIZ, 'models', 'session', 'retail-elaboration.json') : null);
 
   if (!fs.existsSync(entrada)) {
     console.error(`\n  ✗ nao achei ${entrada}`);
@@ -101,14 +101,14 @@ async function main() {
 
   // 1 e 2 -------------------------------------------------------------------
   const aberto = abrir(xml);
-  if (!aberto.nosso) { console.error(`\n  ✗ ${aberto.porque}`); process.exit(1); }
+  if (!aberto.nosso) { console.error(`\n  ✗ ${aberto.because}`); process.exit(1); }
 
-  const problema = aberto.paginas.filter(p => politica(p.estado).bloqueia);
-  const remanejadas = aberto.paginas.filter(p => p.estado === 'remanejado');
+  const problema = aberto.paginas.filter(p => politica(p.state).bloqueia);
+  const remanejadas = aberto.paginas.filter(p => p.state === 'remanejado');
 
   // 3 -----------------------------------------------------------------------
   const acordoAntes = conferir(aberto.sessao);
-  for (const l of briefing(aberto, { acordo: acordoAntes })) console.log(l);
+  for (const l of briefing(aberto, { agreement: acordoAntes })) console.log(l);
 
   // O bloqueio vem DEPOIS do briefing de proposito: mesmo quando nao da para
   // seguir, o usuario recebe o contexto de volta. Bloquear antes de contar o que
@@ -116,21 +116,21 @@ async function main() {
   if (problema.length) {
     console.log('\n  ┌─ DIVERGENCIA ' + '─'.repeat(49));
     for (const p of problema) {
-      console.log(`  │ pagina "${p.nome || p.id}": ${politica(p.estado).diga}`);
-      if (p.estado !== 'divergente') continue;
-      const pode = podeRegerar(aberto.sessao, p.vista);
-      if (!pode.pode) { console.log(`  │   ${pode.porque}`); continue; }
-      const ref = await desenhar(aberto.sessao, p.vista);
+      console.log(`  │ pagina "${p.name || p.id}": ${politica(p.state).diga}`);
+      if (p.state !== 'divergente') continue;
+      const pode = podeRegerar(aberto.sessao, p.view);
+      if (!pode.pode) { console.log(`  │   ${pode.because}`); continue; }
+      const ref = await desenhar(aberto.sessao, p.view);
       // A referencia e a pagina de MESMO id — com 1+N paginas por vista, pegar
       // sempre a primeira compararia a vista consolidada contra uma de detalhe
       // e chamaria de "divergencia" a diferenca entre duas paginas distintas.
       const paginasRef = lerPaginas(ref.xml).paginas;
       const ref1 = paginasRef.find(x => x.id === p.id) || paginasRef[0];
       const d = diferir(p, ref1.celulas);
-      console.log(`  │ ${d.achados.length} diferenca(s): ${d.absorviveis} que o modelo sabe expressar, ${d.opacas} que nao.`);
-      for (const a of d.achados) {
+      console.log(`  │ ${d.findings.length} diferenca(s): ${d.absorviveis} que o modelo sabe expressar, ${d.opacas} que nao.`);
+      for (const a of d.findings) {
         const onde = a.classe === 'absorvivel' ? `absorvivel → ${a.onde}` : 'opaca';
-        console.log(`  │   · ${String(a.tipo).padEnd(14)} ${String(a.id).padEnd(24)} ${a.era !== undefined && a.virou !== undefined ? `"${a.era}" -> "${a.virou}"` : a.era !== undefined ? `era "${a.era}"` : `veio "${a.virou}"`}  [${onde}]`);
+        console.log(`  │   · ${String(a.kind).padEnd(14)} ${String(a.id).padEnd(24)} ${a.era !== undefined && a.virou !== undefined ? `"${a.era}" -> "${a.virou}"` : a.era !== undefined ? `era "${a.era}"` : `veio "${a.virou}"`}  [${onde}]`);
       }
     }
     console.log('  └' + '─'.repeat(63));
@@ -139,7 +139,7 @@ async function main() {
     process.exit(2);
   }
   for (const p of remanejadas)
-    console.log(`\n  ⚠ pagina "${p.nome || p.id}": ${politica(p.estado).diga}`);
+    console.log(`\n  ⚠ pagina "${p.name || p.id}": ${politica(p.state).diga}`);
 
   if (!acordoAntes.ok) { console.error(`\n  ✗ acordo: ${acordoAntes.motivo}`); process.exit(2); }
 
@@ -147,7 +147,7 @@ async function main() {
   // terceira sessao. O que ele nao e e motivo para reaplicar o delta: a
   // elaboracao ja aconteceu, e reaplicar so produziria "ja tinha casaco
   // tecnico" dez vezes.
-  if (aberto.sessao.estagio === 'tecnica') {
+  if (aberto.sessao.stage === 'technical') {
     console.log('\n  Este arquivo ja foi elaborado — as duas vistas estao aqui dentro.');
     console.log('  Nada a fazer: o briefing acima e o estado das paginas ja e a retomada.\n');
     return;
@@ -159,7 +159,7 @@ async function main() {
   if (!delta) {
     console.log('\n  Briefing entregue. Este arquivo esta no estagio LOGICO.');
     console.log('  Para elaborar a vista tecnica, passe --delta <elaboracao.json>');
-    console.log('  (a forma do delta esta em guia/modelo.md).\n');
+    console.log('  (a forma do delta esta em guide/model.md).\n');
     return;
   }
 
@@ -167,35 +167,35 @@ async function main() {
 
   // 4 e 5 -------------------------------------------------------------------
   const elaboracao = JSON.parse(fs.readFileSync(delta, 'utf8'));
-  const tecnico = elaborar(aberto.sessao, elaboracao);
-  console.log(`\n  elaborar    ${aberto.sessao.nos.length} → ${tecnico.nos.length} nos, ` +
-    `${aberto.sessao.arestas.length} → ${tecnico.arestas.length} arestas  (estagio=${tecnico.estagio})`);
+  const technical = elaborar(aberto.sessao, elaboracao);
+  console.log(`\n  elaborar    ${aberto.sessao.nodes.length} → ${technical.nodes.length} nos, ` +
+    `${aberto.sessao.edges.length} → ${technical.edges.length} arestas  (estagio=${technical.stage})`);
 
-  const v = validar(tecnico);
+  const v = validar(technical);
   for (const a of v.avisos) console.log(`  ⚠ ${a}`);
   if (!v.ok) { console.error(`\n  ✗ modelo invalido (${v.fase})`); for (const e of v.erros) console.error(`      · ${e}`); process.exit(1); }
 
-  const depois = conferir(tecnico);
+  const depois = conferir(technical);
   console.log(`  conferir    ${depois.ok ? '✓ a projecao logica do modelo TECNICO e byte a byte a que foi aprovada' : '✗ ' + depois.motivo}`);
-  for (const d of depois.diferencas) console.log(`      · ${d.texto}`);
+  for (const d of depois.diferencas) console.log(`      · ${d.text}`);
   if (!depois.ok) {
     console.error('\n  A elaboracao tecnica mudou o que foi aprovado. Isso exige aprovacao nova, nao um desenho novo.\n');
     process.exit(2);
   }
 
   // 6 -----------------------------------------------------------------------
-  const rl = await desenhar(tecnico, 'logica');
-  const rt = await desenhar(tecnico, 'tecnica');
+  const rl = await desenhar(technical, 'logical');
+  const rt = await desenhar(technical, 'technical');
   for (const a of rt.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  console.log(`  desenhar    logica: ${rl.modelo.nos.length} nos, ${rl.modelo.arestas.length} arestas  ·  ` +
-    `tecnica: ${rt.modelo.nos.length} nos, ${rt.modelo.arestas.length} arestas (caminho "${rt.caminho}")`);
+  console.log(`  desenhar    logica: ${rl.modelo.nodes.length} nos, ${rl.modelo.edges.length} arestas  ·  ` +
+    `tecnica: ${rt.modelo.nodes.length} nos, ${rt.modelo.edges.length} arestas (caminho "${rt.caminho}")`);
   if (rt.trilha.colapsados.length)
     console.log(`              colapso: ${rt.trilha.colapsados.length} no(s) da vista tecnica reancoram na logica`);
   for (const c of rl.trilha.contraidas)
-    console.log(`              contraiu ${c.de} → ${c.para} atraves de [${c.por.join(', ')}]  ("${c.rotulo}")`);
+    console.log(`              contraiu ${c.from} → ${c.to} atraves de [${c.by.join(', ')}]  ("${c.label}")`);
 
   // A prova de que elaborar tecnicamente nao mexeu no desenho aprovado.
-  const antiga = aberto.paginas.find(p => p.vista === 'logica');
+  const antiga = aberto.paginas.find(p => p.view === 'logical');
   const nova = lerPaginas(rl.xml).paginas.find(x => x.id === (antiga && antiga.id)) || lerPaginas(rl.xml).paginas[0];
   const igual = antiga && antiga.selo.panlabsSemantica === nova.selo.panlabsSemantica
     && antiga.selo.panlabsAparencia === nova.selo.panlabsAparencia;

@@ -44,19 +44,19 @@ function extrair(xml) {
 const iguais = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 let falhas = 0;
-const arquivos = fs.readdirSync(path.join(RAIZ, 'saida')).filter(f => f.endsWith('.drawio'));
-if (!arquivos.length) { console.log('  (nenhum .drawio em saida/ — rode o motor antes)'); process.exit(1); }
+const arquivos = fs.readdirSync(path.join(RAIZ, 'output')).filter(f => f.endsWith('.drawio'));
+if (!arquivos.length) { console.log('  (nenhum .drawio em output/ — rode o motor antes)'); process.exit(1); }
 
 const temApp = fs.existsSync(DRAWIO);
 if (!temApp) console.log(`  draw.io headless ausente em ${DRAWIO} — só a camada estática.\n`);
 
 for (const arq of arquivos) {
-  const caminho = path.join(RAIZ, 'saida', arq);
+  const caminho = path.join(RAIZ, 'output', arq);
   const xml = fs.readFileSync(caminho, 'utf8');
-  const nome = arq.replace(/\.drawio$/, '');
+  const name = arq.replace(/\.drawio$/, '');
   // variantes de estilo (fluxo tracejado/animado) saem do mesmo modelo com outro
   // nome de arquivo; sem modelo correspondente não há o que comparar
-  const caminhoModelo = path.join(RAIZ, 'modelo', nome + '.json');
+  const caminhoModelo = path.join(RAIZ, 'models', name + '.json');
   if (!fs.existsSync(caminhoModelo)) { console.log(`  ${arq}\n    (variante sem modelo próprio — pulada)`); continue; }
   const fonte = JSON.parse(fs.readFileSync(caminhoModelo, 'utf8'));
 
@@ -69,7 +69,7 @@ for (const arq of arquivos) {
 
   // 2. o app decodifica e re-serializa pelo codec dele
   if (!temApp) continue;
-  const saida = path.join(TMP, `rt-${nome}.drawio`);
+  const saida = path.join(TMP, `rt-${name}.drawio`);
   try {
     execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', saida, caminho],
       { stdio: ['ignore', 'ignore', 'ignore'] });
@@ -82,8 +82,8 @@ for (const arq of arquivos) {
   if (!ok2) { falhas++; console.log(lido2 ? '        o app alterou o modelo embutido' : '        o app comeu o atributo'); }
 
   // 3. o dossiê — que o motor nunca lê — também volta inteiro?
-  if (fonte.dossie) {
-    const ok3 = lido2 && iguais(lido2.dossie, fonte.dossie);
+  if (fonte.dossier) {
+    const ok3 = lido2 && iguais(lido2.dossier, fonte.dossier);
     console.log(`    dossiê opaco intacto         ${ok3 ? '✓' : '✗'}`);
     if (!ok3) falhas++;
   }

@@ -3,7 +3,7 @@
 /**
  * O controle negativo: o validador reprova o que tem de reprovar.
  *
- * Cada caso de `casos/quebrados.cjs` quebra uma coisa nomeada e declara a
+ * Cada caso de `casos/broken.cjs` quebra uma coisa nomeada e declara a
  * checagem que tem de acusar. Aqui se confere que ela acusou — e, no fim, que o
  * CONTROLE, construído com o mesmo vocabulário e geometria correta, NÃO é
  * acusado pelas checagens duras. Sem essa segunda metade, a suíte não distingue
@@ -11,8 +11,8 @@
  */
 
 const path = require('path');
-const { CASOS, CONTROLE } = require(path.join(__dirname, 'casos', 'quebrados.cjs'));
-const { validarGeometria } = require(path.join(__dirname, '..', 'validador', 'validar-geometria.cjs'));
+const { CASOS, CONTROLE } = require(path.join(__dirname, 'cases', 'broken.cjs'));
+const { validarGeometria } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
 
 /** As checagens que devem passar num desenho geometricamente correto. */
 const DURAS = ['A3.1', 'A3.3', 'A3.5', 'A3.7', 'A4.1', 'A4.2', 'A4.3', 'A4.4', 'A5.5', 'A5.8', 'F1'];
@@ -26,15 +26,15 @@ for (const caso of CASOS) {
   const faltando = caso.espera.filter(id => !acusadas.has(id));
   const ok = faltando.length === 0;
   if (!ok) falhas++;
-  console.log(`  ${ok ? '✓' : '✗'} ${caso.nome}`);
+  console.log(`  ${ok ? '✓' : '✗'} ${caso.name}`);
   if (ok) {
     const quais = caso.espera.map(id => {
-      const achado = [...r.falhas, ...r.avisos].find(x => x.id === id);
-      return `${id} ${achado.estado === 'falha' ? 'reprovou' : 'avisou'}`;
+      const finding = [...r.falhas, ...r.avisos].find(x => x.id === id);
+      return `${id} ${finding.state === 'falha' ? 'reprovou' : 'avisou'}`;
     });
     console.log(`      ${quais.join(', ')}`);
-    const primeira = [...r.falhas, ...r.avisos].find(x => caso.espera.includes(x.id) && x.ocorrencias.length);
-    if (primeira) console.log(`      → ${primeira.ocorrencias[0].o_que}`);
+    const primeira = [...r.falhas, ...r.avisos].find(x => caso.espera.includes(x.id) && x.occurrences.length);
+    if (primeira) console.log(`      → ${primeira.occurrences[0].o_que}`);
   } else {
     console.log(`      esperava ${faltando.join(', ')} e não veio; acusadas: ${[...acusadas].join(', ') || '(nenhuma)'}`);
   }
@@ -55,7 +55,7 @@ console.log('\n  controle positivo (mesmo vocabulário, geometria correta):\n');
     console.log(`      acusaram sem motivo: ${indevidas.join(', ')}`);
     for (const id of indevidas) {
       const x = r.falhas.find(f => f.id === id);
-      for (const o of x.ocorrencias.slice(0, 3)) console.log(`        · ${id}: ${o.o_que}`);
+      for (const o of x.occurrences.slice(0, 3)) console.log(`        · ${id}: ${o.o_que}`);
     }
   }
 
@@ -78,7 +78,7 @@ console.log('\n  cobertura:\n');
   if (!ok) console.log(`      não rodaram: ${r.cobertura.naoRodaram.join(', ')}`);
 
   // Uma checagem que estoura vira estado `erro`, não silêncio.
-  const erros = r.resultados.filter(x => x.estado === 'erro');
+  const erros = r.resultados.filter(x => x.state === 'erro');
   if (erros.length) { falhas++; console.log(`  ✗ ${erros.length} família(s) estouraram: ${erros.map(e => e.mensagem).join(' | ')}`); }
   else console.log('  ✓ nenhuma família estourou');
 }

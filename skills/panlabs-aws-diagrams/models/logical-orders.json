@@ -1,35 +1,35 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "logica-pedidos",
-  "titulo": "Pedidos · vista lógica",
-  "subtitulo": "L2 · a mesma arquitetura antes de nomear serviço — premissa 2 do mapa",
-  "vista": "logica",
-  "genero": "L2",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "logical-orders",
+  "title": "Pedidos · vista lógica",
+  "subtitle": "L2 · a mesma arquitetura antes de nomear serviço — premissa 2 do mapa",
+  "view": "logical",
+  "genre": "L2",
 
 
-  "nos": [
-    { "id": "cliente", "tipo": "ator", "servico": "users", "rotulo": "Clientes",
-      "qualificador": "app móvel e web" },
-    { "id": "borda", "tipo": "bloco", "rotulo": "Borda pública",
-      "qualificador": "autentica e limita taxa" },
-    { "id": "processa", "tipo": "bloco", "rotulo": "Processamento de pedido",
-      "qualificador": "valida, calcula, persiste" },
-    { "id": "catalogo", "tipo": "bloco", "rotulo": "Catálogo de produtos",
-      "qualificador": "leitura consistente" },
-    { "id": "registro", "tipo": "bloco", "rotulo": "Registro de pedidos",
-      "qualificador": "escrita de alto volume" }
+  "nodes": [
+    { "id": "cliente", "kind": "actor", "service": "users", "label": "Clientes",
+      "qualifier": "app móvel e web" },
+    { "id": "edge", "kind": "block", "label": "Borda pública",
+      "qualifier": "autentica e limita taxa" },
+    { "id": "processa", "kind": "block", "label": "Processamento de pedido",
+      "qualifier": "valida, calcula, persiste" },
+    { "id": "catalogo", "kind": "block", "label": "Catálogo de produtos",
+      "qualifier": "leitura consistente" },
+    { "id": "registro", "kind": "block", "label": "Registro de pedidos",
+      "qualifier": "escrita de alto volume" }
   ],
 
-  "arestas": [
-    { "de": "cliente", "para": "borda", "rotulo": "faz pedido", "ordem": 1 },
-    { "de": "borda", "para": "processa", "rotulo": "encaminha", "ordem": 2 },
-    { "de": "processa", "para": "catalogo", "rotulo": "consulta preço", "ordem": 3 },
-    { "de": "processa", "para": "registro", "rotulo": "grava", "ordem": 4 }
+  "edges": [
+    { "from": "cliente", "to": "edge", "label": "faz pedido", "order": 1 },
+    { "from": "edge", "to": "processa", "label": "encaminha", "order": 2 },
+    { "from": "processa", "to": "catalogo", "label": "consulta preço", "order": 3 },
+    { "from": "processa", "to": "registro", "label": "grava", "order": 4 }
   ],
 
-  "notas": [
+  "notes": [
     { "id": "nota-fronteira",
-      "texto": "Agrupado por fronteira de responsabilidade, não por conta AWS — decisão do #15, tomada contra render real.",
-      "origem": "premissa" }
+      "text": "Agrupado por fronteira de responsabilidade, não por conta AWS — decisão do #15, tomada contra render real.",
+      "origin": "assumption" }
   ]
 }

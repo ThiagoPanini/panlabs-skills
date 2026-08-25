@@ -27,13 +27,13 @@ const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const RAIZ = path.join(__dirname, '..');
-const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
+const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
 
 const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
 // o diretório de modelos é argumento para que outro corpus aponte os SEUS
 // modelos para esta mesma régua — o determinismo é propriedade do motor, não
 // de um conjunto de exemplos
-const DIR_MODELOS = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'modelo');
+const DIR_MODELOS = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'models');
 const modelos = fs.readdirSync(DIR_MODELOS).filter(f => f.endsWith('.json'));
 
 /** Só a geometria — ignora ids, estilos e a ordem em que as células saíram. */
@@ -73,7 +73,7 @@ function embaralhar(arr, semente) {
 
     // 2. processo novo
     const outro = execFileSync(process.execPath, ['-e', `
-      const { gerar } = require(${JSON.stringify(path.join(RAIZ, 'motor', 'gerar.cjs'))});
+      const { gerar } = require(${JSON.stringify(path.join(RAIZ, 'engine', 'generate.cjs'))});
       const m = JSON.parse(require('fs').readFileSync(${JSON.stringify(path.join(DIR_MODELOS, arq))}, 'utf8'));
       gerar(m).then(r => process.stdout.write(require('crypto').createHash('sha256').update(r.xml).digest('hex').slice(0,16)));
     `], { encoding: 'utf8' });
@@ -86,8 +86,8 @@ function embaralhar(arr, semente) {
     const divergentes = [];
     for (const semente of [7, 42, 1337]) {
       const m = JSON.parse(bruto);
-      m.nos = embaralhar(m.nos, semente);
-      if (m.arestas) m.arestas = embaralhar(m.arestas, semente + 1);
+      m.nodes = embaralhar(m.nodes, semente);
+      if (m.edges) m.edges = embaralhar(m.edges, semente + 1);
       let d;
       try { d = digital((await gerar(m)).xml); }
       catch (e) { d = 'ERRO: ' + e.message; }

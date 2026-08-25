@@ -4,7 +4,7 @@
  * A árvore de produção não alcança `prototypes/` — e a checagem é de RUNTIME,
  * não de grep.
  *
- * O critério de aceite do #23 é literal: *"`node <raiz>/motor/gerar.cjs <modelo>
+ * O critério de aceite do #23 é literal: *"`node <raiz>/engine/generate.cjs <modelo>
  * --saida <x>` funciona a partir da raiz da skill, sem depender de nada dentro de
  * `prototypes/`"*. Um grep por `prototypes` acharia o caminho escrito à mão e
  * perderia o caminho montado (`path.join(dir, '..', '..')`), que é justamente
@@ -26,24 +26,24 @@ const RAIZ = path.join(__dirname, '..');
 const PROTOTIPOS = path.join(RAIZ, 'prototypes');
 
 let falhas = 0;
-const ok = (cond, titulo, detalhe) => {
-  console.log(`  ${cond ? '✓' : '✗'} ${titulo}${detalhe ? `  — ${detalhe}` : ''}`);
+const ok = (cond, title, detail) => {
+  console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
   if (!cond) falhas++;
 };
 
 async function main() {
   // carrega TUDO o que a skill publicada expõe, e roda o pipeline de verdade
-  const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
-  require(path.join(RAIZ, 'validador', 'validar-geometria.cjs'));
-  require(path.join(RAIZ, 'validador', 'portao.cjs'));
-  require(path.join(RAIZ, 'tema', 'tema.cjs'));
-  require(path.join(RAIZ, 'sessao', 'desenhar.cjs'));
-  require(path.join(RAIZ, 'sessao', 'abrir.cjs'));
-  require(path.join(RAIZ, 'sessao', 'publicar.cjs'));
+  const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
+  require(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
+  require(path.join(RAIZ, 'validator', 'gate.cjs'));
+  require(path.join(RAIZ, 'theme', 'theme.cjs'));
+  require(path.join(RAIZ, 'session', 'draw.cjs'));
+  require(path.join(RAIZ, 'session', 'open.cjs'));
+  require(path.join(RAIZ, 'session', 'publish.cjs'));
 
-  const modelos = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).sort();
+  const modelos = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).sort();
   for (const m of modelos)
-    await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', m), 'utf8')));
+    await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', m), 'utf8')));
 
   const carregados = Object.keys(require.cache)
     .filter(f => !f.includes(`${path.sep}node_modules${path.sep}`))
@@ -63,7 +63,7 @@ async function main() {
   // por `readFileSync`, e um deles apontando para o protótipo passaria
   // despercebido pela primeira asserção.
   //
-  // ⚠️ O `esquema.json` e o `limiares.json` NÃO aparecem nesta lista, e não é
+  // ⚠️ O `schema.json` e o `thresholds.json` NÃO aparecem nesta lista, e não é
   // buraco: os dois são lidos no topo do módulo, na CARGA — então já foram lidos
   // quando a espia entra, e a primeira asserção (`require.cache`) é quem cobre o
   // caminho deles. Um comentário anterior os citava aqui; era falso, e a revisão
@@ -74,8 +74,8 @@ async function main() {
   try {
     delete require.cache[require.resolve(path.join(RAIZ, 'catalog', 'aws-shapes.cjs'))];
     require(path.join(RAIZ, 'catalog', 'aws-shapes.cjs')).carregar();
-    await gerar(JSON.parse(realFs.call(fs, path.join(RAIZ, 'modelo', 'web-multi-az.json'), 'utf8')),
-      { tema: 'corporativo' });
+    await gerar(JSON.parse(realFs.call(fs, path.join(RAIZ, 'models', 'web-multi-az.json'), 'utf8')),
+      { tema: 'corporate' });
   } finally { fs.readFileSync = realFs; }
   // e a espia tem de ter visto ALGUMA coisa — uma espia que não observa nada
   // torna a asserção seguinte vacuamente verdadeira
@@ -95,11 +95,11 @@ async function main() {
   let cli = true;
   try {
     execFileSync(process.execPath,
-      [path.join(RAIZ, 'motor', 'gerar.cjs'), path.join(RAIZ, 'modelo', 'web-multi-az.json'), '--saida', saida],
+      [path.join(RAIZ, 'engine', 'generate.cjs'), path.join(RAIZ, 'models', 'web-multi-az.json'), '--saida', saida],
       { stdio: 'ignore', cwd: RAIZ });
   } catch (e) { cli = false; }
   ok(cli && fs.existsSync(saida) && fs.statSync(saida).size > 0,
-    'node motor/gerar.cjs <modelo> --saida <x> roda a partir da raiz da skill',
+    'node engine/generate.cjs <modelo> --saida <x> roda a partir da raiz da skill',
     cli ? `${fs.statSync(saida).size} bytes` : 'a CLI falhou');
   fs.rmSync(tmp, { recursive: true, force: true });
 

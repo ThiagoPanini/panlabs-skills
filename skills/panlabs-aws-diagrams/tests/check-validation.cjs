@@ -9,92 +9,92 @@
 
 const fs = require('fs');
 const path = require('path');
-const { validar, contraEsquema } = require(path.join(__dirname, '..', 'motor', 'validar.cjs'));
-const { ESQUEMA } = require(path.join(__dirname, '..', 'motor', 'gerar.cjs'));
+const { validar, contraEsquema } = require(path.join(__dirname, '..', 'engine', 'validate.cjs'));
+const { ESQUEMA } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
 
 // Um caso pode trazer o próprio esquema, e aí é medido por `contraEsquema` — o
-// genérico. `validar` é o de `modelo@1`: ele soma checagens semânticas que
+// genérico. `validar` é o de `model@1`: ele soma checagens semânticas que
 // pressupõem `nos`, e apontá-lo para outro contrato quebra antes de medir.
 const ESQUEMA_ELABORACAO = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'sessao', 'esquema-elaboracao.json'), 'utf8'));
+  fs.readFileSync(path.join(__dirname, '..', 'session', 'elaboration.schema.json'), 'utf8'));
 const elaboracao = extra => ({
-  esquema: 'panlabs-aws-diagrams/elaboracao@1', sobre: 'alvo', ...extra,
+  schema: 'panlabs-aws-diagrams/elaboration@1', about: 'target', ...extra,
 });
 
 const base = {
-  esquema: 'panlabs-aws-diagrams/modelo@1',
-  id: 'teste', titulo: 'Teste', vista: 'tecnica',
-  nos: [{ id: 'nuvem', tipo: 'nuvem' }],
+  schema: 'panlabs-aws-diagrams/model@1',
+  id: 'teste', title: 'Teste', view: 'technical',
+  nodes: [{ id: 'cloud', kind: 'cloud' }],
 };
 const com = extra => ({ ...base, ...extra });
 
 const casos = [
   {
-    nome: 'coordenada contrabandeada no nó',
-    modelo: com({ nos: [{ id: 'a', tipo: 'servico', servico: 'lambda', x: 10, y: 20 }] }),
+    name: 'coordenada contrabandeada no nó',
+    modelo: com({ nodes: [{ id: 'a', kind: 'service', service: 'lambda', x: 10, y: 20 }] }),
     espera: 'propriedade desconhecida "x"',
   },
   {
-    nome: 'erro de digitação com vizinho óbvio',
-    modelo: com({ nos: [{ id: 'a', tipo: 'servico', servico: 'lambda', dentroo: 'nuvem' }] }),
+    name: 'erro de digitação com vizinho óbvio',
+    modelo: com({ nodes: [{ id: 'a', kind: 'service', service: 'lambda', dentroo: 'cloud' }] }),
     espera: 'você quis dizer "dentro"',
   },
   {
-    nome: 'pai que não existe',
-    modelo: com({ nos: [{ id: 'a', tipo: 'servico', servico: 'lambda', dentro: 'fantasma' }] }),
+    name: 'pai que não existe',
+    modelo: com({ nodes: [{ id: 'a', kind: 'service', service: 'lambda', inside: 'fantasma' }] }),
     espera: 'não existe',
   },
   {
-    nome: 'contenção cíclica',
-    modelo: com({ nos: [{ id: 'a', tipo: 'grupo', dentro: 'b' }, { id: 'b', tipo: 'grupo', dentro: 'a' }] }),
+    name: 'contenção cíclica',
+    modelo: com({ nodes: [{ id: 'a', kind: 'group', inside: 'b' }, { id: 'b', kind: 'group', inside: 'a' }] }),
     espera: 'cíclica',
   },
   {
-    nome: 'aresta que termina num container',
+    name: 'aresta que termina num container',
     modelo: com({
-      nos: [{ id: 'vpc', tipo: 'vpc' }, { id: 'l', tipo: 'servico', servico: 'lambda' }],
-      arestas: [{ de: 'l', para: 'vpc' }],
+      nodes: [{ id: 'vpc', kind: 'vpc' }, { id: 'l', kind: 'service', service: 'lambda' }],
+      edges: [{ from: 'l', to: 'vpc' }],
     }),
     espera: 'é um container',
   },
   {
-    nome: 'subnet fora de VPC',
-    modelo: com({ nos: [{ id: 's', tipo: 'subnet', acesso: 'privada', dentro: 'nuvem' }, { id: 'nuvem', tipo: 'nuvem' }] }),
+    name: 'subnet fora de VPC',
+    modelo: com({ nodes: [{ id: 's', kind: 'subnet', access: 'private', inside: 'cloud' }, { id: 'cloud', kind: 'cloud' }] }),
     espera: 'fora de qualquer VPC',
   },
   {
-    nome: 'serviço AWS na vista lógica',
-    modelo: com({ vista: 'logica', nos: [{ id: 'a', tipo: 'servico', servico: 'lambda' }] }),
+    name: 'serviço AWS na vista lógica',
+    modelo: com({ view: 'logical', nodes: [{ id: 'a', kind: 'service', service: 'lambda' }] }),
     espera: 'vista lógica é pré-serviços',
   },
   {
-    nome: 'AZ declarada em algo que não é subnet',
-    modelo: com({ nos: [{ id: 'a', tipo: 'servico', servico: 'lambda', az: 'us-east-1a' }] }),
+    name: 'AZ declarada em algo que não é subnet',
+    modelo: com({ nodes: [{ id: 'a', kind: 'service', service: 'lambda', az: 'us-east-1a' }] }),
     espera: 'esperado o literal "subnet"',
   },
   {
-    nome: 'faixa misturando níveis da árvore',
+    name: 'faixa misturando níveis da árvore',
     modelo: com({
-      nos: [{ id: 'v', tipo: 'vpc' }, { id: 's', tipo: 'subnet', dentro: 'v', acesso: 'privada' },
-            { id: 'e', tipo: 'servico', servico: 'ec2', dentro: 's' }],
-      faixas: [{ id: 'f', membros: ['s', 'e'] }],
+      nodes: [{ id: 'v', kind: 'vpc' }, { id: 's', kind: 'subnet', inside: 'v', access: 'private' },
+            { id: 'e', kind: 'service', service: 'ec2', inside: 's' }],
+      bands: [{ id: 'f', members: ['s', 'e'] }],
     }),
     espera: 'profundidades diferentes',
   },
   {
-    nome: 'id fora do formato (vira id de mxCell)',
-    modelo: com({ nos: [{ id: 'Meu Lambda!', tipo: 'servico', servico: 'lambda' }] }),
+    name: 'id fora do formato (vira id de mxCell)',
+    modelo: com({ nodes: [{ id: 'Meu Lambda!', kind: 'service', service: 'lambda' }] }),
     espera: 'não casa com',
   },
   {
-    nome: 'modelo válido continua válido',
-    modelo: com({ nos: [{ id: 'a', tipo: 'servico', servico: 'lambda' }] }),
+    name: 'modelo válido continua válido',
+    modelo: com({ nodes: [{ id: 'a', kind: 'service', service: 'lambda' }] }),
     espera: null,
   },
 
   // ── patternProperties, as duas metades ──────────────────────────────────────
   // Um esquema fechado que ENUMERA comentário livre é contradição, e ela custou:
-  // `elaboracao@1` listava `_`, `_reparenta`, `_arestas` e `_refina` — as quatro
+  // `elaboration@1` listava `_`, `_reparenta`, `_arestas` e `_refina` — as quatro
   // que existiam DENTRO da skill — e reprovava `_conferir`, que só aparecia num
   // artefato de caso que outro ticket havia movido para FORA dela. Verde nos dois
   // PRs, e o defeito só aparecia ao regerar o caso.
@@ -102,14 +102,14 @@ const casos = [
   // As duas metades importam: permitir a chave sem validar o valor troca um
   // buraco por outro.
   {
-    nome: 'comentário livre em chave nova passa (a metade permissiva)',
-    esquema: ESQUEMA_ELABORACAO,
+    name: 'comentário livre em chave nova passa (a metade permissiva)',
+    schema: ESQUEMA_ELABORACAO,
     modelo: elaboracao({ _conferir: 'a lição que o artefato de caso guarda' }),
     espera: null,
   },
   {
-    nome: 'e o VALOR dele ainda é validado (a metade que fecha o buraco)',
-    esquema: ESQUEMA_ELABORACAO,
+    name: 'e o VALOR dele ainda é validado (a metade que fecha o buraco)',
+    schema: ESQUEMA_ELABORACAO,
     modelo: elaboracao({ _conferir: 123 }),
     espera: 'esperado string, veio integer',
   },
@@ -117,14 +117,14 @@ const casos = [
 
 let falhas = 0;
 for (const c of casos) {
-  const r = c.esquema
-    ? (es => ({ ok: es.length === 0, erros: es }))(contraEsquema(c.modelo, c.esquema, c.esquema))
+  const r = c.schema
+    ? (es => ({ ok: es.length === 0, erros: es }))(contraEsquema(c.modelo, c.schema, c.schema))
     : validar(c.modelo, ESQUEMA);
-  const texto = r.erros.join(' | ');
-  const ok = c.espera === null ? r.ok : (!r.ok && texto.includes(c.espera));
+  const text = r.erros.join(' | ');
+  const ok = c.espera === null ? r.ok : (!r.ok && text.includes(c.espera));
   if (!ok) falhas++;
-  console.log(`  ${ok ? '✓' : '✗'} ${c.nome}`);
-  if (!ok) console.log(`      esperava conter ${JSON.stringify(c.espera)}, veio: ${texto || '(passou)'}`);
+  console.log(`  ${ok ? '✓' : '✗'} ${c.name}`);
+  if (!ok) console.log(`      esperava conter ${JSON.stringify(c.espera)}, veio: ${text || '(passou)'}`);
   else if (c.espera) console.log(`      → ${r.erros[0]}`);
 }
 

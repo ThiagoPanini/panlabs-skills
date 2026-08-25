@@ -18,17 +18,17 @@
  *                    · `rounded=1` em AWS4 é no-op silencioso (#4 §8) — o pedido
  *                      não aparece em lugar nenhum, que é o pior tipo de opção.
  *
- *   node tools/gerar-armadilha.cjs
+ *   node tools/generate-trap.cjs
  */
 
 const fs = require('fs');
 const path = require('path');
-const { gerar } = require('../motor/gerar.cjs');
-const contraste = require('../motor/contraste.cjs');
+const { gerar } = require('../engine/generate.cjs');
+const contraste = require('../engine/contrast.cjs');
 
 const RAIZ = path.join(__dirname, '..');
-fs.mkdirSync(path.join(RAIZ, 'saida', 'temas'), { recursive: true });
-const MODELO = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'pedidos-serverless.json'), 'utf8'));
+fs.mkdirSync(path.join(RAIZ, 'output', 'themes'), { recursive: true });
+const MODELO = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'orders-serverless.json'), 'utf8'));
 
 /** Remendo bruto: o que o vocabulário não deixa dizer, dito na marra. */
 function remendar(xml) {
@@ -45,17 +45,17 @@ function remendar(xml) {
 
 async function main() {
   // --- d: dizível e errado -------------------------------------------------
-  const d = await gerar(MODELO, { tema: 'armadilha', forcar: true });
-  fs.writeFileSync(path.join(RAIZ, 'saida', 'temas', 'd-armadilha.drawio'), d.xml);
+  const d = await gerar(MODELO, { tema: 'trap', forcar: true });
+  fs.writeFileSync(path.join(RAIZ, 'output', 'themes', 'd-armadilha.drawio'), d.xml);
   console.log('d-armadilha  — o portão reprovaria assim:');
   for (const l of contraste.resumir(d.relatorio.contraste)) console.log('   ✗ ' + l);
-  fs.writeFileSync(path.join(RAIZ, 'saida', 'temas', 'd-armadilha.veredito.txt'),
+  fs.writeFileSync(path.join(RAIZ, 'output', 'themes', 'd-armadilha.veredito.txt'),
     contraste.resumir(d.relatorio.contraste).join('\n') + '\n');
 
   // --- e: indizível --------------------------------------------------------
-  const e = await gerar(MODELO, { tema: 'claro' });
+  const e = await gerar(MODELO, { tema: 'light' });
   const remendado = remendar(e.xml);
-  fs.writeFileSync(path.join(RAIZ, 'saida', 'temas', 'e-indizivel.drawio'), remendado);
+  fs.writeFileSync(path.join(RAIZ, 'output', 'themes', 'e-indizivel.drawio'), remendado);
   const quantos = k => (remendado.match(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
   console.log('\ne-indizivel  — remendos que NENHUM token do tema pode escrever:');
   console.log(`   sketch=1 injetado em ${quantos('sketch=1')} shape(s) AWS4`);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * #33 — `tools/check-geometria.cjs` passa a aceitar `--tema`.
+ * #33 — `tools/check-geometry.cjs` passa a aceitar `--tema`.
  *
  * Hoje o laudo sempre avalia o tema padrão (`claro`), que é cego para o campo
  * `qualificador` — ele só aparece no tema `corporativo`. Sem `--tema`, o
@@ -24,13 +24,13 @@ const { execFileSync } = require('child_process');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const CLI = path.join(RAIZ, 'tools', 'check-geometria.cjs');
+const CLI = path.join(RAIZ, 'tools', 'check-geometry.cjs');
 // tem `qualificador` no corpus embarcado — ver #33.
-const MODELO = path.join(RAIZ, 'modelo', 'quorum-3-az.json');
+const MODELO = path.join(RAIZ, 'models', 'quorum-3-az.json');
 
 let falhas = 0;
-const ok = (cond, titulo, detalhe) => {
-  console.log(`  ${cond ? '✓' : '✗'} ${titulo}${detalhe ? `  — ${detalhe}` : ''}`);
+const ok = (cond, title, detail) => {
+  console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
   if (!cond) falhas++;
 };
 
@@ -43,8 +43,8 @@ function rodar(...flags) {
 }
 
 const semFlag = rodar();
-const temaClaro = rodar('--tema', 'claro');
-const temaCorporativo = rodar('--tema', 'corporativo');
+const temaClaro = rodar('--tema', 'light');
+const temaCorporativo = rodar('--tema', 'corporate');
 
 ok(semFlag.codigo !== null && [0, 1].includes(semFlag.codigo),
   'sem --tema roda normalmente (linha de base)',
@@ -58,5 +58,5 @@ ok(temaCorporativo.saida !== semFlag.saida,
   '--tema corporativo muda o laudo — o tema pedido chegou ao motor',
   `tamanho sem-flag=${semFlag.saida.length} corporativo=${temaCorporativo.saida.length}`);
 
-console.log(falhas ? `\n  ✗ ${falhas} falha(s)` : '\n  ✓ check-geometria.cjs aceita --tema.');
+console.log(falhas ? `\n  ✗ ${falhas} falha(s)` : '\n  ✓ check-geometry.cjs aceita --tema.');
 process.exit(falhas ? 1 : 0);

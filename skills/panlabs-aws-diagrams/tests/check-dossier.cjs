@@ -18,18 +18,18 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const { aprovar } = require(path.join(RAIZ, 'sessao', 'acordo.cjs'));
-const { elaborar } = require(path.join(RAIZ, 'sessao', 'elaborar.cjs'));
-const { desenhar } = require(path.join(RAIZ, 'sessao', 'desenhar.cjs'));
+const { aprovar } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
+const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
+const { desenhar } = require(path.join(RAIZ, 'session', 'draw.cjs'));
 const { publicar, podar, avisoDeDossie, contarDeliberacao, DELIBERACAO } =
-  require(path.join(RAIZ, 'sessao', 'publicar.cjs'));
-const { abrir } = require(path.join(RAIZ, 'sessao', 'abrir.cjs'));
+  require(path.join(RAIZ, 'session', 'publish.cjs'));
+const { abrir } = require(path.join(RAIZ, 'session', 'open.cjs'));
 const { lerPaginas, impressaoSemantica, impressaoDeAparencia } =
-  require(path.join(RAIZ, 'sessao', 'impressao.cjs'));
+  require(path.join(RAIZ, 'session', 'fingerprint.cjs'));
 
 let falhas = 0;
-const ok = (cond, titulo, detalhe) => {
-  console.log(`  ${cond ? '✓' : '✗'} ${titulo}${detalhe ? `  — ${detalhe}` : ''}`);
+const ok = (cond, title, detail) => {
+  console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
   if (!cond) falhas++;
 };
 
@@ -56,21 +56,21 @@ const FICAM = {
 };
 
 async function main() {
-  const logico = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'sessao', 'varejo-logica.json'), 'utf8'));
-  const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'sessao', 'varejo-elaboracao.json'), 'utf8'));
+  const logical = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-logical.json'), 'utf8'));
+  const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
 
   // ---------------------------------------------------------------- 1 · planta
-  const semeado = JSON.parse(JSON.stringify(logico));
-  const d = semeado.dossie;
-  const escolhida = d.candidatas.find(c => c.estado === 'escolhida');
-  escolhida.nome = FICAM['o nome da candidata escolhida'];
-  d.fatos[0].procedencia = 'inferido';
-  d.fatos[0].fato = FICAM['o fato em si'];
-  semeado.nos[0].rotulo = FICAM['o rotulo de um no do desenho'];
+  const semeado = JSON.parse(JSON.stringify(logical));
+  const d = semeado.dossier;
+  const chosen = d.candidates.find(c => c.state === 'chosen');
+  chosen.name = FICAM['o nome da candidata escolhida'];
+  d.facts[0].provenance = 'inferred';
+  d.facts[0].fact = FICAM['o fato em si'];
+  semeado.nodes[0].label = FICAM['o rotulo de um no do desenho'];
   // `acordo` é escrito por `aprovar`, então a marca de quem aprovou entra por lá
-  const POR = marcaDe('acordo', 'por');
+  const POR = marcaDe('agreement', 'by');
 
-  const tecnico = elaborar(aprovar(semeado, { em: '2026-08-21', por: POR }), elab);
+  const technical = elaborar(aprovar(semeado, { em: '2026-08-21', por: POR }), elab);
 
   /**
    * A plantação, derivada da régua. Roda DEPOIS de `elaborar` porque é ele quem
@@ -80,26 +80,26 @@ async function main() {
   const MARCAS = {};
   const lista = (dd, onde) => (Array.isArray(dd[onde]) ? dd[onde] : dd[onde] ? [dd[onde]] : []);
   for (const r of DELIBERACAO) {
-    for (const it of lista(tecnico.dossie, r.onde)) {
+    for (const it of lista(technical.dossier, r.onde)) {
       for (const c of r.campos) {
         // só planta onde o valor é texto: `recorte` e `difereEm` são estrutura,
         // e trocá-los por string quebraria o esquema. Para esses, a marca vai
         // DENTRO — uma chave que não existe em lugar nenhum.
         const m = marcaDe(r.onde, c);
-        if (c === 'recorte') { if (it[c]) { it[c][m] = m; MARCAS[`${r.onde}.${c}`] = m; } continue; }
-        if (c === 'difereEm') { if (Array.isArray(it[c])) { /* enum fechado — não plantável */ } continue; }
+        if (c === 'snapshot') { if (it[c]) { it[c][m] = m; MARCAS[`${r.onde}.${c}`] = m; } continue; }
+        if (c === 'differsIn') { if (Array.isArray(it[c])) { /* enum fechado — não plantável */ } continue; }
         it[c] = m;
         MARCAS[`${r.onde}.${c}`] = m;
       }
     }
   }
-  MARCAS['acordo.por'] = POR;
+  MARCAS['acordo.by'] = POR;
   // e o item que some INTEIRO: uma candidata descartada, marcada no nome
-  const descartada = tecnico.dossie.candidatas.find(c => c.estado === 'descartada');
-  descartada.nome = marcaDe('candidatas', 'nome-da-descartada');
-  MARCAS['candidatas[descartada].nome'] = descartada.nome;
+  const discarded = technical.dossier.candidates.find(c => c.state === 'discarded');
+  discarded.name = marcaDe('candidates', 'nome-da-descartada');
+  MARCAS['candidatas[descartada].nome'] = discarded.name;
 
-  const trabalho = (await desenhar(tecnico, 'tecnica')).xml;
+  const trabalho = (await desenhar(technical, 'technical')).xml;
   const copia = publicar(trabalho);
 
   // -------------------------------------------------- 2 · o controle, primeiro
@@ -108,24 +108,24 @@ async function main() {
   // trabalho TEM. Uma busca que não acha nada nos dois arquivos não distingue
   // "podou" de "a busca está quebrada".
   console.log(`\n1 · controle: o arquivo de TRABALHO carrega tudo — ${Object.keys(MARCAS).length} campos da régua\n`);
-  for (const [nome, marca] of Object.entries(MARCAS))
-    ok(trabalho.includes(marca), `${nome} está no arquivo de trabalho`);
+  for (const [name, marca] of Object.entries(MARCAS))
+    ok(trabalho.includes(marca), `${name} está no arquivo de trabalho`);
   // e a régua tem de estar coberta: um campo novo em DELIBERACAO sem marca aqui
   // é a fresta que a revisão do #23 achou
-  const previstos = DELIBERACAO.flatMap(r => r.campos.filter(c => c !== 'difereEm').map(c => `${r.onde}.${c}`));
+  const previstos = DELIBERACAO.flatMap(r => r.campos.filter(c => c !== 'differsIn').map(c => `${r.onde}.${c}`));
   const semMarca = previstos.filter(k => !(k in MARCAS));
   ok(semMarca.length === 0, 'todo campo da régua tem marca plantada',
     semMarca.length ? `sem marca: ${semMarca.join(', ')}` : `${previstos.length} campos`);
 
   // ------------------------------------------------------------- 3 · a poda
   console.log('\n2 · a cópia publicada: a deliberação não sai da casa\n');
-  for (const [nome, marca] of Object.entries(MARCAS))
-    ok(!copia.includes(marca), `${nome} NÃO está na cópia`,
+  for (const [name, marca] of Object.entries(MARCAS))
+    ok(!copia.includes(marca), `${name} NÃO está na cópia`,
       copia.includes(marca) ? 'VAZOU' : undefined);
 
   console.log('\n3 · e o que fica, fica — poda não é censura\n');
-  for (const [nome, marca] of Object.entries(FICAM))
-    ok(copia.includes(marca), `${nome} sobreviveu`);
+  for (const [name, marca] of Object.entries(FICAM))
+    ok(copia.includes(marca), `${name} sobreviveu`);
 
   // as impressões continuam: são o que prova que o PNG é este arquivo
   const pubs = lerPaginas(copia).paginas;
@@ -156,7 +156,7 @@ async function main() {
   ok(a.nosso === true, 'a skill ainda reconhece o arquivo como dela');
   ok(a.publicado === true, 'e sabe que é uma cópia publicada');
   ok(a.sessao === null, 'não devolve sessão — não há o que retomar');
-  ok(/publicada/i.test(a.porque || ''), 'e diz por quê', (a.porque || '').slice(0, 70) + '…');
+  ok(/publicada/i.test(a.because || ''), 'e diz por quê', (a.because || '').slice(0, 70) + '…');
 
   const t = abrir(trabalho);
   ok(t.publicado !== true && t.sessao !== null,
@@ -164,44 +164,44 @@ async function main() {
 
   // ------------------------------------------------------------- 5 · o aviso
   console.log('\n5 · o aviso de uma linha (padrão do #16: avisa, nunca bloqueia)\n');
-  const aviso = avisoDeDossie(tecnico);
+  const aviso = avisoDeDossie(technical);
   ok(!!aviso && /deliberacao/i.test(aviso), 'a sessão com deliberação gera aviso', (aviso || '').slice(0, 62) + '…');
-  ok(avisoDeDossie(podar(tecnico)) === null,
+  ok(avisoDeDossie(podar(technical)) === null,
     'e a sessão já podada NÃO gera aviso — o aviso mede, não decora');
   /**
    * O CONTADOR NÃO PODE CONTAR EM DOBRO nem deixar campo de fora — os dois
    * defeitos que a revisão achou, um em cada direção.
    */
   const soUmCampo = (onde, campo, valor) => {
-    const t = podar(JSON.parse(JSON.stringify(tecnico)));
-    const alvo = lista(t.dossie, onde)[0];
-    if (!alvo) return null;
-    alvo[campo] = valor;
+    const t = podar(JSON.parse(JSON.stringify(technical)));
+    const target = lista(t.dossier, onde)[0];
+    if (!target) return null;
+    target[campo] = valor;
     return contarDeliberacao(t);
   };
   for (const r of DELIBERACAO)
     for (const c of r.campos) {
-      if (c === 'difereEm' || c === 'recorte') continue;
+      if (c === 'differsIn' || c === 'snapshot') continue;
       const n = soUmCampo(r.onde, c, 'x');
       if (n === null) continue;
       ok(n === 1, `um único "${r.onde}.${c}" conta exatamente 1`, `contou ${n}`);
     }
-  const dupla = podar(JSON.parse(JSON.stringify(tecnico)));
-  dupla.dossie.candidatas.push({ id: 'z', nome: 'Z', tupla: ['a', 'b', 'c', 'd', 'e'],
-    estado: 'descartada', porque: 'x', paga: 'y' });
+  const dupla = podar(JSON.parse(JSON.stringify(technical)));
+  dupla.dossier.candidates.push({ id: 'z', name: 'Z', tuple: ['a', 'b', 'c', 'd', 'e'],
+    state: 'discarded', because: 'x', pays: 'y' });
   ok(contarDeliberacao(dupla) === 1,
     'uma candidata descartada COM `porque` e `paga` conta 1, não 3',
     `contou ${contarDeliberacao(dupla)}`);
-  const r = await desenhar(tecnico, 'logica');
+  const r = await desenhar(technical, 'logical');
   ok(r.relatorio.avisos.some(x => /Editar diagrama/.test(x)),
     'e ele chega ao relatório de quem desenhou');
 
   // ------------------------------------------------- 6 · a poda é determinística
   console.log('\n6 · a poda é função pura e determinística\n');
-  const antes = JSON.stringify(tecnico);
-  const p1 = JSON.stringify(podar(tecnico));
-  ok(JSON.stringify(tecnico) === antes, 'podar não muta a sessão de quem chamou');
-  ok(p1 === JSON.stringify(podar(tecnico)), 'podar duas vezes dá o mesmo resultado');
+  const antes = JSON.stringify(technical);
+  const p1 = JSON.stringify(podar(technical));
+  ok(JSON.stringify(technical) === antes, 'podar não muta a sessão de quem chamou');
+  ok(p1 === JSON.stringify(podar(technical)), 'podar duas vezes dá o mesmo resultado');
   ok(p1 === JSON.stringify(podar(JSON.parse(p1))), 'podar o já podado é no-op (idempotente)');
   ok(publicar(copia) === copia, 'publicar a cópia devolve a mesma cópia');
 

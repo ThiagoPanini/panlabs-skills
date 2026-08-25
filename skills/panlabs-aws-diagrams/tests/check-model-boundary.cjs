@@ -21,18 +21,18 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const esquema = JSON.parse(fs.readFileSync(path.join(RAIZ, 'esquema.json'), 'utf8'));
+const schema = JSON.parse(fs.readFileSync(path.join(RAIZ, 'schema.json'), 'utf8'));
 
 const GEOMETRIA = [
   'x', 'y', 'w', 'h', 'cx', 'cy', 'dx', 'dy',
   'width', 'height', 'largura', 'altura', 'tamanho', 'size',
   'pos', 'posicao', 'position', 'coord', 'coordenada', 'ponto', 'pontos', 'point', 'points',
   'waypoint', 'waypoints', 'bend', 'bendpoints', 'offset', 'deslocamento',
-  'top', 'left', 'right', 'bottom', 'topo', 'esquerda', 'direita', 'fundo',
-  'margin', 'margem', 'padding', 'recuo', 'spacing', 'espacamento', 'gap', 'calha', 'lane',
+  'top', 'left', 'right', 'bottom', 'topo', 'esquerda', 'direita', 'background',
+  'margin', 'margin', 'padding', 'recuo', 'spacing', 'espacamento', 'gap', 'calha', 'lane',
   'align', 'alinhamento', 'anchor', 'ancora', 'grid', 'grade', 'scale', 'escala',
   'z', 'zorder', 'zindex', 'linha', 'coluna', 'row', 'col', 'column', 'eixo', 'axis',
-  'style', 'estilo', 'cor', 'color', 'fill', 'stroke',
+  'style', 'estilo', 'color', 'color', 'fill', 'stroke',
 ];
 
 const falhas = [];
@@ -49,7 +49,7 @@ const semFechar = [];
       semFechar.push(caminho || '(raiz)');
   }
   for (const [k, v] of Object.entries(no)) andar(v, `${caminho}/${k}`);
-})(esquema, '');
+})(schema, '');
 
 for (const p of props) {
   const n = p.toLowerCase().replace(/[^a-z]/g, '');
@@ -64,7 +64,7 @@ for (const c of semFechar) falhas.push(`objeto sem additionalProperties:false em
 // propriedade do formato, não de um conjunto de exemplos — e quando o #22
 // acrescentou `camada` ao esquema, quem tinha de dizer que ela não é geometria
 // era esta checagem rodando contra os modelos que a usam.
-const dirModelos = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'modelo');
+const dirModelos = process.argv[2] ? path.resolve(process.argv[2]) : path.join(RAIZ, 'models');
 const modelos = fs.existsSync(dirModelos) ? fs.readdirSync(dirModelos).filter(f => f.endsWith('.json')) : [];
 for (const arq of modelos) {
   const bruto = JSON.parse(fs.readFileSync(path.join(dirModelos, arq), 'utf8'));
@@ -72,7 +72,7 @@ for (const arq of modelos) {
     if (!no || typeof no !== 'object') return;
     if (Array.isArray(no)) return no.forEach((v, i) => varrer(v, `${caminho}[${i}]`));
     for (const [k, v] of Object.entries(no)) {
-      if (caminho.startsWith('dossie')) continue;      // o dossiê é opaco por contrato
+      if (caminho.startsWith('dossier')) continue;      // o dossiê é opaco por contrato
       const n = k.toLowerCase().replace(/[^a-z]/g, '');
       if (GEOMETRIA.includes(n)) falhas.push(`${arq}: chave "${k}" em ${caminho}`);
       varrer(v, caminho ? `${caminho}.${k}` : k);

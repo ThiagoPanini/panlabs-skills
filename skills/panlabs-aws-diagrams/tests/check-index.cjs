@@ -22,7 +22,7 @@
 
 const path = require('path');
 const { CHECAGENS, LIMIARES, porId, SEVERIDADES, INSUMOS } = require(
-  path.join(__dirname, '..', 'validador', 'indice.cjs'));
+  path.join(__dirname, '..', 'validator', 'index.cjs'));
 
 // Os 62 ids de (A), congelados da rubrica de qualidade que originou o validador.
 const DA_RUBRICA = [
@@ -85,14 +85,14 @@ for (const id of ids) if (!DA_RUBRICA.includes(id)) anota(`o índice inventou "$
 // ---------------------------------------------------- 2. os campos obrigatórios
 
 for (const c of CHECAGENS) {
-  if (!c.nome) anota(`${c.id} sem nome`);
-  if (c.familia !== c.id.split('.')[0]) anota(`${c.id} declara família "${c.familia}"`);
-  if (!SEVERIDADES.includes(c.severidade)) anota(`${c.id} tem severidade "${c.severidade}", fora de ${SEVERIDADES.join('|')}`);
-  else if (SEVERIDADE_DA_RUBRICA[c.id] && c.severidade !== SEVERIDADE_DA_RUBRICA[c.id])
-    anota(`${c.id} está como "${c.severidade}" e a rubrica diz "${SEVERIDADE_DA_RUBRICA[c.id]}"`);
+  if (!c.name) anota(`${c.id} sem nome`);
+  if (c.family !== c.id.split('.')[0]) anota(`${c.id} declara família "${c.family}"`);
+  if (!SEVERIDADES.includes(c.severity)) anota(`${c.id} tem severidade "${c.severity}", fora de ${SEVERIDADES.join('|')}`);
+  else if (SEVERIDADE_DA_RUBRICA[c.id] && c.severity !== SEVERIDADE_DA_RUBRICA[c.id])
+    anota(`${c.id} está como "${c.severity}" e a rubrica diz "${SEVERIDADE_DA_RUBRICA[c.id]}"`);
   if (ESCALONAM.includes(c.id) && !c.escalona) anota(`${c.id} tem dois níveis na rubrica e não traz escalona: true`);
   if (!ESCALONAM.includes(c.id) && c.escalona) anota(`${c.id} se diz escalonável, e a rubrica lhe dá um nível só`);
-  if (!INSUMOS.includes(c.insumo)) anota(`${c.id} tem insumo "${c.insumo}", fora de ${INSUMOS.join('|')}`);
+  if (!INSUMOS.includes(c.input)) anota(`${c.id} tem insumo "${c.input}", fora de ${INSUMOS.join('|')}`);
   if (!c.mede) anota(`${c.id} não diz o que mede`);
   if (!c.fonte) anota(`${c.id} não cita a fonte — a rubrica cita, o índice tem de citar`);
 }
@@ -109,8 +109,8 @@ for (const id of CALIBRAVEIS) {
   const c = porId(id);
   if (!c) continue;                       // já reportado acima
   if (!c.calibravel) anota(`${id} é "default de engenharia" na rubrica e o índice não marcou como calibrável`);
-  if (!c.limiar || !c.limiar.chave) anota(`${id} é calibrável e não aponta para uma chave de limiares.json`);
-  else if (!(c.limiar.chave in LIMIARES)) anota(`${id} aponta para a chave "${c.limiar.chave}", ausente de limiares.json`);
+  if (!c.limiar || !c.limiar.chave) anota(`${id} é calibrável e não aponta para uma chave de thresholds.json`);
+  else if (!(c.limiar.chave in LIMIARES)) anota(`${id} aponta para a chave "${c.limiar.chave}", ausente de thresholds.json`);
 }
 
 for (const c of CHECAGENS) {
@@ -121,28 +121,28 @@ for (const c of CHECAGENS) {
 // ------------------------------------------- 4. a divisão validador × render
 
 for (const c of CHECAGENS) {
-  if (c.insumo === 'render' && !c.porqueRender)
+  if (c.input === 'render' && !c.porqueRender)
     anota(`${c.id} foi entregue ao render sem dizer por quê — a divisão do #18 exige o motivo`);
-  if (c.insumo !== 'render' && c.porqueRender)
+  if (c.input !== 'render' && c.porqueRender)
     anota(`${c.id} é do validador e mesmo assim justifica o render`);
 }
 
 for (const id of TOLERANCIA_ZERO) {
   const c = porId(id);
   if (!c) continue;
-  if (c.severidade !== 'fail') anota(`${id} tem tolerância zero na rubrica e o índice não a marcou como fail`);
-  if (c.insumo === 'render') anota(`${id} é a espinha semântica do validador e foi empurrada para o render`);
+  if (c.severity !== 'fail') anota(`${id} tem tolerância zero na rubrica e o índice não a marcou como fail`);
+  if (c.input === 'render') anota(`${id} é a espinha semântica do validador e foi empurrada para o render`);
   if (!c.semantica) anota(`${id} não está marcada como falha semântica — é o que separa linter de guarda de veracidade`);
 }
 
 // ------------------------------------------------------------------ relatório
 
-const doValidador = CHECAGENS.filter(c => c.insumo !== 'render');
+const doValidador = CHECAGENS.filter(c => c.input !== 'render');
 console.log(`  checagens no índice:        ${CHECAGENS.length}/62`);
 console.log(`  do validador (obrigatório): ${doValidador.length}`);
 console.log(`  do render (oportunista):    ${CHECAGENS.length - doValidador.length}`);
-console.log(`  fail / warn:                ${CHECAGENS.filter(c => c.severidade === 'fail').length} / ` +
-  `${CHECAGENS.filter(c => c.severidade === 'warn').length}`);
+console.log(`  fail / warn:                ${CHECAGENS.filter(c => c.severity === 'fail').length} / ` +
+  `${CHECAGENS.filter(c => c.severity === 'warn').length}`);
 console.log(`  limiares calibráveis:       ${CHECAGENS.filter(c => c.calibravel).length}`);
 
 if (falhas.length) {

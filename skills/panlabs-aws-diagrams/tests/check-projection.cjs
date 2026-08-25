@@ -3,7 +3,7 @@
 /**
  * M3 — a projecao logica do modelo tecnico e MESMO a vista aprovada?
  *
- *   node tools/check-projecao.cjs
+ *   node tools/check-projection.cjs
  *
  * Esta e a checagem que o ticket compra ao usar um IR so, e ela nao existiria com
  * dois modelos: com um mapeamento explicito entre um modelo logico e um tecnico,
@@ -22,52 +22,52 @@
 const fs = require('fs');
 const path = require('path');
 
-const { aprovar, conferir } = require('../sessao/acordo.cjs');
-const { elaborar } = require('../sessao/elaborar.cjs');
-const { validar } = require('../sessao/validar.cjs');
-const { projetar } = require('../sessao/projetar.cjs');
+const { aprovar, conferir } = require('../session/agreement.cjs');
+const { elaborar } = require('../session/elaborate.cjs');
+const { validar } = require('../session/validate.cjs');
+const { projetar } = require('../session/project.cjs');
 
 const RAIZ = path.join(__dirname, '..');
 const clonar = o => JSON.parse(JSON.stringify(o));
-const no = (m, id) => m.nos.find(n => n.id === id);
+const no = (m, id) => m.nodes.find(n => n.id === id);
 
 /**
  * Sete mutacoes que a checagem TEM de pegar. Todas sao coisas que um agente
  * distraido faz na fase tecnica achando que esta so detalhando.
  */
 const DEVE_QUEBRAR = [
-  { nome: 'tirar o casaco logico de uma capacidade aprovada',
-    faz: m => { delete no(m, 'tratar-falha').logico; no(m, 'tratar-falha').camada = 'tecnica'; } },
+  { name: 'tirar o casaco logico de uma capacidade aprovada',
+    faz: m => { delete no(m, 'tratar-falha').logical; no(m, 'tratar-falha').layer = 'technical'; } },
 
-  { nome: 'renomear uma capacidade aprovada',
-    faz: m => { no(m, 'processar-na-chegada').logico.rotulo = 'Enriquecer e validar'; } },
+  { name: 'renomear uma capacidade aprovada',
+    faz: m => { no(m, 'processar-na-chegada').logical.label = 'Enriquecer e validar'; } },
 
-  { nome: 'mudar uma capacidade de fronteira',
-    faz: m => { no(m, 'consultar').dentro = 'processamento'; } },
+  { name: 'mudar uma capacidade de fronteira',
+    faz: m => { no(m, 'consultar').inside = 'processamento'; } },
 
-  { nome: 'apagar uma capacidade aprovada',
-    faz: m => { m.nos = m.nos.filter(n => n.id !== 'tratar-falha');
-                m.arestas = m.arestas.filter(a => a.de !== 'tratar-falha' && a.para !== 'tratar-falha'); } },
+  { name: 'apagar uma capacidade aprovada',
+    faz: m => { m.nodes = m.nodes.filter(n => n.id !== 'tratar-falha');
+                m.edges = m.edges.filter(a => a.from !== 'tratar-falha' && a.to !== 'tratar-falha'); } },
 
-  { nome: 'acrescentar capacidade que nao foi discutida',
-    faz: m => { m.nos.push({ id: 'antivirus', rotulo: 'Varrer vírus', dentro: 'aterrissagem',
-                             logico: { tipo: 'bloco' }, tecnico: { tipo: 'servico', servico: 'guardduty' } }); } },
+  { name: 'acrescentar capacidade que nao foi discutida',
+    faz: m => { m.nodes.push({ id: 'antivirus', label: 'Varrer vírus', inside: 'aterrissagem',
+                             logical: { kind: 'block' }, technical: { kind: 'service', service: 'guardduty' } }); } },
 
-  { nome: 'apagar a nota do achado RECUSADO',
-    faz: m => { m.notas = m.notas.filter(n => n.id !== 'n-spof'); },
-    porque: 'e o canal por onde "SPOF conhecido e aceito" chega ao desenho (#15 §4)' },
+  { name: 'apagar a nota do achado RECUSADO',
+    faz: m => { m.notes = m.notes.filter(n => n.id !== 'n-spof'); },
+    because: 'e o canal por onde "SPOF conhecido e aceito" chega ao desenho (#15 §4)' },
 
   // Este nao quebra o acordo — quebra a PROJECAO, antes dela existir. Um hub so
   // tecnico com 2 entradas e 2 saidas logicas contrairia para 4 arestas, das
   // quais 2 ninguem afirmou. Sem o guarda, o desenho logico sairia inventando
   // conversa, que e exatamente a mentira calada que este mapa persegue.
-  { nome: 'hub so-tecnico com 2 entradas e 2 saidas logicas',
+  { name: 'hub so-tecnico com 2 entradas e 2 saidas logicas',
     faz: m => {
-      m.arestas.push({ id: 'x-in1', de: 'receber-arquivo', para: 'barramento' });
-      m.arestas.push({ id: 'x-in2', de: 'reter-objeto', para: 'barramento' });
-      m.arestas.push({ id: 'x-out', de: 'barramento', para: 'consultar' });
+      m.edges.push({ id: 'x-in1', from: 'receber-arquivo', to: 'barramento' });
+      m.edges.push({ id: 'x-in2', from: 'reter-objeto', to: 'barramento' });
+      m.edges.push({ id: 'x-out', from: 'barramento', to: 'consultar' });
     },
-    porque: 'a contracao emitiria 4 arestas logicas com 3 afirmadas' },
+    because: 'a contracao emitiria 4 arestas logicas com 3 afirmadas' },
 ];
 
 /**
@@ -75,47 +75,47 @@ const DEVE_QUEBRAR = [
  * alguma, ela esta apertada demais e vira ruido que o usuario aprende a ignorar.
  */
 const NAO_PODE_QUEBRAR = [
-  { nome: 'acrescentar infraestrutura (no so-tecnico)',
-    faz: m => { m.nos.push({ id: 'nat', camada: 'tecnica', dentro: 'vpc-dados',
-                             tecnico: { tipo: 'servico', servico: 'nat gateway', rotulo: 'NAT gateway' } }); } },
+  { name: 'acrescentar infraestrutura (no so-tecnico)',
+    faz: m => { m.nodes.push({ id: 'nat', layer: 'technical', inside: 'vpc-dados',
+                             technical: { kind: 'service', service: 'nat gateway', label: 'NAT gateway' } }); } },
 
-  { nome: 'trocar o servico AWS de uma capacidade',
-    faz: m => { no(m, 'consultar').tecnico.servico = 'redshift'; no(m, 'consultar').tecnico.rotulo = 'Redshift'; } },
+  { name: 'trocar o servico AWS de uma capacidade',
+    faz: m => { no(m, 'consultar').technical.service = 'redshift'; no(m, 'consultar').technical.label = 'Redshift'; } },
 
-  { nome: 'enfiar mais um nivel de rede e reparentar',
-    faz: m => { m.nos.push({ id: 'sub-dados', camada: 'tecnica', dentro: 'vpc-dados',
-                             tecnico: { tipo: 'subnet', rotulo: 'Private subnet · dados', acesso: 'privada' } });
-                no(m, 'endpoint-s3').dentro = 'sub-dados'; } },
+  { name: 'enfiar mais um nivel de rede e reparentar',
+    faz: m => { m.nodes.push({ id: 'sub-dados', layer: 'technical', inside: 'vpc-dados',
+                             technical: { kind: 'subnet', label: 'Private subnet · dados', access: 'private' } });
+                no(m, 'endpoint-s3').inside = 'sub-dados'; } },
 
-  { nome: 'mudar o numero da conta',
-    faz: m => { no(m, 'processamento').tecnico.conta = '999988887777'; } },
+  { name: 'mudar o numero da conta',
+    faz: m => { no(m, 'processamento').technical.account = '999988887777'; } },
 
-  { nome: 'dar rotulo tecnico novo a uma aresta aprovada',
-    faz: m => { m.arestas.find(a => a.id === 'a-grava').tecnico = { rotulo: 'PutObject' }; } },
+  { name: 'dar rotulo tecnico novo a uma aresta aprovada',
+    faz: m => { m.edges.find(a => a.id === 'a-grava').technical = { label: 'PutObject' }; } },
 ];
 
 function main() {
-  const logico = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'sessao', 'varejo-logica.json'), 'utf8'));
-  const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'sessao', 'varejo-elaboracao.json'), 'utf8'));
-  const aprovado = aprovar(logico, { em: '2026-08-21', por: 'usuario', candidata: 'cand-a' });
-  const tecnico = elaborar(aprovado, elab);
+  const logical = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-logical.json'), 'utf8'));
+  const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
+  const aprovado = aprovar(logical, { em: '2026-08-21', por: 'usuario', candidate: 'cand-a' });
+  const technical = elaborar(aprovado, elab);
 
   let falhas = 0;
 
   // -------------------------------------------------------- 1. o caso normal
-  const base = conferir(tecnico);
+  const base = conferir(technical);
   console.log('\n  1 · O caso normal\n');
   console.log(`    a projecao logica do modelo tecnico bate com a aprovada .... ${base.ok ? '✓' : '✗'}`);
-  if (!base.ok) { falhas++; for (const d of base.diferencas) console.log(`        · ${d.texto}`); }
+  if (!base.ok) { falhas++; for (const d of base.diferencas) console.log(`        · ${d.text}`); }
 
-  const pl = projetar(tecnico, 'logica').modelo;
-  const pt = projetar(tecnico, 'tecnica').modelo;
-  console.log(`    vista logica projetada .................................... ${pl.nos.length} nos, ${pl.arestas.length} arestas`);
-  console.log(`    vista tecnica projetada .................................. ${pt.nos.length} nos, ${pt.arestas.length} arestas`);
-  console.log(`    o modelo de sessao tem ................................... ${tecnico.nos.length} nos, ${tecnico.arestas.length} arestas`);
+  const pl = projetar(technical, 'logical').modelo;
+  const pt = projetar(technical, 'technical').modelo;
+  console.log(`    vista logica projetada .................................... ${pl.nodes.length} nos, ${pl.edges.length} arestas`);
+  console.log(`    vista tecnica projetada .................................. ${pt.nodes.length} nos, ${pt.edges.length} arestas`);
+  console.log(`    o modelo de sessao tem ................................... ${technical.nodes.length} nos, ${technical.edges.length} arestas`);
   console.log(`    nenhum no com casaco logico some da projecao logica ....... ` +
-    `${tecnico.nos.filter(n => n.logico).length === pl.nos.length ? '✓' : '✗'}`);
-  if (tecnico.nos.filter(n => n.logico).length !== pl.nos.length) falhas++;
+    `${technical.nodes.filter(n => n.logical).length === pl.nodes.length ? '✓' : '✗'}`);
+  if (technical.nodes.filter(n => n.logical).length !== pl.nodes.length) falhas++;
 
   // A nota de no chega ate a projecao? O `else` sem chaves grudava no `if` de
   // dentro do `for` e a vista logica perdia todo `casacoLogico.nota` em
@@ -124,9 +124,9 @@ function main() {
   // usar `logico.nota` — e ele parou —, uma checagem que so conta o que ja
   // existe passa contando zero. Verde por vacuidade e o modo de falhar que o
   // #17 pagou caro para aprender.
-  const comNota = clonar(tecnico);
-  comNota.nos.find(n => n.id === 'tratar-falha').logico.nota = 'reprocessamento manual, por enquanto';
-  const notaProjetada = projetar(comNota, 'logica').modelo.nos.find(n => n.id === 'tratar-falha').nota;
+  const comNota = clonar(technical);
+  comNota.nodes.find(n => n.id === 'tratar-falha').logical.note = 'reprocessamento manual, por enquanto';
+  const notaProjetada = projetar(comNota, 'logical').modelo.nodes.find(n => n.id === 'tratar-falha').note;
   console.log(`    a nota do casaco logico chega na projecao ................. ` +
     `${notaProjetada ? '✓' : '✗'}  (${notaProjetada ? `"${notaProjetada}"` : 'sumiu'})`);
   if (!notaProjetada) falhas++;
@@ -135,17 +135,17 @@ function main() {
   // duas. A chave de deduplicacao ja foi so `de>para`, e nesse regime a segunda
   // sumia — nas DUAS pontas da comparacao do acordo, o que deixava a checagem
   // cega para a propria perda.
-  const paralelo = clonar(tecnico);
-  paralelo.arestas.push({ id: 'a-confirma', de: 'receber-arquivo', para: 'guardar-bruto', rotulo: 'confirma gravacao' });
-  const proj = projetar(paralelo, 'logica').modelo.arestas
-    .filter(a => a.de === 'receber-arquivo' && a.para === 'guardar-bruto').length;
+  const paralelo = clonar(technical);
+  paralelo.edges.push({ id: 'a-confirma', from: 'receber-arquivo', to: 'guardar-bruto', label: 'confirma gravacao' });
+  const proj = projetar(paralelo, 'logical').modelo.edges
+    .filter(a => a.from === 'receber-arquivo' && a.to === 'guardar-bruto').length;
   console.log(`    duas arestas distintas no mesmo par sobrevivem ............ ${proj === 2 ? '✓' : '✗'}  (${proj} de 2)`);
   if (proj !== 2) falhas++;
 
   // ------------------------------------------------- 2. experimento de controle
   console.log('\n  2 · Experimento de controle — o que TEM de quebrar\n');
   for (const mut of DEVE_QUEBRAR) {
-    const m = clonar(tecnico);
+    const m = clonar(technical);
     mut.faz(m);
     // Uma mutacao pode ser pega pelo validador ANTES da projecao. Vale igual —
     // as duas camadas existem para isso, e a checagem so falharia se NENHUMA
@@ -153,21 +153,21 @@ function main() {
     const v = validar(m);
     let pego = !v.ok, via = 'validador';
     let r = null;
-    if (!pego) { r = conferir(m); pego = !r.ok; via = 'acordo'; }
-    console.log(`    ${mut.nome.padEnd(52)} ${pego ? '✓ pego' : '✗ PASSOU'}  (${pego ? via : '—'})`);
+    if (!pego) { r = conferir(m); pego = !r.ok; via = 'agreement'; }
+    console.log(`    ${mut.name.padEnd(52)} ${pego ? '✓ pego' : '✗ PASSOU'}  (${pego ? via : '—'})`);
     if (!pego) falhas++;
-    else if (r) for (const d of r.diferencas.slice(0, 2)) console.log(`        · ${d.texto}`);
+    else if (r) for (const d of r.diferencas.slice(0, 2)) console.log(`        · ${d.text}`);
     else console.log(`        · ${v.erros[0].slice(0, 110)}`);
   }
 
   console.log('\n  3 · Experimento de controle — o que NAO PODE quebrar\n');
   for (const mut of NAO_PODE_QUEBRAR) {
-    const m = clonar(tecnico);
+    const m = clonar(technical);
     mut.faz(m);
     const v = validar(m);
     const r = v.ok ? conferir(m) : { ok: false, motivo: v.erros[0] };
-    console.log(`    ${mut.nome.padEnd(52)} ${r.ok ? '✓ passou' : '✗ QUEBROU'}`);
-    if (!r.ok) { falhas++; console.log(`        · ${(r.motivo || '').slice(0, 110)}`); for (const d of r.diferencas || []) console.log(`        · ${d.texto}`); }
+    console.log(`    ${mut.name.padEnd(52)} ${r.ok ? '✓ passou' : '✗ QUEBROU'}`);
+    if (!r.ok) { falhas++; console.log(`        · ${(r.motivo || '').slice(0, 110)}`); for (const d of r.diferencas || []) console.log(`        · ${d.text}`); }
   }
 
   const total = DEVE_QUEBRAR.length + NAO_PODE_QUEBRAR.length;

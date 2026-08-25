@@ -1,45 +1,45 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "schema": "panlabs-aws-diagrams/model@1",
   "id": "quorum-3-az",
-  "titulo": "Streaming · quórum de brokers em três zonas",
-  "subtitulo": "Vista técnica T1 · réplica entre TODOS os pares de zona — o leque que não cabe numa reta",
-  "vista": "tecnica",
-  "genero": "T1",
+  "title": "Streaming · quórum de brokers em três zonas",
+  "subtitle": "Vista técnica T1 · réplica entre TODOS os pares de zona — o leque que não cabe numa reta",
+  "view": "technical",
+  "genre": "T1",
 
-  "nos": [
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
-    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de dados · 10.4.0.0/16", "cidr": "10.4.0.0/16", "dentro": "nuvem" },
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de dados · 10.4.0.0/16", "cidr": "10.4.0.0/16", "inside": "cloud" },
 
-    { "id": "app-a", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1a", "cidr": "10.4.1.0/24", "dentro": "vpc" },
-    { "id": "app-b", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1b", "cidr": "10.4.2.0/24", "dentro": "vpc" },
-    { "id": "app-c", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1c", "cidr": "10.4.3.0/24", "dentro": "vpc" },
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "cidr": "10.4.1.0/24", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "cidr": "10.4.2.0/24", "inside": "vpc" },
+    { "id": "app-c", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1c", "cidr": "10.4.3.0/24", "inside": "vpc" },
 
-    { "id": "broker-a", "tipo": "servico", "servico": "msk", "rotulo": "Broker 1", "dentro": "app-a",
-      "qualificador": "líder de um terço das partições" },
-    { "id": "broker-b", "tipo": "servico", "servico": "msk", "rotulo": "Broker 2", "dentro": "app-b",
-      "qualificador": "líder de um terço das partições" },
-    { "id": "broker-c", "tipo": "servico", "servico": "msk", "rotulo": "Broker 3", "dentro": "app-c",
-      "qualificador": "líder de um terço das partições" }
+    { "id": "broker-a", "kind": "service", "service": "msk", "label": "Broker 1", "inside": "app-a",
+      "qualifier": "líder de um terço das partições" },
+    { "id": "broker-b", "kind": "service", "service": "msk", "label": "Broker 2", "inside": "app-b",
+      "qualifier": "líder de um terço das partições" },
+    { "id": "broker-c", "kind": "service", "service": "msk", "label": "Broker 3", "inside": "app-c",
+      "qualifier": "líder de um terço das partições" }
   ],
 
-  "arestas": [
-    { "de": "broker-b", "para": "broker-a", "rotulo": "busca réplica", "protocolo": "kafka", "dados": "volta" },
-    { "de": "broker-c", "para": "broker-a", "rotulo": "busca réplica", "protocolo": "kafka", "dados": "volta" },
-    { "de": "broker-a", "para": "broker-b", "rotulo": "busca réplica", "protocolo": "kafka", "dados": "volta" },
-    { "de": "broker-c", "para": "broker-b", "rotulo": "busca réplica", "protocolo": "kafka", "dados": "volta" },
-    { "de": "broker-a", "para": "broker-c", "rotulo": "busca réplica", "protocolo": "kafka", "dados": "volta" },
-    { "de": "broker-b", "para": "broker-c", "rotulo": "busca réplica", "protocolo": "kafka", "dados": "volta" }
+  "edges": [
+    { "from": "broker-b", "to": "broker-a", "label": "busca réplica", "protocol": "kafka", "data": "back" },
+    { "from": "broker-c", "to": "broker-a", "label": "busca réplica", "protocol": "kafka", "data": "back" },
+    { "from": "broker-a", "to": "broker-b", "label": "busca réplica", "protocol": "kafka", "data": "back" },
+    { "from": "broker-c", "to": "broker-b", "label": "busca réplica", "protocol": "kafka", "data": "back" },
+    { "from": "broker-a", "to": "broker-c", "label": "busca réplica", "protocol": "kafka", "data": "back" },
+    { "from": "broker-b", "to": "broker-c", "label": "busca réplica", "protocol": "kafka", "data": "back" }
   ],
 
-  "notas": [
+  "notes": [
     { "id": "nota-leque",
-      "texto": "Fator de réplica 3 sobre três zonas: cada broker fala com os outros dois, então o grafo de travessia entre zonas é um TRIÂNGULO. Nenhuma ordem de raia põe os três pares lado a lado — quaisquer que sejam as posições, o par das pontas fica a distância 2 e a aresta dele corta a faixa do meio. É o caso que o #21 chamou de fallback, e o gatilho dele é medido, não declarado aqui.",
-      "origem": "legenda" }
+      "text": "Fator de réplica 3 sobre três zonas: cada broker fala com os outros dois, então o grafo de travessia entre zonas é um TRIÂNGULO. Nenhuma ordem de raia põe os três pares lado a lado — quaisquer que sejam as posições, o par das pontas fica a distância 2 e a aresta dele corta a faixa do meio. É o caso que o #21 chamou de fallback, e o gatilho dele é medido, não declarado aqui.",
+      "origin": "legend" }
   ],
 
-  "dossie": {
-    "_comentario": "O caso de DENSIDADE do corpus do #26 — não é um gênero, é um eixo. Existe para que o gatilho da vista de zona de referência (#21) tenha onde disparar; o par de controle que NÃO dispara é o web-fluxo-3-az, com as mesmas três zonas e um grafo de travessia que cabe numa reta.",
-    "eixos": {
+  "dossier": {
+    "_comentario": "O caso de DENSIDADE do corpus do #26 — não é um gênero, é um eixo. Existe para que o gatilho da vista de zona de referência (#21) tenha onde disparar; o par de controle que NÃO dispara é o web-flow-3-az, com as mesmas três zonas e um grafo de travessia que cabe numa reta.",
+    "axes": {
       "E1": "gerenciado sem compute próprio",
       "E2": "assíncrono por evento",
       "E3": "log particionado, replicado por quórum",

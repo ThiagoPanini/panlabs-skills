@@ -3,19 +3,19 @@
 /**
  * O validador geométrico pela linha de comando.
  *
- *   node tools/check-geometria.cjs <modelo.json> [...]   valida o que o motor gerar
- *   node tools/check-geometria.cjs --exemplos            valida os modelos do #11
- *   node tools/check-geometria.cjs ... --tudo            mostra também o que passou
- *   node tools/check-geometria.cjs ... --json            laudo em JSON
- *   node tools/check-geometria.cjs ... --estrito         aviso também reprova
- *   node tools/check-geometria.cjs ... --tema <nome>     avalia com este tema (padrão: claro)
+ *   node tools/check-geometry.cjs <modelo.json> [...]   valida o que o motor gerar
+ *   node tools/check-geometry.cjs --exemplos            valida os modelos do #11
+ *   node tools/check-geometry.cjs ... --tudo            mostra também o que passou
+ *   node tools/check-geometry.cjs ... --json            laudo em JSON
+ *   node tools/check-geometry.cjs ... --estrito         aviso também reprova
+ *   node tools/check-geometry.cjs ... --tema <nome>     avalia com este tema (padrão: claro)
  *
  * O código de saída é 1 quando há falha — é o que permite pendurar isto num
  * portão de CI. Com `--estrito`, aviso conta como falha.
  *
  * SEM `--tema`, o laudo sempre avaliou o tema padrão — e é cego para o que só
  * outro tema liga (#33), como `texto.qualificador`. `--tema` existe para o
- * laudo poder ver o mesmo que `--tema` liga em `motor/gerar.cjs`.
+ * laudo poder ver o mesmo que `--tema` liga em `engine/generate.cjs`.
  *
  * A entrada é um MODELO, não um `.drawio`: o validador lê o `plano`, que é a
  * costura interna do motor (pós-`planejar`, pré-`emitir`), e é ali que a
@@ -28,7 +28,7 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const { validarGeometria, formatar } = require(path.join(__dirname, '..', 'validador', 'validar-geometria.cjs'));
+const { validarGeometria, formatar } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
 
 async function main() {
   const args = process.argv.slice(2);
@@ -37,17 +37,17 @@ async function main() {
   const estrito = args.includes('--estrito');
   const exemplos = args.includes('--exemplos');
   const iTema = args.indexOf('--tema');
-  const nomeTema = iTema >= 0 ? args[iTema + 1] : 'claro';
+  const nomeTema = iTema >= 0 ? args[iTema + 1] : 'light';
   let entradas = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--tema');
 
-  if (exemplos) entradas = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).map(f => path.join(RAIZ, 'modelo', f));
+  if (exemplos) entradas = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).map(f => path.join(RAIZ, 'models', f));
   if (!entradas.length) {
-    console.error('uso: node check-geometria.cjs <modelo.json> [...] | --exemplos  [--tudo] [--json] [--estrito] [--tema <nome>]');
+    console.error('uso: node check-geometry.cjs <modelo.json> [...] | --exemplos  [--tudo] [--json] [--estrito] [--tema <nome>]');
     process.exit(2);
   }
 
   let gerar;
-  try { ({ gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'))); }
+  try { ({ gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'))); }
   catch (erro) {
     console.error(`não consegui carregar o motor em ${RAIZ}: ${erro.message}`);
     process.exit(2);
@@ -57,12 +57,12 @@ async function main() {
   let ruim = 0;
 
   for (const entrada of entradas) {
-    const nome = path.basename(entrada, '.json');
+    const name = path.basename(entrada, '.json');
     let r;
     try {
       r = await gerar(JSON.parse(fs.readFileSync(entrada, 'utf8')), { tema: nomeTema });
     } catch (erro) {
-      console.error(`\n✗ ${nome}: o motor não gerou — ${erro.message}`);
+      console.error(`\n✗ ${name}: o motor não gerou — ${erro.message}`);
       for (const linha of erro.erros || []) console.error(`    · ${linha}`);
       ruim++;
       continue;
@@ -74,18 +74,18 @@ async function main() {
 
     if (json) {
       laudos.push({
-        diagrama: nome, caminho: r.caminho, ok: laudo.ok, resumo: laudo.resumo,
+        diagrama: name, caminho: r.caminho, ok: laudo.ok, resumo: laudo.resumo,
         cobertura: laudo.cobertura,
         checagens: [...laudo.resultados, ...laudo.extras].map(x => ({
-          id: x.id, nome: x.nome, estado: x.estado, semantica: x.semantica,
+          id: x.id, name: x.name, state: x.state, semantica: x.semantica,
           mensagem: x.mensagem, medida: x.medida,
-          ocorrencias: x.ocorrencias.map(o => o.o_que),
+          occurrences: x.occurrences.map(o => o.o_que),
         })),
       });
       continue;
     }
 
-    console.log(`\n${'='.repeat(72)}\n${nome}  (caminho "${r.caminho}", ${r.plano.celulas.length} células)\n${'='.repeat(72)}`);
+    console.log(`\n${'='.repeat(72)}\n${name}  (caminho "${r.caminho}", ${r.plano.celulas.length} células)\n${'='.repeat(72)}`);
     console.log(formatar(laudo, { tudo }));
   }
 

@@ -11,7 +11,7 @@
  *   cat.grupo('vpc');        // -> { style, w, h, ... }  (já corrigido)
  *
  * Referência: a pesquisa de shapes do #17, cristalizada em `aws4.catalog.json`
- * e `correcoes.json` — que são a única fonte que este arquivo lê.
+ * e `corrections.json` — que são a única fonte que este arquivo lê.
  */
 'use strict';
 
@@ -25,8 +25,8 @@ const path = require('path');
  * "Simple Storage Service (S3)", "simple_storage_service". Todos precisam
  * cair no mesmo balde antes de qualquer comparação.
  */
-function normalizar(nome) {
-  return String(nome)
+function normalizar(name) {
+  return String(name)
     .toLowerCase()
     .replace(/[_\-/]+/g, ' ')
     .replace(/[^a-z0-9 ]+/g, ' ')
@@ -37,9 +37,9 @@ function normalizar(nome) {
 }
 
 /** "Simple Storage Service (S3)" indexa também como "s3" e como "simple storage service". */
-function variantes(titulo) {
-  const out = new Set([normalizar(titulo)]);
-  const m = String(titulo).match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+function variantes(title) {
+  const out = new Set([normalizar(title)]);
+  const m = String(title).match(/^(.*?)\s*\(([^)]+)\)\s*$/);
   if (m) {
     out.add(normalizar(m[1]));
     out.add(normalizar(m[2]));
@@ -80,17 +80,17 @@ function temChave(style, chave) {
 /**
  * Aplica ao grupo o delta "o que o draw.io entrega" -> "o que a AWS prescreve":
  * cores da paleta pré-2022, a falta de container=1 e o tingimento das duas
- * subnets. Ver correcoes.json.
+ * subnets. Ver corrections.json.
  */
-function corrigirGrupo(style, correcoes, titulo) {
+function corrigirGrupo(style, correcoes, title) {
   let s = style;
   const aplicadas = [];
 
   for (const [legado, info] of Object.entries(correcoes.paletaLegada)) {
     if (legado.startsWith('_')) continue;
     if (s.includes(legado)) {
-      s = s.split(legado).join(info.para);
-      aplicadas.push(`${legado}->${info.para}`);
+      s = s.split(legado).join(info.to);
+      aplicadas.push(`${legado}->${info.to}`);
     }
   }
 
@@ -104,11 +104,11 @@ function corrigirGrupo(style, correcoes, titulo) {
   // 18 são `none`. O deck é `<a:noFill/>` em todos (A2), e o tingimento derruba
   // #ED7100 de 3,02 para 2,71:1 em quem cai dentro. Ver preenchimentoDeGrupo.
   const pg = correcoes.preenchimentoDeGrupo;
-  if (pg && (pg.afeta || []).includes(titulo)) {
+  if (pg && (pg.afeta || []).includes(title)) {
     const antes = (/(?:^|;)fillColor=([^;]*)/.exec(s) || [])[1];
-    if (antes && antes !== pg.para) {
-      s = setChave(s, 'fillColor', pg.para);
-      aplicadas.push(`fillColor ${antes}->${pg.para}`);
+    if (antes && antes !== pg.to) {
+      s = setChave(s, 'fillColor', pg.to);
+      aplicadas.push(`fillColor ${antes}->${pg.to}`);
     }
   }
 
@@ -120,7 +120,7 @@ function corrigirGrupo(style, correcoes, titulo) {
 function carregar(dir) {
   const base = dir || __dirname;
   const catalogo = JSON.parse(fs.readFileSync(path.join(base, 'aws4.catalog.json'), 'utf8'));
-  const correcoes = JSON.parse(fs.readFileSync(path.join(base, 'correcoes.json'), 'utf8'));
+  const correcoes = JSON.parse(fs.readFileSync(path.join(base, 'corrections.json'), 'utf8'));
 
   const corDaCategoria = cat => (catalogo.categories[cat] || {}).fill || '#232F3D';
 
@@ -130,8 +130,8 @@ function carregar(dir) {
   const porStencil = new Map();   // stencil -> entrada (service icon vence)
   const gruposPorNome = new Map();
 
-  function indexar(entrada, tipo) {
-    const rec = { ...entrada, tipo };
+  function indexar(entrada, kind) {
+    const rec = { ...entrada, kind };
     for (const v of variantes(entrada.title)) {
       if (!porNome.has(v)) porNome.set(v, []);
       porNome.get(v).push(rec);
@@ -141,15 +141,15 @@ function carregar(dir) {
     if (sn) porNome.get(sn).push(rec);
 
     // service icon tem precedência sobre resource icon no mesmo stencil
-    if (!porStencil.has(entrada.stencil) || tipo === 'servico') {
-      if (!(porStencil.get(entrada.stencil) || {}).tipo || tipo === 'servico') {
+    if (!porStencil.has(entrada.stencil) || kind === 'service') {
+      if (!(porStencil.get(entrada.stencil) || {}).kind || kind === 'service') {
         porStencil.set(entrada.stencil, rec);
       }
     }
     return rec;
   }
 
-  for (const s of catalogo.services) indexar(s, 'servico');
+  for (const s of catalogo.services) indexar(s, 'service');
   for (const r of catalogo.resources) indexar(r, 'recurso');
   for (const g of catalogo.groups) {
     for (const v of variantes(g.title)) {
@@ -163,7 +163,7 @@ function carregar(dir) {
     if (rec.style) {                       // fora do template: literal do upstream
       return { style: rec.style, literal: true };
     }
-    const tpl = rec.tipo === 'servico' ? catalogo.templates.svc.style : catalogo.templates.res.style;
+    const tpl = rec.kind === 'service' ? catalogo.templates.svc.style : catalogo.templates.res.style;
     const fill = rec.fill || corDaCategoria(rec.palette);
     return { style: aplicarTemplate(tpl, { fill, stencil: rec.stencil }), literal: false };
   }
@@ -180,8 +180,8 @@ function carregar(dir) {
 
   // ---- busca ----------------------------------------------------------
 
-  function buscar(nome) {
-    const n = normalizar(nome);
+  function buscar(name) {
+    const n = normalizar(name);
 
     // 0. título que existe em mais de uma paleta com cor/ícone divergente.
     //    Vem ANTES da busca por nome: é justamente o caso em que o nome sozinho
@@ -191,7 +191,7 @@ function carregar(dir) {
     if (des && !n.startsWith('_')) {
       const escolhido = (porNome.get(n) || []).find(
         c => c.stencil === des.stencil && c.palette === des.palette);
-      if (escolhido) return { candidatos: [escolhido], via: 'desambiguado:' + des.origem };
+      if (escolhido) return { candidatos: [escolhido], via: 'desambiguado:' + des.origin };
     }
 
     // 1. rename congelado (OpenSearch -> elasticsearch_service).
@@ -204,7 +204,7 @@ function carregar(dir) {
     if (ren && porStencil.has(ren)) return { candidatos: [porStencil.get(ren)], via: 'renome' };
 
     // 2. título ou nome de stencil, direto
-    if (porNome.has(n)) return { candidatos: porNome.get(n), via: 'nome' };
+    if (porNome.has(n)) return { candidatos: porNome.get(n), via: 'name' };
 
     // 3. sigla / apelido — DEPOIS do título: conveniência nossa não derruba
     //    um casamento real com o catálogo.
@@ -224,7 +224,7 @@ function carregar(dir) {
     if (alvos.size === 1) return { candidatos: [...alvos], via: 'substring' };
     if (alvos.size > 1) {
       // desempate: um único service icon entre os candidatos ainda é inequívoco
-      const svcs = [...alvos].filter(c => c.tipo === 'servico');
+      const svcs = [...alvos].filter(c => c.kind === 'service');
       const stencils = new Set(svcs.map(c => c.stencil));
       if (stencils.size === 1) return { candidatos: svcs, via: 'substring' };
     }
@@ -236,36 +236,36 @@ function carregar(dir) {
    * Escada de fallback (pesquisa §5.6):
    *   service icon > resource icon > ícone da categoria > genérico > grupo genérico
    */
-  function servico(nome, opts = {}) {
-    const achado = buscar(nome);
+  function service(name, opts = {}) {
+    const finding = buscar(name);
 
-    if (achado) {
-      const svc = achado.candidatos.find(c => c.tipo === 'servico');
-      if (svc) return entregar(svc, achado.via === 'nome' ? 'servico' : 'servico:' + achado.via);
-      const res = achado.candidatos.find(c => c.tipo === 'recurso');
-      if (res) return entregar(res, achado.via === 'nome' ? 'recurso' : 'recurso:' + achado.via);
+    if (finding) {
+      const svc = finding.candidatos.find(c => c.kind === 'service');
+      if (svc) return entregar(svc, finding.via === 'name' ? 'service' : 'servico:' + finding.via);
+      const res = finding.candidatos.find(c => c.kind === 'recurso');
+      if (res) return entregar(res, finding.via === 'name' ? 'recurso' : 'recurso:' + finding.via);
     }
 
     if (opts.categoria) {
       const cat = normalizar(opts.categoria);
       const porCategoria = catalogo.services.find(
         s => s.palette === cat.replace(/ /g, '_') && normalizar(s.title) === cat);
-      if (porCategoria) return entregar({ ...porCategoria, tipo: 'servico' }, 'categoria');
+      if (porCategoria) return entregar({ ...porCategoria, kind: 'service' }, 'categoria');
       const iconeCat = buscar(opts.categoria);
       if (iconeCat) {
-        const c = iconeCat.candidatos.find(x => x.tipo === 'servico') || iconeCat.candidatos[0];
+        const c = iconeCat.candidatos.find(x => x.kind === 'service') || iconeCat.candidatos[0];
         if (c) return entregar(c, 'categoria');
       }
     }
 
-    const generico = porStencil.get('generic_application');
-    if (generico) return { ...entregar(generico, 'generico'), rotuloSugerido: String(nome) };
+    const generic = porStencil.get('generic_application');
+    if (generic) return { ...entregar(generic, 'generic'), rotuloSugerido: String(name) };
 
     return null;
   }
 
-  function grupo(nome) {
-    const g = gruposPorNome.get(normalizar(nome));
+  function group(name) {
+    const g = gruposPorNome.get(normalizar(name));
     if (!g) return null;
     const { style, correcoes: aplicadas } = corrigirGrupo(g.style, correcoes, g.title);
     return {
@@ -279,7 +279,7 @@ function carregar(dir) {
   return {
     catalogo, correcoes,
     meta: catalogo.meta,
-    servico, grupo, buscar, normalizar,
+    service, group, buscar, normalizar,
     grupos: () => catalogo.groups.map(g => g.title),
     categorias: () => catalogo.categories,
     corDaCategoria
@@ -300,8 +300,8 @@ if (require.main === module) {
     process.exit(0);
   }
   for (const a of args) {
-    const s = cat.servico(a);
-    const g = cat.grupo(a);
+    const s = cat.service(a);
+    const g = cat.group(a);
     if (g) console.log(`grupo   ${a} -> ${g.title} [${g.correcoes.join(' ') || 'sem correção'}]\n  ${g.style}`);
     else if (s) console.log(`serviço ${a} -> ${s.title} (${s.stencil}, ${s.via}, ${s.fill})\n  ${s.style}`);
     else console.log(`?       ${a} -> não resolvido`);

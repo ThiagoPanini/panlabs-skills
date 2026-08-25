@@ -1,34 +1,34 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "panlabs-aws-diagrams/modelo@1",
+  "$id": "panlabs-aws-diagrams/model@1",
   "title": "Modelo de arquitetura (IR)",
   "description": "O que o AGENTE escreve. Semantica pura: quais recursos existem, quem contem quem, quem fala com quem. Nao existe vocabulario de geometria aqui — nenhuma propriedade deste esquema nomeia posicao, tamanho, coordenada ou caminho. Isso e verificado mecanicamente por check-fronteira.cjs.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["esquema", "id", "titulo", "vista", "nos"],
+  "required": ["schema", "id", "title", "view", "nodes"],
   "properties": {
-    "esquema": { "const": "panlabs-aws-diagrams/modelo@1" },
-    "id": { "$ref": "#/definitions/identificador", "description": "Id estavel do modelo. Vira o id da pagina do .drawio — dominio, nunca aleatorio." },
-    "titulo": { "type": "string", "minLength": 1 },
-    "subtitulo": { "type": "string" },
-    "vista": {
-      "enum": ["logica", "tecnica"],
+    "schema": { "const": "panlabs-aws-diagrams/model@1" },
+    "id": { "$ref": "#/definitions/identifier", "description": "Id estavel do modelo. Vira o id da pagina do .drawio — dominio, nunca aleatorio." },
+    "title": { "type": "string", "minLength": 1 },
+    "subtitle": { "type": "string" },
+    "view": {
+      "enum": ["logical", "technical"],
       "description": "Premissa 2. A vista logica fala capacidades (tipo 'bloco'); a tecnica fala servicos AWS (tipo 'servico')."
     },
-    "genero": {
+    "genre": {
       "enum": ["L1", "L2", "T1", "T2", "T3", "T4", "T5"],
       "description": "Genero da v1. L1 blocos logicos, L2 fluxo logico, T1 referencia com consciencia de rede, T2 pipeline de dados, T3 event-driven, T4 fluxo de requisicao numerado, T5 multi-account."
     },
-    "nos": { "type": "array", "items": { "$ref": "#/definitions/no" }, "minItems": 1 },
-    "arestas": { "type": "array", "items": { "$ref": "#/definitions/aresta" }, "default": [] },
-    "faixas": {
+    "nodes": { "type": "array", "items": { "$ref": "#/definitions/node" }, "minItems": 1 },
+    "edges": { "type": "array", "items": { "$ref": "#/definitions/edge" }, "default": [] },
+    "bands": {
       "type": "array",
-      "items": { "$ref": "#/definitions/faixa" },
+      "items": { "$ref": "#/definitions/band" },
       "default": [],
       "description": "Grupos que CRUZAM a arvore de contencao (#19). Auto Scaling group e o caso frequente. As faixas de AZ NAO entram aqui — sao derivadas da dimensao 'az' das subnets pelo motor."
     },
-    "notas": { "type": "array", "items": { "$ref": "#/definitions/nota" }, "default": [] },
-    "dossie": {
+    "notes": { "type": "array", "items": { "$ref": "#/definitions/note" }, "default": [] },
+    "dossier": {
       "type": "object",
       "description": "OPACO AO MOTOR. A sabatina (#15) guarda aqui procedencia, confirmacao, tuplas das candidatas, estacionamento e achados. O motor nao le nada disto — o que precisa virar desenho e projetado em 'notas' pela sabatina.",
       "additionalProperties": true
@@ -36,123 +36,123 @@
   },
 
   "definitions": {
-    "identificador": {
+    "identifier": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*$",
       "maxLength": 64,
       "description": "kebab-case derivado do dominio. Vira id de mxCell — estavel entre execucoes, para o .drawio versionar com diff limpo."
     },
 
-    "no": {
+    "node": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "tipo"],
+      "required": ["id", "kind"],
       "properties": {
-        "id": { "$ref": "#/definitions/identificador" },
-        "tipo": {
+        "id": { "$ref": "#/definitions/identifier" },
+        "kind": {
           "enum": [
-            "nuvem", "conta", "regiao", "vpc", "subnet", "grupo-seguranca", "grupo",
-            "servico", "bloco", "ator"
+            "cloud", "account", "region", "vpc", "subnet", "security-group", "group",
+            "service", "block", "actor"
           ],
           "description": "Os sete primeiros contem; os tres ultimos sao folha. A arvore de contencao real e Cloud > VPC > Subnet (#19) — a AZ nao e um nivel."
         },
-        "rotulo": { "type": "string", "description": "O que aparece desenhado. Ausente: o motor deriva de 'servico' pelo catalogo, ou do tipo." },
-        "qualificador": { "type": "string", "description": "O que este servico faz AQUI — 'armazena os PDFs', 'fila de retentativa'. E o O21 do #5: o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama, e e o que salva tres buckets S3 identicos e ilegiveis. Vive no MODELO e nao no tema, porque e fato da arquitetura; o tema so decide se mostra (texto.qualificador)." },
-        "dentro": { "$ref": "#/definitions/identificador", "description": "Id do no que contem este. Ausente = raiz da pagina. Lista PLANA com referencia ao pai, nao aninhamento: acrescentar um no a 4 niveis de profundidade e uma linha no fim do arquivo, nao reidentar uma subarvore." },
-        "servico": { "type": "string", "description": "Chave do catalogo AWS (#17). Ex.: 'lambda', 'api gateway', 'dynamodb'. So faz sentido com tipo=servico." },
+        "label": { "type": "string", "description": "O que aparece desenhado. Ausente: o motor deriva de 'servico' pelo catalogo, ou do tipo." },
+        "qualifier": { "type": "string", "description": "O que este servico faz AQUI — 'armazena os PDFs', 'fila de retentativa'. E o O21 do #5: o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama, e e o que salva tres buckets S3 identicos e ilegiveis. Vive no MODELO e nao no tema, porque e fato da arquitetura; o tema so decide se mostra (texto.qualificador)." },
+        "inside": { "$ref": "#/definitions/identifier", "description": "Id do no que contem este. Ausente = raiz da pagina. Lista PLANA com referencia ao pai, nao aninhamento: acrescentar um no a 4 niveis de profundidade e uma linha no fim do arquivo, nao reidentar uma subarvore." },
+        "service": { "type": "string", "description": "Chave do catalogo AWS (#17). Ex.: 'lambda', 'api gateway', 'dynamodb'. So faz sentido com tipo=servico." },
         "az": {
           "type": "string",
           "pattern": "^[a-z]{2}-[a-z]+-[0-9][a-z]$",
           "description": "DIMENSAO da subnet, nunca um container (#19). O motor decide sozinho se vira faixa desenhada ou rotulo."
         },
-        "acesso": { "enum": ["publica", "privada"], "description": "So com tipo=subnet." },
-        "camada": {
-          "enum": ["borda", "aplicacao", "dados"],
+        "access": { "enum": ["public", "private"], "description": "So com tipo=subnet." },
+        "layer": {
+          "enum": ["edge", "application", "data"],
           "description": "ANDAR DE REDE da subnet — semantica, nunca posicao (#22). ESCAPE, nao pergunta: por padrao o motor le a camada do QUE A SUBNET GUARDA, pela categoria AWS do catalogo (#17), e o agente nao responde nada a mais. Declare so quando o conteudo nao souber dizer (subnet vazia) ou disser errado (a subnet de ingestao que hospeda os brokers). Declarado vence o derivado, e divergencia entre os dois vira aviso. So com tipo=subnet."
         },
         "cidr": { "type": "string", "description": "Bloco CIDR de vpc ou subnet." },
-        "conta": { "type": "string", "pattern": "^[0-9]{12}$", "description": "So com tipo=conta." },
+        "account": { "type": "string", "pattern": "^[0-9]{12}$", "description": "So com tipo=conta." },
         "ou": {
           "type": "string",
           "minLength": 1,
           "description": "DIMENSAO da conta, nunca um container (#12). O deck oficial nao tem shape de Organizational unit — a OU e par icone+rotulo flutuando acima do primeiro membro, sem caixa (#6 G2). Mesma forma da AZ no #19: o motor decide sozinho se vira faixa desenhada ou fica implicita. So com tipo=conta."
         },
-        "habilita": {
-          "$ref": "#/definitions/identificador",
+        "enables": {
+          "$ref": "#/definitions/identifier",
           "description": "Id do componente que este no AUTORIZA. Habilitador de permissao (IAM role, bucket policy, event bus policy) e no ANEXADO com seta curta apontando para dentro do componente, nunca rotulo de aresta (#6 E9). O motor decide onde ancorar."
         },
-        "nota": { "type": "string", "description": "Anotacao presa a este no." }
+        "note": { "type": "string", "description": "Anotacao presa a este no." }
       },
       "allOf": [
         {
-          "if": { "properties": { "tipo": { "const": "servico" } }, "required": ["tipo"] },
-          "then": { "required": ["servico"] }
+          "if": { "properties": { "kind": { "const": "service" } }, "required": ["kind"] },
+          "then": { "required": ["service"] }
         },
         {
-          "if": { "properties": { "tipo": { "const": "conta" } }, "required": ["tipo"] },
-          "then": { "required": ["conta"] }
+          "if": { "properties": { "kind": { "const": "account" } }, "required": ["kind"] },
+          "then": { "required": ["account"] }
         },
         {
           "if": { "properties": { "az": { "type": "string" } }, "required": ["az"] },
-          "then": { "properties": { "tipo": { "const": "subnet" } } }
+          "then": { "properties": { "kind": { "const": "subnet" } } }
         },
         {
           "if": { "properties": { "ou": { "type": "string" } }, "required": ["ou"] },
-          "then": { "properties": { "tipo": { "const": "conta" } } }
+          "then": { "properties": { "kind": { "const": "account" } } }
         },
         {
-          "if": { "properties": { "camada": { "type": "string" } }, "required": ["camada"] },
-          "then": { "properties": { "tipo": { "const": "subnet" } } }
+          "if": { "properties": { "layer": { "type": "string" } }, "required": ["layer"] },
+          "then": { "properties": { "kind": { "const": "subnet" } } }
         }
       ]
     },
 
-    "aresta": {
+    "edge": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["de", "para"],
+      "required": ["from", "to"],
       "properties": {
-        "id": { "$ref": "#/definitions/identificador" },
-        "de": { "$ref": "#/definitions/identificador", "description": "QUEM INICIA. Nao e 'de onde o dado sai' — e quem abre a conversa. E a resposta a pergunta que satisfaz B3 da rubrica (#8/#15)." },
-        "para": { "$ref": "#/definitions/identificador" },
-        "rotulo": { "type": "string" },
-        "protocolo": { "type": "string", "description": "https, grpc, sql, amqp..." },
-        "dados": {
-          "enum": ["ida", "volta", "ambos"],
-          "default": "ida",
+        "id": { "$ref": "#/definitions/identifier" },
+        "from": { "$ref": "#/definitions/identifier", "description": "QUEM INICIA. Nao e 'de onde o dado sai' — e quem abre a conversa. E a resposta a pergunta que satisfaz B3 da rubrica (#8/#15)." },
+        "to": { "$ref": "#/definitions/identifier" },
+        "label": { "type": "string" },
+        "protocol": { "type": "string", "description": "https, grpc, sql, amqp..." },
+        "data": {
+          "enum": ["out", "back", "both"],
+          "default": "out",
           "description": "Sentido do DADO, quando difere de quem inicia. Polling e 'de: consumidor' com 'dados: volta'."
         },
-        "ordem": { "type": "integer", "minimum": 1, "description": "Numero do passo no genero T4. Semantico, nao geometrico: e o rotulo do passo, nao a posicao dele." }
+        "order": { "type": "integer", "minimum": 1, "description": "Numero do passo no genero T4. Semantico, nao geometrico: e o rotulo do passo, nao a posicao dele." }
       }
     },
 
-    "faixa": {
+    "band": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "membros"],
+      "required": ["id", "members"],
       "properties": {
-        "id": { "$ref": "#/definitions/identificador" },
-        "tipo": { "enum": ["auto-scaling", "generico"], "default": "generico" },
-        "rotulo": { "type": "string" },
-        "membros": {
+        "id": { "$ref": "#/definitions/identifier" },
+        "kind": { "enum": ["auto-scaling", "generic"], "default": "generic" },
+        "label": { "type": "string" },
+        "members": {
           "type": "array",
-          "items": { "$ref": "#/definitions/identificador" },
+          "items": { "$ref": "#/definitions/identifier" },
           "minItems": 2,
           "description": "Ids dos nos que a faixa cruza. A caixa e a UNIAO calculada dos membros — o agente diz QUEM, o motor calcula ONDE."
         }
       }
     },
 
-    "nota": {
+    "note": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["texto"],
+      "required": ["text"],
       "properties": {
-        "id": { "$ref": "#/definitions/identificador" },
-        "texto": { "type": "string", "minLength": 1 },
-        "sobre": { "$ref": "#/definitions/identificador", "description": "No a que a nota se refere. Ausente = nota de rodape do diagrama." },
-        "origem": {
-          "enum": ["achado-recusado", "premissa", "legenda"],
+        "id": { "$ref": "#/definitions/identifier" },
+        "text": { "type": "string", "minLength": 1 },
+        "about": { "$ref": "#/definitions/identifier", "description": "No a que a nota se refere. Ausente = nota de rodape do diagrama." },
+        "origin": {
+          "enum": ["rejected-finding", "assumption", "legend"],
           "description": "'achado-recusado' e o canal por onde a recusa do usuario vira marca no desenho (#15) — a unica coisa do dossie que o motor enxerga, e so porque a sabatina projetou aqui."
         }
       }

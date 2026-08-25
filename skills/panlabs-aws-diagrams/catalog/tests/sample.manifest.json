@@ -22,15 +22,15 @@
    "w": 10,
    "h": 10
   },
-  "cor": "#FF00FF"
+  "color": "#FF00FF"
  },
  "celulas": [
   {
    "id": "c2",
    "pedido": "lambda",
-   "titulo": "Lambda",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Lambda",
+   "kind": "svc",
+   "via": "service",
    "stencil": "lambda",
    "fill": "#ED7100",
    "x": 60,
@@ -42,9 +42,9 @@
   {
    "id": "c3",
    "pedido": "s3",
-   "titulo": "Simple Storage Service (S3)",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Simple Storage Service (S3)",
+   "kind": "svc",
+   "via": "service",
    "stencil": "s3",
    "fill": "#7AA116",
    "x": 210,
@@ -56,9 +56,9 @@
   {
    "id": "c4",
    "pedido": "dynamodb",
-   "titulo": "DynamoDB",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "DynamoDB",
+   "kind": "svc",
+   "via": "service",
    "stencil": "dynamodb",
    "fill": "#C925D1",
    "x": 360,
@@ -70,9 +70,9 @@
   {
    "id": "c5",
    "pedido": "ec2",
-   "titulo": "EC2",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "EC2",
+   "kind": "svc",
+   "via": "service",
    "stencil": "ec2",
    "fill": "#ED7100",
    "x": 510,
@@ -84,9 +84,9 @@
   {
    "id": "c6",
    "pedido": "rds",
-   "titulo": "RDS",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "RDS",
+   "kind": "svc",
+   "via": "service",
    "stencil": "rds",
    "fill": "#C925D1",
    "x": 660,
@@ -98,9 +98,9 @@
   {
    "id": "c7",
    "pedido": "sqs",
-   "titulo": "Simple Queue Service",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Simple Queue Service",
+   "kind": "svc",
+   "via": "service",
    "stencil": "sqs",
    "fill": "#E7157B",
    "x": 810,
@@ -112,9 +112,9 @@
   {
    "id": "c8",
    "pedido": "sns",
-   "titulo": "Simple Notification Service",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Simple Notification Service",
+   "kind": "svc",
+   "via": "service",
    "stencil": "sns",
    "fill": "#E7157B",
    "x": 60,
@@ -126,9 +126,9 @@
   {
    "id": "c9",
    "pedido": "cloudfront",
-   "titulo": "CloudFront",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "CloudFront",
+   "kind": "svc",
+   "via": "service",
    "stencil": "cloudfront",
    "fill": "#8C4FFF",
    "x": 210,
@@ -140,8 +140,8 @@
   {
    "id": "c10",
    "pedido": "iam",
-   "titulo": "Identity & Access Management",
-   "tipo": "svc",
+   "title": "Identity & Access Management",
+   "kind": "svc",
    "via": "servico:sinonimo",
    "stencil": "identity_and_access_management",
    "fill": "#DD344C",
@@ -154,9 +154,9 @@
   {
    "id": "c11",
    "pedido": "eventbridge",
-   "titulo": "EventBridge",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "EventBridge",
+   "kind": "svc",
+   "via": "service",
    "stencil": "eventbridge",
    "fill": "#E7157B",
    "x": 510,
@@ -168,9 +168,9 @@
   {
    "id": "c12",
    "pedido": "step functions",
-   "titulo": "Step Functions",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Step Functions",
+   "kind": "svc",
+   "via": "service",
    "stencil": "step_functions",
    "fill": "#E7157B",
    "x": 660,
@@ -182,9 +182,9 @@
   {
    "id": "c13",
    "pedido": "bedrock",
-   "titulo": "Bedrock",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Bedrock",
+   "kind": "svc",
+   "via": "service",
    "stencil": "bedrock",
    "fill": "#01A88D",
    "x": 810,
@@ -196,9 +196,9 @@
   {
    "id": "c14",
    "pedido": "fargate",
-   "titulo": "Fargate",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Fargate",
+   "kind": "svc",
+   "via": "service",
    "stencil": "fargate",
    "fill": "#ED7100",
    "x": 60,
@@ -210,9 +210,9 @@
   {
    "id": "c15",
    "pedido": "athena",
-   "titulo": "Athena",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Athena",
+   "kind": "svc",
+   "via": "service",
    "stencil": "athena",
    "fill": "#8C4FFF",
    "x": 210,
@@ -224,9 +224,9 @@
   {
    "id": "c16",
    "pedido": "glue",
-   "titulo": "Glue",
-   "tipo": "svc",
-   "via": "servico",
+   "title": "Glue",
+   "kind": "svc",
+   "via": "service",
    "stencil": "glue",
    "fill": "#8C4FFF",
    "x": 360,
@@ -238,8 +238,8 @@
   {
    "id": "c17",
    "pedido": "opensearch",
-   "titulo": "OpenSearch Service",
-   "tipo": "svc",
+   "title": "OpenSearch Service",
+   "kind": "svc",
    "via": "servico:renome",
    "stencil": "elasticsearch_service",
    "fill": "#8C4FFF",
@@ -252,8 +252,8 @@
   {
    "id": "c18",
    "pedido": "iam identity center",
-   "titulo": "Identity Center",
-   "tipo": "svc",
+   "title": "Identity Center",
+   "kind": "svc",
    "via": "servico:renome",
    "stencil": "single_sign_on",
    "fill": "#DD344C",
@@ -266,8 +266,8 @@
   {
    "id": "c19",
    "pedido": "cloudwatch",
-   "titulo": "CloudWatch",
-   "tipo": "svc",
+   "title": "CloudWatch",
+   "kind": "svc",
    "via": "servico:renome",
    "stencil": "cloudwatch_2",
    "fill": "#E7157B",
@@ -280,8 +280,8 @@
   {
    "id": "c20",
    "pedido": "sagemaker",
-   "titulo": "SageMaker AI",
-   "tipo": "svc",
+   "title": "SageMaker AI",
+   "kind": "svc",
    "via": "servico:renome",
    "stencil": "sagemaker",
    "fill": "#01A88D",
@@ -294,8 +294,8 @@
   {
    "id": "c21",
    "pedido": "msk",
-   "titulo": "Managed Streaming for Apache Kafka",
-   "tipo": "svc",
+   "title": "Managed Streaming for Apache Kafka",
+   "kind": "svc",
    "via": "servico:sinonimo",
    "stencil": "managed_streaming_for_kafka",
    "fill": "#8C4FFF",
@@ -308,8 +308,8 @@
   {
    "id": "c22",
    "pedido": "api gateway",
-   "titulo": "API Gateway",
-   "tipo": "svc",
+   "title": "API Gateway",
+   "kind": "svc",
    "via": "servico:desambiguado:deck-aws",
    "stencil": "api_gateway",
    "fill": "#8C4FFF",
@@ -322,8 +322,8 @@
   {
    "id": "c23",
    "pedido": "redshift",
-   "titulo": "Redshift",
-   "tipo": "svc",
+   "title": "Redshift",
+   "kind": "svc",
    "via": "servico:desambiguado:deck-aws",
    "stencil": "redshift",
    "fill": "#8C4FFF",
@@ -336,8 +336,8 @@
   {
    "id": "c24",
    "pedido": "auto scaling",
-   "titulo": "Auto Scaling",
-   "tipo": "svc",
+   "title": "Auto Scaling",
+   "kind": "svc",
    "via": "servico:desambiguado:deck-aws",
    "stencil": "autoscaling",
    "fill": "#E7157B",
@@ -350,8 +350,8 @@
   {
    "id": "c25",
    "pedido": "s3 tables",
-   "titulo": "S3 Tables",
-   "tipo": "res",
+   "title": "S3 Tables",
+   "kind": "res",
    "via": "recurso",
    "stencil": "s3_tables",
    "fill": "#7AA116",
@@ -364,8 +364,8 @@
   {
    "id": "c26",
    "pedido": "s3 express one zone",
-   "titulo": "S3 Express One-Zone",
-   "tipo": "res",
+   "title": "S3 Express One-Zone",
+   "kind": "res",
    "via": "recurso",
    "stencil": "s3_express_one_zone",
    "fill": "#7AA116",
@@ -378,8 +378,8 @@
   {
    "id": "c27",
    "pedido": "eventbridge pipes",
-   "titulo": "EventBridge Pipes",
-   "tipo": "res",
+   "title": "EventBridge Pipes",
+   "kind": "res",
    "via": "recurso",
    "stencil": "eventbridge_pipes",
    "fill": "#E7157B",
@@ -392,8 +392,8 @@
   {
    "id": "c28",
    "pedido": "eventbridge scheduler",
-   "titulo": "EventBridge Scheduler",
-   "tipo": "res",
+   "title": "EventBridge Scheduler",
+   "kind": "res",
    "via": "recurso",
    "stencil": "eventbridge_scheduler",
    "fill": "#E7157B",
@@ -406,8 +406,8 @@
   {
    "id": "c29",
    "pedido": "trainium",
-   "titulo": "Trainium Instance",
-   "tipo": "res",
+   "title": "Trainium Instance",
+   "kind": "res",
    "via": "recurso:substring",
    "stencil": "trainium_instance",
    "fill": "#ED7100",
@@ -420,8 +420,8 @@
   {
    "id": "c30",
    "pedido": "inferentia",
-   "titulo": "Inferentia",
-   "tipo": "res",
+   "title": "Inferentia",
+   "kind": "res",
    "via": "recurso",
    "stencil": "inferentia",
    "fill": "#ED7100",
@@ -434,8 +434,8 @@
   {
    "id": "c31",
    "pedido": "AWS Cloud",
-   "titulo": "AWS Cloud",
-   "tipo": "grupo",
+   "title": "AWS Cloud",
+   "kind": "group",
    "grIcon": "group_aws_cloud_alt",
    "shapeClass": "group",
    "correcoes": [],
@@ -443,7 +443,7 @@
    "y": 960,
    "w": 300,
    "h": 190,
-   "borda": "#232F3E",
+   "edge": "#232F3E",
    "filho": {
     "id": "c32",
     "x": 100,
@@ -457,8 +457,8 @@
   {
    "id": "c33",
    "pedido": "Region",
-   "titulo": "Region",
-   "tipo": "grupo",
+   "title": "Region",
+   "kind": "group",
    "grIcon": "group_region",
    "shapeClass": "group",
    "correcoes": [
@@ -468,7 +468,7 @@
    "y": 960,
    "w": 300,
    "h": 190,
-   "borda": "#00A4A6",
+   "edge": "#00A4A6",
    "filho": {
     "id": "c34",
     "x": 440,
@@ -482,8 +482,8 @@
   {
    "id": "c35",
    "pedido": "VPC",
-   "titulo": "VPC",
-   "tipo": "grupo",
+   "title": "VPC",
+   "kind": "group",
    "grIcon": "group_vpc2",
    "shapeClass": "group",
    "correcoes": [],
@@ -491,7 +491,7 @@
    "y": 960,
    "w": 300,
    "h": 190,
-   "borda": "#8C4FFF",
+   "edge": "#8C4FFF",
    "filho": {
     "id": "c36",
     "x": 780,
@@ -505,8 +505,8 @@
   {
    "id": "c37",
    "pedido": "Availability Zone",
-   "titulo": "Availability Zone",
-   "tipo": "grupo",
+   "title": "Availability Zone",
+   "kind": "group",
    "grIcon": null,
    "shapeClass": null,
    "correcoes": [
@@ -517,7 +517,7 @@
    "y": 960,
    "w": 300,
    "h": 190,
-   "borda": "#00A4A6",
+   "edge": "#00A4A6",
    "filho": {
     "id": "c38",
     "x": 1120,
@@ -531,8 +531,8 @@
   {
    "id": "c39",
    "pedido": "Private subnet",
-   "titulo": "Private subnet",
-   "tipo": "grupo",
+   "title": "Private subnet",
+   "kind": "group",
    "grIcon": "group_security_group",
    "shapeClass": "group",
    "correcoes": [
@@ -542,7 +542,7 @@
    "y": 1190,
    "w": 300,
    "h": 190,
-   "borda": "#00A4A6",
+   "edge": "#00A4A6",
    "filho": {
     "id": "c40",
     "x": 100,
@@ -556,8 +556,8 @@
   {
    "id": "c41",
    "pedido": "Public subnet",
-   "titulo": "Public subnet",
-   "tipo": "grupo",
+   "title": "Public subnet",
+   "kind": "group",
    "grIcon": "group_security_group",
    "shapeClass": "group",
    "correcoes": [],
@@ -565,7 +565,7 @@
    "y": 1190,
    "w": 300,
    "h": 190,
-   "borda": "#7AA116",
+   "edge": "#7AA116",
    "filho": {
     "id": "c42",
     "x": 440,
@@ -579,8 +579,8 @@
   {
    "id": "c43",
    "pedido": "Security group",
-   "titulo": "Security group",
-   "tipo": "grupo",
+   "title": "Security group",
+   "kind": "group",
    "grIcon": null,
    "shapeClass": null,
    "correcoes": [
@@ -591,7 +591,7 @@
    "y": 1190,
    "w": 300,
    "h": 190,
-   "borda": "#DD344C",
+   "edge": "#DD344C",
    "filho": {
     "id": "c44",
     "x": 780,
@@ -605,8 +605,8 @@
   {
    "id": "c45",
    "pedido": "AWS Account",
-   "titulo": "AWS Account",
-   "tipo": "grupo",
+   "title": "AWS Account",
+   "kind": "group",
    "grIcon": "group_account",
    "shapeClass": "group",
    "correcoes": [
@@ -616,7 +616,7 @@
    "y": 1190,
    "w": 300,
    "h": 190,
-   "borda": "#E7157B",
+   "edge": "#E7157B",
    "filho": {
     "id": "c46",
     "x": 1120,
@@ -630,8 +630,8 @@
   {
    "id": "c47",
    "pedido": "Auto Scaling group",
-   "titulo": "Auto Scaling group",
-   "tipo": "grupo",
+   "title": "Auto Scaling group",
+   "kind": "group",
    "grIcon": "group_auto_scaling_group",
    "shapeClass": "groupCenter",
    "correcoes": [
@@ -641,7 +641,7 @@
    "y": 1420,
    "w": 300,
    "h": 190,
-   "borda": "#ED7100",
+   "edge": "#ED7100",
    "filho": {
     "id": "c48",
     "x": 100,
@@ -655,8 +655,8 @@
   {
    "id": "c49",
    "pedido": "Corporate data center",
-   "titulo": "Corporate data center",
-   "tipo": "grupo",
+   "title": "Corporate data center",
+   "kind": "group",
    "grIcon": "group_corporate_data_center",
    "shapeClass": "group",
    "correcoes": [],
@@ -664,7 +664,7 @@
    "y": 1420,
    "w": 300,
    "h": 190,
-   "borda": "#7D8998",
+   "edge": "#7D8998",
    "filho": {
     "id": "c50",
     "x": 440,
@@ -678,8 +678,8 @@
   {
    "id": "c51",
    "pedido": "Elastic Beanstalk container",
-   "titulo": "Elastic Beanstalk container",
-   "tipo": "grupo",
+   "title": "Elastic Beanstalk container",
+   "kind": "group",
    "grIcon": "group_elastic_beanstalk",
    "shapeClass": "group",
    "correcoes": [
@@ -689,7 +689,7 @@
    "y": 1420,
    "w": 300,
    "h": 190,
-   "borda": "#ED7100",
+   "edge": "#ED7100",
    "filho": {
     "id": "c52",
     "x": 780,
@@ -703,8 +703,8 @@
   {
    "id": "c53",
    "pedido": "Generic group",
-   "titulo": "Generic group",
-   "tipo": "grupo",
+   "title": "Generic group",
+   "kind": "group",
    "grIcon": null,
    "shapeClass": null,
    "correcoes": [
@@ -714,7 +714,7 @@
    "y": 1420,
    "w": 300,
    "h": 190,
-   "borda": "#5A6C86",
+   "edge": "#5A6C86",
    "filho": {
     "id": "c54",
     "x": 1120,

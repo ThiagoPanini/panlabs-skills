@@ -22,26 +22,26 @@
  */
 
 const path = require('path');
-const { porId } = require(path.join(__dirname, '..', 'indice.cjs'));
+const { porId } = require(path.join(__dirname, '..', 'index.cjs'));
 
 /** Monta o resultado, herdando do índice o que já está declarado lá. */
-function resultado(id, estado, extra = {}) {
+function resultado(id, state, extra = {}) {
   const c = porId(id);
   if (!c) throw new Error(`checagem "${id}" não está no índice`);
   return {
-    id, nome: c.nome, familia: c.familia, insumo: c.insumo,
-    severidadeMaxima: c.severidade, semantica: !!c.semantica, calibravel: !!c.calibravel,
-    estado,
+    id, name: c.name, family: c.family, input: c.input,
+    severidadeMaxima: c.severity, semantica: !!c.semantica, calibravel: !!c.calibravel,
+    state,
     mensagem: extra.mensagem || '',
     medida: extra.medida === undefined ? null : extra.medida,
-    ocorrencias: extra.ocorrencias || [],
+    occurrences: extra.occurrences || [],
   };
 }
 
 const ok = (id, extra) => resultado(id, 'ok', extra);
 const aviso = (id, extra) => resultado(id, 'aviso', extra);
 const falha = (id, extra) => resultado(id, 'falha', extra);
-const inaplicavel = (id, motivo) => resultado(id, 'inaplicavel', { mensagem: motivo });
+const notApplicable = (id, motivo) => resultado(id, 'notApplicable', { mensagem: motivo });
 
 /** Puladas herdam do índice o motivo — não há dois lugares onde ele possa divergir. */
 function pulada(id) {
@@ -53,9 +53,9 @@ function pulada(id) {
  * Fecha a checagem pelo que foi achado: nada → ok, achados → a severidade que o
  * índice declarou. Escalona quando a checagem tem os dois níveis.
  */
-function conforme(id, ocorrencias, extra = {}) {
-  if (!ocorrencias.length) return ok(id, extra);
-  return resultado(id, porId(id).severidade === 'fail' ? 'falha' : 'aviso', { ...extra, ocorrencias });
+function conforme(id, occurrences, extra = {}) {
+  if (!occurrences.length) return ok(id, extra);
+  return resultado(id, porId(id).severity === 'fail' ? 'falha' : 'aviso', { ...extra, occurrences });
 }
 
 /** Pares não ordenados de uma lista, sem repetir e sem parear consigo mesmo. */
@@ -78,6 +78,6 @@ const semTags = s => String(s || '').replace(/<[^>]+>/g, '').trim();
  * onde uma delas passa a citar só o id — e aí a ocorrência de A4.2 diz
  * "srv está dentro de vpc-b" em vez de dizer de que serviço se trata.
  */
-const nome = e => `${e.id}${semTags(e.rotulo) ? ` ("${semTags(e.rotulo)}")` : ''}`;
+const name = e => `${e.id}${semTags(e.label) ? ` ("${semTags(e.label)}")` : ''}`;
 
-module.exports = { resultado, ok, aviso, falha, inaplicavel, pulada, conforme, pares, media, desvio, arredonda, semTags, nome };
+module.exports = { resultado, ok, aviso, falha, notApplicable, pulada, conforme, pares, media, desvio, arredonda, semTags, name };

@@ -1,34 +1,34 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
+  "schema": "panlabs-aws-diagrams/model@1",
   "id": "hub-tgw",
-  "titulo": "Hub de rede · o mesmo vínculo para duas contas",
-  "subtitulo": "Vista técnica T5 · o caso que dispara o nível 4 da hierarquia do #6 — barramento, 1 linha + N stubs",
-  "vista": "tecnica",
-  "genero": "T5",
+  "title": "Hub de rede · o mesmo vínculo para duas contas",
+  "subtitle": "Vista técnica T5 · o caso que dispara o nível 4 da hierarquia do #6 — barramento, 1 linha + N stubs",
+  "view": "technical",
+  "genre": "T5",
 
-  "nos": [
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
 
-    { "id": "c-net", "tipo": "conta", "conta": "200000000001", "ou": "Infrastructure", "rotulo": "Network", "dentro": "nuvem" },
-    { "id": "tgw", "tipo": "servico", "servico": "transit gateway", "rotulo": "Transit Gateway", "dentro": "c-net" },
+    { "id": "c-net", "kind": "account", "account": "200000000001", "ou": "Infrastructure", "label": "Network", "inside": "cloud" },
+    { "id": "tgw", "kind": "service", "service": "transit gateway", "label": "Transit Gateway", "inside": "c-net" },
 
-    { "id": "c-a", "tipo": "conta", "conta": "200000000002", "ou": "Workloads", "rotulo": "Workload A", "dentro": "nuvem" },
-    { "id": "vpc-a", "tipo": "vpc", "rotulo": "VPC A", "cidr": "10.1.0.0/16", "dentro": "c-a" },
-    { "id": "sub-a", "tipo": "subnet", "rotulo": "Private subnet", "acesso": "privada", "dentro": "vpc-a" },
-    { "id": "ecs-a", "tipo": "servico", "servico": "ecs", "rotulo": "ECS A", "dentro": "sub-a" },
+    { "id": "c-a", "kind": "account", "account": "200000000002", "ou": "Workloads", "label": "Workload A", "inside": "cloud" },
+    { "id": "vpc-a", "kind": "vpc", "label": "VPC A", "cidr": "10.1.0.0/16", "inside": "c-a" },
+    { "id": "sub-a", "kind": "subnet", "label": "Private subnet", "access": "private", "inside": "vpc-a" },
+    { "id": "ecs-a", "kind": "service", "service": "ecs", "label": "ECS A", "inside": "sub-a" },
 
-    { "id": "c-b", "tipo": "conta", "conta": "200000000003", "ou": "Workloads", "rotulo": "Workload B", "dentro": "nuvem" },
-    { "id": "vpc-b", "tipo": "vpc", "rotulo": "VPC B", "cidr": "10.2.0.0/16", "dentro": "c-b" },
-    { "id": "sub-b", "tipo": "subnet", "rotulo": "Private subnet", "acesso": "privada", "dentro": "vpc-b" },
-    { "id": "ecs-b", "tipo": "servico", "servico": "ecs", "rotulo": "ECS B", "dentro": "sub-b" }
+    { "id": "c-b", "kind": "account", "account": "200000000003", "ou": "Workloads", "label": "Workload B", "inside": "cloud" },
+    { "id": "vpc-b", "kind": "vpc", "label": "VPC B", "cidr": "10.2.0.0/16", "inside": "c-b" },
+    { "id": "sub-b", "kind": "subnet", "label": "Private subnet", "access": "private", "inside": "vpc-b" },
+    { "id": "ecs-b", "kind": "service", "service": "ecs", "label": "ECS B", "inside": "sub-b" }
   ],
 
-  "arestas": [
-    { "de": "tgw", "para": "ecs-a", "rotulo": "atracamento VPC" },
-    { "de": "tgw", "para": "ecs-b", "rotulo": "atracamento VPC" }
+  "edges": [
+    { "from": "tgw", "to": "ecs-a", "label": "atracamento VPC" },
+    { "from": "tgw", "to": "ecs-b", "label": "atracamento VPC" }
   ],
 
-  "notas": [
-    { "texto": "As duas travessias saem da MESMA origem e carregam o MESMO vínculo — e é a segunda condição que autoriza o barramento. Mesma origem com vínculos diferentes cai no nível 6 (aresta direta), porque uma barra ligando coisas diferentes afirmaria que as duas contas recebem a mesma coisa.", "origem": "legenda" }
+  "notes": [
+    { "text": "As duas travessias saem da MESMA origem e carregam o MESMO vínculo — e é a segunda condição que autoriza o barramento. Mesma origem com vínculos diferentes cai no nível 6 (aresta direta), porque uma barra ligando coisas diferentes afirmaria que as duas contas recebem a mesma coisa.", "origin": "legend" }
   ]
 }

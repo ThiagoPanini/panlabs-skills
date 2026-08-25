@@ -3,8 +3,8 @@
 /**
  * Motor de geração — IR › layout › mxGraph XML.
  *
- *   node motor/gerar.cjs modelo.json --saida diagrama.drawio
- *   node motor/gerar.cjs modelo.json --explicar        # só o relatório, sem escrever
+ *   node engine/generate.cjs modelo.json --saida diagrama.drawio
+ *   node engine/generate.cjs modelo.json --explicar        # só o relatório, sem escrever
  *
  * O pipeline inteiro, e a fronteira que ele defende:
  *
@@ -15,7 +15,7 @@
  * O tema (#13) entra em `resolver` — ANTES do layout, não depois. Dez dos seus
  * tokens são métrica (corpo do rótulo, densidade da grade, qualificador em duas
  * linhas) e movem coordenada; os outros dezessete são pintura pura. A partição
- * está provada em `tests/check-particao.cjs`.
+ * está provada em `tests/check-partition.cjs`.
  *
  * Nada entre `dispor` e `conferir` tem como ser influenciado pelo modelo a não
  * ser pela semântica. Não é disciplina: o esquema não tem onde escrever uma
@@ -25,20 +25,20 @@
 const fs = require('fs');
 const path = require('path');
 
-const { validar } = require('./validar.cjs');
-const resolverMod = require('./resolver.cjs');
-const { derivar } = require('./derivar.cjs');
-const camadasMod = require('./camadas.cjs');
-const dispor = require('./dispor.cjs');
-const planejar = require('./planejar.cjs');
-const { emitir, conferirXml } = require('./emitir.cjs');
-const temaMod = require('../tema/tema.cjs');
-const contraste = require('./contraste.cjs');
-const { portao, NIVEIS } = require('../validador/portao.cjs');
+const { validar } = require('./validate.cjs');
+const resolverMod = require('./resolve.cjs');
+const { derivar } = require('./derive.cjs');
+const camadasMod = require('./layers.cjs');
+const dispor = require('./layout.cjs');
+const planejar = require('./plan.cjs');
+const { emitir, conferirXml } = require('./emit.cjs');
+const temaMod = require('../theme/theme.cjs');
+const contraste = require('./contrast.cjs');
+const { portao, NIVEIS } = require('../validator/gate.cjs');
 
 // O esquema é ÚNICO e mora na raiz da skill, não dentro do motor: ele é o
 // contrato de quem escreve o modelo, e o motor é só o primeiro consumidor dele.
-const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'esquema.json'), 'utf8'));
+const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'schema.json'), 'utf8'));
 
 /**
  * As vistas de detalhe, uma por conta — e elas NÃO são plano B.
@@ -53,42 +53,42 @@ const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'esquema.j
  * sabe desenhar; recorta semântica e chama o pipeline de novo.
  */
 async function paginasDeDetalhe(modelo, d, res, opts, relatorio) {
-  const planejar = require('./planejar.cjs');
-  const dispor = require('./dispor.cjs');
+  const planejar = require('./plan.cjs');
+  const dispor = require('./layout.cjs');
   const paginas = [];
 
-  for (const conta of modelo.nos.filter(n => n.tipo === 'conta')) {
-    const dentro = new Set();
-    (function marcar(id) { dentro.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(conta.id);
+  for (const account of modelo.nodes.filter(n => n.kind === 'account')) {
+    const inside = new Set();
+    (function marcar(id) { inside.add(id); for (const k of d.t.filhos.get(id)) marcar(k.id); })(account.id);
 
     // as travessias viram TEXTO, não geometria — `E3`: "o texto substitui a
     // cardinalidade". A vista de detalhe carrega só aresta intra-conta.
-    const entram = d.travessias.filter(a => a.contaPara === conta.id);
-    const saem = d.travessias.filter(a => a.contaDe === conta.id);
+    const entram = d.travessias.filter(a => a.contaPara === account.id);
+    const saem = d.travessias.filter(a => a.contaDe === account.id);
     const nomeDaConta = id => {
       const c = d.t.porId.get(id);
-      return (c && c.rotulo) || id;
+      return (c && c.label) || id;
     };
-    const notas = [];
+    const notes = [];
     for (const a of saem)
-      notas.push({ texto: `Sai desta conta: ${a.rotulo || 'ligação'} → ${nomeDaConta(a.contaPara)}`, origem: 'legenda' });
+      notes.push({ text: `Sai desta conta: ${a.label || 'ligação'} → ${nomeDaConta(a.contaPara)}`, origin: 'legend' });
     for (const a of entram)
-      notas.push({ texto: `Entra nesta conta: ${a.rotulo || 'ligação'} ← ${nomeDaConta(a.contaDe)}`, origem: 'legenda' });
+      notes.push({ text: `Entra nesta conta: ${a.label || 'ligação'} ← ${nomeDaConta(a.contaDe)}`, origin: 'legend' });
 
     const sub = {
-      esquema: modelo.esquema,
-      id: `${modelo.id}-${conta.id}`,
-      titulo: `${conta.rotulo || conta.id}`,
-      subtitulo: `Vista de detalhe · ${modelo.titulo}`,
-      vista: modelo.vista,
-      ...(modelo.genero ? { genero: modelo.genero } : {}),
-      nos: modelo.nos
-        .filter(n => dentro.has(n.id))
-        .map(n => (n.id === conta.id ? { ...n, dentro: undefined } : { ...n }))
-        .map(n => { const c = { ...n }; if (c.dentro === undefined) delete c.dentro; return c; }),
-      arestas: (modelo.arestas || []).filter(a => dentro.has(a.de) && dentro.has(a.para)),
-      faixas: (modelo.faixas || []).filter(f => f.membros.every(m => dentro.has(m))),
-      notas,
+      schema: modelo.schema,
+      id: `${modelo.id}-${account.id}`,
+      title: `${account.label || account.id}`,
+      subtitle: `Vista de detalhe · ${modelo.title}`,
+      view: modelo.view,
+      ...(modelo.genre ? { genre: modelo.genre } : {}),
+      nodes: modelo.nodes
+        .filter(n => inside.has(n.id))
+        .map(n => (n.id === account.id ? { ...n, inside: undefined } : { ...n }))
+        .map(n => { const c = { ...n }; if (c.inside === undefined) delete c.inside; return c; }),
+      edges: (modelo.edges || []).filter(a => inside.has(a.from) && inside.has(a.to)),
+      bands: (modelo.bands || []).filter(f => f.members.every(m => inside.has(m))),
+      notes,
     };
 
     try {
@@ -105,7 +105,7 @@ async function paginasDeDetalhe(modelo, d, res, opts, relatorio) {
       paginas.push(p);
     } catch (e) {
       relatorio.avisos.push(
-        `vista de detalhe de "${conta.id}" não saiu: ${e.message}` +
+        `vista de detalhe de "${account.id}" não saiu: ${e.message}` +
         (e.erros ? ` — ${e.erros[0]}` : ''));
     }
   }
@@ -114,39 +114,39 @@ async function paginasDeDetalhe(modelo, d, res, opts, relatorio) {
 
 async function gerar(modelo, opts = {}) {
   const relatorio = { avisos: [], passos: [] };
-  const marco = (nome, extra) => relatorio.passos.push({ nome, ...extra });
+  const marco = (name, extra) => relatorio.passos.push({ name, ...extra });
 
   const v = validar(modelo, ESQUEMA);
   if (!v.ok) { const e = new Error(`modelo inválido (${v.fase})`); e.erros = v.erros; throw e; }
   relatorio.avisos.push(...v.avisos);
-  marco('validar', { nos: modelo.nos.length, arestas: (modelo.arestas || []).length });
+  marco('validar', { nodes: modelo.nodes.length, edges: (modelo.edges || []).length });
 
   // `--fluxo` é override de invocação sobre o token do tema: a mesma arquitetura
   // com o mesmo tema pode querer marcar o caminho quente numa entrega e não na
   // outra. Sobrescreve o token, e NÃO mutando o objeto de quem chamou — um tema
   // é um valor, e `comPatch` devolve outro.
   const base = (opts.tema && typeof opts.tema === 'object') ? opts.tema
-    : temaMod.carregar(opts.tema || 'claro');
-  const tema = opts.fluxo ? temaMod.comPatch(base, { aresta: { fluxo: opts.fluxo } }) : base;
-  marco('tema', { id: tema.id, fundo: tema.fundo, densidade: tema.tokens.folga.densidade, fluxo: tema.tokens.aresta.fluxo });
+    : temaMod.carregar(opts.tema || 'light');
+  const tema = opts.flow ? temaMod.comPatch(base, { aresta: { flow: opts.flow } }) : base;
+  marco('tema', { id: tema.id, background: tema.background, density: tema.tokens.gap.density, flow: tema.tokens.aresta.flow });
 
   const res = resolverMod.criar(tema, opts.catalogo);
 
   const d = derivar(modelo, { cat: res.cat });
-  marco('derivar', { faixasAz: d.az.desenhar, porque: d.az.porque, azs: d.az.azs });
+  marco('derivar', { faixasAz: d.az.desenhar, because: d.az.because, azs: d.az.azs });
 
   // A camada de rede que o motor leu do conteúdo (#22). O agente não escreveu
   // nenhuma delas, salvo onde declarou o escape — e é justamente por isso que
   // vale contar: a ordem das linhas passou a depender desta leitura.
   for (const [id, c] of d.camadas)
     if (c.diverge)
-      relatorio.avisos.push(`subnet "${id}": declarada como camada "${c.camada}", ` +
-        `mas o que ela guarda é "${c.diverge}" (${c.evidencia.map(e => e.servico).join(', ')}). ` +
+      relatorio.avisos.push(`subnet "${id}": declarada como camada "${c.layer}", ` +
+        `mas o que ela guarda é "${c.diverge}" (${c.evidencia.map(e => e.service).join(', ')}). ` +
         `O motor obedece à declaração.`);
 
   let plano, caminho;
   const paginas = [];
-  if (d.modo.modo !== 'nenhum') {
+  if (d.modo.modo !== 'none') {
     // multi-conta manda no caminho, mesmo com faixa de AZ possível: a conta é o
     // nível mais externo da árvore, e quem escolhe a grade é o container mais
     // externo que precisa de grade. A faixa de AZ dentro de uma conta é
@@ -156,19 +156,19 @@ async function gerar(modelo, opts = {}) {
     plano = planejar.planoDeContas(modelo, d, res, g, opts);
     marco('dispor', {
       modo: d.modo.modo, contas: d.modo.contas, travessias: d.modo.travessias,
-      ordem: g.ordem.map(c => c.id).join('→'),
+      order: g.order.map(c => c.id).join('→'),
       varredura: g.varredura.varridas ? `${g.varredura.varridas} permutações, custo ${g.varredura.custo}` : 'canônica',
     });
-    relatorio.avisos.push(`modo "${d.modo.modo}": ${d.modo.porque}`);
-    relatorio.avisos.push(`travessia nível ${d.politica.nivel} (${d.politica.mecanismo}): ${d.politica.porque}`);
-    // O gatilho (`d.ou.desenhar`) só sabe da CONTA — não do modo. `planejar.cjs`
+    relatorio.avisos.push(`modo "${d.modo.modo}": ${d.modo.because}`);
+    relatorio.avisos.push(`travessia nível ${d.politica.nivel} (${d.politica.mecanismo}): ${d.politica.because}`);
+    // O gatilho (`d.ou.desenhar`) só sabe da CONTA — não do modo. `plan.cjs`
     // (§3) suprime a faixa em integração, e o aviso tinha ficado cego a essa
     // segunda condição: anunciava a faixa mesmo quando o `.drawio` saía sem
     // nenhuma. O aviso só afirma o que o desenho de fato tem.
     if (d.ou.desenhar) {
       relatorio.avisos.push(d.modo.modo === 'integracao'
-        ? `faixas de OU: ${d.ou.porque}, mas o modo integração não desenha faixa de OU`
-        : `faixas de OU: ${d.ou.porque}`);
+        ? `faixas de OU: ${d.ou.because}, mas o modo integração não desenha faixa de OU`
+        : `faixas de OU: ${d.ou.because}`);
     }
     paginas.push(...await paginasDeDetalhe(modelo, d, res, opts, relatorio));
   } else if (d.az.desenhar) {
@@ -177,13 +177,13 @@ async function gerar(modelo, opts = {}) {
     // subnet › conteúdo e nada mais. Silenciar um container que ele não modela
     // seria produzir um diagrama que omite parte da arquitetura sem avisar —
     // exatamente o tipo de mentira calada que a rubrica (#8) chama de A4.2.
-    const forasteiros = modelo.nos.filter(n =>
-      ['conta', 'regiao', 'grupo-seguranca', 'grupo'].includes(n.tipo) ||
-      (['servico', 'bloco', 'ator'].includes(n.tipo) &&
-        !(n.dentro && d.t.porId.get(n.dentro) && d.t.porId.get(n.dentro).tipo === 'subnet')));
+    const forasteiros = modelo.nodes.filter(n =>
+      ['account', 'region', 'security-group', 'group'].includes(n.kind) ||
+      (['service', 'block', 'actor'].includes(n.kind) &&
+        !(n.inside && d.t.porId.get(n.inside) && d.t.porId.get(n.inside).kind === 'subnet')));
     if (forasteiros.length) {
       const e = new Error('o caminho da grade ainda não desenha estes nós');
-      e.erros = forasteiros.map(n => `"${n.id}" (${n.tipo}) — a grade de AZ modela só nuvem › VPC › subnet › conteúdo`);
+      e.erros = forasteiros.map(n => `"${n.id}" (${n.kind}) — a grade de AZ modela só nuvem › VPC › subnet › conteúdo`);
       throw e;
     }
     const g = await dispor.porGrade(modelo, d, res);
@@ -219,11 +219,11 @@ async function gerar(modelo, opts = {}) {
       for (const a of layout.encaixe.aplicados)
         relatorio.avisos.push(`encaixe: "${a.aresta}" alinhada movendo ${a.moveu.join('+')} em ${a.delta}px`);
       for (const x of layout.encaixe.desfeitos)
-        relatorio.avisos.push(`encaixe DESFEITO em "${x.aresta}" (${x.delta}px): ${x.porque}`);
+        relatorio.avisos.push(`encaixe DESFEITO em "${x.aresta}" (${x.delta}px): ${x.because}`);
     }
   }
   marco('planejar', {
-    caminho, celulas: plano.celulas.length, pagina: `${plano.larg}×${plano.alt}`,
+    caminho, celulas: plano.celulas.length, page: `${plano.larg}×${plano.alt}`,
     ...(paginas.length ? { paginas: 1 + paginas.length } : {}),
   });
 
@@ -241,7 +241,7 @@ async function gerar(modelo, opts = {}) {
    *
    *   BLOQUEAR É OPT-IN (`--portao`). O próprio #18 chama `veracidade` de
    *   "default recomendado para um portão de PUBLICAÇÃO" — publicar, não
-   *   desenhar. Bloquear em `gerar` faria o motor recusar `web-fluxo-3-az`, que
+   *   desenhar. Bloquear em `gerar` faria o motor recusar `web-flow-3-az`, que
    *   é dívida real, nomeada e de dono conhecido (#24): a geração pararia por um
    *   defeito de roteamento que este ticket decidiu não consertar. Recusar
    *   desenhar é decisão de quem entrega, e ela tem hora.
@@ -255,7 +255,7 @@ async function gerar(modelo, opts = {}) {
    *   verde sobre um laudo que não mediu nada. Chamar `portao()` com o nível
    *   pedido e deixar ele lançar é ao mesmo tempo a correção e a simplificação.
    */
-  const nivel = opts.portao || 'nenhum';
+  const nivel = opts.portao || 'none';
   if (!(nivel in NIVEIS)) {
     const e = new Error(`nível de portão desconhecido: "${nivel}"`);
     e.erros = [`níveis: ${Object.keys(NIVEIS).join(', ')}`];
@@ -263,11 +263,11 @@ async function gerar(modelo, opts = {}) {
   }
   const laudos = [];
   for (const [i, p] of [plano, ...paginas].entries()) {
-    const pagina = p.id || `p${i}`;
+    const page = p.id || `p${i}`;
     try {
-      laudos.push({ pagina, laudo: portao(p, { nivel }) });
+      laudos.push({ page, laudo: portao(p, { nivel }) });
     } catch (e) {
-      e.message = `a página "${pagina}": ${e.message}`;
+      e.message = `a página "${page}": ${e.message}`;
       throw e;
     }
   }
@@ -284,7 +284,7 @@ async function gerar(modelo, opts = {}) {
   // ninguém pediu portão — senão o motor entrega em silêncio o que a rubrica
   // chama de "a falha de maior gravidade de todo o validador"
   for (const f of semanticas)
-    relatorio.avisos.push(`⛔ ${f.id} ${f.nome}: ${f.mensagem} — o desenho afirma o que o modelo nega`);
+    relatorio.avisos.push(`⛔ ${f.id} ${f.name}: ${f.mensagem} — o desenho afirma o que o modelo nega`);
 
   const xml = emitir([plano, ...paginas]);
 
@@ -312,7 +312,7 @@ async function gerar(modelo, opts = {}) {
     throw e;
   }
   if (!c.ok) relatorio.avisos.push(`--forcar: ${c.falhas.length} par(es) abaixo do limiar WCAG, gerado assim mesmo`);
-  // A7.2a é ÁREA: avisa e não reprova (ver o cabeçalho de contraste.cjs)
+  // A7.2a é ÁREA: avisa e não reprova (ver o cabeçalho de contrast.cjs)
   for (const l of contraste.resumir(c, c.avisos)) relatorio.avisos.push(l);
   const n = v => Number.isFinite(v) ? v.toFixed(2) : '-';
   marco('conferir', { ok: true, bytes: xml.length,
@@ -321,12 +321,12 @@ async function gerar(modelo, opts = {}) {
 
   // as folhas que caíram no ícone genérico são o sintoma de nome que o
   // catálogo não conhece — vale avisar, não vale falhar
-  const genericos = res.usados.filter(u => u.via === 'generico');
+  const genericos = res.usados.filter(u => u.via === 'generic');
   if (genericos.length)
     relatorio.avisos.push(`${genericos.length} nó(s) caíram no ícone genérico: ` +
       genericos.map(u => `${u.id}("${u.pediu}")`).join(', '));
 
-  return { xml, plano, paginas, relatorio, resolucoes: res.usados, derivado: d, caminho, tema };
+  return { xml, plano, paginas, relatorio, resolucoes: res.usados, derived: d, caminho, tema };
 }
 
 // ------------------------------------------------------------------- CLI
@@ -335,7 +335,7 @@ async function main() {
   const args = process.argv.slice(2);
   const entrada = args.find(a => !a.startsWith('--'));
   if (!entrada) {
-    console.error('uso: node motor/gerar.cjs <modelo.json> [--saida arquivo.drawio] [--tema ' +
+    console.error('uso: node engine/generate.cjs <modelo.json> [--saida arquivo.drawio] [--tema ' +
       temaMod.listar().join('|') + '] [--fluxo solido|tracejado|animado] [--forcar]\n' +
       '                            [--portao ' + Object.keys(NIVEIS).join('|') + '] [--explicar]');
     process.exit(2);
@@ -344,23 +344,23 @@ async function main() {
   const saida = iSaida >= 0 ? args[iSaida + 1] : entrada.replace(/\.json$/, '.drawio');
   const explicar = args.includes('--explicar');
   const iFluxo = args.indexOf('--fluxo');
-  const fluxo = iFluxo >= 0 ? args[iFluxo + 1] : null;
-  if (fluxo && !['solido', 'tracejado', 'animado'].includes(fluxo)) {
-    console.error(`--fluxo aceita solido | tracejado | animado (veio "${fluxo}")`);
+  const flow = iFluxo >= 0 ? args[iFluxo + 1] : null;
+  if (flow && !['solid', 'dashed', 'animated'].includes(flow)) {
+    console.error(`--fluxo aceita solido | tracejado | animado (veio "${flow}")`);
     process.exit(2);
   }
   const iTema = args.indexOf('--tema');
-  const nomeTema = iTema >= 0 ? args[iTema + 1] : 'claro';
+  const nomeTema = iTema >= 0 ? args[iTema + 1] : 'light';
   const forcar = args.includes('--forcar');
   const iPortao = args.indexOf('--portao');
-  const nivelPortao = iPortao >= 0 ? args[iPortao + 1] : 'nenhum';
+  const nivelPortao = iPortao >= 0 ? args[iPortao + 1] : 'none';
 
   let modelo;
   try { modelo = JSON.parse(fs.readFileSync(entrada, 'utf8')); }
   catch (e) { console.error(`não consegui ler ${entrada}: ${e.message}`); process.exit(1); }
 
   let r;
-  try { r = await gerar(modelo, { fluxo: fluxo || undefined, tema: nomeTema, forcar, portao: nivelPortao }); }
+  try { r = await gerar(modelo, { flow: flow || undefined, tema: nomeTema, forcar, portao: nivelPortao }); }
   catch (e) {
     console.error(`\n✗ ${e.message}`);
     for (const linha of e.erros || []) console.error(`    · ${linha}`);
@@ -368,10 +368,10 @@ async function main() {
   }
 
   for (const p of r.relatorio.passos)
-    console.log(`  ${p.nome.padEnd(10)} ${Object.entries(p).filter(([k]) => k !== 'nome')
+    console.log(`  ${p.name.padEnd(10)} ${Object.entries(p).filter(([k]) => k !== 'name')
       .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('/') : v}`).join('  ')}`);
   for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  if (r.tema.tokens.aresta.fluxo === 'animado')
+  if (r.tema.tokens.aresta.flow === 'animated')
     console.log('  ⚠ fluxo "animado" só se vê em SVG ou HTML. O #4 mediu e este motor confirmou: ' +
       'exportado para PNG vira um tracejado ESTÁTICO, sem erro nenhum. Exporte com -f svg.');
 
@@ -387,23 +387,23 @@ async function main() {
     // A camada de rede é derivada mas invisível no desenho — só a ORDEM a
     // denuncia. Sem uma trilha, "por que a Data subnet ficou embaixo?" só se
     // responde relendo o código.
-    if (r.derivado.camadas.size) {
+    if (r.derived.camadas.size) {
       console.log('\n  camada de rede das subnets (#22):');
-      for (const [id, c] of r.derivado.camadas)
-        console.log(`    ${String(id).padEnd(20)} ${String(c.camada || '—').padEnd(11)} [${c.via || 'sem evidência'}]` +
-          (c.evidencia.length ? `  ← ${c.evidencia.map(e => `${e.servico}(${e.categoria})`).join(', ')}` : ''));
+      for (const [id, c] of r.derived.camadas)
+        console.log(`    ${String(id).padEnd(20)} ${String(c.layer || '—').padEnd(11)} [${c.via || 'sem evidência'}]` +
+          (c.evidencia.length ? `  ← ${c.evidencia.map(e => `${e.service}(${e.categoria})`).join(', ')}` : ''));
     }
 
     // O laudo geométrico (#18), pagina a pagina. Sai aqui porque o `--explicar`
     // e a trilha de auditoria do motor: quem quer saber POR QUE o desenho ficou
     // assim quer as duas listas, a do catalogo e a da rubrica.
     console.log('\n  laudo geométrico (#18):');
-    for (const { pagina, laudo } of r.relatorio.geometria) {
+    for (const { page, laudo } of r.relatorio.geometria) {
       const s = laudo.resumo;
-      console.log(`    ${String(pagina).padEnd(38)} ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ` +
-        `${s.inaplicavel} inaplicável · ${s.pulada} do render`);
+      console.log(`    ${String(page).padEnd(38)} ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ` +
+        `${s.notApplicable} inaplicável · ${s.pulada} do render`);
       for (const f of laudo.semanticas)
-        console.log(`      ⛔ ${f.id} ${f.nome}: ${f.mensagem}`);
+        console.log(`      ⛔ ${f.id} ${f.name}: ${f.mensagem}`);
       if (laudo.falhas.length)
         console.log(`      achados: ${laudo.falhas.map(f => f.id).join(', ')}`);
     }

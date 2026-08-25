@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # O pacote que sai de casa, e a única medida do teto que importa.
 #
-#   tools/empacotar.sh              mede e empacota em ../<nome>.skill
-#   tools/empacotar.sh --conferir   só mede, não escreve nada
+#   tools/package.sh              mede e empacota em ../<nome>.skill
+#   tools/package.sh --conferir   só mede, não escreve nada
 #
 # ⚠️ `.gitignore` NÃO PROTEGE O PACOTE, e essa é a razão de este arquivo existir.
 #
@@ -14,7 +14,7 @@
 #     EXCLUDE_FILES      = {".DS_Store"}
 #     ROOT_EXCLUDE_DIRS  = {"evals"}     # só na raiz da skill
 #
-# Nada de `.gitignore` nessa lista. Um `saida/` cheio de render — que o git
+# Nada de `.gitignore` nessa lista. Um `output/` cheio de render — que o git
 # ignora — vai para dentro do `.skill` do mesmo jeito. E o teto é DURO: 30 MB
 # descomprimidos, recusa na hora do upload.
 #
@@ -87,7 +87,7 @@ if git -C "$RAIZ" rev-parse --git-dir > /dev/null 2>&1; then
       echo
       echo "  ⚠ ${#IGNORADOS[@]} arquivo(s) que o GIT IGNORA e o pacote LEVA — $(hum $cb)"
       echo "    O empacotador não lê .gitignore. Rode a limpeza antes de publicar:"
-      echo "      rm -rf saida/* && mkdir -p saida/temas"
+      echo "      rm -rf output/* && mkdir -p output/temas"
     fi
   fi
 fi

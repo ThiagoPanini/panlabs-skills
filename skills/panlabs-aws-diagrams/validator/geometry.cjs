@@ -52,7 +52,7 @@ function contem(pai, filho, padding = 0) {
  * NEGATIVA quando se sobrepõem — e o valor negativo é a profundidade da
  * sobreposição no eixo em que ela é menor, que é o quanto A3.1 teria de afastar.
  */
-function folga(a, b) {
+function gap(a, b) {
   const dx = Math.max(a.x - direita(b), b.x - direita(a));
   const dy = Math.max(a.y - baixo(b), b.y - baixo(a));
   if (dx > 0 && dy > 0) return Math.hypot(dx, dy);
@@ -181,9 +181,9 @@ function distanciaPontoPolilinha(p, linha) {
  */
 function hausdorff(a, b) {
   if (!a.length || !b.length) return Infinity;
-  const ida = Math.max(...a.map(p => distanciaPontoPolilinha(p, b)));
-  const volta = Math.max(...b.map(p => distanciaPontoPolilinha(p, a)));
-  return Math.max(ida, volta);
+  const out = Math.max(...a.map(p => distanciaPontoPolilinha(p, b)));
+  const back = Math.max(...b.map(p => distanciaPontoPolilinha(p, a)));
+  return Math.max(out, back);
 }
 
 function comprimento(pontos) {
@@ -194,8 +194,8 @@ function comprimento(pontos) {
 
 /** Está sobre o perímetro do retângulo, dentro da tolerância. */
 function noPerimetro(p, r, tol) {
-  const dentro = p.x >= r.x - tol && p.x <= direita(r) + tol && p.y >= r.y - tol && p.y <= baixo(r) + tol;
-  if (!dentro) return false;
+  const inside = p.x >= r.x - tol && p.x <= direita(r) + tol && p.y >= r.y - tol && p.y <= baixo(r) + tol;
+  if (!inside) return false;
   const d = Math.min(
     Math.abs(p.x - r.x), Math.abs(p.x - direita(r)),
     Math.abs(p.y - r.y), Math.abs(p.y - baixo(r)));
@@ -204,7 +204,7 @@ function noPerimetro(p, r, tol) {
 
 module.exports = {
   EPS, direita, baixo, centro,
-  areaDaIntersecao, contem, folga, paddings, envolvente,
+  areaDaIntersecao, contem, gap, paddings, envolvente,
   segmentoCruzaRetangulo, polilinhaCruzaRetangulo,
   cruzamento, anguloEntre, anguloInterno,
   distanciaPontoSegmento, distanciaPontoPolilinha, hausdorff, comprimento, noPerimetro,

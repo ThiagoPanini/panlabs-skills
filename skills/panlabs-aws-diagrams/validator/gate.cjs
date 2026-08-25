@@ -20,7 +20,7 @@
  * motor ainda era protótipo de outro ticket e mexer nele de fora misturaria duas
  * fronteiras de decisão; a árvore de produção acabou com essa separação.
  *
- * Como ele entra em `motor/gerar.cjs`, e por que assim:
+ * Como ele entra em `engine/generate.cjs`, e por que assim:
  *
  *   O LAUDO SAI SEMPRE, em `relatorio.geometria`, e uma falha SEMÂNTICA vira
  *   aviso mesmo sem ninguém pedir portão. Um portão que só existe quando alguém
@@ -32,14 +32,14 @@
  *   desenhar tem hora.
  *
  * O QUE ELE NÃO FAZ. Não corrige, não reposiciona, não pede novo layout. A
- * justificativa está em `validar-geometria.cjs`: um laço de correção comandado
+ * justificativa está em `validate-geometry.cjs`: um laço de correção comandado
  * pelo validador é um segundo otimizador competindo com o ELK, sem gradiente e
  * sem função objetivo, porque o B9 da rubrica proíbe combinar as 62 num score.
- * Quem corrige é `alinhar.cjs`, que tem as alavancas na mão.
+ * Quem corrige é `align.cjs`, que tem as alavancas na mão.
  */
 
 const path = require('path');
-const { validarGeometria, formatar } = require(path.join(__dirname, 'validar-geometria.cjs'));
+const { validarGeometria, formatar } = require(path.join(__dirname, 'validate-geometry.cjs'));
 
 /**
  * Níveis de bloqueio, do mais frouxo ao mais apertado.
@@ -50,7 +50,7 @@ const { validarGeometria, formatar } = require(path.join(__dirname, 'validar-geo
  * ir para a parede; um diagrama que MENTE sobre a fronteira de rede, não.
  */
 const NIVEIS = {
-  nenhum: () => false,
+  none: () => false,
   veracidade: laudo => laudo.semanticas.length > 0,
   falha: laudo => laudo.falhas.length > 0,
   estrito: laudo => laudo.falhas.length > 0 || laudo.avisos.length > 0,
@@ -69,14 +69,14 @@ const NIVEIS = {
  */
 function portao(plano, opts = {}) {
   const laudo = validarGeometria(plano, opts);
-  const nivel = opts.nivel || (opts.bloquear ? 'falha' : 'nenhum');
+  const nivel = opts.nivel || (opts.bloquear ? 'falha' : 'none');
   const barra = NIVEIS[nivel];
   if (!barra) throw new Error(`nível de portão desconhecido: "${nivel}" (use ${Object.keys(NIVEIS).join(', ')})`);
 
   // Um laudo incompleto nunca passa, em nenhum nível: se uma checagem que devia
   // rodar não rodou, o verde não quer dizer nada — e é justamente no dia em que
   // alguém quebra uma família que o portão precisa não estar mentindo.
-  const incompleto = laudo.cobertura.naoRodaram.length > 0 || laudo.resultados.some(r => r.estado === 'erro');
+  const incompleto = laudo.cobertura.naoRodaram.length > 0 || laudo.resultados.some(r => r.state === 'erro');
 
   if (!barra(laudo) && !incompleto) return laudo;
 
@@ -84,13 +84,13 @@ function portao(plano, opts = {}) {
   if (incompleto) {
     if (laudo.cobertura.naoRodaram.length)
       linhas.push(`checagens que não rodaram: ${laudo.cobertura.naoRodaram.join(', ')}`);
-    for (const r of laudo.resultados.filter(x => x.estado === 'erro')) linhas.push(r.mensagem);
+    for (const r of laudo.resultados.filter(x => x.state === 'erro')) linhas.push(r.mensagem);
   }
   for (const r of [...laudo.semanticas, ...laudo.falhas.filter(f => !f.semantica)]) {
-    linhas.push(`${r.id} ${r.nome}${r.semantica ? ' (o desenho afirma o que o modelo nega)' : ''}: ${r.mensagem}`);
-    for (const o of r.ocorrencias.slice(0, 3)) linhas.push(`    · ${o.o_que}`);
+    linhas.push(`${r.id} ${r.name}${r.semantica ? ' (o desenho afirma o que o modelo nega)' : ''}: ${r.mensagem}`);
+    for (const o of r.occurrences.slice(0, 3)) linhas.push(`    · ${o.o_que}`);
   }
-  if (nivel === 'estrito') for (const r of laudo.avisos) linhas.push(`${r.id} ${r.nome}: ${r.mensagem}`);
+  if (nivel === 'estrito') for (const r of laudo.avisos) linhas.push(`${r.id} ${r.name}: ${r.mensagem}`);
 
   const erro = new Error(incompleto
     ? 'laudo geométrico incompleto — há checagem que não rodou'

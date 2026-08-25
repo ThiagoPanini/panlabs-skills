@@ -6,10 +6,10 @@
  *
  *   projetar  ->  gerar (o motor, sem saber que existem duas vistas)  ->  selar
  *
- * O motor recebe um `modelo@1` de UMA vista e nao sabe que existem duas. Nao
+ * O motor recebe um `model@1` de UMA vista e nao sabe que existem duas. Nao
  * precisou saber: a diferenca entre as vistas foi resolvida antes de ele ser
  * chamado — e continua sendo verdade depois que o motor cresceu com o #12, o #13
- * e o #22, o que e o teste real da tese. `tests/check-motor-intocado.cjs` congela
+ * e o #22, o que e o teste real da tese. `tests/check-engine-untouched.cjs` congela
  * os bytes do motor de PRODUCAO para que a proxima mudanca nele seja deliberada.
  *
  * ⚠️ O que MUDOU na recertificacao do #23: `gerar` pode devolver 1+N paginas
@@ -17,16 +17,16 @@
  */
 
 const path = require('path');
-const { projetar } = require('./projetar.cjs');
-const { selar } = require('./gravar.cjs');
-const { avisoDeDossie } = require('./publicar.cjs');
+const { projetar } = require('./project.cjs');
+const { selar } = require('./save.cjs');
+const { avisoDeDossie } = require('./publish.cjs');
 
-const { gerar } = require(path.join(__dirname, '..', 'motor', 'gerar.cjs'));
+const { gerar } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
 
-async function desenhar(sessao, vista, opts = {}) {
-  const { modelo, trilha } = projetar(sessao, vista);
+async function desenhar(sessao, view, opts = {}) {
+  const { modelo, trilha } = projetar(sessao, view);
   const r = await gerar(modelo, opts);
-  const xml = selar(r.xml, sessao, vista, { motor: opts.motor });
+  const xml = selar(r.xml, sessao, view, { motor: opts.motor });
   // Aviso de uma linha, no padrao do #16: avisa, nunca bloqueia, e nomeia a
   // saida. Vai no relatorio e nao no stdout porque quem imprime e a CLI.
   const aviso = avisoDeDossie(sessao);

@@ -24,10 +24,10 @@ const catalogo = cat.catalogo;
 const correcoes = cat.correcoes;
 
 const falhas = [];
-const notas = [];
-function checar(nome, ok, detalhe) {
-  if (ok) notas.push(`  ok    ${nome}${detalhe ? ' — ' + detalhe : ''}`);
-  else falhas.push(`  FALHA ${nome}${detalhe ? ' — ' + detalhe : ''}`);
+const notes = [];
+function checar(name, ok, detail) {
+  if (ok) notes.push(`  ok    ${name}${detail ? ' — ' + detail : ''}`);
+  else falhas.push(`  FALHA ${name}${detail ? ' — ' + detail : ''}`);
 }
 
 // ------------------------------------------------- 1. integridade do catálogo
@@ -52,9 +52,9 @@ checar('toda categoria tem cor hex válida', hexRuim.length === 0,
 // não existem, e cair no fallback sem necessidade.
 const doisCaminhos = ['s3 tables', 's3 express one zone', 'eventbridge pipes',
                       'eventbridge scheduler', 'trainium', 'inferentia'];
-for (const nome of doisCaminhos) {
-  const r = cat.servico(nome);
-  checar(`caminho de resource icon: ${nome}`,
+for (const name of doisCaminhos) {
+  const r = cat.service(name);
+  checar(`caminho de resource icon: ${name}`,
     !!r && r.via.startsWith('recurso'),
     r ? `${r.title} -> ${r.stencil} (${r.via})` : 'não resolvido');
 }
@@ -75,7 +75,7 @@ for (const grupoTabela of ['renomes', 'sinonimos']) {
                  : `${Object.keys(tabela).length - 1} entradas`);
 
   const naoResolve = Object.keys(tabela).filter(k => !k.startsWith('_'))
-    .filter(k => !cat.servico(k));
+    .filter(k => !cat.service(k));
   checar(`toda chave de ${grupoTabela} resolve`, naoResolve.length === 0,
     naoResolve.join(', ') || 'todas');
 
@@ -84,12 +84,12 @@ for (const grupoTabela of ['renomes', 'sinonimos']) {
   const desviou = Object.entries(tabela)
     .filter(([k]) => !k.startsWith('_'))
     .filter(([k, stencil]) => {
-      const r = cat.servico(k);
+      const r = cat.service(k);
       return !r || r.stencil !== stencil;
     });
   checar(`toda chave de ${grupoTabela} resolve PARA O STENCIL DECLARADO`,
     desviou.length === 0,
-    desviou.map(([k, v]) => `${k}: esperado ${v}, veio ${(cat.servico(k) || {}).stencil}`).join('; ')
+    desviou.map(([k, v]) => `${k}: esperado ${v}, veio ${(cat.service(k) || {}).stencil}`).join('; ')
       || 'todas');
 }
 
@@ -99,7 +99,7 @@ const legados = Object.keys(correcoes.paletaLegada).filter(k => !k.startsWith('_
 let corrigidos = 0, semContainer = [], comLegado = [];
 
 for (const g of catalogo.groups) {
-  const r = cat.grupo(g.title);
+  const r = cat.group(g.title);
   if (!r) { falhas.push(`  FALHA grupo não resolve: ${g.title}`); continue; }
   if (!/(^|;)container=1(;|$)/.test(r.style)) semContainer.push(g.title);
   for (const l of legados) if (r.style.includes(l)) comLegado.push(`${g.title}:${l}`);
@@ -140,7 +140,7 @@ checar('todo título ambíguo tem entrada de desambiguação',
 const desRuins = Object.entries(correcoes.desambiguacao)
   .filter(([k]) => !k.startsWith('_'))
   .filter(([k, d]) => {
-    const r = cat.servico(k);
+    const r = cat.service(k);
     return !r || r.stencil !== d.stencil || r.palette !== d.palette;
   });
 checar('desambiguação de fato governa a resolução', desRuins.length === 0,
@@ -149,7 +149,7 @@ checar('desambiguação de fato governa a resolução', desRuins.length === 0,
 
 const arbitrarios = Object.entries(correcoes.desambiguacao)
   .filter(([k, d]) => !k.startsWith('_') && d.revisar).map(([k]) => k);
-notas.push(`  --    ${arbitrarios.length} desempates arbitrários abertos: ${arbitrarios.join(', ')}`);
+notes.push(`  --    ${arbitrarios.length} desempates arbitrários abertos: ${arbitrarios.join(', ')}`);
 
 // ------------------------------------------------- 5. round-trip (precisa repo)
 
@@ -195,16 +195,16 @@ if (repo && fs.existsSync(repo)) {
   checar('todo stencil citado existe em aws4.xml', ausentes.length === 0,
     ausentes.join(', ') || `${citados.size} stencils`);
 } else {
-  notas.push('  --    round-trip pulado (passe o caminho do repo do draw.io para rodá-lo)');
+  notes.push('  --    round-trip pulado (passe o caminho do repo do draw.io para rodá-lo)');
 }
 
 // ----------------------------------------------------------------- resultado
 
 console.log(`catálogo aws4 — draw.io ${catalogo.meta.drawio && catalogo.meta.drawio.version}, commit ${(catalogo.meta.commit || '').slice(0, 8)}`);
-console.log(notas.join('\n'));
+console.log(notes.join('\n'));
 if (falhas.length) {
   console.log(falhas.join('\n'));
   console.log(`\n${falhas.length} falha(s).`);
   process.exit(1);
 }
-console.log(`\ntodas as ${notas.filter(n => n.includes('ok ')).length} checagens passaram.`);
+console.log(`\ntodas as ${notes.filter(n => n.includes('ok ')).length} checagens passaram.`);

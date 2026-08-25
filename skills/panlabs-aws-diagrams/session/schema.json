@@ -1,36 +1,36 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "panlabs-aws-diagrams/sessao@1",
+  "$id": "panlabs-aws-diagrams/session@1",
   "title": "Modelo de sessao — UM IR, dois casacos",
-  "description": "O que persiste entre sessoes. NAO e o que o motor come: o motor do #11 come `modelo@1`, de uma vista so, e continua comendo — este esquema PROJETA para aquele (ver projetar.cjs). A diferenca entre a vista logica e a tecnica nao e outro modelo, e outro CASACO sobre os mesmos nos, mais os nos que so a camada tecnica tem. Como no #11, nenhuma propriedade aqui nomeia posicao, tamanho, distancia ou direcao — a fronteira do #11 vale igual, e check-fronteira.cjs varre este arquivo tambem.",
+  "description": "O que persiste entre sessoes. NAO e o que o motor come: o motor do #11 come `model@1`, de uma vista so, e continua comendo — este esquema PROJETA para aquele (ver project.cjs). A diferenca entre a vista logica e a tecnica nao e outro modelo, e outro CASACO sobre os mesmos nos, mais os nos que so a camada tecnica tem. Como no #11, nenhuma propriedade aqui nomeia posicao, tamanho, distancia ou direcao — a fronteira do #11 vale igual, e check-fronteira.cjs varre este arquivo tambem.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "esquema",
+    "schema",
     "id",
-    "titulo",
-    "estagio",
-    "nos"
+    "title",
+    "stage",
+    "nodes"
   ],
   "properties": {
-    "esquema": {
-      "const": "panlabs-aws-diagrams/sessao@1"
+    "schema": {
+      "const": "panlabs-aws-diagrams/session@1"
     },
     "id": {
-      "$ref": "#/definitions/identificador",
+      "$ref": "#/definitions/identifier",
       "description": "Id estavel da sessao. Vira o id da pagina do .drawio, com sufixo por vista."
     },
-    "titulo": {
+    "title": {
       "type": "string",
       "minLength": 1
     },
-    "subtitulo": {
+    "subtitle": {
       "type": "string"
     },
-    "estagio": {
+    "stage": {
       "enum": [
-        "logica",
-        "tecnica"
+        "logical",
+        "technical"
       ],
       "description": "Ate onde o modelo foi elaborado. `logica` = so casacos logicos existem (fase pre-servicos, #15 §5). `tecnica` = todo no tem casaco tecnico. Estagio e do MODELO; vista e do DESENHO. Um modelo no estagio tecnica emite as DUAS vistas; um no estagio logica emite so a logica."
     },
@@ -39,59 +39,59 @@
       "additionalProperties": false,
       "description": "Apresentacao por vista. NAO entra no acordo: trocar o titulo depois de aprovado nao desfaz aprovacao nenhuma, e um esquema de acordo que se quebra com isso vira ruido que o usuario aprende a ignorar.\n\nExiste porque a primeira volta deste prototipo emitiu as duas paginas com o MESMO titulo, e a pagina tecnica saiu do render dizendo \"vista logica\" no cabecalho. Um modelo so nao quer dizer uma apresentacao so.",
       "properties": {
-        "logica": {
-          "$ref": "#/definitions/apresentacao"
+        "logical": {
+          "$ref": "#/definitions/presentation"
         },
-        "tecnica": {
-          "$ref": "#/definitions/apresentacao"
+        "technical": {
+          "$ref": "#/definitions/presentation"
         }
       }
     },
-    "nos": {
+    "nodes": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/no"
+        "$ref": "#/definitions/node"
       },
       "minItems": 1
     },
-    "arestas": {
+    "edges": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/aresta"
+        "$ref": "#/definitions/edge"
       },
       "default": []
     },
-    "faixas": {
+    "bands": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/faixa"
+        "$ref": "#/definitions/band"
       },
       "default": []
     },
-    "notas": {
+    "notes": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/nota"
+        "$ref": "#/definitions/note"
       },
       "default": []
     },
-    "dossie": {
-      "$ref": "#/definitions/dossie",
+    "dossier": {
+      "$ref": "#/definitions/dossier",
       "description": "OPACO AO MOTOR, como o #11 decidiu — e o motor segue sem ler um campo, porque nem chega a ver este arquivo. O que mudou e que agora a CAMADA DE SESSAO le: o acordo, as candidatas e os achados sao o que faz uma vista logica aprovada ser retomavel. Opaco ao motor nao quer dizer sem forma."
     }
   },
   "definitions": {
-    "apresentacao": {
+    "presentation": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "titulo": {
+        "title": {
           "type": "string"
         },
-        "subtitulo": {
+        "subtitle": {
           "type": "string"
         },
-        "genero": {
+        "genre": {
           "enum": [
             "L1",
             "L2",
@@ -105,21 +105,21 @@
         }
       }
     },
-    "identificador": {
+    "identifier": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*$",
       "maxLength": 64,
       "description": "kebab-case derivado do dominio. O MESMO id atravessa as duas vistas — e o que torna a rastreabilidade uma projecao calculavel em vez de uma tabela de-para mantida a mao."
     },
-    "camada": {
+    "layer": {
       "enum": [
-        "ambas",
-        "tecnica"
+        "both",
+        "technical"
       ],
-      "default": "ambas",
+      "default": "both",
       "description": "Onde o elemento existe. `ambas` = aparece nas duas vistas (o padrao). `tecnica` = so a vista tecnica tem — VPC, subnet, endpoint, papel de IAM: infraestrutura sem capacidade correspondente.\n\nE redundante com a presenca do casaco `logico`, e isso e de proposito. Sem ela, ESQUECER o casaco logico de um no aprovado se le como \"ah, e so tecnico\" e a capacidade some da projecao SEM ERRO NENHUM — que e exatamente a falha silenciosa que este ticket existe para impedir. Com o padrao em `ambas`, esquecer vira erro de validacao. Redundancia CONFERIDA e guarda, nao ruido."
     },
-    "no": {
+    "node": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -127,81 +127,81 @@
       ],
       "properties": {
         "id": {
-          "$ref": "#/definitions/identificador"
+          "$ref": "#/definitions/identifier"
         },
-        "rotulo": {
+        "label": {
           "type": "string",
           "description": "Rotulo compartilhado pelas duas vistas. Cada casaco pode sobrescrever."
         },
-        "camada": {
-          "$ref": "#/definitions/camada"
+        "layer": {
+          "$ref": "#/definitions/layer"
         },
-        "dentro": {
-          "$ref": "#/definitions/identificador",
+        "inside": {
+          "$ref": "#/definitions/identifier",
           "description": "Quem contem este no, no nivel MAIS FINO que o modelo conhece. Um so campo para as duas vistas: a contencao logica e obtida COLAPSANDO — sobe-se por `dentro` ate achar um ancestral que exista na vista logica.\n\nE por isso que a fase tecnica pode enfiar VPC e subnet entre a folha e a fronteira sem mexer no que foi aprovado: a projecao logica passa por cima dos niveis que so a camada tecnica tem."
         },
-        "logico": {
-          "$ref": "#/definitions/casacoLogico"
+        "logical": {
+          "$ref": "#/definitions/logicalFacet"
         },
-        "tecnico": {
-          "$ref": "#/definitions/casacoTecnico"
+        "technical": {
+          "$ref": "#/definitions/technicalFacet"
         }
       }
     },
-    "casacoLogico": {
+    "logicalFacet": {
       "type": "object",
       "additionalProperties": false,
       "description": "Como o no aparece na vista logica. Vocabulario de CAPACIDADE, nunca de servico (#15 §5: nome de servico dito cedo demais vai para o estacionamento, nao para o desenho).",
       "required": [
-        "tipo"
+        "kind"
       ],
       "properties": {
-        "tipo": {
+        "kind": {
           "enum": [
-            "grupo",
-            "bloco",
-            "ator"
+            "group",
+            "block",
+            "actor"
           ],
           "description": "`grupo` = fronteira de responsabilidade (#15 §6: quem e dono, o que fica isolado — NUNCA \"conta AWS\", porque a vista logica e mostrada tambem a gente nao-AWS). `bloco` = capacidade. `ator` = quem esta fora."
         },
-        "rotulo": {
+        "label": {
           "type": "string"
         },
-        "nota": {
+        "note": {
           "type": "string"
         },
-        "qualificador": {
+        "qualifier": {
           "type": "string",
-          "description": "O que este no faz AQUI. Mesmo campo do `modelo@1`, e pelo mesmo motivo (o O21 do #5): o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama. Vive nas DUAS vistas porque a capacidade logica tambem se repete — \"Guardar a serie\" e \"Guardar o evento\" sao dois blocos que o rotulo sozinho nao distingue."
+          "description": "O que este no faz AQUI. Mesmo campo do `model@1`, e pelo mesmo motivo (o O21 do #5): o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama. Vive nas DUAS vistas porque a capacidade logica tambem se repete — \"Guardar a serie\" e \"Guardar o evento\" sao dois blocos que o rotulo sozinho nao distingue."
         }
       }
     },
-    "casacoTecnico": {
+    "technicalFacet": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Como o no aparece na vista tecnica. Vocabulario de servico AWS e de topologia de rede. Os campos sao os mesmos do `no` do modelo@1 (#11) — de proposito: o casaco tecnico E o no do modelo@1, e a projecao so o copia.",
+      "description": "Como o no aparece na vista tecnica. Vocabulario de servico AWS e de topologia de rede. Os campos sao os mesmos do `no` do model@1 (#11) — de proposito: o casaco tecnico E o no do model@1, e a projecao so o copia.",
       "required": [
-        "tipo"
+        "kind"
       ],
       "properties": {
-        "tipo": {
+        "kind": {
           "enum": [
-            "nuvem",
-            "conta",
-            "regiao",
+            "cloud",
+            "account",
+            "region",
             "vpc",
             "subnet",
-            "grupo-seguranca",
-            "grupo",
-            "servico",
-            "bloco",
-            "ator"
+            "security-group",
+            "group",
+            "service",
+            "block",
+            "actor"
           ]
         },
-        "rotulo": {
+        "label": {
           "type": "string"
         },
-        "servico": {
+        "service": {
           "type": "string",
           "description": "Chave do catalogo AWS (#17)."
         },
@@ -209,175 +209,175 @@
           "type": "string",
           "pattern": "^[a-z]{2}-[a-z]+-[0-9][a-z]$"
         },
-        "acesso": {
+        "access": {
           "enum": [
-            "publica",
-            "privada"
+            "public",
+            "private"
           ]
         },
-        "camada": {
+        "layer": {
           "enum": [
-            "borda",
-            "aplicacao",
-            "dados"
+            "edge",
+            "application",
+            "data"
           ],
-          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `no` em `modelo@1`, e mesmo NOME que o `camada` do `no` que envolve este casaco (que aqui significa onde o elemento existe na sessao — ambas|tecnica). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com tipo=subnet. Ausente ate o #37 — era o mesmo defeito que `qualificador`, `ou` e `habilita` tiveram ate o #29 (tests/check-paridade-tecnica.cjs mede isto agora)."
+          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `no` em `model@1`, e mesmo NOME que o `camada` do `no` que envolve este casaco (que aqui significa onde o elemento existe na sessao — ambas|tecnica). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com tipo=subnet. Ausente ate o #37 — era o mesmo defeito que `qualificador`, `ou` e `habilita` tiveram ate o #29 (tests/check-technical-parity.cjs mede isto agora)."
         },
         "cidr": {
           "type": "string"
         },
-        "conta": {
+        "account": {
           "type": "string",
           "pattern": "^[0-9]{12}$"
         },
-        "nota": {
+        "note": {
           "type": "string"
         },
-        "qualificador": {
+        "qualifier": {
           "type": "string",
-          "description": "O que este no faz AQUI. Mesmo campo do `modelo@1`, e pelo mesmo motivo (o O21 do #5): o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama. Vive nas DUAS vistas porque a capacidade logica tambem se repete — \"Guardar a serie\" e \"Guardar o evento\" sao dois blocos que o rotulo sozinho nao distingue."
+          "description": "O que este no faz AQUI. Mesmo campo do `model@1`, e pelo mesmo motivo (o O21 do #5): o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama. Vive nas DUAS vistas porque a capacidade logica tambem se repete — \"Guardar a serie\" e \"Guardar o evento\" sao dois blocos que o rotulo sozinho nao distingue."
         },
         "ou": {
           "type": "string",
           "minLength": 1,
-          "description": "DIMENSAO da conta, nunca um container (#12) — mesmo campo do `modelo@1`. So com tipo=conta. Sem ele, uma arquitetura multi-conta construida pelo ARCO DE DUAS VISTAS nao conseguia expressar unidade organizacional nenhuma, enquanto a mesma arquitetura escrita direto em `modelo@1` conseguia. A assimetria era acidente, nao politica."
+          "description": "DIMENSAO da conta, nunca um container (#12) — mesmo campo do `model@1`. So com tipo=conta. Sem ele, uma arquitetura multi-conta construida pelo ARCO DE DUAS VISTAS nao conseguia expressar unidade organizacional nenhuma, enquanto a mesma arquitetura escrita direto em `model@1` conseguia. A assimetria era acidente, nao politica."
         },
-        "habilita": {
-          "$ref": "#/definitions/identificador",
-          "description": "Id do componente que este no AUTORIZA — mesmo campo do `modelo@1`. Habilitador de permissao (papel IAM, bucket policy, politica de event bus) e no ANEXADO, nunca rotulo de aresta (#6 E9). So no casaco TECNICO: permissao e fato de infraestrutura, e a vista logica nao a conhece."
+        "enables": {
+          "$ref": "#/definitions/identifier",
+          "description": "Id do componente que este no AUTORIZA — mesmo campo do `model@1`. Habilitador de permissao (papel IAM, bucket policy, politica de event bus) e no ANEXADO, nunca rotulo de aresta (#6 E9). So no casaco TECNICO: permissao e fato de infraestrutura, e a vista logica nao a conhece."
         }
       }
     },
-    "aresta": {
+    "edge": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "de",
-        "para"
+        "from",
+        "to"
       ],
       "properties": {
         "id": {
-          "$ref": "#/definitions/identificador"
+          "$ref": "#/definitions/identifier"
         },
-        "de": {
-          "$ref": "#/definitions/identificador",
+        "from": {
+          "$ref": "#/definitions/identifier",
           "description": "QUEM INICIA (#11) — nao e de onde o dado sai."
         },
-        "para": {
-          "$ref": "#/definitions/identificador"
+        "to": {
+          "$ref": "#/definitions/identifier"
         },
-        "rotulo": {
+        "label": {
           "type": "string"
         },
-        "camada": {
-          "$ref": "#/definitions/camada"
+        "layer": {
+          "$ref": "#/definitions/layer"
         },
-        "protocolo": {
+        "protocol": {
           "type": "string"
         },
-        "dados": {
+        "data": {
           "enum": [
-            "ida",
-            "volta",
-            "ambos"
+            "out",
+            "back",
+            "both"
           ],
-          "default": "ida"
+          "default": "out"
         },
-        "ordem": {
+        "order": {
           "type": "integer",
           "minimum": 1
         },
-        "logico": {
-          "$ref": "#/definitions/casacoDeAresta"
+        "logical": {
+          "$ref": "#/definitions/edgeFacet"
         },
-        "tecnico": {
-          "$ref": "#/definitions/casacoDeAresta"
+        "technical": {
+          "$ref": "#/definitions/edgeFacet"
         }
       }
     },
-    "casacoDeAresta": {
+    "edgeFacet": {
       "type": "object",
       "additionalProperties": false,
       "description": "So o que difere entre as vistas. Uma aresta nao muda de extremo entre vistas — se mudasse, nao seria a mesma aresta.",
       "properties": {
-        "rotulo": {
+        "label": {
           "type": "string"
         },
-        "protocolo": {
+        "protocol": {
           "type": "string"
         },
-        "ordem": {
+        "order": {
           "type": "integer",
           "minimum": 1
         }
       }
     },
-    "faixa": {
+    "band": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "id",
-        "membros"
+        "members"
       ],
       "description": "Grupo que CRUZA a arvore de contencao (#19). Faixa e conceito de topologia — so existe na vista tecnica.",
       "properties": {
         "id": {
-          "$ref": "#/definitions/identificador"
+          "$ref": "#/definitions/identifier"
         },
-        "tipo": {
+        "kind": {
           "enum": [
             "auto-scaling",
-            "generico"
+            "generic"
           ],
-          "default": "generico"
+          "default": "generic"
         },
-        "rotulo": {
+        "label": {
           "type": "string"
         },
-        "membros": {
+        "members": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/identificador"
+            "$ref": "#/definitions/identifier"
           },
           "minItems": 2
         }
       }
     },
-    "nota": {
+    "note": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "texto"
+        "text"
       ],
       "properties": {
         "id": {
-          "$ref": "#/definitions/identificador"
+          "$ref": "#/definitions/identifier"
         },
-        "texto": {
+        "text": {
           "type": "string",
           "minLength": 1
         },
-        "sobre": {
-          "$ref": "#/definitions/identificador"
+        "about": {
+          "$ref": "#/definitions/identifier"
         },
-        "camada": {
-          "$ref": "#/definitions/camada"
+        "layer": {
+          "$ref": "#/definitions/layer"
         },
-        "origem": {
+        "origin": {
           "enum": [
-            "achado-recusado",
-            "premissa",
-            "legenda"
+            "rejected-finding",
+            "assumption",
+            "legend"
           ]
         }
       }
     },
-    "dossie": {
+    "dossier": {
       "type": "object",
       "additionalProperties": false,
       "description": "O que a sabatina (#15) descobriu e que o desenho nao carrega. Viaja dentro do .drawio e volta inteiro (#2 §7, #11 achado 7).",
       "properties": {
-        "eixos": {
+        "axes": {
           "type": "object",
           "additionalProperties": false,
           "description": "Os cinco eixos de forma do #15 §2. Sao a tupla da candidata ESCOLHIDA, repetida aqui por conveniencia de leitura.",
@@ -399,70 +399,70 @@
             }
           }
         },
-        "fatos": {
+        "facts": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "fato",
-              "procedencia"
+              "fact",
+              "provenance"
             ],
             "properties": {
-              "fato": {
+              "fact": {
                 "type": "string"
               },
-              "procedencia": {
+              "provenance": {
                 "enum": [
-                  "perguntado",
-                  "inferido",
-                  "de-candidata"
+                  "asked",
+                  "inferred",
+                  "from-candidate"
                 ],
                 "description": "#15 §5. Fato `inferido` nao satisfaz A1 ate ser confirmado."
               },
-              "confirmado": {
+              "confirmed": {
                 "type": "boolean",
                 "default": false
               },
-              "de": {
+              "from": {
                 "type": "string",
                 "description": "Trecho ou fonte, quando `inferido`."
               }
             }
           }
         },
-        "estacionamento": {
+        "parking": {
           "type": "array",
           "description": "#15 §5: o usuario diz \"Lambda\" no minuto um, sempre. Fica estacionado e VOLTA na fase tecnica como sugestao inferida contra a capacidade correspondente. Este campo e o unico jeito de esse retorno sobreviver a uma sessao nova.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "nome",
-              "estado"
+              "name",
+              "state"
             ],
             "properties": {
-              "nome": {
+              "name": {
                 "type": "string"
               },
-              "capacidade": {
-                "$ref": "#/definitions/identificador",
+              "capability": {
+                "$ref": "#/definitions/identifier",
                 "description": "Contra qual no ele volta."
               },
-              "estado": {
+              "state": {
                 "enum": [
-                  "estacionado",
-                  "devolvido",
-                  "descartado"
+                  "parked",
+                  "returned",
+                  "discarded"
                 ]
               },
-              "nota": {
+              "note": {
                 "type": "string"
               }
             }
           }
         },
-        "candidatas": {
+        "candidates": {
           "type": "array",
           "description": "#15 §3. Teto 3, piso 2. As DESCARTADAS ficam: sem elas a sessao seguinte re-propoe uma forma que ja foi recusada, e ninguem sabe responder \"por que nao a B?\".",
           "items": {
@@ -470,18 +470,18 @@
             "additionalProperties": false,
             "required": [
               "id",
-              "nome",
-              "tupla",
-              "estado"
+              "name",
+              "tuple",
+              "state"
             ],
             "properties": {
               "id": {
-                "$ref": "#/definitions/identificador"
+                "$ref": "#/definitions/identifier"
               },
-              "nome": {
+              "name": {
                 "type": "string"
               },
-              "tupla": {
+              "tuple": {
                 "type": "array",
                 "items": {
                   "type": "string"
@@ -490,13 +490,13 @@
                 "maxItems": 5,
                 "description": "E1..E5 na ordem. O invariante de distincao do #15: todo par de candidatas difere em >= 1 posicao."
               },
-              "estado": {
+              "state": {
                 "enum": [
-                  "escolhida",
-                  "descartada"
+                  "chosen",
+                  "discarded"
                 ]
               },
-              "difereEm": {
+              "differsIn": {
                 "type": "array",
                 "items": {
                   "enum": [
@@ -508,96 +508,96 @@
                   ]
                 }
               },
-              "compra": {
+              "buys": {
                 "type": "string"
               },
-              "paga": {
+              "pays": {
                 "type": "string"
               },
-              "escolhaSe": {
+              "chooseIf": {
                 "type": "string"
               },
-              "erradaSe": {
+              "wrongIf": {
                 "type": "string"
               },
-              "porque": {
+              "because": {
                 "type": "string",
                 "description": "Por que foi escolhida ou descartada. E o que responde \"por que nao a B?\" seis meses depois."
               }
             }
           }
         },
-        "achados": {
+        "findings": {
           "type": "array",
           "description": "#15 §4. A revisao de lacunas bloqueia em bloco, uma vez so; cada achado sai daqui aceito ou recusado. O RECUSADO e o que precisa sobreviver ate o diagrama — e ele sobrevive projetado em `notas` com origem `achado-recusado`.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "regra",
-              "estado"
+              "rule",
+              "state"
             ],
             "properties": {
-              "regra": {
+              "rule": {
                 "type": "string",
                 "description": "spof | single-az | egress-sem-controle | dado-em-subnet-publica | cross-account-sem-confianca | assincrono-sem-dlq | ..."
               },
-              "alvo": {
-                "$ref": "#/definitions/identificador"
+              "target": {
+                "$ref": "#/definitions/identifier"
               },
-              "estado": {
+              "state": {
                 "enum": [
-                  "aceito",
-                  "recusado",
-                  "resolvido"
+                  "accepted",
+                  "rejected",
+                  "resolved"
                 ]
               },
-              "nota": {
+              "note": {
                 "type": "string"
               },
-              "viaNota": {
-                "$ref": "#/definitions/identificador",
+              "viaNote": {
+                "$ref": "#/definitions/identifier",
                 "description": "Id da entrada de `notas` que leva esta recusa ate o desenho. Obrigatorio quando `estado` e `recusado`: sem o elo, a recusa fica so no dossie e o diagrama volta a enganar calado. Elo explicito, e nao busca de substring no texto, porque quem edita o texto da nota nao pode quebrar a rastreabilidade sem perceber."
               },
-              "em": {
+              "at": {
                 "type": "string",
                 "description": "Data ISO da decisao."
               }
             }
           }
         },
-        "acordo": {
+        "agreement": {
           "type": "object",
           "additionalProperties": false,
           "description": "A APROVACAO DA VISTA LOGICA — o marco que a premissa 2 chama de coracao do produto.\n\nNao e um booleano. Um booleano `aprovado: true` sobrevive a edicoes que ele nao deveria sobreviver: mude o modelo depois de aprovado e o booleano continua dizendo sim. O acordo guarda o RECORTE da projecao logica que foi aprovada — e o recorte morre quando o modelo muda. Aprovacao vira fato conferivel.\n\nO recorte e guardado, nao recalculado, e isso nao contradiz a regra de nao guardar saida junto da fonte: ele nao e derivavel do modelo atual. E historia — o que o humano disse sim para —, e historia nao se recalcula. Sem ele, uma quebra de acordo so sabe dizer QUE mudou, nunca O QUE mudou.",
           "required": [
-            "vista",
-            "impressao",
-            "recorte"
+            "view",
+            "fingerprint",
+            "snapshot"
           ],
           "properties": {
-            "vista": {
+            "view": {
               "enum": [
-                "logica"
+                "logical"
               ]
             },
-            "impressao": {
+            "fingerprint": {
               "type": "string",
               "pattern": "^sha256:[0-9a-f]{64}$",
               "description": "sha256 do recorte canonizado. E o NOME do acordo — comparacao barata; o recorte e o conteudo."
             },
-            "recorte": {
+            "snapshot": {
               "type": "object",
               "description": "O que foi aprovado: nos (id, tipo, rotulo, dentro), arestas (de, para, rotulo, dados) e notas. Nao leva titulo nem subtitulo — apresentacao nao e acordo."
             },
-            "em": {
+            "at": {
               "type": "string"
             },
-            "por": {
+            "by": {
               "type": "string"
             },
-            "candidata": {
-              "$ref": "#/definitions/identificador"
+            "candidate": {
+              "$ref": "#/definitions/identifier"
             }
           }
         }

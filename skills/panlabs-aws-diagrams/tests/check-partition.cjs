@@ -21,16 +21,16 @@
  *                        ignorando o token — foi assim que se descobriu que a faixa
  *                        de título não olhava para `texto.grupo`.
  *
- *   node tools/check-particao.cjs
+ *   node tools/check-partition.cjs
  */
 
 const fs = require('fs');
 const path = require('path');
-const { gerar } = require('../motor/gerar.cjs');
-const temaMod = require('../tema/tema.cjs');
+const { gerar } = require('../engine/generate.cjs');
+const temaMod = require('../theme/theme.cjs');
 
-const ler = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'modelo', f), 'utf8'));
-const MODELO = ler('pedidos-serverless.json');
+const ler = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'models', f), 'utf8'));
+const MODELO = ler('orders-serverless.json');
 
 /**
  * DOIS modelos, e o segundo não é zelo.
@@ -45,52 +45,52 @@ const MODELO = ler('pedidos-serverless.json');
  * estilo pode depender de um fato do modelo**, e uma bateria de um modelo só não
  * distingue "token morto" de "modelo que não exercita o token".
  */
-const LOGICO = ler('logica-pedidos.json');
+const LOGICO = ler('logical-orders.json');
 
 const PINTURA = [
-  ['pagina.cor', { pagina: { cor: '#FAFAFA' } }],
-  ['tinta.forte', { tinta: { forte: '#111111' } }],
-  ['tinta.fraca', { tinta: { fraca: '#444444' } }],
-  ['tinta.halo', { tinta: { halo: '#FFFFF0' } }],
-  ['aresta.cor', { aresta: { cor: '#545B64' } }],
-  ['aresta.espessura', { aresta: { espessura: 2.4 } }],
-  ['aresta.ponta', { aresta: { ponta: 'open' } }],
-  ['aresta.cantos', { aresta: { cantos: 0 } }],
-  ['aresta.saltos', { aresta: { saltos: 'none' } }],
-  ['aresta.fluxo', { aresta: { fluxo: 'tracejado' } }],
-  ['nota.fundo', { nota: { fundo: '#EEEEEE' } }],
-  ['nota.borda', { nota: { borda: '#555555' } }],
-  ['nota.tinta', { nota: { tinta: '#000000' } }],
+  ['pagina.cor', { page: { color: '#FAFAFA' } }],
+  ['tinta.forte', { ink: { strong: '#111111' } }],
+  ['tinta.fraca', { ink: { weak: '#444444' } }],
+  ['tinta.halo', { ink: { halo: '#FFFFF0' } }],
+  ['aresta.cor', { aresta: { color: '#545B64' } }],
+  ['aresta.espessura', { aresta: { thickness: 2.4 } }],
+  ['aresta.ponta', { aresta: { tip: 'open' } }],
+  ['aresta.cantos', { aresta: { corners: 0 } }],
+  ['aresta.saltos', { aresta: { jumps: 'none' } }],
+  ['aresta.fluxo', { aresta: { flow: 'dashed' } }],
+  ['nota.fundo', { note: { background: '#EEEEEE' } }],
+  ['nota.borda', { note: { edge: '#555555' } }],
+  ['nota.tinta', { note: { ink: '#000000' } }],
 
   // PINTURA por uma razão medida, não por natureza: Arial e Helvetica têm as
   // mesmas larguras de avanço, então dentro do enum de três a métrica não muda.
   // Foi esta checagem que fechou o enum — com Verdana no lugar, ela acusava
   // "não moveu nada", que era o motor dimensionando a faixa para a fonte errada.
-  ['texto.familia', { texto: { familia: 'Helvetica' } }],
+  ['texto.familia', { text: { family: 'Helvetica' } }],
 ];
 
 /** Pintura que só existe na vista lógica — medida contra o modelo lógico. */
 const PINTURA_LOGICA = [
-  ['bloco.fundo', { bloco: { fundo: '#F5F5F5' } }],
-  ['bloco.borda', { bloco: { borda: '#777777' } }],
-  ['bloco.cantos', { bloco: { cantos: 0 } }],
+  ['bloco.fundo', { block: { background: '#F5F5F5' } }],
+  ['bloco.borda', { block: { edge: '#777777' } }],
+  ['bloco.cantos', { block: { corners: 0 } }],
 ];
 
 const METRICA = [
   // margem da página não move nada DENTRO do desenho, mas desloca o desenho
   // inteiro e muda a caixa da página — geometria, portanto métrica
-  ['pagina.margem', { pagina: { margem: 56 } }],
-  ['texto.rotulo', { texto: { rotulo: 16 } }],
-  ['texto.grupo', { texto: { grupo: 18 } }],
-  ['texto.aresta', { texto: { aresta: 16 } }],
-  ['texto.titulo', { texto: { titulo: 30 } }],
-  ['texto.subtitulo', { texto: { subtitulo: 18 } }],
-  ['texto.qualificador', { texto: { qualificador: true } }],
-  ['folga.base', { folga: { base: 4 } }],
-  ['folga.densidade', { folga: { densidade: 1.6 } }],
+  ['pagina.margem', { page: { margin: 56 } }],
+  ['texto.rotulo', { text: { label: 16 } }],
+  ['texto.grupo', { text: { group: 18 } }],
+  ['texto.aresta', { text: { aresta: 16 } }],
+  ['texto.titulo', { text: { title: 30 } }],
+  ['texto.subtitulo', { text: { subtitle: 18 } }],
+  ['texto.qualificador', { text: { qualifier: true } }],
+  ['folga.base', { gap: { base: 4 } }],
+  ['folga.densidade', { gap: { density: 1.6 } }],
   // não move ninguém de lugar, mas ACRESCENTA célula ao bloco de título — e é por
   // isso que não é pintura: muda o conjunto de células, não só a cor delas
-  ['cartao.revisao', { cartao: { revisao: 'Revisado em 2026-08-21' } }],
+  ['cartao.revisao', { card: { revision: 'Revisado em 2026-08-21' } }],
 ];
 
 /**
@@ -111,7 +111,7 @@ function semPayload(xml) {
 function geometria(plano) {
   const m = new Map();
   for (const c of plano.celulas) {
-    if (c.tipo === 'aresta') { m.set(c.id, JSON.stringify(c.pontos || [])); continue; }
+    if (c.kind === 'aresta') { m.set(c.id, JSON.stringify(c.pontos || [])); continue; }
     m.set(c.id, `${Math.round(c.geo.x)},${Math.round(c.geo.y)},${Math.round(c.geo.w)},${Math.round(c.geo.h)}`);
   }
   return m;
@@ -128,39 +128,39 @@ function diferencas(a, b) {
 }
 
 async function main() {
-  const base = await gerar(MODELO, { tema: 'claro', forcar: true });
+  const base = await gerar(MODELO, { tema: 'light', forcar: true });
   const g0 = geometria(base.plano);
-  const baseLog = await gerar(LOGICO, { tema: 'claro', forcar: true });
+  const baseLog = await gerar(LOGICO, { tema: 'light', forcar: true });
   const gLog = geometria(baseLog.plano);
   let falhou = 0;
 
   console.log(`referência: tema "claro" · técnico ${g0.size} células · lógico ${gLog.size} células\n`);
   console.log('PINTURA — não pode mover coordenada');
-  for (const [nome, patch, ehLogico] of [...PINTURA, ...PINTURA_LOGICA.map(p => [...p, true])]) {
+  for (const [name, patch, ehLogico] of [...PINTURA, ...PINTURA_LOGICA.map(p => [...p, true])]) {
     const modelo = ehLogico ? LOGICO : MODELO;
     const ref = ehLogico ? gLog : g0;
     const refXml = ehLogico ? baseLog.xml : base.xml;
-    const r = await gerar(modelo, { tema: temaMod.comPatch('claro', patch), forcar: true });
+    const r = await gerar(modelo, { tema: temaMod.comPatch('light', patch), forcar: true });
     const d = diferencas(ref, geometria(r.plano));
     const inerte = semPayload(r.xml) === semPayload(refXml);
     if (d.length) {
-      console.log(`  ✗ ${nome.padEnd(20)} moveu ${d.length} célula(s): ${d.slice(0, 2).join(' · ')}`);
+      console.log(`  ✗ ${name.padEnd(20)} moveu ${d.length} célula(s): ${d.slice(0, 2).join(' · ')}`);
       falhou = 1;
     } else if (inerte) {
       // pintura que não move coordenada E não muda o XML é token morto
-      console.log(`  ✗ ${nome.padEnd(20)} não moveu nem pintou — token inerte`);
+      console.log(`  ✗ ${name.padEnd(20)} não moveu nem pintou — token inerte`);
       falhou = 1;
     } else {
-      console.log(`  ✓ ${nome.padEnd(20)} geometria idêntica, style mudou${ehLogico ? '  (vista lógica)' : ''}`);
+      console.log(`  ✓ ${name.padEnd(20)} geometria idêntica, style mudou${ehLogico ? '  (vista lógica)' : ''}`);
     }
   }
 
   console.log('\nMÉTRICA — tem de mover alguma coisa');
-  for (const [nome, patch] of METRICA) {
-    const r = await gerar(MODELO, { tema: temaMod.comPatch('claro', patch), forcar: true });
+  for (const [name, patch] of METRICA) {
+    const r = await gerar(MODELO, { tema: temaMod.comPatch('light', patch), forcar: true });
     const d = diferencas(g0, geometria(r.plano));
-    if (!d.length) { console.log(`  ✗ ${nome.padEnd(20)} NÃO moveu nada — o motor está ignorando o token`); falhou = 1; }
-    else console.log(`  ✓ ${nome.padEnd(20)} moveu ${String(d.length).padStart(2)} célula(s)`);
+    if (!d.length) { console.log(`  ✗ ${name.padEnd(20)} NÃO moveu nada — o motor está ignorando o token`); falhou = 1; }
+    else console.log(`  ✓ ${name.padEnd(20)} moveu ${String(d.length).padStart(2)} célula(s)`);
   }
 
   console.log(falhou ? '\nPARTIÇÃO QUEBRADA' : '\npartição íntegra: pintura pinta, métrica mede');

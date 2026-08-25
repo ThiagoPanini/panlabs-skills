@@ -3,17 +3,17 @@
 /**
  * A revisão de lacunas, do terminal — o passo 4 do arco.
  *
- *   node tools/revisar-lacunas.cjs <modelo.json>       o laudo, legível
- *   node tools/revisar-lacunas.cjs <modelo.json> --json  para ler no código
- *   node tools/revisar-lacunas.cjs --corpus             a tabela do corpus inteiro
+ *   node tools/review-gaps.cjs <modelo.json>       o laudo, legível
+ *   node tools/review-gaps.cjs <modelo.json> --json  para ler no código
+ *   node tools/review-gaps.cjs --corpus             a tabela do corpus inteiro
  *
- * Come `modelo@1`. Se o que você tem é um `sessao@1`, projete antes — igual ao
- * `check-geometria.cjs`, e pelo mesmo motivo (ver `guia/sabatina.md`).
+ * Come `model@1`. Se o que você tem é um `session@1`, projete antes — igual ao
+ * `check-geometry.cjs`, e pelo mesmo motivo (ver `guide/inquiry.md`).
  */
 
 const fs = require('fs');
 const path = require('path');
-const { revisar, NOMES, arquivosDoCorpus } = require(path.join(__dirname, '..', 'sessao', 'lacunas.cjs'));
+const { revisar, NOMES, arquivosDoCorpus } = require(path.join(__dirname, '..', 'session', 'gaps.cjs'));
 
 const RAIZ = path.join(__dirname, '..');
 
@@ -22,15 +22,15 @@ function umModelo(arq, json) {
   const r = revisar(modelo);
   if (json) { console.log(JSON.stringify(r, null, 2)); return r; }
 
-  console.log(`\n  ${modelo.titulo || modelo.id}  (${modelo.nos.length} nós, teto ${r.teto})`);
-  if (!r.achados.length) console.log('    nenhum achado');
-  for (const a of r.achados) console.log(`    ⚠ ${a.regra.padEnd(28)} ${String(a.alvo).padEnd(22)} ${a.porque}`);
+  console.log(`\n  ${modelo.title || modelo.id}  (${modelo.nodes.length} nós, teto ${r.teto})`);
+  if (!r.findings.length) console.log('    nenhum achado');
+  for (const a of r.findings) console.log(`    ⚠ ${a.rule.padEnd(28)} ${String(a.target).padEnd(22)} ${a.because}`);
   if (r.mudas.length) {
     console.log('\n    mudas (a regra não tem sujeito neste modelo — não é o mesmo que passar):');
-    for (const m of r.mudas) console.log(`      · ${m.regra.padEnd(28)} ${m.porque}`);
+    for (const m of r.mudas) console.log(`      · ${m.rule.padEnd(28)} ${m.because}`);
   }
-  console.log(`\n    ${r.achados.length} achado(s) · teto ⌈${modelo.nos.length}÷4⌉ = ${r.teto} · ` +
-    (r.dentroDoTeto ? 'dentro' : '⛔ ESTOURA'));
+  console.log(`\n    ${r.findings.length} achado(s) · teto ⌈${modelo.nodes.length}÷4⌉ = ${r.teto} · ` +
+    (r.dentroDoTeto ? 'inside' : '⛔ ESTOURA'));
   return r;
 }
 
@@ -42,20 +42,20 @@ function corpus() {
     const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, rel), 'utf8'));
     const r = revisar(modelo);
     const porRegra = new Map();
-    for (const a of r.achados) porRegra.set(a.regra, (porRegra.get(a.regra) || 0) + 1);
+    for (const a of r.findings) porRegra.set(a.rule, (porRegra.get(a.rule) || 0) + 1);
     for (const [k] of porRegra) disparou.set(k, (disparou.get(k) || 0) + 1);
-    for (const m of r.mudas) calou.set(m.regra, (calou.get(m.regra) || 0) + 1);
+    for (const m of r.mudas) calou.set(m.rule, (calou.get(m.rule) || 0) + 1);
     linhas.push({
-      nome: path.basename(rel, '.json'), nos: modelo.nos.length,
-      n: r.achados.length, teto: r.teto, ok: r.dentroDoTeto,
+      name: path.basename(rel, '.json'), nodes: modelo.nodes.length,
+      n: r.findings.length, teto: r.teto, ok: r.dentroDoTeto,
       regras: [...porRegra.entries()].map(([k, v]) => `${k}×${v}`).join(' '),
     });
   }
 
-  const w = Math.max(...linhas.map(l => l.nome.length));
+  const w = Math.max(...linhas.map(l => l.name.length));
   console.log(`  ${'modelo'.padEnd(w)}  nós  ach  teto        regras que dispararam`);
   for (const l of linhas)
-    console.log(`  ${l.nome.padEnd(w)}  ${String(l.nos).padStart(3)}  ${String(l.n).padStart(3)}  ` +
+    console.log(`  ${l.name.padEnd(w)}  ${String(l.nodes).padStart(3)}  ${String(l.n).padStart(3)}  ` +
       `${String(l.teto).padStart(4)} ${l.ok ? ' ' : '⛔'}   ${l.regras}`);
 
   console.log('\n  L2/L3 — toda regra tem de disparar em ≥1 modelo E calar em ≥1:');
@@ -67,7 +67,7 @@ function corpus() {
     console.log(`    ${ok ? '✓' : '✗'} ${r.padEnd(30)} disparou em ${String(d).padStart(2)} · calou em ${String(c).padStart(2)}`);
   }
   const estouram = linhas.filter(l => !l.ok);
-  console.log(`\n  L4 — teto ⌈nós÷4⌉: ${estouram.length ? '✗ ' + estouram.map(l => l.nome).join(', ') : '✓ nenhum modelo estoura'}`);
+  console.log(`\n  L4 — teto ⌈nós÷4⌉: ${estouram.length ? '✗ ' + estouram.map(l => l.name).join(', ') : '✓ nenhum modelo estoura'}`);
   return vermelho === 0 && !estouram.length;
 }
 
@@ -76,7 +76,7 @@ function main() {
   if (args.includes('--corpus')) { process.exit(corpus() ? 0 : 1); }
   const arq = args.find(a => !a.startsWith('--'));
   if (!arq) {
-    console.error('uso: node tools/revisar-lacunas.cjs <modelo.json> [--json]   |   --corpus');
+    console.error('uso: node tools/review-gaps.cjs <modelo.json> [--json]   |   --corpus');
     process.exit(2);
   }
   umModelo(arq, args.includes('--json'));

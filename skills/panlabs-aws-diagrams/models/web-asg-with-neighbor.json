@@ -1,36 +1,36 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "web-asg-com-vizinho",
-  "titulo": "Web · Auto Scaling group com vizinho de subnet",
-  "subtitulo": "T4 · dois membros do ASG em AZs distintas, um terceiro serviço na subnet do primeiro deles",
-  "vista": "tecnica",
-  "genero": "T4",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "web-asg-with-neighbor",
+  "title": "Web · Auto Scaling group com vizinho de subnet",
+  "subtitle": "T4 · dois membros do ASG em AZs distintas, um terceiro serviço na subnet do primeiro deles",
+  "view": "technical",
+  "genre": "T4",
 
-  "nos": [
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
-    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "dentro": "nuvem" },
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
 
-    { "id": "app-a", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
-    { "id": "app-b", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
 
-    { "id": "web-a", "tipo": "servico", "servico": "ec2", "rotulo": "EC2 · web", "dentro": "app-a" },
-    { "id": "fraude-a", "tipo": "servico", "servico": "lambda", "rotulo": "Lambda · antifraude", "dentro": "app-a" },
-    { "id": "web-b", "tipo": "servico", "servico": "ec2", "rotulo": "EC2 · web", "dentro": "app-b" }
+    { "id": "web-a", "kind": "service", "service": "ec2", "label": "EC2 · web", "inside": "app-a" },
+    { "id": "fraude-a", "kind": "service", "service": "lambda", "label": "Lambda · antifraude", "inside": "app-a" },
+    { "id": "web-b", "kind": "service", "service": "ec2", "label": "EC2 · web", "inside": "app-b" }
   ],
 
-  "arestas": [
-    { "de": "web-a", "para": "fraude-a", "rotulo": "pontua o risco", "ordem": 1 },
-    { "de": "web-a", "para": "web-b", "rotulo": "sincroniza sessão", "ordem": 2 }
+  "edges": [
+    { "from": "web-a", "to": "fraude-a", "label": "pontua o risco", "order": 1 },
+    { "from": "web-a", "to": "web-b", "label": "sincroniza sessão", "order": 2 }
   ],
 
-  "faixas": [
-    { "id": "asg-web", "tipo": "auto-scaling", "rotulo": "Auto Scaling group", "membros": ["web-a", "web-b"] }
+  "bands": [
+    { "id": "asg-web", "kind": "auto-scaling", "label": "Auto Scaling group", "members": ["web-a", "web-b"] }
   ],
 
-  "notas": [
+  "notes": [
     {
-      "texto": "fraude-a mora na mesma subnet de web-a e NÃO escala com o grupo. Na grade, a faixa é a união das subnets inteiras dos membros (app-a e app-b) — sem degradar, qualquer vizinho de web-a cairia dentro da caixa. É o caso frequente do #31: aqui a faixa vira rótulo em vez de afirmar um atributo que fraude-a não tem.",
-      "origem": "legenda"
+      "text": "fraude-a mora na mesma subnet de web-a e NÃO escala com o grupo. Na grade, a faixa é a união das subnets inteiras dos membros (app-a e app-b) — sem degradar, qualquer vizinho de web-a cairia dentro da caixa. É o caso frequente do #31: aqui a faixa vira rótulo em vez de afirmar um atributo que fraude-a não tem.",
+      "origin": "legend"
     }
   ]
 }

@@ -47,8 +47,8 @@
  * | `achados[].nota` | **sai** | é onde mora "o time aceitou por orçamento" |
  * | `achados[]` regra/alvo/estado | fica | o QUE foi encontrado é técnico, e a recusa já viaja como nota no desenho (#14) |
  * | `estacionamento` | **sai inteiro** | é fala de pessoa em reunião, com aspas |
- * | `fatos[].de` | **sai** | a citação. O `fato` fica: ele é premissa da arquitetura |
- * | `acordo.por` | **sai** | nome de pessoa |
+ * | `fatos[].from` | **sai** | a citação. O `fato` fica: ele é premissa da arquitetura |
+ * | `acordo.by` | **sai** | nome de pessoa |
  * | `acordo.recorte` | **sai** | é a vista lógica aprovada, isto é, a deliberação da fase 1 |
  * | `acordo.impressao`/`em`/`vista` | fica | provam QUE foi aprovado e QUANDO, sem dizer por quem nem o quê |
  *
@@ -60,9 +60,9 @@
  * que só existia na conversa, não.**
  */
 
-const { reescreverSelos } = require('./impressao.cjs');
+const { reescreverSelos } = require('./fingerprint.cjs');
 
-const ESQUEMA_PUBLICADO = 'panlabs-aws-diagrams/publicado@1';
+const ESQUEMA_PUBLICADO = 'panlabs-aws-diagrams/published@1';
 
 /**
  * A RÉGUA, EM DADOS — uma lista só, e é dela que saem as três coisas que
@@ -79,17 +79,17 @@ const ESQUEMA_PUBLICADO = 'panlabs-aws-diagrams/publicado@1';
  * (quando existe) diz quais ITENS somem inteiros.
  */
 const DELIBERACAO = [
-  { onde: 'candidatas', filtro: c => c.estado === 'descartada',
-    campos: ['porque', 'paga', 'compra', 'escolhaSe', 'erradaSe', 'difereEm'],
-    porque: 'as candidatas descartadas somem; da escolhida sobra o que descreve o desenho' },
-  { onde: 'achados', campos: ['nota'],
-    porque: 'o QUE foi achado é técnico; o texto costuma citar a conversa' },
-  { onde: 'estacionamento', filtro: () => true, campos: ['nota'],
-    porque: 'é fala de pessoa em reunião, com aspas' },
-  { onde: 'fatos', campos: ['de'],
-    porque: 'a citação sai; o fato fica, é premissa da arquitetura' },
-  { onde: 'acordo', campos: ['por', 'recorte'],
-    porque: 'nome de pessoa, e a deliberação da fase lógica' },
+  { onde: 'candidates', filtro: c => c.state === 'discarded',
+    campos: ['because', 'pays', 'buys', 'chooseIf', 'wrongIf', 'differsIn'],
+    because: 'as candidatas descartadas somem; da escolhida sobra o que descreve o desenho' },
+  { onde: 'findings', campos: ['note'],
+    because: 'o QUE foi achado é técnico; o texto costuma citar a conversa' },
+  { onde: 'parking', filtro: () => true, campos: ['note'],
+    because: 'é fala de pessoa em reunião, com aspas' },
+  { onde: 'facts', campos: ['from'],
+    because: 'a citação sai; o fato fica, é premissa da arquitetura' },
+  { onde: 'agreement', campos: ['by', 'snapshot'],
+    because: 'nome de pessoa, e a deliberação da fase lógica' },
 ];
 
 const listaDe = (d, onde) => (Array.isArray(d[onde]) ? d[onde] : d[onde] ? [d[onde]] : []);
@@ -97,7 +97,7 @@ const listaDe = (d, onde) => (Array.isArray(d[onde]) ? d[onde] : d[onde] ? [d[on
 /** A sessão sem a deliberação. Função pura: devolve outra, não muta a de dentro. */
 function podar(sessao) {
   const s = JSON.parse(JSON.stringify(sessao));
-  const d = s.dossie;
+  const d = s.dossier;
   if (!d) return s;
 
   for (const r of DELIBERACAO) {
@@ -106,7 +106,7 @@ function podar(sessao) {
     let itens = listaDe(d, r.onde);
     if (r.filtro) itens = itens.filter(x => !r.filtro(x));
     // `estacionamento` some inteiro: o filtro dele casa com todo item
-    if (r.filtro && !itens.length && ehLista && r.onde === 'estacionamento') { delete d[r.onde]; continue; }
+    if (r.filtro && !itens.length && ehLista && r.onde === 'parking') { delete d[r.onde]; continue; }
     for (const it of itens) for (const c of r.campos) delete it[c];
     d[r.onde] = ehLista ? itens : itens[0];
   }
@@ -115,7 +115,7 @@ function podar(sessao) {
 
 /** Quantos itens de deliberação uma sessão ainda carrega. Mesma lista da poda. */
 function contarDeliberacao(sessao) {
-  const d = (sessao && sessao.dossie) || {};
+  const d = (sessao && sessao.dossier) || {};
   let n = 0;
   for (const r of DELIBERACAO) {
     for (const it of listaDe(d, r.onde)) {
@@ -164,7 +164,7 @@ function publicar(xml) {
 
 /**
  * O aviso de uma linha, no padrão que o #16 fixou: avisa, não bloqueia, e nomeia
- * o que fazer. Fica aqui e não em `gravar.cjs` porque quem sabe o que é
+ * o que fazer. Fica aqui e não em `save.cjs` porque quem sabe o que é
  * deliberação é este módulo — a régua mora num lugar só.
  */
 function avisoDeDossie(sessao) {
@@ -183,7 +183,7 @@ function avisoDeDossie(sessao) {
   if (!quantos) return null;
   return `este arquivo carrega ${quantos} item(ns) de deliberacao no selo — candidata descartada, ` +
     'recusa com motivo, estacionamento ou quem aprovou. Legiveis em Extras > Editar diagrama. ' +
-    'Para mandar para fora, gere a copia publicada (sessao/publicar.cjs).';
+    'Para mandar para fora, gere a copia publicada (session/publish.cjs).';
 }
 
 // ------------------------------------------------------------------- CLI
@@ -202,12 +202,12 @@ function main() {
   }
   // ⚠️ `i !== iSaida + 1` pula o valor de `--saida` — mas com `iSaida = -1` ele
   // pulava o ÍNDICE 0, que é justamente o argumento posicional da forma sem
-  // `--saida`. `node sessao/publicar.cjs saida/varejo.drawio` respondia com o
+  // `--saida`. `node session/publish.cjs output/retail.drawio` respondia com o
   // texto de uso, o que faz a linha do README parecer errada quando quem está
   // errado é a guarda. Achado no #24, ao regerar a cópia publicada.
   const entrada = args.find((a, i) => !a.startsWith('--') && !(iSaida >= 0 && i === iSaida + 1));
   if (!entrada) {
-    console.error('uso: node sessao/publicar.cjs <trabalho.drawio> [--saida <copia>.drawio]');
+    console.error('uso: node session/publish.cjs <trabalho.drawio> [--saida <copia>.drawio]');
     console.error('  Produz a copia que CIRCULA: sem candidatas descartadas, sem o motivo das');
     console.error('  recusas, sem estacionamento e sem quem aprovou. Ela NAO retoma a sessao.');
     process.exit(2);
@@ -220,7 +220,7 @@ function main() {
 
   let sessao = null;
   try {
-    sessao = JSON.parse(require('./impressao.cjs').lerPaginas(xml).paginas[0].selo.panlabsSessao);
+    sessao = JSON.parse(require('./fingerprint.cjs').lerPaginas(xml).paginas[0].selo.panlabsSessao);
   } catch (e) { /* sem selo legivel */ }
   const antes = sessao ? contarDeliberacao(sessao) : 0;
 

@@ -262,17 +262,17 @@ const catalog = {
     drawio: drawioVersion,
     commit: git(['log', '-1', '--format=%H']),
     commitDate: git(['log', '-1', '--format=%cI']),
-    familia: 'mxgraph.aws4',
+    family: 'mxgraph.aws4',
     stencilsDeclarados: declaredStencils.size,
     referenciasQuebradas: broken,
     pointsDuplicadosNormalizados: pointsDeduplicados,
     extraidoPor: 'catalog/tools/extract-aws4-catalog.cjs'
   },
   templates: {
-    svc: { style: svcTpl.template, cobre: svcTpl.hits, de: services.length,
-           nota: 'Service Icon (quadrado colorido). ${FILL} = cor da categoria; ${STENCIL} = resIcon.' },
-    res: { style: resTpl.template, cobre: resTpl.hits, de: resources.length,
-           nota: 'Resource Icon plano (sem quadrado). ${FILL} = cor da categoria; ${STENCIL} = shape.' }
+    svc: { style: svcTpl.template, cobre: svcTpl.hits, from: services.length,
+           note: 'Service Icon (quadrado colorido). ${FILL} = cor da categoria; ${STENCIL} = resIcon.' },
+    res: { style: resTpl.template, cobre: resTpl.hits, from: resources.length,
+           note: 'Resource Icon plano (sem quadrado). ${FILL} = cor da categoria; ${STENCIL} = shape.' }
   },
   categories,
   services,

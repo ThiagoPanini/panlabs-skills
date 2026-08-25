@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verifica, shape a shape, que o PNG renderizado mostra o ícone — não caixa vazia.
 
-    python3 verificar-render.py tests/amostra.png tests/amostra.manifesto.json
+    python3 verify-render.py tests/sample.png tests/sample.manifest.json
 
 "Caixa vazia" tem uma definição mecânica, não visual:
 

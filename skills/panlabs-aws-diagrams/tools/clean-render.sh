@@ -11,7 +11,7 @@ set -uo pipefail
 #
 # `pkill -f` casa contra a linha de comando INTEIRA, então o padrão sem o `-`
 # casava também com quem apenas RECEBEU o caminho do binário como argumento:
-# `./tests/rodar.sh /…/squashfs-root/drawio` é uma dessas. Uma suite que chama
+# `./tests/run.sh /…/squashfs-root/drawio` é uma dessas. Uma suite que chama
 # outra passando o binário adiante matava a suite chamada no meio da limpeza —
 # ela imprimia "suite verde" e morria com SIGKILL logo depois, e o `pipefail`
 # do chamador traduzia isso em vermelho sem uma linha de erro. Achado ao

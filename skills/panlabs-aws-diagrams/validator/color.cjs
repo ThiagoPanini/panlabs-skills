@@ -8,7 +8,7 @@
  * estética errada por 5% produz um aviso um pouco fora de lugar; um contraste
  * errado por 5% aprova um texto que a norma reprova, e o diagrama vai para o
  * slide com a etiqueta de acessível que ele não tem. Por isso as três contas
- * daqui são conferidas contra valor publicado em `tests/check-primitivas.cjs`.
+ * daqui são conferidas contra valor publicado em `tests/check-primitives.cjs`.
  *
  * Duas armadilhas conhecidas, e por que este módulo as evita:
  *
@@ -195,7 +195,7 @@ function distancia(a, b) {
 
 // Viénot, Brettel & Mollon (1999): RGB linear → LMS e a volta. As projeções
 // dicromatas abaixo têm o cinza como ponto fixo — é a propriedade que
-// `check-primitivas.cjs` confere, porque uma matriz transposta por engano
+// `check-primitives.cjs` confere, porque uma matriz transposta por engano
 // continua devolvendo cor plausível e deixa de colapsar vermelho com verde.
 const M_LMS = [
   [17.8824, 43.5161, 4.11935],
@@ -218,9 +218,9 @@ const aplica = (m, v) => m.map(linha => linha[0] * v[0] + linha[1] * v[1] + linh
 const deslinearizar = v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(Math.max(0, v), 1 / 2.4) - 0.055);
 
 /** A cor como um dicromata a vê. `tipo` ∈ protanopia | deuteranopia | tritanopia. */
-function simular(hex, tipo) {
-  const projetar = PROJECAO[tipo];
-  if (!projetar) throw new Error(`tipo de deficiência desconhecido: "${tipo}"`);
+function simular(hex, kind) {
+  const projetar = PROJECAO[kind];
+  if (!projetar) throw new Error(`tipo de deficiência desconhecido: "${kind}"`);
   const rgb = paraRgb(hex);
   if (!rgb) return null;
   const lms = aplica(M_LMS, rgb.map(linearizar));

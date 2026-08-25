@@ -50,23 +50,23 @@
  */
 const CATEGORIA_CAMADA = {
   // borda — o andar que encara alguma coisa de fora da subnet
-  network_content_delivery: 'borda',
-  security_identity_compliance: 'borda',
+  network_content_delivery: 'edge',
+  security_identity_compliance: 'edge',
 
   // aplicação — o andar que computa
-  compute: 'aplicacao',
-  containers: 'aplicacao',
-  application_integration: 'aplicacao',
-  front_end_web_mobile: 'aplicacao',
+  compute: 'application',
+  containers: 'application',
+  application_integration: 'application',
+  front_end_web_mobile: 'application',
 
   // dados — o andar que guarda
-  database: 'dados',
-  storage: 'dados',
-  analytics: 'dados',
+  database: 'data',
+  storage: 'data',
+  analytics: 'data',
 };
 
 /** Cima para baixo. É a ordem de leitura da vista de rede, e é só ela. */
-const CAMADAS = ['borda', 'aplicacao', 'dados'];
+const CAMADAS = ['edge', 'application', 'data'];
 
 /** Sem camada vai para o fim do grupo de exposição — ver `chaveDeIrmao`. */
 const SEM_CAMADA = 9;
@@ -86,7 +86,7 @@ function ordemDeCamada(c) {
  * para 9. Empatavam na prática (os dois vão depois de `privada`), mas duas
  * tabelas para uma regra é uma a mais.
  */
-const ORDEM_ACESSO = { publica: 0, privada: 1 };
+const ORDEM_ACESSO = { public: 0, private: 1 };
 
 function ordemDeAcesso(a) {
   return ORDEM_ACESSO[a] ?? 9;
@@ -104,9 +104,9 @@ function camadaDeGrupo(lista) {
 
 /** Categoria AWS de um nó folha, ou null se ele não resolve para serviço. */
 function categoriaDoNo(no, cat) {
-  const chave = no.servico || (no.tipo === 'ator' ? 'users' : null);
+  const chave = no.service || (no.kind === 'actor' ? 'users' : null);
   if (!chave) return null;
-  const s = cat.servico(chave);
+  const s = cat.service(chave);
   return s ? (s.palette || null) : null;
 }
 
@@ -131,16 +131,16 @@ function camadaDaSubnet(subnet, descendentes, cat) {
   const evidencia = [];
   for (const n of descendentes) {
     const categoria = categoriaDoNo(n, cat);
-    const camada = categoria ? (CATEGORIA_CAMADA[categoria] || null) : null;
-    if (camada) evidencia.push({ id: n.id, servico: n.servico || n.tipo, categoria, camada });
+    const layer = categoria ? (CATEGORIA_CAMADA[categoria] || null) : null;
+    if (layer) evidencia.push({ id: n.id, service: n.service || n.kind, categoria, layer });
   }
 
-  const declarada = subnet.camada || null;
-  const derivada = camadaDeGrupo(evidencia.map(e => e.camada));
+  const declarada = subnet.layer || null;
+  const derivada = camadaDeGrupo(evidencia.map(e => e.layer));
 
   if (declarada) {
     return {
-      camada: declarada,
+      layer: declarada,
       via: 'declarada',
       derivada,
       evidencia,
@@ -150,13 +150,13 @@ function camadaDaSubnet(subnet, descendentes, cat) {
       diverge: derivada && derivada !== declarada ? derivada : null,
     };
   }
-  return { camada: derivada, via: derivada ? 'derivada' : null, derivada, evidencia, diverge: null };
+  return { layer: derivada, via: derivada ? 'derivada' : null, derivada, evidencia, diverge: null };
 }
 
 /**
  * A camada de toda subnet do modelo, indexada por id.
  *
- * `t` é a árvore do `derivar.cjs`. DESCENDENTE, não filho direto: um serviço
+ * `t` é a árvore do `derive.cjs`. DESCENDENTE, não filho direto: um serviço
  * dentro de um security group dentro da subnet continua sendo o que a subnet
  * guarda.
  */
@@ -164,14 +164,14 @@ function camadasDeSubnets(modelo, t, cat) {
   const porSubnet = new Map();
   const descendentesDe = new Map();
 
-  for (const n of modelo.nos) {
-    const sub = t.ancestrais(n).find(a => a.tipo === 'subnet');
+  for (const n of modelo.nodes) {
+    const sub = t.ancestrais(n).find(a => a.kind === 'subnet');
     if (!sub) continue;
     if (!descendentesDe.has(sub.id)) descendentesDe.set(sub.id, []);
     descendentesDe.get(sub.id).push(n);
   }
 
-  for (const s of modelo.nos.filter(n => n.tipo === 'subnet'))
+  for (const s of modelo.nodes.filter(n => n.kind === 'subnet'))
     porSubnet.set(s.id, camadaDaSubnet(s, descendentesDe.get(s.id) || [], cat));
 
   return porSubnet;
@@ -185,17 +185,17 @@ function camadasDeSubnets(modelo, t, cat) {
  * papel, não a da subnet: se `dado-a` guarda um RDS e `dado-b` está vazia, a
  * linha guarda um RDS.
  *
- * A chave é a mesma que o `dispor.cjs` usa para virar linha — de propósito. Ter
+ * A chave é a mesma que o `layout.cjs` usa para virar linha — de propósito. Ter
  * duas definições de "papel" seria ter duas grades.
  */
 function chaveDePapel(subnet, t) {
-  const vpc = (t.ancestrais(subnet).find(a => a.tipo === 'vpc') || {}).id;
-  return `${vpc}|${subnet.acesso || '?'}|${subnet.rotulo || ''}`;
+  const vpc = (t.ancestrais(subnet).find(a => a.kind === 'vpc') || {}).id;
+  return `${vpc}|${subnet.access || '?'}|${subnet.label || ''}`;
 }
 
 function papeisDeSubnet(modelo, t, camadas) {
   const papeis = new Map();
-  for (const s of modelo.nos.filter(n => n.tipo === 'subnet')) {
+  for (const s of modelo.nodes.filter(n => n.kind === 'subnet')) {
     const chave = chaveDePapel(s, t);
     if (!papeis.has(chave))
       // os campos vêm da SUBNET, não de fatiar a chave de volta: a chave é um
@@ -203,15 +203,15 @@ function papeisDeSubnet(modelo, t, camadas) {
       // rótulo tem `|`
       papeis.set(chave, {
         chave,
-        vpc: (t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id,
-        acesso: s.acesso || null,
-        rotulo: s.rotulo || '',
-        subnets: [], camada: null,
+        vpc: (t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id,
+        access: s.access || null,
+        label: s.label || '',
+        subnets: [], layer: null,
       });
     papeis.get(chave).subnets.push(s.id);
   }
   for (const p of papeis.values())
-    p.camada = camadaDeGrupo(p.subnets.map(id => (camadas.get(id) || {}).camada || null));
+    p.layer = camadaDeGrupo(p.subnets.map(id => (camadas.get(id) || {}).layer || null));
   return papeis;
 }
 
@@ -227,26 +227,26 @@ function papeisDeSubnet(modelo, t, camadas) {
 function lacunasDeCamada(modelo, t, camadas) {
   const grupos = new Map();
   for (const p of papeisDeSubnet(modelo, t, camadas).values()) {
-    const chave = `${p.vpc}|${p.acesso}`;
-    if (!grupos.has(chave)) grupos.set(chave, { vpc: p.vpc, acesso: p.acesso, papeis: [] });
+    const chave = `${p.vpc}|${p.access}`;
+    if (!grupos.has(chave)) grupos.set(chave, { vpc: p.vpc, access: p.access, papeis: [] });
     grupos.get(chave).papeis.push(p);
   }
 
   const lacunas = [];
-  for (const { vpc, acesso, papeis } of grupos.values()) {
+  for (const { vpc, access, papeis } of grupos.values()) {
     if (papeis.length < 2) continue;                     // nada a ordenar
-    const orfaos = papeis.filter(p => !p.camada);
+    const orfaos = papeis.filter(p => !p.layer);
     if (!orfaos.length) continue;
     lacunas.push({
-      vpc, acesso: acesso || 'sem exposição declarada', papeis: papeis.length,
+      vpc, access: access || 'sem exposição declarada', papeis: papeis.length,
       orfaos: orfaos.map(o => ({
-        papel: o.rotulo || `(sem rótulo: ${o.subnets.join(', ')})`,
+        papel: o.label || `(sem rótulo: ${o.subnets.join(', ')})`,
         subnets: o.subnets,
         vazio: o.subnets.every(id => !((camadas.get(id) || {}).evidencia || []).length),
       })).sort((a, b) => a.papel.localeCompare(b.papel, 'pt')),
     });
   }
-  return lacunas.sort((a, b) => a.vpc.localeCompare(b.vpc) || a.acesso.localeCompare(b.acesso));
+  return lacunas.sort((a, b) => a.vpc.localeCompare(b.vpc) || a.access.localeCompare(b.access));
 }
 
 /**
@@ -260,7 +260,7 @@ function textoDaLacuna(lacunas) {
   const linhas = [];
   for (const l of lacunas)
     for (const o of l.orfaos)
-      linhas.push(`VPC "${l.vpc}" · ${l.acesso}s: "${o.papel}" (${o.subnets.join(', ')}) ` +
+      linhas.push(`VPC "${l.vpc}" · ${l.access}s: "${o.papel}" (${o.subnets.join(', ')}) ` +
         `não diz que camada de rede ocupa — ${o.vazio ? 'vazia, nada a inferir' : 'o que ela guarda não tem andar de rede'}` +
         ` (são ${l.papeis} papéis para empilhar)`);
   linhas.push('declare `camada` ("borda" | "aplicacao" | "dados") nessas subnets, ou ponha dentro delas o serviço que elas hospedam');

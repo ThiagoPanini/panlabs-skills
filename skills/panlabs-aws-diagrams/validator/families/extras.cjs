@@ -46,7 +46,7 @@
  * regressão.
  *
  * ⚠️ E a medição do #26 diz que o defeito NÃO ACONTECE neste motor. Varrendo
- * malha completa de 3, 4, 5 e 6 zonas (`tools/medir-leque.cjs`), com piso de
+ * malha completa de 3, 4, 5 e 6 zonas (`tools/measure-fan.cjs`), com piso de
  * varredura previsto de 2, 8, 20 e 40, o F2 medido é ZERO nas quatro. O
  * roteamento do #24 leva a aresta longa para a borda externa das faixas em vez
  * de reto entre colunas; o piso continua contando um cruzamento que o desenho
@@ -59,13 +59,13 @@
  */
 
 const path = require('path');
-const g = require(path.join(__dirname, '..', 'geometria.cjs'));
-const { semTags, arredonda, nome } = require(path.join(__dirname, 'comum.cjs'));
+const g = require(path.join(__dirname, '..', 'geometry.cjs'));
+const { semTags, arredonda, name } = require(path.join(__dirname, 'common.cjs'));
 
 /**
  * O descritor de um achado da família `F`, num lugar só.
  *
- * ⚠️ `conforme()` de `comum.cjs` faria isto para as 62 — e NÃO serve aqui, por
+ * ⚠️ `conforme()` de `common.cjs` faria isto para as 62 — e NÃO serve aqui, por
  * construção: ele decide a severidade lendo `porId(id).severidade` do índice, e
  * `porId('F1')` e `porId('F2')` são `undefined` justamente porque a família `F`
  * fica **fora** do índice de propósito. Usar `conforme` aqui quebraria no acesso,
@@ -74,10 +74,10 @@ const { semTags, arredonda, nome } = require(path.join(__dirname, 'comum.cjs'));
  * Então o descritor é escrito à mão, mas **uma vez** por checagem em vez de duas
  * (o ramo `inaplicavel` e o ramo com veredito repetiam os sete campos).
  */
-const achadoDeFaixa = (id, nomeDaChecagem) => (estado, mensagem, medida, ocorrencias = []) => ({
-  id, nome: nomeDaChecagem, familia: 'F', insumo: 'geometria',
+const achadoDeFaixa = (id, nomeDaChecagem) => (state, mensagem, medida, occurrences = []) => ({
+  id, name: nomeDaChecagem, family: 'F', input: 'geometria',
   severidadeMaxima: 'fail', semantica: true, calibravel: false,
-  estado, mensagem, medida, ocorrencias,
+  state, mensagem, medida, occurrences,
 });
 
 
@@ -94,56 +94,56 @@ const achadoDeFaixa = (id, nomeDaChecagem) => (estado, mensagem, medida, ocorren
  * desenha como `render: rotulo` e cuja "caixa" é âncora de rótulo, não região.
  */
 function f2(cena) {
-  const achado = achadoDeFaixa('F2', 'Aresta atravessando faixa alheia');
-  const comMembros = cena.faixas.filter(f => Array.isArray(f.membros) && f.membros.length);
-  const arestas = cena.arestas.filter(a => a.completa);
+  const finding = achadoDeFaixa('F2', 'Aresta atravessando faixa alheia');
+  const comMembros = cena.bands.filter(f => Array.isArray(f.members) && f.members.length);
+  const edges = cena.edges.filter(a => a.completa);
 
-  if (!comMembros.length || !arestas.length)
-    return achado('inaplicavel',
-      !arestas.length ? 'o diagrama não tem arestas' : 'o diagrama não tem faixa com membros declarados',
-      { faixas: comMembros.length, arestas: arestas.length });
+  if (!comMembros.length || !edges.length)
+    return finding('notApplicable',
+      !edges.length ? 'o diagrama não tem arestas' : 'o diagrama não tem faixa com membros declarados',
+      { bands: comMembros.length, edges: edges.length });
 
-  const dela = (ponta, f) => f.membros.some(m => m === ponta || cena.ehDescendente(ponta, m));
+  const dela = (tip, f) => f.members.some(m => m === tip || cena.ehDescendente(tip, m));
 
   const casos = [];
-  for (const a of arestas)
+  for (const a of edges)
     for (const f of comMembros) {
-      if (dela(a.de, f) || dela(a.para, f)) continue;
+      if (dela(a.from, f) || dela(a.to, f)) continue;
       if (!g.polilinhaCruzaRetangulo(a.pontos, f.caixa)) continue;
       casos.push({
-        o_que: `a aresta "${a.id}" (${a.de}→${a.para}) atravessa a faixa "${f.id}"` +
-          `${semTags(f.rotulo) ? ` (${semTags(f.rotulo)})` : ''}, de onde não sai nem para onde vai — ` +
+        o_que: `a aresta "${a.id}" (${a.from}→${a.to}) atravessa a faixa "${f.id}"` +
+          `${semTags(f.label) ? ` (${semTags(f.label)})` : ''}, de onde não sai nem para onde vai — ` +
           `o desenho põe o caminho dentro de uma zona que ele não toca`,
         ids: [a.id, f.id],
       });
     }
 
-  return achado(casos.length ? 'falha' : 'ok',
+  return finding(casos.length ? 'falha' : 'ok',
     casos.length
       ? `${casos.length} travessia(s) de faixa alheia — tolerância é zero, como em A5.5`
-      : `${arestas.length} aresta(s) contra ${comMembros.length} faixa(s): nenhuma corta faixa que não é dela`,
-    { faixas: comMembros.length, arestas: arestas.length, travessias_de_faixa: casos.length },
+      : `${edges.length} aresta(s) contra ${comMembros.length} faixa(s): nenhuma corta faixa que não é dela`,
+    { bands: comMembros.length, edges: edges.length, travessias_de_faixa: casos.length },
     casos);
 }
 
 module.exports = function extras(cena) {
   const saida = [];
-  const { faixas, nos } = cena;
-  const achado = achadoDeFaixa('F1', 'Faixa abraça exatamente seus membros');
+  const { bands, nodes } = cena;
+  const finding = achadoDeFaixa('F1', 'Faixa abraça exatamente seus membros');
 
   // ---------------------------------------------------------------- F1
-  const conferiveis = faixas.filter(f => Array.isArray(f.membros));
+  const conferiveis = bands.filter(f => Array.isArray(f.members));
   if (!conferiveis.length) {
-    saida.push(achado('inaplicavel',
-      faixas.length ? 'as faixas do plano não declaram membros' : 'o diagrama não tem faixas',
-      { faixas: faixas.length }));
+    saida.push(finding('notApplicable',
+      bands.length ? 'as faixas do plano não declaram membros' : 'o diagrama não tem faixas',
+      { bands: bands.length }));
     saida.push(f2(cena));
     return saida;
   }
 
   const casos = [];
   for (const f of conferiveis) {
-    const declarados = new Set(f.membros);
+    const declarados = new Set(f.members);
     for (const id of declarados) {
       const membro = cena.porElemento.get(id);
       if (!membro || !membro.caixa) continue;
@@ -154,25 +154,25 @@ module.exports = function extras(cena) {
           ids: [f.id, id],
         });
     }
-    for (const n of nos) {
+    for (const n of nodes) {
       if (declarados.has(n.id)) continue;
       const area = g.areaDaIntersecao(f.caixa, n.caixa);
       if (area <= 0) continue;
-      const dentro = g.contem(f.caixa, n.caixa);
+      const inside = g.contem(f.caixa, n.caixa);
       casos.push({
-        o_que: `a faixa "${f.id}" ${dentro ? 'contém' : 'encosta em'} ${nome(n)}, que não é membro dela — ` +
-          `o desenho afirma dele um atributo (${semTags(f.rotulo) || f.id}) que o modelo não declara`,
+        o_que: `a faixa "${f.id}" ${inside ? 'contém' : 'encosta em'} ${name(n)}, que não é membro dela — ` +
+          `o desenho afirma dele um atributo (${semTags(f.label) || f.id}) que o modelo não declara`,
         ids: [f.id, n.id],
         area: arredonda(area, 0),
       });
     }
   }
 
-  saida.push(achado(casos.length ? 'falha' : 'ok',
+  saida.push(finding(casos.length ? 'falha' : 'ok',
     casos.length
       ? `${casos.length} divergência(s) entre o que a faixa desenha e o que ela declara`
       : `${conferiveis.length} faixa(s) abraçam exatamente seus membros`,
-    { faixas: conferiveis.length, divergencias: casos.length },
+    { bands: conferiveis.length, divergencias: casos.length },
     casos));
 
   // ---------------------------------------------------------------- F2

@@ -3,7 +3,7 @@
 /**
  * As quatro células do #12 saem de TOKEN, e o tema `claro` reconstrói os literais.
  *
- * Quando o multi-conta entrou no motor, o #13 ainda não existia ali: `planejar.cjs`
+ * Quando o multi-conta entrou no motor, o #13 ainda não existia ali: `plan.cjs`
  * ganhou quatro estilos escritos à mão — o rótulo de OU, a linha do barramento, o
  * stub e o habilitador de permissão — com hex dentro. Enquanto o motor só desenhava
  * no branco isso não custava nada. No instante em que os dois passaram a rodar
@@ -25,16 +25,16 @@
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const temaMod = require(path.join(RAIZ, 'tema', 'tema.cjs'));
-const { razao, limiarDeTexto } = require(path.join(RAIZ, 'motor', 'contraste.cjs'));
+const temaMod = require(path.join(RAIZ, 'theme', 'theme.cjs'));
+const { razao, limiarDeTexto } = require(path.join(RAIZ, 'engine', 'contrast.cjs'));
 
 let falhas = 0;
-const ok = (cond, titulo, detalhe) => {
-  console.log(`  ${cond ? '✓' : '✗'} ${titulo}${detalhe ? `  — ${detalhe}` : ''}`);
+const ok = (cond, title, detail) => {
+  console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
   if (!cond) falhas++;
 };
 
-/** Os literais como o #12 os escreveu, copiados do `planejar.cjs` daquele ticket. */
+/** Os literais como o #12 os escreveu, copiados do `plan.cjs` daquele ticket. */
 const LITERAIS = {
   ou: 'text;html=1;fontSize=13;fontStyle=1;fontColor=#232F3E;align=left;verticalAlign=middle;',
   barramento: 'endArrow=none;html=1;strokeColor=#232F3E;strokeWidth=1.6;',
@@ -61,20 +61,20 @@ const chaves = s => Object.fromEntries(
   }));
 
 console.log('\n1 · o tema `claro` reconstrói os quatro literais do #12\n');
-const claro = temaMod.carregar('claro');
-for (const [nome, literal] of Object.entries(LITERAIS)) {
-  const a = chaves(literal), b = chaves(claro[nome]());
+const light = temaMod.carregar('light');
+for (const [name, literal] of Object.entries(LITERAIS)) {
+  const a = chaves(literal), b = chaves(light[name]());
   const perdidas = Object.keys(a).filter(k => a[k] !== b[k]);
   const novas = Object.keys(b).filter(k => !(k in a));
-  const inesperadas = novas.filter(k => !ACRESCIMOS[nome].includes(k));
-  ok(perdidas.length === 0 && inesperadas.length === 0, `${nome}`,
+  const inesperadas = novas.filter(k => !ACRESCIMOS[name].includes(k));
+  ok(perdidas.length === 0 && inesperadas.length === 0, `${name}`,
     perdidas.length ? `divergiu em ${perdidas.map(k => `${k}: ${a[k]} → ${b[k]}`).join(', ')}`
       : inesperadas.length ? `chave nova não prevista: ${inesperadas.join(', ')}`
         : `${Object.keys(a).length} chaves idênticas` + (novas.length ? ` + ${novas.join(', ')}` : ''));
 }
 
 console.log('\n2 · o mapeamento token → literal, uma asserção por linha\n');
-const t = claro.tokens;
+const t = light.tokens;
 /**
  * ⚠️ ISTO ERA UM `console.log` E SÓ — uma seção numerada que não sabia falhar,
  * pega na revisão do #23. Ela imprimia os valores dos tokens e chamava aquilo de
@@ -82,14 +82,14 @@ const t = claro.tokens;
  * escreveu à mão**, e isso é uma comparação.
  */
 for (const [token, valor, estilo, chave] of [
-  ['tinta.forte', t.tinta.forte, 'ou', 'fontColor'],
-  ['tinta.fraca', t.tinta.fraca, 'habilitador', 'strokeColor'],
-  ['tinta.halo', t.tinta.halo, 'stub', 'labelBackgroundColor'],
-  ['aresta.cor', t.aresta.cor, 'barramento', 'strokeColor'],
-  ['aresta.espessura', t.aresta.espessura, 'barramento', 'strokeWidth'],
-  ['aresta.ponta', t.aresta.ponta, 'stub', 'endArrow'],
-  ['texto.aresta', t.texto.aresta, 'stub', 'fontSize'],
-  ['texto.grupo + 1', t.texto.grupo + 1, 'ou', 'fontSize'],
+  ['tinta.forte', t.ink.strong, 'ou', 'fontColor'],
+  ['tinta.fraca', t.ink.weak, 'habilitador', 'strokeColor'],
+  ['tinta.halo', t.ink.halo, 'stub', 'labelBackgroundColor'],
+  ['aresta.cor', t.aresta.color, 'barramento', 'strokeColor'],
+  ['aresta.espessura', t.aresta.thickness, 'barramento', 'strokeWidth'],
+  ['aresta.ponta', t.aresta.tip, 'stub', 'endArrow'],
+  ['texto.aresta', t.text.aresta, 'stub', 'fontSize'],
+  ['texto.grupo + 1', t.text.group + 1, 'ou', 'fontSize'],
 ]) {
   const noLiteral = chaves(LITERAIS[estilo])[chave];
   ok(String(valor) === String(noLiteral), `${String(token).padEnd(18)} → S_${estilo.toUpperCase()}.${chave}`,
@@ -97,8 +97,8 @@ for (const [token, valor, estilo, chave] of [
 }
 
 console.log('\n3 · e no deck escuro os quatro passam no contraste — o que a troca comprou\n');
-const escuro = temaMod.carregar('escuro');
-const fundo = escuro.tokens.pagina.cor;
+const dark = temaMod.carregar('dark');
+const background = dark.tokens.page.color;
 /**
  * QUAIS dos quatro o literal do #12 teria QUEBRADO no escuro — e o número está
  * escrito porque o valor da troca é ele.
@@ -109,17 +109,17 @@ const fundo = escuro.tokens.pagina.cor;
  * que o dia em que a paleta mudar apareça aqui em vez de sumir.
  */
 const QUEBRARIAM = new Set(['ou', 'barramento', 'stub']);
-for (const nome of Object.keys(LITERAIS)) {
-  const antes = chaves(LITERAIS[nome]).strokeColor || chaves(LITERAIS[nome]).fontColor;
-  const depois = (k => k.strokeColor || k.fontColor)(chaves(escuro[nome]()));
-  const rAntes = razao(antes, fundo), rDepois = razao(depois, fundo);
+for (const name of Object.keys(LITERAIS)) {
+  const antes = chaves(LITERAIS[name]).strokeColor || chaves(LITERAIS[name]).fontColor;
+  const depois = (k => k.strokeColor || k.fontColor)(chaves(dark[name]()));
+  const rAntes = razao(antes, background), rDepois = razao(depois, background);
   // rótulo é texto (WCAG 1.4.3) e traço é grafismo (1.4.11) — o piso do texto sai
   // de `limiarDeTexto`, que já conhece o corte de 24px/18,5px em negrito
-  const piso = nome === 'ou' ? limiarDeTexto(escuro.ou()) : 3.0;
-  ok(rDepois >= piso, `${nome} no escuro passa por token`,
+  const piso = name === 'ou' ? limiarDeTexto(dark.ou()) : 3.0;
+  ok(rDepois >= piso, `${name} no escuro passa por token`,
     `${depois} = ${rDepois.toFixed(2)}:1 (piso ${piso}:1)`);
-  ok((rAntes < piso) === QUEBRARIAM.has(nome),
-    `e o literal do #12 ${QUEBRARIAM.has(nome) ? 'QUEBRARIA' : 'passaria'} — como esperado`,
+  ok((rAntes < piso) === QUEBRARIAM.has(name),
+    `e o literal do #12 ${QUEBRARIAM.has(name) ? 'QUEBRARIA' : 'passaria'} — como esperado`,
     `${antes} = ${rAntes.toFixed(2)}:1`);
 }
 

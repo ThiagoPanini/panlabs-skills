@@ -3,11 +3,11 @@
 /**
  * A mesma decisão, conferida NO ARQUIVO EMITIDO — não na regra que eu escrevi.
  *
- * O `check-camada.cjs` prova que a REGRA ordena certo, e ele faz isso chamando
- * a regra. Se um dia o `dispor.cjs` parar de consultar a camada, aquela régua
+ * O `check-layer.cjs` prova que a REGRA ordena certo, e ele faz isso chamando
+ * a regra. Se um dia o `layout.cjs` parar de consultar a camada, aquela régua
  * continua verde e o desenho sai errado: ela estaria conferindo a minha
  * intenção, não o produto. É a lição que o #17 pagou caro — "checagem estática
- * não substitui render" — e o formato aqui é o do `check-travessia.cjs` do #12.
+ * não substitui render" — e o formato aqui é o do `check-traversal.cjs` do #12.
  *
  * Esta lê o `.drawio` que o motor acabou de emitir, extrai o Y de cada célula
  * de subnet e confere que a ordem de cima para baixo é a que o ticket espera.
@@ -22,20 +22,20 @@ const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
 
-const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
+const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
 
 /**
  * O que o ticket #22 espera ver, de cima para baixo, em cada modelo.
  * É a tabela do enunciado, mais os casos que este protótipo acrescentou.
  */
 const ESPERADO = {
-  'app-dados': ['App subnet', 'Data subnet'],
-  'web-dados': ['Web subnet', 'Data subnet'],
+  'app-data': ['App subnet', 'Data subnet'],
+  'web-data': ['Web subnet', 'Data subnet'],
   'ingest-core': ['Ingest subnet', 'Core subnet'],
-  'tres-camadas-mistas': ['Firewall subnet', 'Worker subnet', 'Analytics subnet'],
-  'subnet-vazia-declarada': ['App subnet', 'Reserved subnet'],
-  'web-dados-com-fluxo': ['Public subnet', 'Web subnet', 'Data subnet'],
-  'elk-sem-camada': ['App subnet', 'Reserved subnet'],
+  'three-mixed-layers': ['Firewall subnet', 'Worker subnet', 'Analytics subnet'],
+  'declared-empty-subnet': ['App subnet', 'Reserved subnet'],
+  'web-data-with-flow': ['Public subnet', 'Web subnet', 'Data subnet'],
+  'elk-no-layer': ['App subnet', 'Reserved subnet'],
 };
 
 /**
@@ -52,24 +52,24 @@ function linhasDoArquivo(xml) {
   const celulas = [...xml.matchAll(
     /<mxCell id="([^"]+)" value="([^"]*)" style="([^"]*)"[^>]*>\s*<mxGeometry x="(-?\d+)" y="(-?\d+)"/g)]
     .filter(m => /group_security_group/.test(m[3]))
-    .map(m => ({ id: m[1], rotulo: m[2], y: Number(m[5]) }));
+    .map(m => ({ id: m[1], label: m[2], y: Number(m[5]) }));
 
   celulas.sort((a, b) => a.y - b.y || a.id.localeCompare(b.id));
   const vistos = new Set();
-  return celulas.filter(c => !vistos.has(c.rotulo) && vistos.add(c.rotulo)).map(c => c.rotulo);
+  return celulas.filter(c => !vistos.has(c.label) && vistos.add(c.label)).map(c => c.label);
 }
 
 (async () => {
   let falhas = 0;
   console.log('\n  ordem das linhas LIDA DO ARQUIVO EMITIDO\n');
 
-  for (const [nome, esperado] of Object.entries(ESPERADO)) {
-    const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', `${nome}.json`), 'utf8'));
+  for (const [name, esperado] of Object.entries(ESPERADO)) {
+    const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', `${name}.json`), 'utf8'));
     const { xml } = await gerar(modelo);
     const obtido = linhasDoArquivo(xml);
     const ok = JSON.stringify(obtido) === JSON.stringify(esperado);
     if (!ok) falhas++;
-    console.log(`  ${ok ? '✓' : '✗'} ${nome.padEnd(24)} ${obtido.join(' → ')}`);
+    console.log(`  ${ok ? '✓' : '✗'} ${name.padEnd(24)} ${obtido.join(' → ')}`);
     if (!ok) console.log(`      esperado: ${esperado.join(' → ')}`);
   }
 
@@ -78,8 +78,8 @@ function linhasDoArquivo(xml) {
    * tudo. Aqui a subnet de dados é declarada como borda — o desenho TEM de
    * inverter, e se não inverter é porque o arquivo não está sendo lido.
    */
-  const controle = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'web-dados.json'), 'utf8'));
-  for (const n of controle.nos) if (n.rotulo === 'Data subnet') n.camada = 'borda';
+  const controle = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'web-data.json'), 'utf8'));
+  for (const n of controle.nodes) if (n.label === 'Data subnet') n.layer = 'edge';
   const { xml } = await gerar(controle);
   const invertido = linhasDoArquivo(xml);
   const inverteu = JSON.stringify(invertido) === JSON.stringify(['Data subnet', 'Web subnet']);

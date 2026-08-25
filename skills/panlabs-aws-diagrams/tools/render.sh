@@ -38,7 +38,7 @@ codigo=$?
 # o nome do arquivo aparece na linha de comando de QUEM CHAMOU este script, e
 # o pkill mata o chamador junto. Custou uma bisseção inteira em silêncio — o
 # lote parava na terceira linha sem erro nenhum. Limpeza de sobra é trabalho do
-# `limpar-render.sh`, que sabe distinguir o que é nosso.
+# `clean-render.sh`, que sabe distinguir o que é nosso.
 
 if [ ! -s "$SAIDA" ]; then
   echo "✗ $(basename "$ENTRADA") não rendeu (código $codigo)"

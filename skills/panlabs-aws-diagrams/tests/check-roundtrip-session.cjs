@@ -23,20 +23,20 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { abrir } = require('../sessao/abrir.cjs');
-const { canonicalizar } = require('../sessao/impressao.cjs');
+const { abrir } = require('../session/open.cjs');
+const { canonicalizar } = require('../session/fingerprint.cjs');
 
 const RAIZ = path.join(__dirname, '..');
-const ARQ = path.join(RAIZ, 'saida', 'varejo.drawio');
+const ARQ = path.join(RAIZ, 'output', 'retail.drawio');
 const { binario } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
 const DRAWIO = binario(process.argv[2]);
 
-if (!fs.existsSync(ARQ)) { console.error('  rode tools/aprovar.cjs e tools/retomar.cjs antes.'); process.exit(1); }
+if (!fs.existsSync(ARQ)) { console.error('  rode tools/approve.cjs e tools/resume.cjs antes.'); process.exit(1); }
 
 const antes = abrir(fs.readFileSync(ARQ, 'utf8'));
 let falhas = 0;
-const diz = (rotulo, ok, extra = '') => {
-  console.log(`    ${rotulo.padEnd(52)} ${ok ? '✓' : '✗'} ${extra}`);
+const diz = (label, ok, extra = '') => {
+  console.log(`    ${label.padEnd(52)} ${ok ? '✓' : '✗'} ${extra}`);
   if (!ok) falhas++;
 };
 
@@ -44,10 +44,10 @@ console.log('\n  Estatico (roda em qualquer maquina)\n');
 diz('reconhecido como nosso', antes.nosso, antes.comoReconheci.join(' · '));
 diz('as duas paginas trazem selo', antes.paginas.every(p => p.selo && p.selo.panlabsEsquema), `${antes.paginas.length} pagina(s)`);
 diz('as copias do modelo concordam', !antes.conflitoDeCopias);
-diz('todas as paginas intactas', antes.paginas.every(p => p.estado === 'intacto'),
-  antes.paginas.map(p => `${p.vista}=${p.estado}`).join(' '));
-diz('o dossie viajou inteiro', !!(antes.sessao.dossie && antes.sessao.dossie.acordo && antes.sessao.dossie.candidatas),
-  `${(antes.sessao.dossie.candidatas || []).length} candidata(s), ${(antes.sessao.dossie.achados || []).length} achado(s)`);
+diz('todas as paginas intactas', antes.paginas.every(p => p.state === 'intacto'),
+  antes.paginas.map(p => `${p.view}=${p.state}`).join(' '));
+diz('o dossie viajou inteiro', !!(antes.sessao.dossier && antes.sessao.dossier.agreement && antes.sessao.dossier.candidates),
+  `${(antes.sessao.dossier.candidates || []).length} candidata(s), ${(antes.sessao.dossier.findings || []).length} achado(s)`);
 
 if (!fs.existsSync(DRAWIO)) {
   console.log(`\n  draw.io headless ausente em ${DRAWIO} — a camada do app fica de fora (premissa 8).`);
@@ -96,10 +96,10 @@ diz('as duas paginas voltaram', depois.paginas.length === antes.paginas.length,
 diz('o selo sobreviveu nas duas', depois.paginas.every(p => p.selo && p.selo.panlabsEsquema));
 diz('o modelo de sessao voltou identico', canonicalizar(depois.sessao) === canonicalizar(antes.sessao));
 diz('o dossie opaco voltou identico',
-  canonicalizar(depois.sessao && depois.sessao.dossie) === canonicalizar(antes.sessao.dossie));
+  canonicalizar(depois.sessao && depois.sessao.dossier) === canonicalizar(antes.sessao.dossier));
 diz('AINDA LE COMO INTACTO depois de o app reescrever',
-  depois.paginas.every(p => p.estado === 'intacto'),
-  depois.paginas.map(p => `${p.vista}=${p.estado}`).join(' '));
+  depois.paginas.every(p => p.state === 'intacto'),
+  depois.paginas.map(p => `${p.view}=${p.state}`).join(' '));
 console.log(`\n    bytes: ${fs.statSync(ARQ).size} → ${bruto.length}` +
   `  (o app ${bruto.length === fs.statSync(ARQ).size ? 'nao mudou o tamanho' : 'reescreveu o arquivo'})`);
 

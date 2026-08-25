@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Expõe a skill nos dois lugares onde os harnesses da casa procuram.
 #
-#   tools/instalar.sh              instala (ou reaponta) os dois links
-#   tools/instalar.sh --conferir   só confere, não escreve nada
-#   tools/instalar.sh --forcar     substitui até diretório real (perigoso)
+#   tools/install.sh              instala (ou reaponta) os dois links
+#   tools/install.sh --conferir   só confere, não escreve nada
+#   tools/install.sh --forcar     substitui até diretório real (perigoso)
 #
 # A premissa 7 do mapa exige a skill auto-contida e publicável: zero binário,
 # zero rede, zero `npm install` em runtime. Instalar, então, é só apontar — e

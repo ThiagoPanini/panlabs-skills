@@ -58,7 +58,7 @@ function chave(style, k) {
   const m = new RegExp('(?:^|;)' + k + '=([^;]*)').exec(style || '');
   return m ? m[1] : null;
 }
-const cor = v => (v && /^#[0-9A-Fa-f]{6}$/.test(v)) ? v : null;
+const color = v => (v && /^#[0-9A-Fa-f]{6}$/.test(v)) ? v : null;
 
 /** Limiar de texto (A7.1): 3:1 vale só para texto grande. */
 function limiarDeTexto(style) {
@@ -80,11 +80,11 @@ function limiarDeTexto(style) {
 function fundoEfetivo(cel, porId, fundoPagina, pularProprio) {
   let atual = pularProprio ? porId.get(cel.pai) : cel;
   while (atual) {
-    const f = cor(chave(atual.style, 'fillColor'));
-    if (f) return { cor: f, de: atual.id };
+    const f = color(chave(atual.style, 'fillColor'));
+    if (f) return { color: f, from: atual.id };
     atual = porId.get(atual.pai);
   }
-  return { cor: fundoPagina, de: '(página)' };
+  return { color: fundoPagina, from: '(página)' };
 }
 
 const ehAws4 = style => /shape=mxgraph\.aws4\./.test(style || '');
@@ -98,45 +98,45 @@ const ehGrupoAws4 = style => /shape=mxgraph\.aws4\.(group|groupCenter|group2)\b/
 function paresDe(cel, porId, fundoPagina) {
   const st = cel.style || '';
   const pares = [];
-  const rotulo = String(cel.rotulo || '').replace(/<[^>]+>/g, '').trim();
+  const label = String(cel.label || '').replace(/<[^>]+>/g, '').trim();
 
-  if (cel.tipo === 'aresta') {
-    const halo = cor(chave(st, 'labelBackgroundColor'));
-    const traco = cor(chave(st, 'strokeColor'));
-    if (traco) pares.push({ regra: 'A7.2', o_que: 'traço da aresta', frente: traco, fundo: fundoPagina, alvo: 3.0 });
-    if (rotulo) pares.push({ regra: 'A7.1', o_que: 'rótulo da aresta', frente: cor(chave(st, 'fontColor')) || '#000000',
-      fundo: halo || fundoPagina, alvo: limiarDeTexto(st) });
+  if (cel.kind === 'aresta') {
+    const halo = color(chave(st, 'labelBackgroundColor'));
+    const traco = color(chave(st, 'strokeColor'));
+    if (traco) pares.push({ rule: 'A7.2', o_que: 'traço da aresta', frente: traco, background: fundoPagina, target: 3.0 });
+    if (label) pares.push({ rule: 'A7.1', o_que: 'rótulo da aresta', frente: color(chave(st, 'fontColor')) || '#000000',
+      background: halo || fundoPagina, target: limiarDeTexto(st) });
     return pares;
   }
 
-  const fill = cor(chave(st, 'fillColor'));
-  const stroke = cor(chave(st, 'strokeColor'));
+  const fill = color(chave(st, 'fillColor'));
+  const stroke = color(chave(st, 'strokeColor'));
 
   if (ehIconeDeServico(st)) {
     // o quadrado da categoria contra o que está atrás dele — ÁREA, portanto aviso
     const atras = fundoEfetivo(cel, porId, fundoPagina, true);
-    if (fill) pares.push({ regra: 'A7.2a', o_que: 'quadrado do ícone', frente: fill, fundo: atras.cor, alvo: 3.0, aviso: true });
+    if (fill) pares.push({ rule: 'A7.2a', o_que: 'quadrado do ícone', frente: fill, background: atras.color, target: 3.0, aviso: true });
     // e o GLIFO contra o quadrado — `strokeColor` pinta o glifo (#4 §3.2)
-    if (stroke && fill) pares.push({ regra: 'A7.2', o_que: 'glifo dentro do ícone', frente: stroke, fundo: fill, alvo: 3.0 });
+    if (stroke && fill) pares.push({ rule: 'A7.2', o_que: 'glifo dentro do ícone', frente: stroke, background: fill, target: 3.0 });
     // o rótulo do service icon é desenhado FORA da caixa (verticalLabelPosition=bottom):
     // ele cai sobre o pai, nunca sobre o próprio quadrado
-    if (rotulo) pares.push({ regra: 'A7.1', o_que: 'rótulo do ícone', frente: cor(chave(st, 'fontColor')) || '#000000',
-      fundo: atras.cor, alvo: limiarDeTexto(st) });
+    if (label) pares.push({ rule: 'A7.1', o_que: 'rótulo do ícone', frente: color(chave(st, 'fontColor')) || '#000000',
+      background: atras.color, target: limiarDeTexto(st) });
     return pares;
   }
 
   if (ehAws4(st)) {   // grupo, ou ícone monocromático de recurso
     const atras = fundoEfetivo(cel, porId, fundoPagina, true);
-    const grupo = ehGrupoAws4(st);
-    if (stroke) pares.push({ regra: 'A7.2', o_que: grupo ? 'borda do grupo' : 'traço do ícone',
-      frente: stroke, fundo: atras.cor, alvo: 3.0 });
+    const group = ehGrupoAws4(st);
+    if (stroke) pares.push({ rule: 'A7.2', o_que: group ? 'borda do grupo' : 'traço do ícone',
+      frente: stroke, background: atras.color, target: 3.0 });
     // Num grupo, quem carrega a fronteira é a BORDA; o preenchimento é lavagem e
     // a WCAG 1.4.11 fala de "the important parts". Medir o tingimento contra a
     // página reprovaria um cinza-claro que não precisa ser visto — e deixaria
     // passar o que de fato importa, que é o efeito do tingimento sobre QUEM CAI
     // EM CIMA DELE. Esse efeito já é medido: entra como `fundo efetivo` dos
     // filhos. Num ícone monocromático é o contrário: `fillColor` É o traço.
-    if (fill && !grupo) pares.push({ regra: 'A7.2', o_que: 'traço do ícone monocromático', frente: fill, fundo: atras.cor, alvo: 3.0 });
+    if (fill && !group) pares.push({ rule: 'A7.2', o_que: 'traço do ícone monocromático', frente: fill, background: atras.color, target: 3.0 });
     /**
      * ⚠️ O CORTE DE Z DO RÓTULO DE GRUPO É OUTRO, e errar aqui é falso negativo.
      *
@@ -156,18 +156,18 @@ function paresDe(cel, porId, fundoPagina) {
     // sobre o pai — medi-lo contra o próprio fill dá 1,00:1 sempre, porque tinta e
     // glifo são a mesma cor do tema. A primeira versão desta correção não fez a
     // distinção e reprovou os três temas de uma vez; a suite pegou.
-    const sob = grupo ? fundoEfetivo(cel, porId, fundoPagina, false) : atras;
-    if (rotulo) pares.push({ regra: 'A7.1', o_que: grupo ? 'rótulo do grupo' : 'rótulo do ícone',
-      frente: cor(chave(st, 'fontColor')) || '#000000',
-      fundo: cor(chave(st, 'labelBackgroundColor')) || sob.cor, alvo: limiarDeTexto(st) });
+    const sob = group ? fundoEfetivo(cel, porId, fundoPagina, false) : atras;
+    if (label) pares.push({ rule: 'A7.1', o_que: group ? 'rótulo do grupo' : 'rótulo do ícone',
+      frente: color(chave(st, 'fontColor')) || '#000000',
+      background: color(chave(st, 'labelBackgroundColor')) || sob.color, target: limiarDeTexto(st) });
     return pares;
   }
 
   // retângulo comum: bloco lógico, nota, título, subtítulo
   const atras = fundoEfetivo(cel, porId, fundoPagina, true);
-  if (stroke) pares.push({ regra: 'A7.2', o_que: 'borda da caixa', frente: stroke, fundo: atras.cor, alvo: 3.0 });
-  if (rotulo) pares.push({ regra: 'A7.1', o_que: 'texto', frente: cor(chave(st, 'fontColor')) || '#000000',
-    fundo: fill || atras.cor, alvo: limiarDeTexto(st) });
+  if (stroke) pares.push({ rule: 'A7.2', o_que: 'borda da caixa', frente: stroke, background: atras.color, target: 3.0 });
+  if (label) pares.push({ rule: 'A7.1', o_que: 'text', frente: color(chave(st, 'fontColor')) || '#000000',
+    background: fill || atras.color, target: limiarDeTexto(st) });
   return pares;
 }
 
@@ -183,7 +183,7 @@ function corNaoEUnicoCanal(celulas) {
   const assinaturas = new Map();
   for (const c of celulas) {
     const st = c.style || '';
-    if (c.tipo === 'aresta' || !ehAws4(st)) continue;
+    if (c.kind === 'aresta' || !ehAws4(st)) continue;
     const fill = chave(st, 'fillColor') || '-';
     const outros = [chave(st, 'strokeColor') || '-', chave(st, 'dashed') || '0',
       chave(st, 'resIcon') || chave(st, 'grIcon') || (/shape=([^;]*)/.exec(st) || [])[1] || '-'].join('|');
@@ -192,38 +192,38 @@ function corNaoEUnicoCanal(celulas) {
   }
   const violacoes = [];
   for (const [outros, fills] of assinaturas)
-    if (fills.size > 1) violacoes.push({ regra: 'A7.3', o_que: `${fills.size} significados que diferem só no fill`, detalhe: outros });
+    if (fills.size > 1) violacoes.push({ rule: 'A7.3', o_que: `${fills.size} significados que diferem só no fill`, detail: outros });
   return violacoes;
 }
 
 // ---------------------------------------------------------------- portão
 
 function medir(plano) {
-  const fundoPagina = plano.fundo || '#FFFFFF';
+  const fundoPagina = plano.background || '#FFFFFF';
   const porId = new Map(plano.celulas.map(c => [c.id, c]));
-  const achados = [];
+  const findings = [];
 
   for (const cel of plano.celulas) {
     if (cel.visivel === false) continue;
     for (const par of paresDe(cel, porId, fundoPagina)) {
-      const r = razao(par.frente, par.fundo);
+      const r = razao(par.frente, par.background);
       if (r === null) continue;
-      achados.push({ ...par, id: cel.id, razao: r, passa: r >= par.alvo });
+      findings.push({ ...par, id: cel.id, razao: r, passa: r >= par.target });
     }
   }
-  achados.push(...corNaoEUnicoCanal(plano.celulas).map(v => ({ ...v, id: '(paleta)', razao: null, passa: false, alvo: null })));
+  findings.push(...corNaoEUnicoCanal(plano.celulas).map(v => ({ ...v, id: '(paleta)', razao: null, passa: false, target: null })));
 
-  const abaixo = achados.filter(a => !a.passa);
+  const abaixo = findings.filter(a => !a.passa);
   const falhas = abaixo.filter(a => !a.aviso);
   const avisos = abaixo.filter(a => a.aviso);
   return {
     ok: falhas.length === 0,
-    total: achados.length,
+    total: findings.length,
     falhas, avisos,
-    piorTexto: Math.min(Infinity, ...achados.filter(a => a.regra === 'A7.1').map(a => a.razao)),
-    piorGrafismo: Math.min(Infinity, ...achados.filter(a => a.regra === 'A7.2').map(a => a.razao)),
-    piorArea: Math.min(Infinity, ...achados.filter(a => a.regra === 'A7.2a').map(a => a.razao)),
-    achados,
+    piorTexto: Math.min(Infinity, ...findings.filter(a => a.rule === 'A7.1').map(a => a.razao)),
+    piorGrafismo: Math.min(Infinity, ...findings.filter(a => a.rule === 'A7.2').map(a => a.razao)),
+    piorArea: Math.min(Infinity, ...findings.filter(a => a.rule === 'A7.2a').map(a => a.razao)),
+    findings,
   };
 }
 
@@ -251,7 +251,7 @@ function medirTodos(paginas) {
     piorTexto: partes.map(p => p.piorTexto).reduce(min, Infinity),
     piorGrafismo: partes.map(p => p.piorGrafismo).reduce(min, Infinity),
     piorArea: partes.map(p => p.piorArea).reduce(min, Infinity),
-    achados: partes.flatMap(p => p.achados),
+    findings: partes.flatMap(p => p.findings),
     paginas: partes.length,
   };
 }
@@ -260,16 +260,16 @@ function medirTodos(paginas) {
 function resumir(r, quais) {
   const grupos = new Map();
   for (const f of (quais || r.falhas)) {
-    const k = `${f.regra}|${f.o_que}|${f.frente}|${f.fundo}`;
+    const k = `${f.rule}|${f.o_que}|${f.frente}|${f.background}`;
     if (!grupos.has(k)) grupos.set(k, { ...f, quantos: 0, ids: [] });
     const g = grupos.get(k);
     g.quantos++; if (g.ids.length < 3) g.ids.push(f.id);
   }
   return [...grupos.values()].sort((a, b) => (a.razao || 0) - (b.razao || 0)).map(g =>
     g.razao === null
-      ? `${g.regra}  ${g.o_que} — ${g.detalhe}`
-      : `${g.regra}  ${g.o_que}: ${g.frente} sobre ${g.fundo} = ${g.razao.toFixed(2)}:1 ` +
-        `(precisa ${g.alvo.toFixed(1)}:1) — ${g.quantos}× [${g.ids.join(', ')}${g.quantos > 3 ? ', …' : ''}]`);
+      ? `${g.rule}  ${g.o_que} — ${g.detail}`
+      : `${g.rule}  ${g.o_que}: ${g.frente} sobre ${g.background} = ${g.razao.toFixed(2)}:1 ` +
+        `(precisa ${g.target.toFixed(1)}:1) — ${g.quantos}× [${g.ids.join(', ')}${g.quantos > 3 ? ', …' : ''}]`);
 }
 
 module.exports = { medir, medirTodos, resumir, razao, luminancia, paresDe, limiarDeTexto, fundoEfetivo, chave };

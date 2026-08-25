@@ -17,7 +17,7 @@
  * disjuntos" — as duas com tolerância zero, e A4.2 chamada de "a falha de maior
  * gravidade semântica de todo o validador".
  *
- * Só que este motor desenha dois tipos de caixa, e o `resolver.cjs` é explícito
+ * Só que este motor desenha dois tipos de caixa, e o `resolve.cjs` é explícito
  * sobre o segundo: **"Uma faixa existe para CRUZAR outras caixas."** Uma faixa
  * de AZ atravessa as subnets; um Auto Scaling group abraça EC2 de duas AZs
  * distintas. Aplicar A4.2 e A4.3 sobre elas reprova o desenho correto, e reprova
@@ -45,14 +45,14 @@
  */
 
 const path = require('path');
-const { LIMIARES } = require(path.join(__dirname, 'indice.cjs'));
-const cor = require(path.join(__dirname, 'cor.cjs'));
-const geo = require(path.join(__dirname, 'geometria.cjs'));
+const { LIMIARES } = require(path.join(__dirname, 'index.cjs'));
+const color = require(path.join(__dirname, 'color.cjs'));
+const geo = require(path.join(__dirname, 'geometry.cjs'));
 
 const v = chave => LIMIARES[chave].valor;
 
 /** Células que são moldura do documento, não conteúdo do diagrama. */
-const CHROME = new Set(['titulo', 'subtitulo', 'notas', 'panlabs-modelo']);
+const CHROME = new Set(['title', 'subtitle', 'notes', 'panlabs-modelo']);
 
 // -------------------------------------------------------------------- estilo
 
@@ -81,7 +81,7 @@ const num = (e, chave, padrao) => {
   return Number.isFinite(x) ? x : padrao;
 };
 /** `none` e ausente são coisas diferentes de uma cor, e as duas viram `null`. */
-const corDe = (e, chave) => (cor.ehCor(e[chave]) ? e[chave] : null);
+const corDe = (e, chave) => (color.ehCor(e[chave]) ? e[chave] : null);
 
 // -------------------------------------------------------------------- rótulo
 
@@ -99,9 +99,9 @@ const corDe = (e, chave) => (cor.ehCor(e[chave]) ? e[chave] : null);
  * motor RESERVA espaço e nunca CONFERE se a reserva bastou, e é a conferência
  * que A3.2, A3.3 e A3.4 fazem. A palavra final continua sendo do render (B7).
  */
-function caixaDeRotulo(caixa, rotulo, estilo) {
-  const texto = String(rotulo || '').replace(/<[^>]+>/g, '').trim();
-  if (!texto) return null;
+function caixaDeRotulo(caixa, label, estilo) {
+  const text = String(label || '').replace(/<[^>]+>/g, '').trim();
+  if (!text) return null;
 
   const fonte = num(estilo, 'fontSize', 12);
   const escala = fonte / 12;
@@ -113,7 +113,7 @@ function caixaDeRotulo(caixa, rotulo, estilo) {
     const porLinha = Math.max(1, Math.floor(larg / porCaractere));
     let linhas = 1;
     let atual = 0;
-    for (const palavra of texto.split(/\s+/)) {
+    for (const palavra of text.split(/\s+/)) {
       const custo = palavra.length + (atual ? 1 : 0);
       if (atual + custo > porLinha && atual > 0) { linhas++; atual = palavra.length; }
       else atual += custo;
@@ -128,15 +128,15 @@ function caixaDeRotulo(caixa, rotulo, estilo) {
     const recuo = 'grIcon' in estilo || estilo.spacingLeft ? num(estilo, 'spacingLeft', 30) : 8;
     return {
       x: caixa.x + recuo, y: caixa.y,
-      w: Math.min(caixa.w - recuo, texto.length * porCaractere),
+      w: Math.min(caixa.w - recuo, text.length * porCaractere),
       h: v('alturaDaFaixaDeTitulo'),
-      onde: 'titulo',
+      onde: 'title',
     };
   }
 
   // Folha com rótulo por fora: faixa centrada logo abaixo do ícone.
   if (estilo.verticalLabelPosition === 'bottom') {
-    const larg = Math.min(largMax, texto.length * porCaractere);
+    const larg = Math.min(largMax, text.length * porCaractere);
     return {
       x: caixa.x + (caixa.w - larg) / 2, y: caixa.y + caixa.h,
       w: larg, h: Math.max(v('alturaMinimaDeRotulo'), quebra(largMax) * alturaLinha),
@@ -145,7 +145,7 @@ function caixaDeRotulo(caixa, rotulo, estilo) {
   }
 
   // Rótulo interno: a caixa é a própria caixa do objeto.
-  return { x: caixa.x, y: caixa.y, w: caixa.w, h: caixa.h, onde: 'dentro' };
+  return { x: caixa.x, y: caixa.y, w: caixa.w, h: caixa.h, onde: 'inside' };
 }
 
 // -------------------------------------------------------------------- aresta
@@ -163,10 +163,10 @@ function caixaDeRotulo(caixa, rotulo, estilo) {
  * checagem reporta nesse caso — o que ela não faz é passar calada fingindo ter
  * conferido.
  */
-function pontaNoPerimetro(caixa, alvo) {
+function pontaNoPerimetro(caixa, target) {
   const c = geo.centro(caixa);
-  const dx = alvo.x - c.x;
-  const dy = alvo.y - c.y;
+  const dx = target.x - c.x;
+  const dy = target.y - c.y;
   if (Math.abs(dx) < geo.EPS && Math.abs(dy) < geo.EPS) return c;
   const tx = Math.abs(dx) < geo.EPS ? Infinity : (caixa.w / 2) / Math.abs(dx);
   const ty = Math.abs(dy) < geo.EPS ? Infinity : (caixa.h / 2) / Math.abs(dy);
@@ -190,14 +190,14 @@ function criarCena(plano, opts = {}) {
   let modelo = opts.modelo || null;
   if (!modelo) {
     const embutido = celulas.find(c => c.id === 'panlabs-modelo');
-    if (embutido && embutido.dados && embutido.dados.panlabsModelo) {
-      try { modelo = JSON.parse(embutido.dados.panlabsModelo); } catch { modelo = null; }
+    if (embutido && embutido.data && embutido.data.panlabsModelo) {
+      try { modelo = JSON.parse(embutido.data.panlabsModelo); } catch { modelo = null; }
     }
   }
 
-  const idsDeFaixa = new Set((modelo && modelo.faixas || []).map(f => f.id));
-  const membrosDaFaixa = new Map((modelo && modelo.faixas || []).map(f => [f.id, f.membros || []]));
-  const noDoModelo = new Map((modelo && modelo.nos || []).map(n => [n.id, n]));
+  const idsDeFaixa = new Set((modelo && modelo.bands || []).map(f => f.id));
+  const membrosDaFaixa = new Map((modelo && modelo.bands || []).map(f => [f.id, f.members || []]));
+  const noDoModelo = new Map((modelo && modelo.nodes || []).map(n => [n.id, n]));
 
   // 2. coordenada absoluta, resolvendo a cadeia de pais
   const porId = new Map();
@@ -219,10 +219,10 @@ function criarCena(plano, opts = {}) {
   const elementos = [];
   celulas.forEach((c, z) => {
     const estilo = lerEstilo(c.style);
-    if (c.tipo === 'aresta') {
+    if (c.kind === 'aresta') {
       elementos.push({
         id: c.id, classe: 'aresta', pai: c.pai, z, estilo, estiloBruto: c.style || '',
-        rotulo: c.rotulo || '', de: c.de, para: c.para, dobras: c.pontos || [],
+        label: c.label || '', from: c.from, to: c.to, dobras: c.pontos || [],
         // os mesmos campos que as caixas ganham: sem isto cada família reparseia
         // a style à mão, e A3.9 e A7.1 já divergiram no default de `fontSize`
         traco: corDe(estilo, 'strokeColor'),
@@ -239,17 +239,17 @@ function criarCena(plano, opts = {}) {
     let classe;
     if (oculto || CHROME.has(c.id)) classe = c.id === 'panlabs-modelo' || oculto ? 'oculto' : 'moldura';
     else if (idsDeFaixa.has(c.id) || /^az-/.test(c.id)) classe = 'faixa';
-    else if (estilo.container === '1') classe = 'grupo';
+    else if (estilo.container === '1') classe = 'group';
     else if (estilo._flags.includes('text')) classe = 'moldura';
     else classe = 'no';
 
     elementos.push({
       id: c.id, classe, pai: c.pai, z, caixa, estilo, estiloBruto: c.style || '',
-      rotulo: c.rotulo || '',
-      tipoSemantico: (noDoModelo.get(c.id) || {}).tipo || null,
+      label: c.label || '',
+      tipoSemantico: (noDoModelo.get(c.id) || {}).kind || null,
       noModelo: noDoModelo.get(c.id) || null,
-      membros: membrosDaFaixa.get(c.id) || null,
-      rotuloCaixa: caixa && !oculto ? caixaDeRotulo(caixa, c.rotulo, estilo) : null,
+      members: membrosDaFaixa.get(c.id) || null,
+      rotuloCaixa: caixa && !oculto ? caixaDeRotulo(caixa, c.label, estilo) : null,
       preenchimento: corDe(estilo, 'fillColor'),
       traco: corDe(estilo, 'strokeColor'),
       corDaFonte: corDe(estilo, 'fontColor') || '#000000',
@@ -259,31 +259,31 @@ function criarCena(plano, opts = {}) {
     });
   });
 
-  const de = classe => elementos.filter(e => e.classe === classe);
-  const nos = de('no');
-  const grupos = de('grupo');
-  const faixas = de('faixa');
-  const molduras = de('moldura');
-  const arestas = de('aresta');
-  const caixas = [...nos, ...grupos, ...faixas];
+  const from = classe => elementos.filter(e => e.classe === classe);
+  const nodes = from('no');
+  const grupos = from('group');
+  const bands = from('faixa');
+  const molduras = from('moldura');
+  const edges = from('aresta');
+  const caixas = [...nodes, ...grupos, ...bands];
   const porElemento = new Map(elementos.map(e => [e.id, e]));
 
   // 4. as faixas de AZ nascem do caminho da grade e não estão no modelo; os
   //    membros delas são os nós cuja subnet declara aquela zona.
-  for (const f of faixas) {
-    if (f.membros) continue;
+  for (const f of bands) {
+    if (f.members) continue;
     const zona = /^az-(.+)$/.exec(f.id);
-    if (!zona || !modelo) { f.membros = null; continue; }
-    const subnets = new Set((modelo.nos || []).filter(n => n.az === zona[1]).map(n => n.id));
-    f.membros = (modelo.nos || [])
-      .filter(n => subnets.has(n.id) || subnets.has(n.dentro))
+    if (!zona || !modelo) { f.members = null; continue; }
+    const subnets = new Set((modelo.nodes || []).filter(n => n.az === zona[1]).map(n => n.id));
+    f.members = (modelo.nodes || [])
+      .filter(n => subnets.has(n.id) || subnets.has(n.inside))
       .map(n => n.id)
       .filter(id => porElemento.has(id) && porElemento.get(id).classe === 'no');
   }
 
   // 5. a árvore de contenção DECLARADA — só grupos e nós; faixa não é pai de ninguém
   const filhosDe = new Map();
-  for (const e of [...nos, ...grupos]) {
+  for (const e of [...nodes, ...grupos]) {
     const pai = e.pai === '1' ? null : e.pai;
     if (!filhosDe.has(pai)) filhosDe.set(pai, []);
     filhosDe.get(pai).push(e);
@@ -302,26 +302,26 @@ function criarCena(plano, opts = {}) {
   const ehDescendente = (id, ancestralId) => ancestrais(id).some(a => a.id === ancestralId);
 
   // 6. as pontas das arestas, e a polilinha completa
-  for (const a of arestas) {
-    const origem = porElemento.get(a.de);
-    const destino = porElemento.get(a.para);
-    if (!origem || !destino) { a.pontos = a.dobras.slice(); a.completa = false; continue; }
+  for (const a of edges) {
+    const origin = porElemento.get(a.from);
+    const destino = porElemento.get(a.to);
+    if (!origin || !destino) { a.pontos = a.dobras.slice(); a.completa = false; continue; }
     const rumoInicio = a.dobras[0] || geo.centro(destino.caixa);
-    const rumoFim = a.dobras[a.dobras.length - 1] || geo.centro(origem.caixa);
-    const inicio = ancoraDeclarada(origem.caixa, a.estilo, 'exit') || pontaNoPerimetro(origem.caixa, rumoInicio);
+    const rumoFim = a.dobras[a.dobras.length - 1] || geo.centro(origin.caixa);
+    const inicio = ancoraDeclarada(origin.caixa, a.estilo, 'exit') || pontaNoPerimetro(origin.caixa, rumoInicio);
     const fim = ancoraDeclarada(destino.caixa, a.estilo, 'entry') || pontaNoPerimetro(destino.caixa, rumoFim);
     a.pontos = [inicio, ...a.dobras, fim];
     a.completa = true;
     a.ancorada = !!(inicio.declarada && fim.declarada);
     a.comprimento = geo.comprimento(a.pontos);
-    a.rotuloCaixa = a.rotulo ? caixaDeRotuloDeAresta(a) : null;
+    a.rotuloCaixa = a.label ? caixaDeRotuloDeAresta(a) : null;
   }
 
   function caixaDeRotuloDeAresta(a) {
-    const texto = String(a.rotulo).replace(/<[^>]+>/g, '').trim();
-    if (!texto) return null;
+    const text = String(a.label).replace(/<[^>]+>/g, '').trim();
+    if (!text) return null;
     const fonte = num(a.estilo, 'fontSize', 12);
-    const larg = texto.length * v('larguraMediaDeCaractere') * (fonte / 12);
+    const larg = text.length * v('larguraMediaDeCaractere') * (fonte / 12);
     const alt = v('alturaDeLinha') * (fonte / 12);
     const meio = pontoNoMeio(a.pontos);
     return { x: meio.x - larg / 2, y: meio.y - alt / 2, w: larg, h: alt, onde: 'aresta' };
@@ -356,15 +356,15 @@ function criarCena(plano, opts = {}) {
    * embaixo, que é exatamente o que ela promete visualmente.
    */
   function fundoEfetivoEm(ponto, ateZ = Infinity) {
-    let fundo = plano.fundo || '#FFFFFF';
+    let background = plano.background || '#FFFFFF';
     for (const e of caixas) {
       if (e.z >= ateZ) continue;
       if (!e.preenchimento) continue;
       const c = e.caixa;
       if (ponto.x < c.x || ponto.x > geo.direita(c) || ponto.y < c.y || ponto.y > geo.baixo(c)) continue;
-      fundo = cor.compor(e.preenchimento, fundo, e.opacidade);
+      background = color.compor(e.preenchimento, background, e.opacidade);
     }
-    return fundo;
+    return background;
   }
 
   /**
@@ -389,25 +389,25 @@ function criarCena(plano, opts = {}) {
     const halo = corDe(e.estilo, 'labelBackgroundColor');
     if (halo) return halo;
     const caixa = e.rotuloCaixa;
-    if (!caixa) return plano.fundo || '#FFFFFF';
+    if (!caixa) return plano.background || '#FFFFFF';
     return fundoEfetivoEm({ x: caixa.x + caixa.w / 2, y: caixa.y + caixa.h / 2 }, e.z + 1);
   }
 
   // Grau de cada nó. Mora aqui porque A5.1 (c_max), A6.1 e A8.3 querem o mesmo
   // mapa, e três cópias é onde uma delas passa a contar aresta incompleta.
   const grau = new Map();
-  for (const a of arestas) if (a.completa) for (const id of [a.de, a.para]) grau.set(id, (grau.get(id) || 0) + 1);
+  for (const a of edges) if (a.completa) for (const id of [a.from, a.to]) grau.set(id, (grau.get(id) || 0) + 1);
 
   return {
     plano, modelo, grau,
     canvas: { x: 0, y: 0, w: plano.larg, h: plano.alt },
-    fundo: plano.fundo || '#FFFFFF',
-    elementos, nos, grupos, faixas, molduras, arestas, caixas,
+    background: plano.background || '#FFFFFF',
+    elementos, nodes, grupos, bands, molduras, edges, caixas,
     porElemento, filhosDe, ancestrais, ehDescendente,
     fundoEfetivoEm, fundoDoRotulo, pontoNoMeio,
     // a legenda ainda não existe neste motor; a cena expõe o campo para que a
     // família A1 possa dizer "ausente" em vez de estourar
-    legenda: plano.legenda || [],
+    legend: plano.legend || [],
   };
 }
 

@@ -26,14 +26,14 @@
 const fs = require('fs');
 const path = require('path');
 const { revisar, NOMES, arquivosDoCorpus } =
-  require(path.join(__dirname, '..', 'sessao', 'lacunas.cjs'));
+  require(path.join(__dirname, '..', 'session', 'gaps.cjs'));
 
 const RAIZ = path.join(__dirname, '..');
 
 /**
  * ⚠️ EXCEÇÕES NOMEADAS AO L4 — nenhuma, e a lista vazia é resultado, não descuido.
  *
- * Ela teve uma, e a história dela é o mecanismo funcionando. `plataforma-3-contas`
+ * Ela teve uma, e a história dela é o mecanismo funcionando. `platform-3-accounts`
  * fazia 6 achados com teto 5, os seis foram conferidos à mão, e a entrada ficou
  * aqui com o motivo medido: o denominador do teto é contagem de nós, e achado
  * escala com SUPERFÍCIE de arquitetura.
@@ -51,10 +51,10 @@ const RAIZ = path.join(__dirname, '..');
 const FORA_DO_TETO = {};
 
 let falhou = 0;
-const anota = (ok, o_que, detalhe) => {
+const anota = (ok, o_que, detail) => {
   if (!ok) falhou++;
   console.log(`  ${ok ? '✓' : '✗'} ${o_que}`);
-  if (detalhe) console.log(`      ${detalhe}`);
+  if (detail) console.log(`      ${detail}`);
 };
 
 // ------------------------------------------------------------- roda o corpus
@@ -69,14 +69,14 @@ let totalAchados = 0, totalNos = 0;
 
 for (const rel of arqs) {
   const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, rel), 'utf8'));
-  const nome = path.basename(rel, '.json');
+  const name = path.basename(rel, '.json');
   const r = revisar(modelo);
-  totalAchados += r.achados.length;
-  totalNos += modelo.nos.length;
+  totalAchados += r.findings.length;
+  totalNos += modelo.nodes.length;
 
-  for (const k of new Set(r.achados.map(a => a.regra))) disparou.set(k, (disparou.get(k) || 0) + 1);
-  for (const m of r.mudas) calou.set(m.regra, (calou.get(m.regra) || 0) + 1);
-  if (!r.dentroDoTeto) estouram.push({ nome, achados: r.achados.length, teto: r.teto });
+  for (const k of new Set(r.findings.map(a => a.rule))) disparou.set(k, (disparou.get(k) || 0) + 1);
+  for (const m of r.mudas) calou.set(m.rule, (calou.get(m.rule) || 0) + 1);
+  if (!r.dentroDoTeto) estouram.push({ name, findings: r.findings.length, teto: r.teto });
 }
 
 console.log(`\n1 · o corpus rodado: ${arqs.length} modelos, ${totalNos} nós, ${totalAchados} achados\n`);
@@ -87,7 +87,7 @@ console.log(`\n1 · o corpus rodado: ${arqs.length} modelos, ${totalNos} nós, $
   for (const rel of arqs) {
     const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, rel), 'utf8'));
     for (const m of revisar(modelo).mudas)
-      if (!m.porque || !m.porque.trim()) semMotivo.push(`${path.basename(rel, '.json')}/${m.regra}`);
+      if (!m.because || !m.because.trim()) semMotivo.push(`${path.basename(rel, '.json')}/${m.rule}`);
   }
   anota(!semMotivo.length, 'L1 · toda regra muda traz o motivo — "não acusou" nunca se confunde com "não rodou"',
     semMotivo.length ? semMotivo.join(', ') : `${[...calou.values()].reduce((a, b) => a + b, 0)} silêncios, todos com motivo`);
@@ -104,22 +104,22 @@ for (const r of NOMES) {
 // L4
 console.log('\n3 · o teto\n');
 {
-  const inesperados = estouram.filter(e => !FORA_DO_TETO[e.nome]);
+  const inesperados = estouram.filter(e => !FORA_DO_TETO[e.name]);
   anota(!inesperados.length, 'L4 · nenhum modelo estoura ⌈nós÷4⌉ fora das exceções nomeadas',
     inesperados.length
-      ? inesperados.map(e => `${e.nome}: ${e.achados} > ${e.teto}`).join(' · ')
+      ? inesperados.map(e => `${e.name}: ${e.findings} > ${e.teto}`).join(' · ')
       : `${arqs.length - estouram.length}/${arqs.length} dentro do teto`);
 
   // a outra ponta: uma exceção que parou de estourar tem de ser APAGADA
-  for (const [nome, esperado] of Object.entries(FORA_DO_TETO)) {
-    const real = estouram.find(e => e.nome === nome);
-    anota(!!real, `a exceção nomeada "${nome}" AINDA estoura`,
-      real ? `${real.achados} achados contra teto ${real.teto} — ${esperado.porque}`
+  for (const [name, esperado] of Object.entries(FORA_DO_TETO)) {
+    const real = estouram.find(e => e.name === name);
+    anota(!!real, `a exceção nomeada "${name}" AINDA estoura`,
+      real ? `${real.findings} achados contra teto ${real.teto} — ${esperado.because}`
         : `ela não estoura mais: o teto foi consertado ou a regra mudou. APAGUE a entrada de FORA_DO_TETO.`);
     if (real)
-      anota(real.achados === esperado.achados && real.teto === esperado.teto,
+      anota(real.findings === esperado.findings && real.teto === esperado.teto,
         `e estoura pela MESMA margem que foi conferida à mão`,
-        `esperado ${esperado.achados}/${esperado.teto}, veio ${real.achados}/${real.teto}`);
+        `esperado ${esperado.findings}/${esperado.teto}, veio ${real.findings}/${real.teto}`);
   }
 }
 

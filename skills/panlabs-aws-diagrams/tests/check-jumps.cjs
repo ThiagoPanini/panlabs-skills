@@ -26,11 +26,11 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 
 
-const { derivar } = require(path.join(RAIZ, 'motor', 'derivar.cjs'));
-const camadas = require(path.join(RAIZ, 'motor', 'camadas.cjs'));
-const resolverMod = require(path.join(RAIZ, 'motor', 'resolver.cjs'));
+const { derivar } = require(path.join(RAIZ, 'engine', 'derive.cjs'));
+const camadas = require(path.join(RAIZ, 'engine', 'layers.cjs'));
+const resolverMod = require(path.join(RAIZ, 'engine', 'resolve.cjs'));
 
-const cat = resolverMod.criar(require(path.join(RAIZ, 'tema', 'tema.cjs')).carregar('claro')).cat;
+const cat = resolverMod.criar(require(path.join(RAIZ, 'theme', 'theme.cjs')).carregar('light')).cat;
 
 /**
  * Os modelos que o #22 escreveu PARA esta pergunta. O resto do corpus veio de
@@ -41,14 +41,14 @@ const cat = resolverMod.criar(require(path.join(RAIZ, 'tema', 'tema.cjs')).carre
  * Na árvore de produção o corpus mora todo em `modelo/`, então a separação que
  * antes era de DIRETÓRIO passa a ser esta lista. É a mesma linha, escrita.
  */
-const DO_22 = new Set(['app-dados', 'elk-sem-camada', 'ingest-core', 'subnet-vazia-declarada',
-  'tres-camadas-mistas', 'web-dados-com-fluxo', 'web-dados', 'subnet-vazia']);
+const DO_22 = new Set(['app-data', 'elk-no-layer', 'ingest-core', 'declared-empty-subnet',
+  'three-mixed-layers', 'web-data-with-flow', 'web-data', 'empty-subnet']);
 
 const corpus = [];
-for (const dir of [path.join(RAIZ, 'modelo'), path.join(RAIZ, 'modelo', 'recusa')])
+for (const dir of [path.join(RAIZ, 'models'), path.join(RAIZ, 'models', 'refusal')])
   for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json')).sort()) {
-    const nome = f.replace(/\.json$/, '');
-    corpus.push({ grupo: DO_22.has(nome) ? 'q22' : 'herdado', nome,
+    const name = f.replace(/\.json$/, '');
+    corpus.push({ group: DO_22.has(name) ? 'q22' : 'herdado', name,
       modelo: JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) });
   }
 
@@ -65,20 +65,20 @@ function distanciaDaBorda(modelo, d) {
   const subnetDe = id => {
     const n = d.t.porId.get(id);
     if (!n) return null;
-    return n.tipo === 'subnet' ? n : d.t.ancestrais(n).find(a => a.tipo === 'subnet') || null;
+    return n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet') || null;
   };
-  const emVpc = n => d.t.ancestrais(n).some(a => a.tipo === 'vpc');
+  const emVpc = n => d.t.ancestrais(n).some(a => a.kind === 'vpc');
 
-  const fontes = modelo.nos.filter(n => ['servico', 'bloco', 'ator'].includes(n.tipo))
-    .filter(n => !emVpc(n) || (subnetDe(n.id) || {}).acesso === 'publica')
+  const fontes = modelo.nodes.filter(n => ['service', 'block', 'actor'].includes(n.kind))
+    .filter(n => !emVpc(n) || (subnetDe(n.id) || {}).access === 'public')
     .map(n => n.id);
-  if (!fontes.length) return { ok: false, porque: 'nenhum nó exposto de onde contar', dist: new Map() };
+  if (!fontes.length) return { ok: false, because: 'nenhum nó exposto de onde contar', dist: new Map() };
 
-  const viz = new Map(modelo.nos.map(n => [n.id, []]));
-  for (const a of modelo.arestas || []) {
-    if (!viz.has(a.de) || !viz.has(a.para)) continue;
-    viz.get(a.de).push(a.para);
-    viz.get(a.para).push(a.de);
+  const viz = new Map(modelo.nodes.map(n => [n.id, []]));
+  for (const a of modelo.edges || []) {
+    if (!viz.has(a.from) || !viz.has(a.to)) continue;
+    viz.get(a.from).push(a.to);
+    viz.get(a.to).push(a.from);
   }
 
   const dist = new Map(fontes.map(f => [f, 0]));
@@ -96,7 +96,7 @@ function distanciaDaBorda(modelo, d) {
     const chave = camadas.chaveDePapel(s, d.t);
     porPapel.set(chave, Math.min(porPapel.get(chave) ?? Infinity, dd));
   }
-  return { ok: porPapel.size > 0, porque: porPapel.size ? null : 'nenhuma subnet alcançada por aresta', dist: porPapel };
+  return { ok: porPapel.size > 0, because: porPapel.size ? null : 'nenhuma subnet alcançada por aresta', dist: porPapel };
 }
 
 let alcanca = 0, mudo = 0, concorda = 0, discorda = 0;
@@ -106,31 +106,31 @@ let alcanca = 0, mudo = 0, concorda = 0, discorda = 0;
 let herdadoFala = 0, herdadoMudo = 0, herdadoDiscorda = 0;
 const detalhes = [];
 
-for (const { grupo, nome, modelo } of corpus) {
+for (const { group, name, modelo } of corpus) {
   const d = derivar(modelo, { cat });
   const papeis = [...camadas.papeisDeSubnet(modelo, d.t, d.camadas).values()];
-  const privados = papeis.filter(p => p.acesso === 'privada');
-  if (privados.length < 2) { detalhes.push([grupo, nome, '—', 'menos de 2 papéis privados: a pergunta não se põe']); continue; }
+  const privados = papeis.filter(p => p.access === 'private');
+  if (privados.length < 2) { detalhes.push([group, name, '—', 'menos de 2 papéis privados: a pergunta não se põe']); continue; }
 
   const s = distanciaDaBorda(modelo, d);
   const cobertos = privados.filter(p => s.dist.has(p.chave));
   if (!s.ok || cobertos.length < 2) {
     mudo++;
-    if (grupo !== 'q22') herdadoMudo++;
-    detalhes.push([grupo, nome, 'MUDA', s.porque || `só ${cobertos.length} de ${privados.length} papéis alcançados por aresta`]);
+    if (group !== 'q22') herdadoMudo++;
+    detalhes.push([group, name, 'MUDA', s.because || `só ${cobertos.length} de ${privados.length} papéis alcançados por aresta`]);
     continue;
   }
   alcanca++;
-  if (grupo !== 'q22') herdadoFala++;
+  if (group !== 'q22') herdadoFala++;
 
-  const porSalto = [...cobertos].sort((a, b) => s.dist.get(a.chave) - s.dist.get(b.chave) || a.rotulo.localeCompare(b.rotulo, 'pt'));
+  const porSalto = [...cobertos].sort((a, b) => s.dist.get(a.chave) - s.dist.get(b.chave) || a.label.localeCompare(b.label, 'pt'));
   const porCamada = [...cobertos].sort((a, b) =>
-    camadas.ordemDeCamada(a.camada) - camadas.ordemDeCamada(b.camada) || a.rotulo.localeCompare(b.rotulo, 'pt'));
-  const igual = JSON.stringify(porSalto.map(p => p.rotulo)) === JSON.stringify(porCamada.map(p => p.rotulo));
+    camadas.ordemDeCamada(a.layer) - camadas.ordemDeCamada(b.layer) || a.label.localeCompare(b.label, 'pt'));
+  const igual = JSON.stringify(porSalto.map(p => p.label)) === JSON.stringify(porCamada.map(p => p.label));
   if (igual) concorda++; else discorda++;
-  if (!igual && grupo !== 'q22') herdadoDiscorda++;
-  detalhes.push([grupo, nome, igual ? 'CONCORDA' : 'DISCORDA',
-    `saltos → ${porSalto.map(p => `${p.rotulo}(${s.dist.get(p.chave)})`).join(' · ')}`]);
+  if (!igual && group !== 'q22') herdadoDiscorda++;
+  detalhes.push([group, name, igual ? 'CONCORDA' : 'DISCORDA',
+    `saltos → ${porSalto.map(p => `${p.label}(${s.dist.get(p.chave)})`).join(' · ')}`]);
 }
 
 console.log('\n  distância da borda vs. camada do conteúdo — todo o corpus de rede da skill\n');

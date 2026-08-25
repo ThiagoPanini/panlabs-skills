@@ -21,7 +21,7 @@
       "ponto da paleta. Não se aplica a service/resource icons — lá nada está errado."
     ],
     "#D86613": {
-      "para": "#ED7100",
+      "to": "#ED7100",
       "paleta": "laranja Compute",
       "afeta": [
         "Auto Scaling group",
@@ -32,7 +32,7 @@
       "evidencia": "Architecture-Group-Icons_07312026/*.svg (Icon-package_07312026.zip)"
     },
     "#CD2264": {
-      "para": "#E7157B",
+      "to": "#E7157B",
       "paleta": "rosa Application Integration / Management",
       "afeta": [
         "AWS Account",
@@ -41,7 +41,7 @@
       "evidencia": "Architecture-Group-Icons_07312026/*.svg"
     },
     "#147EBA": {
-      "para": "#00A4A6",
+      "to": "#00A4A6",
       "paleta": "teal Region / Availability Zone",
       "afeta": [
         "Availability Zone (borda e rótulo)",
@@ -51,7 +51,7 @@
       "evidencia": "Architecture-Group-Icons_07312026/*.svg — Region e Private subnet já usam #00A4A6 na borda; o rótulo ficou para trás"
     },
     "#DD3522": {
-      "para": "#DD344C",
+      "to": "#DD344C",
       "paleta": "vermelho Security Identity Compliance",
       "afeta": [
         "Security group"
@@ -77,24 +77,24 @@
     ],
     "#248814": {
       "onde": "fontColor de Public subnet",
-      "borda": "#7AA116"
+      "edge": "#7AA116"
     },
     "#3F8624": {
       "onde": "fontColor de AWS IoT Greengrass e IoT Greengrass Deployment",
-      "borda": "#7AA116"
+      "edge": "#7AA116"
     },
     "#AAB7B8": {
       "onde": "fontColor de VPC (cinza)",
-      "borda": "#8C4FFF"
+      "edge": "#8C4FFF"
     },
     "#5A6C86": {
       "onde": "fontColor de Server contents e Corporate data center",
-      "borda": "#7D8998"
+      "edge": "#7D8998"
     },
     "#232F3E": {
       "onde": "AWS Cloud — deck traz #242F3E, 1 dígito de diferença",
-      "borda": "#232F3E",
-      "nota": "é também o squid ink usado como fontColor de TODO service icon; mexer aqui desalinha 403 entradas para ganhar 1 dígito"
+      "edge": "#232F3E",
+      "note": "é também o squid ink usado como fontColor de TODO service icon; mexer aqui desalinha 403 entradas para ganhar 1 dígito"
     },
     "_resolvidoEm": "https://github.com/ThiagoPanini/panlabs-skills/issues/13",
     "_medicao": {
@@ -168,7 +168,7 @@
       "",
       "O que ficou no lugar: o tingimento voltou a ser do catálogo, e o VALOR virou derivação",
       "do tema (`grupo.tingimento`), porque um azul-claro que funciona no deck claro é um",
-      "bloco luminoso num fundo escuro. Ver prototypes/q13/tema/esquema.json."
+      "bloco luminoso num fundo escuro. Ver prototypes/q13/theme/schema.json."
     ],
     "_retiradaEm": "https://github.com/ThiagoPanini/panlabs-skills/issues/13",
     "afeta": []
@@ -276,7 +276,7 @@
       "palette": "analytics",
       "stencil": "analytics",
       "fill": "#8C4FFF",
-      "origem": "stencil-casa-titulo",
+      "origin": "stencil-casa-titulo",
       "evidencia": "stencil 'analytics' e o titulo normalizado sao o mesmo nome",
       "alternativas": [
         {
@@ -290,7 +290,7 @@
       "palette": "network_content_delivery",
       "stencil": "api_gateway",
       "fill": "#8C4FFF",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Networking-Content-Delivery",
       "alternativas": [
         {
@@ -304,7 +304,7 @@
       "palette": "management_governance",
       "stencil": "autoscaling",
       "fill": "#E7157B",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Management-Tools",
       "alternativas": [
         {
@@ -318,7 +318,7 @@
       "palette": "security_identity_compliance",
       "stencil": "cloud_directory",
       "fill": "#DD344C",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Security-Identity",
       "alternativas": [
         {
@@ -332,7 +332,7 @@
       "palette": "artificial_intelligence",
       "stencil": "codeguru_2",
       "fill": "#01A88D",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Artificial-Intelligence",
       "alternativas": [
         {
@@ -346,7 +346,7 @@
       "palette": "developer_tools",
       "stencil": "command_line_interface",
       "fill": "#C925D1",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Developer-Tools",
       "alternativas": [
         {
@@ -360,7 +360,7 @@
       "palette": "compute",
       "stencil": "compute_optimizer",
       "fill": "#ED7100",
-      "origem": "ordem-da-paleta",
+      "origin": "ordem-da-paleta",
       "evidencia": "AWS lista em Compute,Management-Tools",
       "alternativas": [
         {
@@ -376,7 +376,7 @@
       "palette": "business_applications",
       "stencil": "connect",
       "fill": "#DD344C",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Business-Applications",
       "alternativas": [
         {
@@ -395,7 +395,7 @@
       "palette": "database",
       "stencil": "database_migration_service",
       "fill": "#C925D1",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Databases",
       "alternativas": [
         {
@@ -409,7 +409,7 @@
       "palette": "network_content_delivery",
       "stencil": "elastic_load_balancing",
       "fill": "#8C4FFF",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Networking-Content-Delivery",
       "alternativas": [
         {
@@ -423,7 +423,7 @@
       "palette": "compute",
       "stencil": "elastic_vmware_service",
       "fill": "#ED7100",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Compute",
       "alternativas": [
         {
@@ -437,7 +437,7 @@
       "palette": "analytics",
       "stencil": "kinesis_video_streams",
       "fill": "#8C4FFF",
-      "origem": "irmandade",
+      "origin": "irmandade",
       "evidencia": "AWS lista em Analytics,Media-Services; Kinesis, Kinesis Data Streams e Data Firehose resolvem em analytics",
       "alternativas": [
         {
@@ -456,7 +456,7 @@
       "palette": "customer_enablement",
       "stencil": "managed_services",
       "fill": "#C925D1",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Customer-Enablement",
       "alternativas": [
         {
@@ -470,7 +470,7 @@
       "palette": "management_governance",
       "stencil": "organizations",
       "fill": "#E7157B",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Management-Tools",
       "alternativas": [
         {
@@ -484,7 +484,7 @@
       "palette": "business_applications",
       "stencil": "pinpoint",
       "fill": "#DD344C",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Business-Applications",
       "alternativas": [
         {
@@ -498,7 +498,7 @@
       "palette": "blockchain",
       "stencil": "quantum_ledger_database",
       "fill": "#ED7100",
-      "origem": "ordem-da-paleta",
+      "origin": "ordem-da-paleta",
       "evidencia": "servico ausente do deck AWS Q3-2026 (descontinuado)",
       "alternativas": [
         {
@@ -514,7 +514,7 @@
       "palette": "analytics",
       "stencil": "redshift",
       "fill": "#8C4FFF",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Analytics",
       "alternativas": [
         {
@@ -528,7 +528,7 @@
       "palette": "business_applications",
       "stencil": "simple_email_service",
       "fill": "#DD344C",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Business-Applications",
       "alternativas": [
         {
@@ -542,7 +542,7 @@
       "palette": "storage",
       "stencil": "snowball",
       "fill": "#7AA116",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Storage",
       "alternativas": [
         {
@@ -556,7 +556,7 @@
       "palette": "storage",
       "stencil": "snowball_edge",
       "fill": "#7AA116",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Storage",
       "alternativas": [
         {
@@ -570,7 +570,7 @@
       "palette": "storage",
       "stencil": "snowmobile",
       "fill": "#7AA116",
-      "origem": "irmandade",
+      "origin": "irmandade",
       "evidencia": "servico ausente do deck AWS Q3-2026 (descontinuado); Snowball e Snowball Edge resolvidos pelo deck em storage",
       "alternativas": [
         {
@@ -588,7 +588,7 @@
       "palette": "business_applications",
       "stencil": "workdocs",
       "fill": "#DD344C",
-      "origem": "deck-aws",
+      "origin": "deck-aws",
       "evidencia": "Icon-package_07312026 / Arch_Business-Applications",
       "alternativas": [
         {

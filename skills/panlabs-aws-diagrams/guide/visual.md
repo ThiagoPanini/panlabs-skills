@@ -5,7 +5,7 @@ como no [`SKILL.md`](../SKILL.md).
 
 ## O tema é um vocabulário FECHADO
 
-O contrato é [`../tema/esquema.json`](../tema/esquema.json), e cada token carrega
+O contrato é [`../theme/schema.json`](../theme/schema.json), e cada token carrega
 a medição que o justifica. Leia o arquivo.
 
 O que importa saber antes de abrir: **a camada normativa da AWS é indizível**.
@@ -49,7 +49,7 @@ estrago, não para entregar.
 | | quando | o que faz |
 |---|---|---|
 | **portão de contraste** (tema) | sempre, em `gerar` | **reprova** — `--forcar` gera assim mesmo |
-| **portão geométrico** (laudo) | opt-in, `--portao` | ver [`laudo.md`](laudo.md) |
+| **portão geométrico** (laudo) | opt-in, `--portao` | ver [`report.md`](report.md) |
 
 Ele reprova porque **rótulo que some não dá erro em lugar nenhum**: o arquivo
 abre, o PNG sai, e o diagrama passa a omitir informação em silêncio. Roda sobre o
@@ -118,7 +118,7 @@ repetiria exatamente o erro diagnosticado.
 ## A cópia que circula
 
 ```bash
-node sessao/publicar.cjs saida/<caso>.drawio --saida saida/<caso>.publicado.drawio
+node session/publish.cjs output/<caso>.drawio --saida output/<caso>.publicado.drawio
 ```
 
 O arquivo de trabalho carrega a deliberação em texto legível por qualquer um em
@@ -142,7 +142,7 @@ reunião, o nome de quem aprovou.
 | `acordo.por` · `acordo.recorte` | **sai** — nome de pessoa, e a deliberação da fase 1 |
 | `acordo.impressao` `em` `vista` | fica — provam **que** e **quando**, sem dizer por quem nem o quê |
 
-**A cópia se declara.** O selo dela diz `publicado@1` e **que ela não retoma** —
+**A cópia se declara.** O selo dela diz `published@1` e **que ela não retoma** —
 senão chegaria numa sessão seguinte como um arquivo de trabalho com o dossiê
 mutilado, e a skill diria *"candidatas descartadas: nenhuma"*, que é falso.
 

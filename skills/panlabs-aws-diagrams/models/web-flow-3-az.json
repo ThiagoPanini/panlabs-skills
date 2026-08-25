@@ -1,53 +1,53 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "web-fluxo-3-az",
-  "titulo": "Web · fluxo numerado sobre três zonas",
-  "subtitulo": "Vista técnica T4 · o mesmo motor do web-multi-az, com passo numerado — e o eixo da grade muda por regra",
-  "vista": "tecnica",
-  "genero": "T4",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "web-flow-3-az",
+  "title": "Web · fluxo numerado sobre três zonas",
+  "subtitle": "Vista técnica T4 · o mesmo motor do web-multi-az, com passo numerado — e o eixo da grade muda por regra",
+  "view": "technical",
+  "genre": "T4",
 
-  "nos": [
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
-    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "dentro": "nuvem" },
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
 
-    { "id": "pub-a", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "az": "us-east-1a", "dentro": "vpc" },
-    { "id": "pub-b", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "az": "us-east-1b", "dentro": "vpc" },
-    { "id": "pub-c", "tipo": "subnet", "rotulo": "Public subnet", "acesso": "publica", "az": "us-east-1c", "dentro": "vpc" },
+    { "id": "pub-a", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "pub-b", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "pub-c", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1c", "inside": "vpc" },
 
-    { "id": "app-a", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
-    { "id": "app-b", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
-    { "id": "app-c", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "us-east-1c", "dentro": "vpc" },
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "app-c", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1c", "inside": "vpc" },
 
-    { "id": "dado-a", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
-    { "id": "dado-b", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
-    { "id": "dado-c", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1c", "dentro": "vpc" },
+    { "id": "dado-a", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "dado-b", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "dado-c", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1c", "inside": "vpc" },
 
-    { "id": "alb-a", "tipo": "servico", "servico": "application load balancer", "rotulo": "ALB", "dentro": "pub-a" },
-    { "id": "alb-b", "tipo": "servico", "servico": "application load balancer", "rotulo": "ALB", "dentro": "pub-b" },
-    { "id": "alb-c", "tipo": "servico", "servico": "application load balancer", "rotulo": "ALB", "dentro": "pub-c" },
+    { "id": "alb-a", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-a" },
+    { "id": "alb-b", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-b" },
+    { "id": "alb-c", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-c" },
 
-    { "id": "ec2-a", "tipo": "servico", "servico": "ec2", "rotulo": "EC2", "dentro": "app-a" },
-    { "id": "ec2-b", "tipo": "servico", "servico": "ec2", "rotulo": "EC2", "dentro": "app-b" },
-    { "id": "ec2-c", "tipo": "servico", "servico": "ec2", "rotulo": "EC2", "dentro": "app-c" },
+    { "id": "ec2-a", "kind": "service", "service": "ec2", "label": "EC2", "inside": "app-a" },
+    { "id": "ec2-b", "kind": "service", "service": "ec2", "label": "EC2", "inside": "app-b" },
+    { "id": "ec2-c", "kind": "service", "service": "ec2", "label": "EC2", "inside": "app-c" },
 
-    { "id": "rds-a", "tipo": "servico", "servico": "rds", "rotulo": "RDS primária", "dentro": "dado-a" },
-    { "id": "rds-b", "tipo": "servico", "servico": "rds", "rotulo": "RDS standby", "dentro": "dado-b" },
-    { "id": "cache-c", "tipo": "servico", "servico": "elasticache", "rotulo": "ElastiCache", "dentro": "dado-c" }
+    { "id": "rds-a", "kind": "service", "service": "rds", "label": "RDS primária", "inside": "dado-a" },
+    { "id": "rds-b", "kind": "service", "service": "rds", "label": "RDS standby", "inside": "dado-b" },
+    { "id": "cache-c", "kind": "service", "service": "elasticache", "label": "ElastiCache", "inside": "dado-c" }
   ],
 
-  "arestas": [
-    { "de": "alb-a", "para": "ec2-a", "rotulo": "encaminha", "ordem": 1 },
-    { "de": "alb-b", "para": "ec2-b", "rotulo": "encaminha", "ordem": 2 },
-    { "de": "ec2-a", "para": "rds-a", "rotulo": "grava", "protocolo": "sql", "ordem": 3 },
-    { "de": "ec2-b", "para": "rds-a", "rotulo": "grava", "protocolo": "sql", "ordem": 4 },
-    { "de": "ec2-c", "para": "rds-a", "rotulo": "grava", "protocolo": "sql", "ordem": 5 }
+  "edges": [
+    { "from": "alb-a", "to": "ec2-a", "label": "encaminha", "order": 1 },
+    { "from": "alb-b", "to": "ec2-b", "label": "encaminha", "order": 2 },
+    { "from": "ec2-a", "to": "rds-a", "label": "grava", "protocol": "sql", "order": 3 },
+    { "from": "ec2-b", "to": "rds-a", "label": "grava", "protocol": "sql", "order": 4 },
+    { "from": "ec2-c", "to": "rds-a", "label": "grava", "protocol": "sql", "order": 5 }
   ],
 
-  "faixas": [
-    { "id": "asg", "tipo": "auto-scaling", "rotulo": "Auto Scaling group", "membros": ["ec2-a", "ec2-b", "ec2-c"] }
+  "bands": [
+    { "id": "asg", "kind": "auto-scaling", "label": "Auto Scaling group", "members": ["ec2-a", "ec2-b", "ec2-c"] }
   ],
 
-  "notas": [
-    { "texto": "Nem as raias de zona nem o eixo estão no modelo. O motor derivou que a arquitetura afirma redundância zonal (#19) e que há passo numerado — e o #21 diz que a dimensão ORDENADA fica com a horizontal, então a zona virou raia empilhada. O web-multi-az, sem passo numerado, continua com a zona em coluna.", "origem": "legenda" }
+  "notes": [
+    { "text": "Nem as raias de zona nem o eixo estão no modelo. O motor derivou que a arquitetura afirma redundância zonal (#19) e que há passo numerado — e o #21 diz que a dimensão ORDENADA fica com a horizontal, então a zona virou raia empilhada. O web-multi-az, sem passo numerado, continua com a zona em coluna.", "origin": "legend" }
   ]
 }

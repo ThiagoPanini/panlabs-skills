@@ -25,9 +25,9 @@
  * bloqueio que dispara a toa e bloqueio que o usuario aprende a ignorar.
  */
 
-const { lerPaginas, impressaoSemantica, impressaoDeAparencia, diferenca, classificar } = require('./impressao.cjs');
-const { ESQUEMA_SELO } = require('./gravar.cjs');
-const { ESQUEMA_PUBLICADO } = require('./publicar.cjs');
+const { lerPaginas, impressaoSemantica, impressaoDeAparencia, diferenca, classificar } = require('./fingerprint.cjs');
+const { ESQUEMA_SELO } = require('./save.cjs');
+const { ESQUEMA_PUBLICADO } = require('./publish.cjs');
 
 /**
  * @returns {{nosso, comoReconheci, host, paginas, sessao, conflitoDeCopias}}
@@ -40,7 +40,7 @@ function abrir(xml) {
   if (comSelo.length) comoReconheci.push(`selo em ${comSelo.length}/${paginas.length} pagina(s)`);
   // O `host` e a marca fraca: e atributo do APP, nao nosso, e quem gravar o
   // arquivo por ultimo escreve o proprio nome nele. Serve para explicar, nunca
-  // para decidir. Medido em `tools/medir-hospedeiro.cjs`.
+  // para decidir. Medido em `tools/measure-host.cjs`.
   if (host === 'panlabs-aws-diagrams') comoReconheci.push('host="panlabs-aws-diagrams" (marca fraca)');
 
   /**
@@ -55,7 +55,7 @@ function abrir(xml) {
   if (publicadas.length === comSelo.length && publicadas.length) {
     comoReconheci.push(`copia PUBLICADA (${ESQUEMA_PUBLICADO}) — nao retoma`);
     return { nosso: true, publicado: true, comoReconheci, host, paginas: [], sessao: null, conflitoDeCopias: null,
-      porque: publicadas[0].selo.panlabsPorque ||
+      because: publicadas[0].selo.panlabsPorque ||
         'copia publicada: a deliberacao foi podada de proposito. Retome pelo arquivo de trabalho.' };
   }
   if (publicadas.length)
@@ -68,37 +68,37 @@ function abrir(xml) {
 
   if (!comSelo.length)
     return { nosso: false, comoReconheci, host, paginas: [], sessao: null, conflitoDeCopias: null,
-      porque: 'nenhuma pagina traz o selo — ou o arquivo nao e nosso, ou a pagina que o tinha foi apagada' };
+      because: 'nenhuma pagina traz o selo — ou o arquivo nao e nosso, ou a pagina que o tinha foi apagada' };
 
   // As copias por pagina tem de concordar. Discordar so acontece se alguem
   // colou uma pagina de OUTRO arquivo aqui dentro — que e informacao, nao erro.
   const copias = [...new Set(comSelo.map(p => p.selo.panlabsSessao))];
   const conflitoDeCopias = copias.length > 1
-    ? { quantas: copias.length, paginas: comSelo.map(p => ({ pagina: p.id, vista: p.selo.panlabsVista })) }
+    ? { quantas: copias.length, paginas: comSelo.map(p => ({ page: p.id, view: p.selo.panlabsVista })) }
     : null;
 
   let sessao = null;
   try { sessao = JSON.parse(comSelo[0].selo.panlabsSessao); }
   catch (e) { return { nosso: true, comoReconheci, host, paginas: [], sessao: null, conflitoDeCopias,
-    porque: `o selo existe mas nao e JSON valido: ${e.message}` }; }
+    because: `o selo existe mas nao e JSON valido: ${e.message}` }; }
 
   const analisadas = paginas.map(p => {
     if (!p.selo || !p.selo.panlabsEsquema)
-      return { ...p, vista: null, estado: 'sem-selo', porque: 'pagina sem selo — acrescentada a mao, ou nossa e teve o selo apagado' };
+      return { ...p, view: null, state: 'sem-selo', because: 'pagina sem selo — acrescentada a mao, ou nossa e teve o selo apagado' };
     const semAgora = impressaoSemantica(p.celulas);
     const apaAgora = impressaoDeAparencia(p.celulas);
     const semBate = semAgora === p.selo.panlabsSemantica;
     const apaBate = apaAgora === p.selo.panlabsAparencia;
     return {
       ...p,
-      vista: p.selo.panlabsVista,
-      estado: !semBate ? 'divergente' : apaBate ? 'intacto' : 'remanejado',
+      view: p.selo.panlabsVista,
+      state: !semBate ? 'divergente' : apaBate ? 'intacto' : 'remanejado',
       impressoes: { semAgora, apaAgora, semSelada: p.selo.panlabsSemantica, apaSelada: p.selo.panlabsAparencia },
       motor: p.selo.panlabsMotor,
     };
   });
 
-  return { nosso: true, comoReconheci, host, paginas: analisadas, sessao, conflitoDeCopias, porque: null };
+  return { nosso: true, comoReconheci, host, paginas: analisadas, sessao, conflitoDeCopias, because: null };
 }
 
 /**
@@ -109,11 +109,11 @@ function abrir(xml) {
  * que sai de `projetar` nesse caso fala de casaco, e quem esta lendo quer ouvir
  * falar do arquivo.
  */
-function podeRegerar(sessao, vista) {
-  if (vista === 'tecnica' && sessao.estagio !== 'tecnica')
-    return { pode: false, porque: 'a pagina diz ser a vista tecnica, mas o modelo selado esta no estagio logico — ' +
+function podeRegerar(sessao, view) {
+  if (view === 'technical' && sessao.stage !== 'technical')
+    return { pode: false, because: 'a pagina diz ser a vista tecnica, mas o modelo selado esta no estagio logico — ' +
       'o selo e as paginas nao vieram da mesma gravacao.' };
-  if (!vista) return { pode: false, porque: 'a pagina nao diz que vista ela e.' };
+  if (!view) return { pode: false, because: 'a pagina nao diz que vista ela e.' };
   return { pode: true };
 }
 
@@ -132,17 +132,17 @@ function podeRegerar(sessao, vista) {
  * selo carrega `panlabsMotor` — a divergencia geometrica passa a ser explicavel
  * em vez de misteriosa.
  */
-function diferir(pagina, celulasDeReferencia) {
-  const achados = classificar(diferenca(celulasDeReferencia, pagina.celulas));
-  const so = t => achados.filter(a => a.tipo === t).length;
+function diferir(page, celulasDeReferencia) {
+  const findings = classificar(diferenca(celulasDeReferencia, page.celulas));
+  const so = t => findings.filter(a => a.kind === t).length;
   return {
-    achados,
+    findings,
     resumo: {
-      sumiram: so('sumiu'), apareceram: so('apareceu'), rotulos: so('rotulo'),
+      sumiram: so('sumiu'), apareceram: so('apareceu'), rotulos: so('label'),
       pais: so('mudou-de-pai'), formas: so('forma'), extremos: so('extremos'),
     },
-    absorviveis: achados.filter(a => a.classe === 'absorvivel').length,
-    opacas: achados.filter(a => a.classe === 'opaca').length,
+    absorviveis: findings.filter(a => a.classe === 'absorvivel').length,
+    opacas: findings.filter(a => a.classe === 'opaca').length,
   };
 }
 
@@ -155,8 +155,8 @@ function diferir(pagina, celulasDeReferencia) {
  * briefing, e um estado novo obrigaria a lembrar de dois lugares — este e o
  * unico que sabe o que cada estado significa.
  */
-function politica(estado) {
-  switch (estado) {
+function politica(state) {
+  switch (state) {
     case 'intacto':
       return { glifo: '✓', regerarEhSeguro: true, bloqueia: false,
         diga: 'o desenho e o que o modelo produz. Sigo.' };

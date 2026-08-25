@@ -4,7 +4,7 @@
  * Os diagramas bons do corpus, laudados — a outra metade do critério de aceite.
  *
  * O ticket pede que o validador "separe os dois": os quebrados de propósito e o
- * diagrama bom. `check-quebrados.cjs` cobre o primeiro lado. Aqui está o
+ * diagrama bom. `check-broken.cjs` cobre o primeiro lado. Aqui está o
  * segundo, e ele NÃO é "tudo verde".
  *
  * A distinção que a suíte trava é entre duas coisas que um relatório único
@@ -29,14 +29,14 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const { validarGeometria } = require(path.join(__dirname, '..', 'validador', 'validar-geometria.cjs'));
-const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
+const { validarGeometria } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
+const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
 
 /**
  * ⚠️ QUARENTENA NOMEADA — hoje VAZIA, e a lista vazia é o registro.
  *
  * A recertificação do #23 rodou o validador do #18 sobre o corpus do #12 pela
- * primeira vez e achou uma dívida real e SEMÂNTICA: o `web-fluxo-3-az` acusava
+ * primeira vez e achou uma dívida real e SEMÂNTICA: o `web-flow-3-az` acusava
  * `A5.5` ×2 — duas gravações de EC2 em raias diferentes atravessando o grupo
  * "app-a", de onde não saíam nem para onde iam. Ela entrou aqui com ticket
  * (#24), com o porquê e com a contagem EXATA, e com a regra de que quando fosse
@@ -54,16 +54,16 @@ const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
 const QUARENTENA = {};
 
 async function main() {
-  const modelos = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).sort();
+  const modelos = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).sort();
   let falhou = 0;
 
   for (const arquivo of modelos) {
-    const nome = path.basename(arquivo, '.json');
+    const name = path.basename(arquivo, '.json');
     let r;
     try {
-      r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', arquivo), 'utf8')));
+      r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', arquivo), 'utf8')));
     } catch (e) {
-      console.log(`  ✗ ${nome}: o motor não gerou — ${e.message}`);
+      console.log(`  ✗ ${name}: o motor não gerou — ${e.message}`);
       falhou = 1;
       continue;
     }
@@ -74,22 +74,22 @@ async function main() {
     // 1. tolerância zero no que é semântico — salvo quarentena nomeada, e ela
     //    cobra igualdade EXATA, não "menos ou igual"
     const mentiras = laudo.semanticas;
-    const assinatura = mentiras.map(m => `${m.id}×${m.ocorrencias.length}`).sort();
-    const q = QUARENTENA[nome];
+    const assinatura = mentiras.map(m => `${m.id}×${m.occurrences.length}`).sort();
+    const q = QUARENTENA[name];
     const emQuarentena = q && JSON.stringify(assinatura) === JSON.stringify([...q.esperado].sort());
 
     if (emQuarentena) {
-      console.log(`  ⚠ ${nome}: ${assinatura.join(', ')} — QUARENTENA ${q.ticket} (${q.porque})`);
+      console.log(`  ⚠ ${name}: ${assinatura.join(', ')} — QUARENTENA ${q.ticket} (${q.because})`);
     } else {
-      console.log(`  ${mentiras.length ? '✗' : '✓'} ${nome}: ${mentiras.length ? `${mentiras.length} FALHA(S) SEMÂNTICA(S)` : 'nenhuma falha semântica'}`);
+      console.log(`  ${mentiras.length ? '✗' : '✓'} ${name}: ${mentiras.length ? `${mentiras.length} FALHA(S) SEMÂNTICA(S)` : 'nenhuma falha semântica'}`);
       for (const m of mentiras) {
         falhou = 1;
-        console.log(`      ${m.id} ${m.nome}: ${m.mensagem}`);
-        for (const o of m.ocorrencias.slice(0, 3)) console.log(`        · ${o.o_que}`);
+        console.log(`      ${m.id} ${m.name}: ${m.mensagem}`);
+        for (const o of m.occurrences.slice(0, 3)) console.log(`        · ${o.o_que}`);
       }
       if (q) {
         falhou = 1;
-        console.log(`      ✗ a quarentena ${q.ticket} para "${nome}" esperava ${q.esperado.join(', ')} e veio ` +
+        console.log(`      ✗ a quarentena ${q.ticket} para "${name}" esperava ${q.esperado.join(', ')} e veio ` +
           `${assinatura.length ? assinatura.join(', ') : 'nada'} — ` +
           (assinatura.length ? 'a dívida mudou de forma' : 'a dívida foi PAGA: apague a entrada de QUARENTENA'));
       }
@@ -100,11 +100,11 @@ async function main() {
       falhou = 1;
       console.log(`      ✗ não rodaram: ${laudo.cobertura.naoRodaram.join(', ')}`);
     }
-    const erros = laudo.resultados.filter(x => x.estado === 'erro');
+    const erros = laudo.resultados.filter(x => x.state === 'erro');
     for (const e of erros) { falhou = 1; console.log(`      ✗ ${e.mensagem}`); }
 
     // 3. o retrato, que é o que se compara entre sessões
-    console.log(`      ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ${s.inaplicavel} inaplicável · ${s.pulada} do render`);
+    console.log(`      ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ${s.notApplicable} inaplicável · ${s.pulada} do render`);
     if (laudo.falhas.length)
       console.log(`      achados (não travam a suíte): ${laudo.falhas.map(f => f.id).join(', ')}`);
   }
@@ -121,8 +121,8 @@ async function main() {
   //
   // O que distingue é a VERACIDADE: o desenho afirma alguma coisa que o modelo
   // nega? Aí a separação é limpa, e é ela que o portão usa como nível default.
-  const { portao } = require(path.join(__dirname, '..', 'validador', 'portao.cjs'));
-  const { CASOS } = require(path.join(__dirname, 'casos', 'quebrados.cjs'));
+  const { portao } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
+  const { CASOS } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 
   console.log('\n  a separação, no eixo da veracidade:\n');
   const mentirosos = CASOS.filter(c => ['A4.2', 'A4.4', 'A5.5', 'F1'].some(id => c.espera.includes(id)));
@@ -131,20 +131,20 @@ async function main() {
     let barrou = false;
     try { portao(c.plano, { modelo: c.modelo, nivel: 'veracidade' }); } catch { barrou = true; }
     if (barrou) barrados++;
-    else { falhou = 1; console.log(`  ✗ "${c.nome}" passou o portão de veracidade`); }
+    else { falhou = 1; console.log(`  ✗ "${c.name}" passou o portão de veracidade`); }
   }
   console.log(`  ${barrados === mentirosos.length ? '✓' : '✗'} ${barrados}/${mentirosos.length} diagramas que mentem foram barrados`);
 
   let passaram = 0, emQuarentenaNoPortao = 0;
   for (const arquivo of modelos) {
-    const nome = path.basename(arquivo, '.json');
-    const r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', arquivo), 'utf8')));
+    const name = path.basename(arquivo, '.json');
+    const r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', arquivo), 'utf8')));
     try { portao(r.plano, { nivel: 'veracidade' }); passaram++; }
     catch (e) {
       // o portão barra o que mente, e a quarentena não o desliga: ele CONTINUA
-      // barrando o `web-fluxo-3-az`, que é o comportamento certo. O que a
+      // barrando o `web-flow-3-az`, que é o comportamento certo. O que a
       // quarentena faz é não chamar de regressão uma dívida já nomeada.
-      if (QUARENTENA[nome]) { emQuarentenaNoPortao++; console.log(`  ⚠ ${arquivo} barrado pelo portão — quarentena ${QUARENTENA[nome].ticket}`); }
+      if (QUARENTENA[name]) { emQuarentenaNoPortao++; console.log(`  ⚠ ${arquivo} barrado pelo portão — quarentena ${QUARENTENA[name].ticket}`); }
       else { falhou = 1; console.log(`  ✗ ${arquivo} foi barrado: ${e.erros.join(' | ')}`); }
     }
   }

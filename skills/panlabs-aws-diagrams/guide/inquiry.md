@@ -103,7 +103,7 @@ Não é julgamento seu. Rode a família `A1` — completude semântica — contr
 em construção, e cada falha nomeia um fato faltante que **é** a pergunta.
 
 ```bash
-node tools/check-geometria.cjs <modelo-em-construcao.json>
+node tools/check-geometry.cjs <modelo-em-construcao.json>
 ```
 
 Limita dos dois lados, que era o medo do ticket: não pergunta para sempre (`A1` é
@@ -112,15 +112,15 @@ do layout).
 
 ### Rodando `A1` sobre um modelo de sessão
 
-`check-geometria.cjs` come `modelo@1`. Se o que você está construindo é um
-`sessao@1`, **projete antes** — e a projeção é fiel: os dois caminhos produzem
+`check-geometry.cjs` come `model@1`. Se o que você está construindo é um
+`session@1`, **projete antes** — e a projeção é fiel: os dois caminhos produzem
 laudo idêntico, medido.
 
 ```bash
-node -e "const {projetar}=require('./sessao/projetar.cjs');
+node -e "const {projetar}=require('./session/project.cjs');
   require('fs').writeFileSync('/tmp/proj.json',
     JSON.stringify(projetar(require('./modelo/sessao/<caso>-logica.json'),'logica').modelo));"
-node tools/check-geometria.cjs /tmp/proj.json
+node tools/check-geometry.cjs /tmp/proj.json
 ```
 
 ### O piso — as checagens que fato nenhum fecha
@@ -133,7 +133,7 @@ em modelos, porque o multi-conta sai em 1+N: `A1.2`, `A1.3` e `A1.11` acusam em
 |---|---|---|
 | `A1.2` | legenda presente | o motor ainda não emite legenda |
 | `A1.3` | legenda cobre todo canal visual | mesma causa |
-| `A1.11` | `data`, `versao`, `autor` | `modelo@1` é `additionalProperties: false` e **não tem esses campos** — não há onde escrever |
+| `A1.11` | `data`, `versao`, `autor` | `model@1` é `additionalProperties: false` e **não tem esses campos** — não há onde escrever |
 
 E o piso **sobe duas** assim que qualquer nota tiver `sobre`:
 
@@ -148,7 +148,7 @@ do piso — e não são perguntas.
 
 **Pare quando `A1` chegar a exatamente o piso do seu modelo.** Tratar entrada de
 piso como pergunta faz a sabatina rodar para sempre; a dívida tem dono e endereço
-em [`laudo.md`](laudo.md).
+em [`report.md`](report.md).
 
 ### As que são perguntas
 
@@ -214,8 +214,8 @@ respostas a perguntas — são **propriedades emergentes do grafo**. Não dá pa
 perguntar *"tem SPOF?"*.
 
 ```bash
-node tools/revisar-lacunas.cjs <modelo.json>       # o laudo
-node tools/revisar-lacunas.cjs --corpus            # a régua contra o corpus
+node tools/review-gaps.cjs <modelo.json>       # o laudo
+node tools/review-gaps.cjs --corpus            # a régua contra o corpus
 ```
 
 São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura que o
@@ -277,16 +277,16 @@ e cada um matou um falso positivo concreto:
 
 | | e o que ele matou |
 |---|---|
-| `spof` orfana **≥2** | num encadeamento `A→B→C`, dizer que B é o ponto único de falha de C é só dizer que **C tem um vizinho** — afirmação sobre C, não sobre caminho compartilhado. Sem a cláusula, o `pedidos-serverless` acusava o VPC endpoint por "separar" o DynamoDB |
-| egresso conta **ligado**, não só contido | no `hub-tgw-3-contas` o Transit Gateway **é** a saída controlada e mora fora das VPCs que serve. A regra reprovava as duas spokes pelo motivo que as torna certas |
-| `spof` **só os maximais** | numa cadeia toda ligação é ponto de articulação, com os órfãos encaixados. A `frota-preditiva` acusava **seis** num modelo de 11 nós — pior que o protótipo que motivou esta calibração inteira |
+| `spof` orfana **≥2** | num encadeamento `A→B→C`, dizer que B é o ponto único de falha de C é só dizer que **C tem um vizinho** — afirmação sobre C, não sobre caminho compartilhado. Sem a cláusula, o `orders-serverless` acusava o VPC endpoint por "separar" o DynamoDB |
+| egresso conta **ligado**, não só contido | no `hub-tgw-3-accounts` o Transit Gateway **é** a saída controlada e mora fora das VPCs que serve. A regra reprovava as duas spokes pelo motivo que as torna certas |
+| `spof` **só os maximais** | numa cadeia toda ligação é ponto de articulação, com os órfãos encaixados. A `predictive-fleet` acusava **seis** num modelo de 11 nós — pior que o protótipo que motivou esta calibração inteira |
 
-A régua está em `tests/check-lacunas.cjs`, e ela cobra dos **dois lados**: toda
+A régua está em `tests/check-gaps.cjs`, e ela cobra dos **dois lados**: toda
 regra tem de disparar em ≥1 modelo do corpus **e** calar em ≥1. Regra que dispara
 em todos não está medindo nada — está afirmando uma constante.
 
 **Nenhum modelo do corpus estoura o teto** de ⌈nós÷4⌉ — 22 de 22. Houve uma
-exceção nomeada, o `plataforma-3-contas` a 6 achados contra teto 5, e ela
+exceção nomeada, o `platform-3-accounts` a 6 achados contra teto 5, e ela
 **expirou sozinha** quando a cláusula dos maximais entrou: o teste ficou vermelho
 com a mensagem que ele mesmo tinha preparado, e a entrada foi apagada.
 
@@ -297,7 +297,7 @@ nós.
 
 **`retencao-sem-regra` não virou regra**, e é bom dizer por quê: ele aparece no
 dossiê do corpus de sessão, mas retenção é fato de política de dado que o
-`modelo@1` não tem onde afirmar. Sai da sabatina, não do grafo — e este módulo só
+`model@1` não tem onde afirmar. Sai da sabatina, não do grafo — e este módulo só
 lê o grafo.
 
 ## Fase 6 · O acordo e a transição
@@ -307,7 +307,7 @@ aprovar: o estacionamento volta como sugestão inferida contra a capacidade
 correspondente.
 
 A aprovação vira fato conferível — ver o passo 5 do [`SKILL.md`](../SKILL.md) para
-o mecanismo, e [`modelo.md`](modelo.md) para o que a projeção faz com os níveis
+o mecanismo, e [`model.md`](model.md) para o que a projeção faz com os níveis
 que só a vista técnica tem.
 
 ## O que veio do método de sabatina geral

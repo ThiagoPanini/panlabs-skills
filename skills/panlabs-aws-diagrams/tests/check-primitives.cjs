@@ -21,19 +21,19 @@
  */
 
 const path = require('path');
-const g = require(path.join(__dirname, '..', 'validador', 'geometria.cjs'));
-const c = require(path.join(__dirname, '..', 'validador', 'cor.cjs'));
+const g = require(path.join(__dirname, '..', 'validator', 'geometry.cjs'));
+const c = require(path.join(__dirname, '..', 'validator', 'color.cjs'));
 
 const falhas = [];
 const casos = [];
 
-function ok(nome, condicao, detalhe) {
-  casos.push(nome);
-  if (!condicao) falhas.push(`${nome}${detalhe ? ` — ${detalhe}` : ''}`);
+function ok(name, condicao, detail) {
+  casos.push(name);
+  if (!condicao) falhas.push(`${name}${detail ? ` — ${detail}` : ''}`);
 }
-function perto(nome, obtido, esperado, tol) {
+function perto(name, obtido, esperado, tol) {
   const d = Math.abs(obtido - esperado);
-  ok(nome, d <= tol, `esperava ${esperado} (±${tol}), veio ${Number(obtido.toFixed(4))}`);
+  ok(name, d <= tol, `esperava ${esperado} (±${tol}), veio ${Number(obtido.toFixed(4))}`);
 }
 
 // ------------------------------------------------------------------ geometria
@@ -48,10 +48,10 @@ perto('área de interseção de retângulos que só se encostam', g.areaDaInters
 
 ok('contém: filho dentro do pai com folga', g.contem(r(0, 0, 100, 100), r(20, 20, 10, 10)));
 ok('contém: filho estourando a borda', !g.contem(r(0, 0, 100, 100), r(95, 20, 10, 10)));
-perto('folga entre retângulos separados no eixo x', g.folga(r(0, 0, 10, 10), r(18, 0, 10, 10)), 8, 1e-9);
-ok('folga entre retângulos sobrepostos é negativa', g.folga(r(0, 0, 10, 10), r(5, 5, 10, 10)) < 0,
-  `veio ${g.folga(r(0, 0, 10, 10), r(5, 5, 10, 10))}`);
-perto('folga entre retângulos que se encostam é zero', g.folga(r(0, 0, 10, 10), r(10, 0, 10, 10)), 0, 1e-9);
+perto('folga entre retângulos separados no eixo x', g.gap(r(0, 0, 10, 10), r(18, 0, 10, 10)), 8, 1e-9);
+ok('folga entre retângulos sobrepostos é negativa', g.gap(r(0, 0, 10, 10), r(5, 5, 10, 10)) < 0,
+  `veio ${g.gap(r(0, 0, 10, 10), r(5, 5, 10, 10))}`);
+perto('folga entre retângulos que se encostam é zero', g.gap(r(0, 0, 10, 10), r(10, 0, 10, 10)), 0, 1e-9);
 
 // segmento × retângulo — o coração de A3.5 e A5.5
 ok('segmento atravessando o retângulo', g.segmentoCruzaRetangulo({ x: -5, y: 5 }, { x: 15, y: 5 }, r(0, 0, 10, 10)));
@@ -136,9 +136,9 @@ perto('L* do preto', c.paraLab('#000000')[0], 0, 1e-3);
 
 // Simulação de deficiência de cor: o cinza é o ponto fixo das três matrizes —
 // se uma simulação mexe num cinza, ela está errada.
-for (const tipo of ['protanopia', 'deuteranopia', 'tritanopia']) {
-  const simulado = c.simular('#808080', tipo);
-  ok(`${tipo} não mexe no cinza`, c.deltaE00(c.paraLab(simulado), c.paraLab('#808080')) < 1.5, `virou ${simulado}`);
+for (const kind of ['protanopia', 'deuteranopia', 'tritanopia']) {
+  const simulado = c.simular('#808080', kind);
+  ok(`${kind} não mexe no cinza`, c.deltaE00(c.paraLab(simulado), c.paraLab('#808080')) < 1.5, `virou ${simulado}`);
 }
 // E o que ela tem de fazer: vermelho e verde colapsam sob protanopia. Se a
 // distância entre eles não cair muito, a matriz está inerte e A7.4 nunca acusa.

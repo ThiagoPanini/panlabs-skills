@@ -41,7 +41,7 @@ function geometria(g, extra = '') {
 
 function vertice(c, ind) {
   const p = ' '.repeat(ind);
-  const attrs = `id="${esc(c.id)}" value="${esc(c.rotulo || '')}" style="${esc(c.style)}" vertex="1" parent="${esc(c.pai)}"` +
+  const attrs = `id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" vertex="1" parent="${esc(c.pai)}"` +
     (c.visivel === false ? ' visible="0"' : '');
   return `${p}<mxCell ${attrs}>\n${p}  ${geometria(c.geo)}\n${p}</mxCell>`;
 }
@@ -52,9 +52,9 @@ function vertice(c, ind) {
  */
 function verticeComDados(c, ind) {
   const p = ' '.repeat(ind);
-  const dados = Object.entries(c.dados)
+  const data = Object.entries(c.data)
     .map(([k, v]) => `${k}="${esc(limparGremlins(v))}"`).join(' ');
-  return `${p}<object id="${esc(c.id)}" label="${esc(c.rotulo || '')}" ${dados}>\n` +
+  return `${p}<object id="${esc(c.id)}" label="${esc(c.label || '')}" ${data}>\n` +
     `${p}  <mxCell style="${esc(c.style)}" vertex="1" parent="${esc(c.pai)}"${c.visivel === false ? ' visible="0"' : ''}>\n` +
     `${p}    ${geometria(c.geo)}\n` +
     `${p}  </mxCell>\n${p}</object>`;
@@ -75,32 +75,32 @@ function aresta(c, ind) {
   const arr = pontos ? `\n${p}    <Array as="points">${pontos}\n${p}    </Array>` : '';
 
   const solta = c.solta || {};
-  const ponta = (nome, x, y) =>
-    `\n${p}    <mxPoint x="${r(x)}" y="${r(y)}" as="${nome}"/>`;
+  const tip = (name, x, y) =>
+    `\n${p}    <mxPoint x="${r(x)}" y="${r(y)}" as="${name}"/>`;
   const soltas =
-    (c.de ? '' : (solta.x1 !== undefined ? ponta('sourcePoint', solta.x1, solta.y1) : '')) +
-    (c.para ? '' : (solta.x2 !== undefined ? ponta('targetPoint', solta.x2, solta.y2) : ''));
+    (c.from ? '' : (solta.x1 !== undefined ? tip('sourcePoint', solta.x1, solta.y1) : '')) +
+    (c.to ? '' : (solta.x2 !== undefined ? tip('targetPoint', solta.x2, solta.y2) : ''));
 
   const corpo = arr + soltas;
   const geo = corpo
     ? `<mxGeometry relative="1" as="geometry">${corpo}\n${p}  </mxGeometry>`
     : `<mxGeometry relative="1" as="geometry"/>`;
 
-  return `${p}<mxCell id="${esc(c.id)}" value="${esc(c.rotulo || '')}" style="${esc(c.style)}" edge="1" ` +
-    `parent="${esc(c.pai)}"${c.de ? ` source="${esc(c.de)}"` : ''}${c.para ? ` target="${esc(c.para)}"` : ''}>\n` +
+  return `${p}<mxCell id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" edge="1" ` +
+    `parent="${esc(c.pai)}"${c.from ? ` source="${esc(c.from)}"` : ''}${c.to ? ` target="${esc(c.to)}"` : ''}>\n` +
     `${p}  ${geo}\n${p}</mxCell>`;
 }
 
-function pagina(plano) {
+function page(plano) {
   const corpo = plano.celulas.map(c =>
-    c.tipo === 'aresta' ? aresta(c, 8)
-      : c.dados ? verticeComDados(c, 8)
+    c.kind === 'aresta' ? aresta(c, 8)
+      : c.data ? verticeComDados(c, 8)
       : vertice(c, 8)).join('\n');
 
-  return `  <diagram id="${esc(plano.id)}" name="${esc(plano.nome || plano.titulo)}">
+  return `  <diagram id="${esc(plano.id)}" name="${esc(plano.name || plano.title)}">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
         arrows="1" fold="1" page="1" pageScale="1" pageWidth="${r(plano.larg)}" pageHeight="${r(plano.alt)}"
-        math="0" shadow="0"${plano.fundo ? ` background="${esc(plano.fundo)}"` : ''}>
+        math="0" shadow="0"${plano.background ? ` background="${esc(plano.background)}"` : ''}>
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
@@ -125,7 +125,7 @@ ${corpo}
 function emitir(planos) {
   const lista = Array.isArray(planos) ? planos : [planos];
   return `<mxfile host="panlabs-aws-diagrams" compressed="false">
-${lista.map(pagina).join('\n')}
+${lista.map(page).join('\n')}
 </mxfile>
 `;
 }
@@ -150,12 +150,12 @@ function conferirXml(xml) {
       erros.push(`'&' não escapado no texto, offset ${pos + bruto.index}`);
     pos = m.index + m[0].length;
 
-    const [, nome, attrs, fechaSozinha] = m;
+    const [, name, attrs, fechaSozinha] = m;
     if (m[0].startsWith('</')) {
       const topo = pilha.pop();
-      if (topo !== nome) erros.push(`</${nome}> fecha <${topo || 'nada'}>`);
+      if (topo !== name) erros.push(`</${name}> fecha <${topo || 'nada'}>`);
     } else if (!fechaSozinha) {
-      pilha.push(nome);
+      pilha.push(name);
     }
     // valor de atributo com '<' cru ou '&' solto
     for (const a of attrs.matchAll(/([\w.:-]+)\s*=\s*"([^"]*)"/g)) {

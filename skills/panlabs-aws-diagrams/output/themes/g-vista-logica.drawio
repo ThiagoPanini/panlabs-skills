@@ -1,0 +1,58 @@
+<mxfile host="panlabs-aws-diagrams" compressed="false">
+  <diagram id="logical-orders" name="Pedidos · vista lógica">
+    <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="995" pageHeight="353"
+        math="0" shadow="0" background="#FFFFFF">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Pedidos · vista lógica" style="text;html=1;fontSize=19;fontStyle=1;fontColor=#232F3E;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="28" width="264" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="L2 · a mesma arquitetura antes de nomear serviço — premissa 2 do mapa" style="text;html=1;fontSize=12;fontColor=#5A6C86;fontFamily=Arial,Helvetica;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="32" y="55" width="514" height="17" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge" value="Borda pública" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#232F3E;fontColor=#232F3E;fontFamily=Arial,Helvetica;fontSize=12;verticalAlign=middle;align=center;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="219" y="99" width="170" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="catalogo" value="Catálogo de produtos" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#232F3E;fontColor=#232F3E;fontFamily=Arial,Helvetica;fontSize=12;verticalAlign=middle;align=center;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="781" y="99" width="170" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="cliente" value="Clientes" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.users;fontFamily=Arial,Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="44" y="88" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="processa" value="Processamento de pedido" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#232F3E;fontColor=#232F3E;fontFamily=Arial,Helvetica;fontSize=12;verticalAlign=middle;align=center;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="480" y="99" width="170" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="registro" value="Registro de pedidos" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#232F3E;fontColor=#232F3E;fontFamily=Arial,Helvetica;fontSize=12;verticalAlign=middle;align=center;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="781" y="176" width="170" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-cliente-edge0" value="&lt;b&gt;1.&lt;/b&gt; faz pedido" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="cliente" target="edge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-edge-processa1" value="&lt;b&gt;2.&lt;/b&gt; encaminha" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="edge" target="processa">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-processa-catalogo2" value="&lt;b&gt;3.&lt;/b&gt; consulta preço" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="processa" target="catalogo">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e-processa-registro3" value="&lt;b&gt;4.&lt;/b&gt; grava" style="edgeStyle=orthogonalEdgeStyle;html=1;jettySize=auto;orthogonalLoop=1;rounded=1;strokeColor=#232F3E;strokeWidth=1.6;endArrow=blockThin;endFill=1;endSize=6;fontSize=10;fontFamily=Arial,Helvetica;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;arcSize=12;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="processa" target="registro">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="716" y="127"/>
+              <mxPoint x="716" y="204"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="notes" value="Agrupado por fronteira de responsabilidade, não por conta AWS — decisão do #15, tomada contra render real." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#B7791F;fontColor=#6B4E00;fontFamily=Arial,Helvetica;fontSize=11;align=left;verticalAlign=top;spacing=8;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="32" y="283" width="931" height="38" as="geometry"/>
+        </mxCell>
+        <object id="panlabs-modelo" label="" panlabsEsquema="panlabs-aws-diagrams/model@1" panlabsModelo="{&quot;schema&quot;:&quot;panlabs-aws-diagrams/model@1&quot;,&quot;id&quot;:&quot;logical-orders&quot;,&quot;title&quot;:&quot;Pedidos · vista lógica&quot;,&quot;subtitle&quot;:&quot;L2 · a mesma arquitetura antes de nomear serviço — premissa 2 do mapa&quot;,&quot;view&quot;:&quot;logical&quot;,&quot;genre&quot;:&quot;L2&quot;,&quot;nodes&quot;:[{&quot;id&quot;:&quot;cliente&quot;,&quot;kind&quot;:&quot;actor&quot;,&quot;service&quot;:&quot;users&quot;,&quot;label&quot;:&quot;Clientes&quot;,&quot;qualifier&quot;:&quot;app móvel e web&quot;},{&quot;id&quot;:&quot;edge&quot;,&quot;kind&quot;:&quot;block&quot;,&quot;label&quot;:&quot;Borda pública&quot;,&quot;qualifier&quot;:&quot;autentica e limita taxa&quot;},{&quot;id&quot;:&quot;processa&quot;,&quot;kind&quot;:&quot;block&quot;,&quot;label&quot;:&quot;Processamento de pedido&quot;,&quot;qualifier&quot;:&quot;valida, calcula, persiste&quot;},{&quot;id&quot;:&quot;catalogo&quot;,&quot;kind&quot;:&quot;block&quot;,&quot;label&quot;:&quot;Catálogo de produtos&quot;,&quot;qualifier&quot;:&quot;leitura consistente&quot;},{&quot;id&quot;:&quot;registro&quot;,&quot;kind&quot;:&quot;block&quot;,&quot;label&quot;:&quot;Registro de pedidos&quot;,&quot;qualifier&quot;:&quot;escrita de alto volume&quot;}],&quot;edges&quot;:[{&quot;from&quot;:&quot;cliente&quot;,&quot;to&quot;:&quot;edge&quot;,&quot;label&quot;:&quot;faz pedido&quot;,&quot;order&quot;:1},{&quot;from&quot;:&quot;edge&quot;,&quot;to&quot;:&quot;processa&quot;,&quot;label&quot;:&quot;encaminha&quot;,&quot;order&quot;:2},{&quot;from&quot;:&quot;processa&quot;,&quot;to&quot;:&quot;catalogo&quot;,&quot;label&quot;:&quot;consulta preço&quot;,&quot;order&quot;:3},{&quot;from&quot;:&quot;processa&quot;,&quot;to&quot;:&quot;registro&quot;,&quot;label&quot;:&quot;grava&quot;,&quot;order&quot;:4}],&quot;notes&quot;:[{&quot;id&quot;:&quot;nota-fronteira&quot;,&quot;text&quot;:&quot;Agrupado por fronteira de responsabilidade, não por conta AWS — decisão do #15, tomada contra render real.&quot;,&quot;origin&quot;:&quot;assumption&quot;}]}" panlabsTema="{&quot;id&quot;:&quot;light&quot;,&quot;background&quot;:&quot;light&quot;,&quot;tokens&quot;:{&quot;page&quot;:{&quot;color&quot;:&quot;#FFFFFF&quot;,&quot;margin&quot;:32},&quot;group&quot;:{&quot;tint&quot;:&quot;derived&quot;},&quot;ink&quot;:{&quot;strong&quot;:&quot;#232F3E&quot;,&quot;weak&quot;:&quot;#5A6C86&quot;,&quot;halo&quot;:&quot;#FFFFFF&quot;},&quot;text&quot;:{&quot;family&quot;:&quot;Arial,Helvetica&quot;,&quot;label&quot;:12,&quot;group&quot;:12,&quot;aresta&quot;:10,&quot;title&quot;:19,&quot;subtitle&quot;:12,&quot;qualifier&quot;:false},&quot;aresta&quot;:{&quot;color&quot;:&quot;#232F3E&quot;,&quot;thickness&quot;:1.6,&quot;tip&quot;:&quot;blockThin&quot;,&quot;corners&quot;:12,&quot;jumps&quot;:&quot;arc&quot;,&quot;flow&quot;:&quot;solid&quot;},&quot;gap&quot;:{&quot;base&quot;:8,&quot;density&quot;:1},&quot;note&quot;:{&quot;background&quot;:&quot;#FFF8E1&quot;,&quot;edge&quot;:&quot;#B7791F&quot;,&quot;ink&quot;:&quot;#6B4E00&quot;},&quot;block&quot;:{&quot;background&quot;:&quot;#FFFFFF&quot;,&quot;edge&quot;:&quot;#232F3E&quot;,&quot;corners&quot;:12},&quot;card&quot;:{&quot;revision&quot;:null},&quot;background&quot;:&quot;light&quot;}}">
+          <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
+            <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
+          </mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

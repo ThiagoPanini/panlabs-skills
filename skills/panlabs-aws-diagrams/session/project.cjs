@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Projecao — `sessao@1` + vista  ->  `modelo@1` (o que o motor do #11 come).
+ * Projecao — `session@1` + vista  ->  `model@1` (o que o motor do #11 come).
  *
  * Este arquivo e a resposta inteira a primeira pergunta do #14 ("um IR ou
  * dois?"). O ticket enunciou o trade-off como *rastreabilidade vs simplicidade*:
@@ -30,107 +30,107 @@
  *    para `processar -> tabela`, com o rotulo da primeira aresta.
  *
  * O motor do #11 nao mudou uma linha para isto acontecer — e nao e coincidencia:
- * a saida daqui e um `modelo@1` valido, e o motor continua sendo um renderizador
+ * a saida daqui e um `model@1` valido, e o motor continua sendo um renderizador
  * de UMA vista. Quem sabe que existem duas e a camada de sessao.
  */
 
-const VISTAS = ['logica', 'tecnica'];
+const VISTAS = ['logical', 'technical'];
 
 /**
- * Campos que o casaco tecnico repassa direto para o no do modelo@1.
+ * Campos que o casaco tecnico repassa direto para o no do model@1.
  *
- * ⚠️ ESTA LISTA E O `sessao/esquema.json` SAO A MESMA DECISAO ESCRITA DUAS VEZES,
+ * ⚠️ ESTA LISTA E O `session/schema.json` SAO A MESMA DECISAO ESCRITA DUAS VEZES,
  * e o dia em que discordarem o campo some sem erro nenhum — foi o que aconteceu
- * com `qualificador`, `ou` e `habilita` ate o #29: os tres existiam em `modelo@1`
+ * com `qualificador`, `ou` e `habilita` ate o #29: os tres existiam em `model@1`
  * e nao existiam aqui, entao quem passava pelo ARCO DE DUAS VISTAS perdia os tres
- * enquanto quem escrevia `modelo@1` direto os tinha. `ou` era o mais caro: sem
+ * enquanto quem escrevia `model@1` direto os tinha. `ou` era o mais caro: sem
  * ele, multi-conta pelo arco nao conseguia expressar unidade organizacional
  * nenhuma — as duas bandeiras da skill nao se combinavam.
  *
- * `tests/check-paridade-tecnica.cjs` (#37) mede duas paridades, nao uma:
- * modelo@1.no contra sessao@1.casacoTecnico (os dois ESQUEMAS), e esta lista
- * contra sessao@1.casacoTecnico (o esquema contra quem de fato PROJETA). A
+ * `tests/check-technical-parity.cjs` (#37) mede duas paridades, nao uma:
+ * model@1.no contra session@1.casacoTecnico (os dois ESQUEMAS), e esta lista
+ * contra session@1.casacoTecnico (o esquema contra quem de fato PROJETA). A
  * primeira sozinha nao pegaria a falha que faltou aqui para `camada` (#22)
  * ate o #37: o campo podia estar nos dois esquemas e ainda assim nunca
- * chegar ao modelo@1 projetado, se esta lista esquecesse dele. Exportada por
+ * chegar ao model@1 projetado, se esta lista esquecesse dele. Exportada por
  * isso — a checagem le a lista de verdade, nao uma copia dela.
  */
-const CAMPOS_TECNICOS = ['servico', 'az', 'acesso', 'cidr', 'conta', 'nota',
-                         'qualificador', 'ou', 'habilita', 'camada'];
+const CAMPOS_TECNICOS = ['service', 'az', 'access', 'cidr', 'account', 'note',
+                         'qualifier', 'ou', 'enables', 'layer'];
 
 /** O mesmo, do lado logico. `nota` ja vinha; `qualificador` entrou no #29. */
-const CAMPOS_LOGICOS = ['nota', 'qualificador'];
+const CAMPOS_LOGICOS = ['note', 'qualifier'];
 
-const existeNa = (el, vista) =>
-  vista === 'tecnica' ? true : (el.camada || 'ambas') !== 'tecnica';
+const existeNa = (el, view) =>
+  view === 'technical' ? true : (el.layer || 'both') !== 'technical';
 
 /**
- * @param {object} sessao  modelo `sessao@1`
+ * @param {object} sessao  modelo `session@1`
  * @param {'logica'|'tecnica'} vista
  * @returns {{modelo: object, trilha: object}}
  */
-function projetar(sessao, vista) {
-  if (!VISTAS.includes(vista)) throw new Error(`vista "${vista}" — esperado logica ou tecnica`);
-  if (vista === 'tecnica' && sessao.estagio !== 'tecnica')
+function projetar(sessao, view) {
+  if (!VISTAS.includes(view)) throw new Error(`vista "${view}" — esperado logica ou tecnica`);
+  if (view === 'technical' && sessao.stage !== 'technical')
     throw new Error('modelo no estagio "logica" nao emite vista tecnica: nenhum no tem casaco tecnico ainda');
 
-  const porId = new Map(sessao.nos.map(n => [n.id, n]));
+  const porId = new Map(sessao.nodes.map(n => [n.id, n]));
   const trilha = { colapsados: [], contraidas: [], descartados: [] };
 
   // ------------------------------------------------------- 1. quem sobrevive
   const vive = new Set();
-  for (const n of sessao.nos) {
-    if (!existeNa(n, vista)) { trilha.descartados.push({ o: 'no', id: n.id, porque: 'so existe na vista tecnica' }); continue; }
+  for (const n of sessao.nodes) {
+    if (!existeNa(n, view)) { trilha.descartados.push({ o: 'no', id: n.id, because: 'so existe na vista tecnica' }); continue; }
     vive.add(n.id);
   }
 
   // ------------------------------------------------- 2. contencao colapsada
   /** Sobe por `dentro` ate achar um ancestral que exista nesta vista. */
   function paiNaVista(no) {
-    let atual = no.dentro, saltos = 0;
+    let atual = no.inside, jumps = 0;
     while (atual !== undefined) {
-      if (vive.has(atual)) return { pai: atual, saltos };
+      if (vive.has(atual)) return { pai: atual, jumps };
       const acima = porId.get(atual);
-      if (!acima) return { pai: undefined, saltos };   // referencia quebrada — o validador reclama antes
-      atual = acima.dentro; saltos++;
+      if (!acima) return { pai: undefined, jumps };   // referencia quebrada — o validador reclama antes
+      atual = acima.inside; jumps++;
     }
-    return { pai: undefined, saltos };
+    return { pai: undefined, jumps };
   }
 
-  const nos = [];
-  for (const n of sessao.nos) {
+  const nodes = [];
+  for (const n of sessao.nodes) {
     if (!vive.has(n.id)) continue;
-    const casaco = vista === 'logica' ? n.logico : n.tecnico;
-    if (!casaco) throw new Error(`no "${n.id}" sem casaco "${vista}" — o validador de sessao deveria ter pego isto`);
+    const facet = view === 'logical' ? n.logical : n.technical;
+    if (!facet) throw new Error(`no "${n.id}" sem casaco "${view}" — o validador de sessao deveria ter pego isto`);
 
-    const { pai, saltos } = paiNaVista(n);
-    if (saltos > 0) trilha.colapsados.push({ id: n.id, de: n.dentro, para: pai, saltos });
+    const { pai, jumps } = paiNaVista(n);
+    if (jumps > 0) trilha.colapsados.push({ id: n.id, from: n.inside, to: pai, jumps });
 
-    const saida = { id: n.id, tipo: casaco.tipo };
-    const rotulo = casaco.rotulo !== undefined ? casaco.rotulo : n.rotulo;
-    if (rotulo !== undefined) saida.rotulo = rotulo;
-    if (pai !== undefined) saida.dentro = pai;
+    const saida = { id: n.id, kind: facet.kind };
+    const label = facet.label !== undefined ? facet.label : n.label;
+    if (label !== undefined) saida.label = label;
+    if (pai !== undefined) saida.inside = pai;
     // As chaves aqui NAO sao decoracao: sem elas o `else` gruda no `if` de
     // dentro do `for` e a projecao LOGICA nunca copia `nota` — o casaco logico
     // declara o campo, o esquema o documenta, e ele some sem erro nenhum.
-    if (vista === 'tecnica') {
-      for (const c of CAMPOS_TECNICOS) if (casaco[c] !== undefined) saida[c] = casaco[c];
+    if (view === 'technical') {
+      for (const c of CAMPOS_TECNICOS) if (facet[c] !== undefined) saida[c] = facet[c];
     } else {
-      for (const c of CAMPOS_LOGICOS) if (casaco[c] !== undefined) saida[c] = casaco[c];
+      for (const c of CAMPOS_LOGICOS) if (facet[c] !== undefined) saida[c] = facet[c];
     }
-    nos.push(saida);
+    nodes.push(saida);
   }
 
   // ---------------------------------------------------- 3. arestas
-  const arestasDaVista = (sessao.arestas || []).filter(a => existeNa(a, vista));
-  for (const a of (sessao.arestas || []))
-    if (!existeNa(a, vista))
-      trilha.descartados.push({ o: 'aresta', id: a.id || `${a.de}->${a.para}`, porque: 'so existe na vista tecnica' });
+  const arestasDaVista = (sessao.edges || []).filter(a => existeNa(a, view));
+  for (const a of (sessao.edges || []))
+    if (!existeNa(a, view))
+      trilha.descartados.push({ o: 'aresta', id: a.id || `${a.from}->${a.to}`, because: 'so existe na vista tecnica' });
 
   const saindoDe = new Map();
   for (const a of arestasDaVista) {
-    if (!saindoDe.has(a.de)) saindoDe.set(a.de, []);
-    saindoDe.get(a.de).push(a);
+    if (!saindoDe.has(a.from)) saindoDe.set(a.from, []);
+    saindoDe.get(a.from).push(a);
   }
 
   /**
@@ -145,15 +145,15 @@ function projetar(sessao, vista) {
     visitados.add(idInicial);
     const out = [];
     for (const seguinte of (saindoDe.get(idInicial) || []))
-      for (const alvo of alcancaveis(seguinte.para, visitados))
-        out.push({ id: alvo.id, por: [idInicial, ...alvo.por] });
+      for (const target of alcancaveis(seguinte.to, visitados))
+        out.push({ id: target.id, por: [idInicial, ...target.by] });
     return out;
   }
 
-  const arestas = [];
+  const edges = [];
   const jaVistas = new Set();
   for (const a of arestasDaVista) {
-    if (!vive.has(a.de)) continue;   // caminho que comeca em infraestrutura nao tem leitura logica
+    if (!vive.has(a.from)) continue;   // caminho que comeca em infraestrutura nao tem leitura logica
 
     // Os alvos tem de estar todos conhecidos ANTES de emitir, porque o id de
     // saida depende de quantos sao. Sem isto a aresta contraida perdia o id da
@@ -162,77 +162,77 @@ function projetar(sessao, vista) {
     // inteira num desenho que nao mudou em nada. Custou uma rodada de bancada.
     const alvos = [];
     const vistos = new Set();
-    for (const alvo of alcancaveis(a.para, new Set())) {
-      if (alvo.id === a.de) continue;                          // contracao fechou um laco
-      if (vistos.has(alvo.id)) continue;
+    for (const target of alcancaveis(a.to, new Set())) {
+      if (target.id === a.from) continue;                          // contracao fechou um laco
+      if (vistos.has(target.id)) continue;
       // A chave leva a ARESTA de origem, nao so o par (de, para). Sem isso, duas
       // arestas aprovadas DISTINTAS entre o mesmo par — "envia pedido" e
       // "confirma recebimento" entre os mesmos dois blocos — colapsariam numa
       // so, e as duas pontas da comparacao do acordo perderiam a mesma, deixando
       // a checagem cega para a perda. `vistos` continua deduplicando o leque de
       // UMA aresta, que e o caso que a contracao realmente cria.
-      const chave = `${a.id || `${a.de}>${a.para}`}#${alvo.id}`;
+      const chave = `${a.id || `${a.from}>${a.to}`}#${target.id}`;
       if (jaVistas.has(chave)) continue;
-      jaVistas.add(chave); vistos.add(alvo.id);
-      alvos.push(alvo);
+      jaVistas.add(chave); vistos.add(target.id);
+      alvos.push(target);
     }
 
-    for (const alvo of alvos) {
-      const casaco = (vista === 'logica' ? a.logico : a.tecnico) || {};
-      const e = { de: a.de, para: alvo.id };
+    for (const target of alvos) {
+      const facet = (view === 'logical' ? a.logical : a.technical) || {};
+      const e = { from: a.from, to: target.id };
       // A aresta contraida CONTINUA sendo a aresta aprovada — so passou a ser
       // desenhada pelo caminho curto, e por isso herda o id. Quando um salto
       // abre em leque (um barramento com varios consumidores), o alvo desempata.
-      if (a.id !== undefined) e.id = alvos.length > 1 ? `${a.id}--${alvo.id}` : a.id;
-      const rotulo = casaco.rotulo !== undefined ? casaco.rotulo : a.rotulo;
-      if (rotulo !== undefined) e.rotulo = rotulo;
-      const protocolo = casaco.protocolo !== undefined ? casaco.protocolo : a.protocolo;
-      if (protocolo !== undefined) e.protocolo = protocolo;
-      if (a.dados !== undefined) e.dados = a.dados;
-      const ordem = casaco.ordem !== undefined ? casaco.ordem : a.ordem;
-      if (ordem !== undefined) e.ordem = ordem;
-      arestas.push(e);
+      if (a.id !== undefined) e.id = alvos.length > 1 ? `${a.id}--${target.id}` : a.id;
+      const label = facet.label !== undefined ? facet.label : a.label;
+      if (label !== undefined) e.label = label;
+      const protocol = facet.protocol !== undefined ? facet.protocol : a.protocol;
+      if (protocol !== undefined) e.protocol = protocol;
+      if (a.data !== undefined) e.data = a.data;
+      const order = facet.order !== undefined ? facet.order : a.order;
+      if (order !== undefined) e.order = order;
+      edges.push(e);
 
-      if (alvo.por.length)
-        trilha.contraidas.push({ de: a.de, para: alvo.id, por: alvo.por, rotulo });
+      if (target.by.length)
+        trilha.contraidas.push({ from: a.from, to: target.id, por: target.by, label });
     }
   }
 
   // ---------------------------------------------------- 4. faixas e notas
   // Faixa e conceito de topologia (#19) — a vista logica nao tem o que cruzar.
-  const faixas = vista === 'tecnica'
-    ? (sessao.faixas || []).filter(f => f.membros.every(m => vive.has(m)))
+  const bands = view === 'technical'
+    ? (sessao.bands || []).filter(f => f.members.every(m => vive.has(m)))
     : [];
 
-  const notas = [];
-  for (const nt of (sessao.notas || [])) {
-    if (!existeNa(nt, vista)) { trilha.descartados.push({ o: 'nota', id: nt.id || nt.texto.slice(0, 24), porque: 'so existe na vista tecnica' }); continue; }
-    if (nt.sobre !== undefined && !vive.has(nt.sobre)) {
+  const notes = [];
+  for (const nt of (sessao.notes || [])) {
+    if (!existeNa(nt, view)) { trilha.descartados.push({ o: 'note', id: nt.id || nt.text.slice(0, 24), because: 'so existe na vista tecnica' }); continue; }
+    if (nt.about !== undefined && !vive.has(nt.about)) {
       // Nota presa a um no que sumiu na projecao. Reancorar no ancestral seria
       // mudar o que ela afirma; omitir calado seria A4.2. Vira nota de rodape,
       // e a trilha registra o remanejo.
-      trilha.descartados.push({ o: 'ancora-de-nota', id: nt.sobre, porque: 'nota virou rodape nesta vista' });
-      const { sobre, camada, ...resto } = nt;
-      notas.push(resto);
+      trilha.descartados.push({ o: 'ancora-de-nota', id: nt.about, because: 'nota virou rodape nesta vista' });
+      const { about, layer, ...resto } = nt;
+      notes.push(resto);
       continue;
     }
-    const { camada, ...resto } = nt;
-    notas.push(resto);
+    const { layer, ...resto } = nt;
+    notes.push(resto);
   }
 
-  const ap = (sessao.vistas && sessao.vistas[vista]) || {};
+  const ap = (sessao.vistas && sessao.vistas[view]) || {};
   const modelo = {
-    esquema: 'panlabs-aws-diagrams/modelo@1',
-    id: `${sessao.id}-${vista}`,
-    titulo: ap.titulo || sessao.titulo,
-    vista,
-    nos, arestas,
+    schema: 'panlabs-aws-diagrams/model@1',
+    id: `${sessao.id}-${view}`,
+    title: ap.title || sessao.title,
+    view,
+    nodes, edges,
   };
-  const sub = ap.subtitulo !== undefined ? ap.subtitulo : sessao.subtitulo;
-  if (sub) modelo.subtitulo = sub;
-  if (ap.genero) modelo.genero = ap.genero;
-  if (faixas.length) modelo.faixas = faixas;
-  if (notas.length) modelo.notas = notas;
+  const sub = ap.subtitle !== undefined ? ap.subtitle : sessao.subtitle;
+  if (sub) modelo.subtitle = sub;
+  if (ap.genre) modelo.genre = ap.genre;
+  if (bands.length) modelo.bands = bands;
+  if (notes.length) modelo.notes = notes;
 
   return { modelo, trilha };
 }
@@ -252,15 +252,15 @@ function recorteDoAcordo(modeloLogico) {
   // faz ("a","bc") e ("ab","c") virarem a mesma chave; e o rotulo entra porque,
   // com arestas paralelas entre o mesmo par, sem ele a ordem depende de quem
   // chegou primeiro na lista — e a impressao do acordo deixaria de ser estavel.
-  const chaveDaAresta = a => `${a.de} ${a.para} ${a.rotulo || ''}`;
+  const chaveDaAresta = a => `${a.from} ${a.to} ${a.label || ''}`;
   const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
   return {
-    nos: modeloLogico.nos.map(n => ({ id: n.id, tipo: n.tipo, rotulo: n.rotulo, dentro: n.dentro, nota: n.nota }))
+    nodes: modeloLogico.nodes.map(n => ({ id: n.id, kind: n.kind, label: n.label, inside: n.inside, note: n.note }))
       .sort((a, b) => cmp(a.id, b.id)),
-    arestas: (modeloLogico.arestas || []).map(a => ({ de: a.de, para: a.para, rotulo: a.rotulo, dados: a.dados }))
+    edges: (modeloLogico.edges || []).map(a => ({ from: a.from, to: a.to, label: a.label, data: a.data }))
       .sort((x, y) => cmp(chaveDaAresta(x), chaveDaAresta(y))),
-    notas: (modeloLogico.notas || []).map(n => ({ texto: n.texto, sobre: n.sobre, origem: n.origem }))
-      .sort((a, b) => cmp(a.texto, b.texto)),
+    notes: (modeloLogico.notes || []).map(n => ({ text: n.text, about: n.about, origin: n.origin }))
+      .sort((a, b) => cmp(a.text, b.text)),
   };
 }
 

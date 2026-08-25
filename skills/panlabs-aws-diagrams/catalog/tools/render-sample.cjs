@@ -4,7 +4,7 @@
  * cada shape caiu — para a verificação por pixel saber onde olhar.
  *
  *   node render-sample.cjs [dir-de-saida]
- *   -> amostra.drawio  +  amostra.manifesto.json
+ *   -> sample.drawio  +  sample.manifest.json
  *
  * A amostra é escolhida para exercitar cada correção, não para ser bonita:
  * renomes congelados, títulos ambíguos entre paletas, os dois caminhos de
@@ -97,17 +97,17 @@ function proximaPosicao() {
 
 for (const [lista, esperado] of [[SERVICOS, 'svc'], [RECURSOS, 'res']]) {
   if (coluna !== 0) { coluna = 0; linha++; }          // cada lista começa numa linha
-  for (const nome of lista) {
-    const r = cat.servico(nome);
-    if (!r) throw new Error(`amostra pede "${nome}" e o catálogo não resolve`);
+  for (const name of lista) {
+    const r = cat.service(name);
+    if (!r) throw new Error(`amostra pede "${name}" e o catálogo não resolve`);
     const tipoReal = r.via.startsWith('recurso') ? 'res' : 'svc';
     if (tipoReal !== esperado) {
-      throw new Error(`"${nome}" deveria ser ${esperado} e resolveu como ${tipoReal} (${r.via})`);
+      throw new Error(`"${name}" deveria ser ${esperado} e resolveu como ${tipoReal} (${r.via})`);
     }
     const { x, y } = proximaPosicao();
     const cid = vertice({ valor: r.title, style: r.style, x, y, w: ICONE, h: ICONE });
     manifesto.push({
-      id: cid, pedido: nome, titulo: r.title, tipo: tipoReal, via: r.via,
+      id: cid, pedido: name, title: r.title, kind: tipoReal, via: r.via,
       stencil: r.stencil, fill: r.fill, x, y, w: ICONE, h: ICONE,
       glifo: tipoReal === 'svc' ? '#ffffff' : r.fill
     });
@@ -116,27 +116,27 @@ for (const [lista, esperado] of [[SERVICOS, 'svc'], [RECURSOS, 'res']]) {
 
 // ---- banda C: grupos, cada um com um ícone dentro (prova o aninhamento)
 const yGrupos = Y0 + (linha + 1) * PASSO_Y;
-GRUPOS.forEach((nome, i) => {
-  const g = cat.grupo(nome);
-  if (!g) throw new Error(`amostra pede o grupo "${nome}" e o catálogo não resolve`);
+GRUPOS.forEach((name, i) => {
+  const g = cat.group(name);
+  if (!g) throw new Error(`amostra pede o grupo "${name}" e o catálogo não resolve`);
   const gx = X0 + (i % GRUPO_COLS) * (GRUPO_W + GRUPO_GAP);
   const gy = yGrupos + Math.floor(i / GRUPO_COLS) * (GRUPO_H + GRUPO_GAP);
   const gid = vertice({ valor: g.title, style: g.style, x: gx, y: gy, w: GRUPO_W, h: GRUPO_H });
 
   // filho aninhado: se container=1 não pegou, ele ainda desenha, mas o
   // arquivo deixa de expressar contenção — por isso o manifesto guarda o pai.
-  const dentro = cat.servico('lambda');
-  const fid = vertice({ valor: '', style: dentro.style, x: FILHO_X, y: FILHO_Y,
+  const inside = cat.service('lambda');
+  const fid = vertice({ valor: '', style: inside.style, x: FILHO_X, y: FILHO_Y,
                         w: FILHO, h: FILHO, pai: gid });
 
   const stroke = (g.style.match(/strokeColor=([^;]*)/) || [])[1];
   manifesto.push({
-    id: gid, pedido: nome, titulo: g.title, tipo: 'grupo',
+    id: gid, pedido: name, title: g.title, kind: 'group',
     grIcon: g.grIcon, shapeClass: g.shapeClass, correcoes: g.correcoes,
     x: gx, y: gy, w: GRUPO_W, h: GRUPO_H,
-    borda: stroke === 'none' ? null : stroke,
+    edge: stroke === 'none' ? null : stroke,
     filho: { id: fid, x: gx + FILHO_X, y: gy + FILHO_Y, w: FILHO, h: FILHO,
-             fill: dentro.fill, glifo: '#ffffff' }
+             fill: inside.fill, glifo: '#ffffff' }
   });
 });
 
@@ -146,7 +146,7 @@ const alturaTotal = yGrupos + Math.ceil(GRUPOS.length / GRUPO_COLS) * (GRUPO_H +
 vertice({ valor: '', style: marcadorStyle, x: larguraTotal, y: alturaTotal, w: 10, h: 10 });
 
 const calib = { a: { x: 0, y: 0, w: 10, h: 10 }, b: { x: larguraTotal, y: alturaTotal, w: 10, h: 10 },
-                cor: MARCADOR };
+                color: MARCADOR };
 
 // ------------------------------------------------------------------- saída
 
@@ -167,8 +167,8 @@ ${celulas.join('\n')}
 `;
 
 fs.mkdirSync(saida, { recursive: true });
-fs.writeFileSync(path.join(saida, 'amostra.drawio'), xml);
-fs.writeFileSync(path.join(saida, 'amostra.manifesto.json'), JSON.stringify({
+fs.writeFileSync(path.join(saida, 'sample.drawio'), xml);
+fs.writeFileSync(path.join(saida, 'sample.manifest.json'), JSON.stringify({
   meta: {
     drawio: cat.meta.drawio, commit: cat.meta.commit,
     servicos: SERVICOS.length, recursos: RECURSOS.length, grupos: GRUPOS.length
@@ -182,5 +182,5 @@ console.error([
   `resource icons ${RECURSOS.length}`,
   `grupos         ${GRUPOS.length}`,
   `células        ${manifesto.length} (+ ${GRUPOS.length} filhos aninhados + 2 marcadores)`,
-  `saída          ${path.join(saida, 'amostra.drawio')}`
+  `saída          ${path.join(saida, 'sample.drawio')}`
 ].join('\n'));

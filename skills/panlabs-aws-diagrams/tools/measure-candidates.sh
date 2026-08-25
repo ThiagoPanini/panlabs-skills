@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # A MEDIÇÃO QUE ESCOLHEU O MOTOR DE PRODUÇÃO — reprodutível, não afirmada.
 #
-#   tools/medir-candidatos.sh [ref]        # default: HEAD
+#   tools/measure-candidates.sh [ref]        # default: HEAD
 #
 # O #23 pede o motor escolhido "por medição, não por data", e uma medição que só
 # existe em prosa é exatamente o tipo de afirmação que este ticket nasceu para
@@ -16,10 +16,10 @@
 # O ANCESTRAL COMUM é `daf4bc4` e o número não foi escolhido: é o commit em que o
 # #13 forkou o motor. Achado assim, e conferível:
 #
-#     git log --oneline -- skills/.../prototypes/q13/motor/derivar.cjs
+#     git log --oneline -- skills/.../prototypes/q13/engine/derive.cjs
 #     # -> daf4bc4, único commit; e naquele commit
-#     git show daf4bc4:.../q11/motor/derivar.cjs | sha256sum
-#     git show daf4bc4:.../q13/motor/derivar.cjs | sha256sum   # o MESMO hash
+#     git show daf4bc4:.../q11/engine/derive.cjs | sha256sum
+#     git show daf4bc4:.../q13/engine/derive.cjs | sha256sum   # o MESMO hash
 set -uo pipefail
 
 REF="${1:-HEAD}"
@@ -29,7 +29,7 @@ REPO="$(cd "$RAIZ/../.." && pwd)"
 P="skills/panlabs-aws-diagrams/prototypes"
 BASE="daf4bc4"
 
-if ! git -C "$REPO" cat-file -e "$REF:$P/q13/motor/dispor.cjs" 2>/dev/null; then
+if ! git -C "$REPO" cat-file -e "$REF:$P/q13/engine/layout.cjs" 2>/dev/null; then
   echo "  os protótipos não existem em '$REF' — não há o que medir."
   echo "  (é o estado esperado depois que eles saírem da árvore; a medição já"
   echo "   foi feita e registrada)"
@@ -58,7 +58,7 @@ extrair() {  # extrair <ref> <caminho-no-repo> <destino>
 
 # ── as duas variantes ────────────────────────────────────────────────────────
 # A: o motor do #11 no lugar dele.  B: o motor do #13 no lugar do #11, com o
-# tema ao lado (é de lá que o `resolver.cjs` dele carrega o tema).
+# tema ao lado (é de lá que o `resolve.cjs` dele carrega o tema).
 for V in A B; do
   rm -rf "$TMP/_x"; mkdir -p "$TMP/_x" "$TMP/$V"
   extrair "$REF" "skills/panlabs-aws-diagrams/catalog" "$TMP/$V/catalog"
@@ -90,32 +90,32 @@ medir() {
   echo
   echo "  ── $ROT"
   linha "#11 fronteira"        node "$Q11/tools/check-fronteira.cjs"
-  linha "#11 validacao"        node "$Q11/tools/check-validacao.cjs"
+  linha "#11 validacao"        node "$Q11/tools/check-validation.cjs"
   for m in "$Q11"/modelo/*.json; do
     linha "#11 gerar $(basename "$m" .json)" \
-      node "$Q11/motor/gerar.cjs" "$m" --saida "$Q11/saida/$(basename "$m" .json).drawio"
+      node "$Q11/engine/generate.cjs" "$m" --saida "$Q11/output/$(basename "$m" .json).drawio"
   done
-  linha "#11 determinismo"     node "$Q11/tools/check-determinismo.cjs"
-  linha "#12 gatilhos"         node "$Q12/tools/check-gatilhos.cjs"
+  linha "#11 determinismo"     node "$Q11/tools/check-determinism.cjs"
+  linha "#12 gatilhos"         node "$Q12/tools/check-triggers.cjs"
   for m in "$Q12"/modelo/*.json; do
     nome="$(basename "$m" .json)"
-    linha "#12 gerar $nome" node "$Q11/motor/gerar.cjs" "$m" \
-      --saida "$Q12/saida/$(echo "$nome" | sed 's/-[0-9]*-contas$//;s/-3-az$//').drawio"
+    linha "#12 gerar $nome" node "$Q11/engine/generate.cjs" "$m" \
+      --saida "$Q12/output/$(echo "$nome" | sed 's/-[0-9]*-contas$//;s/-3-az$//').drawio"
   done
-  linha "#12 travessia"        node "$Q12/tools/check-travessia.cjs"
-  linha "#12 determinismo"     node "$Q11/tools/check-determinismo.cjs" "$Q12/modelo"
-  linha "#12 bissecao"         node "$Q12/tools/bissecar-modelo.cjs" "$Q12/modelo/hub-tgw-3-contas.json"
+  linha "#12 travessia"        node "$Q12/tools/check-traversal.cjs"
+  linha "#12 determinismo"     node "$Q11/tools/check-determinism.cjs" "$Q12/modelo"
+  linha "#12 bissecao"         node "$Q12/tools/bisect-model.cjs" "$Q12/models/hub-tgw-3-accounts.json"
   linha "#14 fronteira"        node "$Q14/tools/check-fronteira.cjs"
-  linha "#14 motor-intocado"   node "$Q14/tools/check-motor-intocado.cjs"
+  linha "#14 motor-intocado"   node "$Q14/tools/check-engine-untouched.cjs"
   linha "#14 sessao1"          node "$Q14/sessao1.cjs"
   linha "#14 sessao2"          node "$Q14/sessao2.cjs"
-  linha "#14 projecao"         node "$Q14/tools/check-projecao.cjs"
-  linha "#14 impressao"        node "$Q14/tools/medir-impressao.cjs"
-  linha "#18 indice"           node "$Q18/tests/check-indice.cjs"
-  linha "#18 primitivas"       node "$Q18/tests/check-primitivas.cjs"
-  linha "#18 quebrados"        node "$Q18/tests/check-quebrados.cjs"
-  linha "#18 portao"           node "$Q18/tests/check-portao.cjs"
-  linha "#18 bons"             node "$Q18/tests/check-bons.cjs"
+  linha "#14 projecao"         node "$Q14/tools/check-projection.cjs"
+  linha "#14 impressao"        node "$Q14/tools/medir-fingerprint.cjs"
+  linha "#18 indice"           node "$Q18/tests/check-index.cjs"
+  linha "#18 primitivas"       node "$Q18/tests/check-primitives.cjs"
+  linha "#18 quebrados"        node "$Q18/tests/check-broken.cjs"
+  linha "#18 portao"           node "$Q18/tests/check-gate.cjs"
+  linha "#18 bons"             node "$Q18/tests/check-good.cjs"
   printf '\n    ==> %s: %s VERMELHO(S) de %s\n' "$ROT" "$falhas" "$total"
 }
 
@@ -132,7 +132,7 @@ echo
 printf '  %-16s %10s %10s\n' arquivo 'tema #13' 'tronco'
 printf '  %s\n' "----------------------------------------"
 soma_t=0; soma_m=0
-for f in alinhar.cjs derivar.cjs dispor.cjs emitir.cjs gerar.cjs planejar.cjs resolver.cjs validar.cjs esquema.json; do
+for f in align.cjs derive.cjs layout.cjs emit.cjs generate.cjs plan.cjs resolve.cjs validate.cjs schema.json; do
   conta() {  # conta <ref-a>:<caminho-a> <ref-b>:<caminho-b>
     local a b
     a="$TMP/_a"; b="$TMP/_b"

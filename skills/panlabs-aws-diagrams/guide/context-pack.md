@@ -132,11 +132,11 @@ segurança sem tocar o grafo.
 | a premissa citada por inteiro | **no próprio `premissas.md`** | é a fonte da verdade, e já está versionada |
 
 > ⚠️ O contrato original mandava guardar a citação em `dossie.contextPack`. Medido:
-> `modelo@1` aceita (`dossie` é `additionalProperties: true`), mas **`sessao@1`
+> `model@1` aceita (`dossie` é `additionalProperties: true`), mas **`session@1`
 > recusa** — o dossiê de sessão tem lista fechada de seis campos. Como o pack é
 > um arquivo versionado, guardar a citação dentro do `.drawio` seria uma segunda
 > cópia que dessincroniza; a nota curta mais o ponteiro para o pack basta. Se um
-> dia a citação precisar viajar, o campo tem de nascer em `sessao/esquema.json`.
+> dia a citação precisar viajar, o campo tem de nascer em `session/schema.json`.
 
 ## Como o pack nasce, na primeira vez
 

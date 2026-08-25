@@ -7,7 +7,7 @@ description: Desenha arquitetura AWS em draw.io — sabatina a necessidade até 
 
 > **O agente escreve o QUE existe. O motor calcula ONDE fica.**
 
-A **fronteira** não é disciplina, é gramática: `esquema.json` não tem nenhuma
+A **fronteira** não é disciplina, é gramática: `schema.json` não tem nenhuma
 propriedade que nomeie posição, tamanho, distância ou direção. Não existe onde
 escrever uma coordenada. Escreva semântica — quais recursos existem, quem contém
 quem, quem fala com quem — e pare.
@@ -31,8 +31,8 @@ julgamento, o critério está escrito como comando.
 | entrada | o que rodar |
 |---|---|
 | necessidade em prosa, ata de reunião, foto de quadro branco | nada — siga para o passo 2 |
-| um `.drawio` de sessão anterior | `node tools/retomar.cjs <arquivo>` |
-| um modelo já escrito (`modelo@1`) | `node motor/gerar.cjs <modelo.json> --saida x.drawio` — e pare aqui, o arco acabou |
+| um `.drawio` de sessão anterior | `node tools/resume.cjs <arquivo>` |
+| um modelo já escrito (`model@1`) | `node engine/generate.cjs <modelo.json> --saida x.drawio` — e pare aqui, o arco acabou |
 
 **Fecha quando** a porta certa foi acionada: na segunda, o **briefing** já está
 impresso. Ele devolve o acordo, as candidatas descartadas com o motivo, os achados
@@ -40,7 +40,7 @@ recusados e o estacionamento — **nada disso se pergunta de novo ao usuário**.
 
 O briefing também classifica cada página em `intacto`, `remanejado` ou
 `divergente`. Regerar por cima de uma página `remanejado` joga fora ajuste manual;
-`divergente` bloqueia. Ver [`guia/modelo.md`](guia/modelo.md).
+`divergente` bloqueia. Ver [`guide/model.md`](guide/model.md).
 
 ### 2 · Sabatina até a completude fechar
 
@@ -50,7 +50,7 @@ Rodadas inteiras de uma vez, cada pergunta numerada e com recomendação. Só os
 > **A checagem que falha é a próxima pergunta.**
 
 ```bash
-node tools/check-geometria.cjs <modelo-em-construcao.json>
+node tools/check-geometry.cjs <modelo-em-construcao.json>
 ```
 
 **Fecha quando** `A1` chega ao **piso** — e o piso tem nome: `A1.2`, `A1.3` e
@@ -58,9 +58,9 @@ node tools/check-geometria.cjs <modelo-em-construcao.json>
 corpus), mais `A1.5` e `A1.12` assim que qualquer nota tiver `sobre`. Toda outra
 entrada de `A1` que aparecer é uma pergunta a fazer.
 
-[`guia/sabatina.md`](guia/sabatina.md) traz o protocolo inteiro — eixos,
+[`guide/inquiry.md`](guide/inquiry.md) traz o protocolo inteiro — eixos,
 procedência, estacionamento, material de entrada — e o comando que projeta um
-`sessao@1` para `modelo@1`, que é o que a checagem come.
+`session@1` para `model@1`, que é o que a checagem come.
 
 ### 3 · Proponha candidatas, e deixe o humano escolher
 
@@ -80,7 +80,7 @@ confiança, assíncrono sem DLQ. Não é pergunta: é **propriedade emergente do
 montado**, e só existe depois que o grafo existe.
 
 ```bash
-node tools/revisar-lacunas.cjs <modelo.json>
+node tools/review-gaps.cjs <modelo.json>
 ```
 
 Cada regra tem pré-condição, e onde o modelo não afirma a estrutura de que ela
@@ -101,7 +101,7 @@ A aprovação não é um booleano. `aprovar()` guarda o **recorte** da projeçã
 lógica aprovada; `conferir()` reprojeta o modelo de hoje e compara.
 
 ```bash
-node tools/aprovar.cjs <caso>-logica.json --por <quem> --saida saida/<caso>.drawio
+node tools/approve.cjs <caso>-logica.json --por <quem> --saida output/<caso>.drawio
 ```
 
 `--candidata` sai do próprio dossiê: a sabatina marcou a vencedora com
@@ -119,11 +119,11 @@ O estacionamento volta agora: os nomes de serviço ditos cedo demais reaparecem
 como **sugestão inferida** contra a capacidade correspondente, para confirmar.
 
 A fase técnica **não reescreve o modelo aprovado** — ela aplica um **delta de
-elaboração** (`elaboracao@1`) sobre o que veio de dentro do `.drawio`. Nenhum campo
+elaboração** (`elaboration@1`) sobre o que veio de dentro do `.drawio`. Nenhum campo
 do delta alcança um casaco lógico, e `elaborar` recusa se você tentar: a fase
 técnica não inventa capacidade. A forma do delta está em
-[`guia/modelo.md`](guia/modelo.md); o exemplo do corpus é
-`modelo/sessao/varejo-elaboracao.json`.
+[`guide/model.md`](guide/model.md); o exemplo do corpus é
+`models/session/retail-elaboration.json`.
 
 Resolva todo nome pelo catálogo **antes** de escrevê-lo no delta:
 
@@ -137,7 +137,7 @@ do que ele leu é o passo 6. Separá-los leria o arquivo duas vezes, e a segunda
 leitura poderia discordar da primeira.
 
 ```bash
-node tools/retomar.cjs saida/<caso>.drawio --delta <caso>-elaboracao.json
+node tools/resume.cjs output/<caso>.drawio --delta <caso>-elaboracao.json
 ```
 
 Ele sai com **2** quando a elaboração mudou o que foi aprovado — que é o caso em
@@ -148,7 +148,7 @@ que a resposta certa é aprovação nova, não desenho novo.
 - `conferir()` continua `ok` — a projeção lógica de hoje ainda é byte a byte a
   aprovada, mesmo depois de a fase técnica ter enfiado VPC e subnet entre a folha
   e a fronteira;
-- `node motor/gerar.cjs <modelo> --portao veracidade` passa — nenhuma falha
+- `node engine/generate.cjs <modelo> --portao veracidade` passa — nenhuma falha
   semântica, isto é, o desenho não afirma fronteira de rede que o modelo nega.
 
 ### 7 · Publique a cópia que circula
@@ -159,10 +159,10 @@ o time recusou, fala de reunião, quem aprovou —, tudo legível em *Extras ›
 diagrama*.
 
 ```bash
-node sessao/publicar.cjs saida/<caso>.drawio --saida saida/<caso>.publicado.drawio
+node session/publish.cjs output/<caso>.drawio --saida output/<caso>.publicado.drawio
 ```
 
-**Fecha quando** o selo da cópia diz `publicado@1` e o comando reporta quantos
+**Fecha quando** o selo da cópia diz `published@1` e o comando reporta quantos
 itens de deliberação podou. Sai o que é sobre **pessoas** e sobre **caminhos não
 tomados**; fica o que é sobre a arquitetura desenhada.
 
@@ -170,14 +170,14 @@ tomados**; fica o que é sobre a arquitetura desenhada.
 
 | | |
 |---|---|
-| `node motor/gerar.cjs <m.json> --saida x.drawio` | desenha. `--tema claro\|escuro\|corporativo` · `--fluxo solido\|tracejado\|animado` · `--portao nenhum\|veracidade\|falha\|estrito` · `--explicar` |
-| `node tools/check-geometria.cjs <m.json>` | o laudo das 62 checagens. `--exemplos` roda o corpus, `--json` para ler no código |
-| `node tools/revisar-lacunas.cjs <m.json>` | a revisão de lacunas do passo 4. `--corpus` roda a régua inteira |
+| `node engine/generate.cjs <m.json> --saida x.drawio` | desenha. `--tema claro\|escuro\|corporativo` · `--fluxo solido\|tracejado\|animado` · `--portao nenhum\|veracidade\|falha\|estrito` · `--explicar` |
+| `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--exemplos` roda o corpus, `--json` para ler no código |
+| `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas do passo 4. `--corpus` roda a régua inteira |
 | `node catalog/aws-shapes.cjs <nome>...` | resolve nome → shape, com as correções aplicadas |
-| `node tools/aprovar.cjs <sessao.json>` | passo 5: aprova a vista lógica e grava o `.drawio` que retoma. `--por` · `--candidata` · `--em` · `--saida` |
-| `node tools/retomar.cjs <arq.drawio>` | passos 1 e 6: reconhece o arquivo, classifica as páginas e imprime o briefing. Com `--delta <d.json>`, elabora a vista técnica e grava as duas |
-| `node sessao/publicar.cjs <arq.drawio>` | a cópia que sai de casa |
-| `./tests/rodar.sh` | a régua inteira, em 8 camadas |
+| `node tools/approve.cjs <sessao.json>` | passo 5: aprova a vista lógica e grava o `.drawio` que retoma. `--por` · `--candidata` · `--em` · `--saida` |
+| `node tools/resume.cjs <arq.drawio>` | passos 1 e 6: reconhece o arquivo, classifica as páginas e imprime o briefing. Com `--delta <d.json>`, elabora a vista técnica e grava as duas |
+| `node session/publish.cjs <arq.drawio>` | a cópia que sai de casa |
+| `./tests/run.sh` | a régua inteira, em 8 camadas |
 
 `--explicar` é a trilha de auditoria: mostra como cada nome caiu no catálogo, de
 onde saiu a camada de rede de cada subnet, e o laudo geométrico página a página.
@@ -202,7 +202,7 @@ pergunta nova na sabatina.
 
 ## A régua
 
-`./tests/rodar.sh` — 8 camadas. As sete primeiras rodam em qualquer máquina; só o
+`./tests/run.sh` — 8 camadas. As sete primeiras rodam em qualquer máquina; só o
 render precisa do draw.io headless e, sem o binário, avisa e segue. O render é
 dependência de **desenvolvimento**; a skill publicada não carrega nenhuma.
 
@@ -214,17 +214,17 @@ estáticas verdes com o ícone errado no desenho.
 
 | leia quando | |
 |---|---|
-| for perguntar ao usuário, propor candidatas ou revisar lacunas | [`guia/sabatina.md`](guia/sabatina.md) |
-| for escrever ou corrigir um modelo, e o esquema não bastar | [`guia/modelo.md`](guia/modelo.md) |
-| a empresa tiver premissas de arquitetura, ou não tiver | [`guia/context-pack.md`](guia/context-pack.md) |
-| o laudo acusar, ou o portão barrar | [`guia/laudo.md`](guia/laudo.md) |
-| pedirem fundo escuro, cor da casa, fluxo animado ou uma cópia para circular | [`guia/visual.md`](guia/visual.md) |
+| for perguntar ao usuário, propor candidatas ou revisar lacunas | [`guide/inquiry.md`](guide/inquiry.md) |
+| for escrever ou corrigir um modelo, e o esquema não bastar | [`guide/model.md`](guide/model.md) |
+| a empresa tiver premissas de arquitetura, ou não tiver | [`guide/context-pack.md`](guide/context-pack.md) |
+| o laudo acusar, ou o portão barrar | [`guide/report.md`](guide/report.md) |
+| pedirem fundo escuro, cor da casa, fluxo animado ou uma cópia para circular | [`guide/visual.md`](guide/visual.md) |
 
 Os contratos são a fonte da verdade e estão versionados — leia o arquivo, não uma
-cópia dele: [`esquema.json`](esquema.json) (`modelo@1`, o que o agente escreve),
-[`sessao/esquema.json`](sessao/esquema.json) (`sessao@1`, o que persiste entre
-conversas), [`tema/esquema.json`](tema/esquema.json) (`tema@1`, o vocabulário
-fechado de estilo) e [`sessao/esquema-elaboracao.json`](sessao/esquema-elaboracao.json)
-(`elaboracao@1`, o delta da fase técnica). Os quatro são varridos por
-`tests/check-esquema-unico.cjs`, e `modelo@1` e o casaco técnico de `sessao@1` têm
-paridade de campo conferida por `tests/check-paridade-tecnica.cjs` (#37).
+cópia dele: [`schema.json`](schema.json) (`model@1`, o que o agente escreve),
+[`session/schema.json`](session/schema.json) (`session@1`, o que persiste entre
+conversas), [`theme/schema.json`](theme/schema.json) (`theme@1`, o vocabulário
+fechado de estilo) e [`session/elaboration.schema.json`](session/elaboration.schema.json)
+(`elaboration@1`, o delta da fase técnica). Os quatro são varridos por
+`tests/check-single-schema.cjs`, e `model@1` e o casaco técnico de `session@1` têm
+paridade de campo conferida por `tests/check-technical-parity.cjs` (#37).

@@ -12,7 +12,7 @@
 const path = require('path');
 const {
   camadasDeSubnets, lacunasDeCamada, ordemDeCamada, ordemDeAcesso, chaveDePapel,
-} = require('./camadas.cjs');
+} = require('./layers.cjs');
 
 const CAMINHO_CATALOGO = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
 let _catalogo = null;
@@ -50,7 +50,7 @@ function catalogoPadrao() {
  *
  * O #22 tirou daqui o placeholder: o desempate do meio era alfabético e
  * derrubava `Web · Data` e `Ingest · Core`. Agora quem desempata é a camada
- * que a subnet ocupa, lida do que ela guarda (`camadas.cjs`). O alfabeto
+ * que a subnet ocupa, lida do que ela guarda (`layers.cjs`). O alfabeto
  * sobreviveu como ÚLTIMO desempate, e mudou de função: ele não carrega mais
  * significado nenhum, só garante ordem total entre coisas que a semântica
  * empatou — que é o que o determinismo precisa.
@@ -70,9 +70,9 @@ function catalogoPadrao() {
  */
 function chaveDeIrmao(n, camadaDe) {
   return [
-    ordemDeAcesso(n.acesso),
+    ordemDeAcesso(n.access),
     ordemDeCamada(camadaDe(n.id)),      // só subnet tem camada; o resto cai no piso
-    String(n.rotulo || n.servico || n.id),
+    String(n.label || n.service || n.id),
     String(n.id),
   ];
 }
@@ -92,17 +92,17 @@ function compararIrmaos(a, b, camadaDe) {
  * só é usada para consultar ancestralidade, que não depende de ordem.
  */
 function arvore(modelo, camadaDe = () => null) {
-  const porId = new Map(modelo.nos.map(n => [n.id, n]));
-  const filhos = new Map(modelo.nos.map(n => [n.id, []]));
+  const porId = new Map(modelo.nodes.map(n => [n.id, n]));
+  const filhos = new Map(modelo.nodes.map(n => [n.id, []]));
   const raizes = [];
-  for (const n of modelo.nos) {
-    if (n.dentro === undefined) raizes.push(n);
-    else filhos.get(n.dentro).push(n);
+  for (const n of modelo.nodes) {
+    if (n.inside === undefined) raizes.push(n);
+    else filhos.get(n.inside).push(n);
   }
   const cmp = (a, b) => compararIrmaos(a, b, camadaDe);
   raizes.sort(cmp);
   for (const lista of filhos.values()) lista.sort(cmp);
-  const pai = n => n.dentro === undefined ? null : porId.get(n.dentro);
+  const pai = n => n.inside === undefined ? null : porId.get(n.inside);
   const ancestrais = n => { const o = []; let c = pai(n); while (c) { o.push(c); c = pai(c); } return o; };
   const profundidade = n => ancestrais(n).length;
   return { porId, filhos, raizes, pai, ancestrais, profundidade };
@@ -117,12 +117,12 @@ function arvore(modelo, camadaDe = () => null) {
  * diferentes, e a repetição entre elas não afirma redundância zonal nenhuma.
  */
 function gatilhoAz(modelo, t) {
-  const subnets = modelo.nos.filter(n => n.tipo === 'subnet');
+  const subnets = modelo.nodes.filter(n => n.kind === 'subnet');
   const azs = [...new Set(subnets.map(s => s.az).filter(Boolean))].sort();
   if (azs.length < 2)
-    return { desenhar: false, azs, porque: `só ${azs.length} AZ distinta declarada` };
+    return { desenhar: false, azs, because: `só ${azs.length} AZ distinta declarada` };
 
-  // a chave de papel é a do `camadas.cjs` — a mesma que vira LINHA da grade.
+  // a chave de papel é a do `layers.cjs` — a mesma que vira LINHA da grade.
   // Ela estava escrita à mão aqui também, e papel é conceito de um dono só.
   const porPapel = new Map();
   for (const s of subnets) {
@@ -130,20 +130,20 @@ function gatilhoAz(modelo, t) {
     const k = chaveDePapel(s, t);
     if (!porPapel.has(k))
       porPapel.set(k, {
-        vpc: (t.ancestrais(s).find(a => a.tipo === 'vpc') || {}).id,
-        acesso: s.acesso || '?',
+        vpc: (t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id,
+        access: s.access || '?',
         zonas: new Set(),
       });
     porPapel.get(k).zonas.add(s.az);
   }
   const redundantes = [...porPapel.values()].filter(p => p.zonas.size >= 2);
   if (!redundantes.length)
-    return { desenhar: false, azs, porque: `${azs.length} AZs, mas nenhum papel de subnet se repete entre elas` };
+    return { desenhar: false, azs, because: `${azs.length} AZs, mas nenhum papel de subnet se repete entre elas` };
 
   return {
     desenhar: true, azs,
-    porque: `${redundantes.length} papel(is) em ≥2 AZs: ` +
-      redundantes.map(p => `${p.vpc}/${p.acesso}×${p.zonas.size}`).join(', '),
+    because: `${redundantes.length} papel(is) em ≥2 AZs: ` +
+      redundantes.map(p => `${p.vpc}/${p.access}×${p.zonas.size}`).join(', '),
   };
 }
 
@@ -152,8 +152,8 @@ function gatilhoAz(modelo, t) {
 /** Conta mais próxima na linha de ancestrais. `null` = o nó não mora em conta nenhuma. */
 function contaDe(no, t) {
   if (!no) return null;
-  if (no.tipo === 'conta') return no;
-  return t.ancestrais(no).find(a => a.tipo === 'conta') || null;
+  if (no.kind === 'account') return no;
+  return t.ancestrais(no).find(a => a.kind === 'account') || null;
 }
 
 /**
@@ -184,7 +184,7 @@ function contaDe(no, t) {
  * contra ela que "OU – Security" significa alguma coisa.
  */
 function gatilhoOu(modelo, t) {
-  const contas = modelo.nos.filter(n => n.tipo === 'conta');
+  const contas = modelo.nodes.filter(n => n.kind === 'account');
   const porOu = new Map();
   for (const c of contas) {
     if (!c.ou) continue;
@@ -197,7 +197,7 @@ function gatilhoOu(modelo, t) {
   if (!agrupam.length)
     return {
       desenhar: false, ous,
-      porque: ous.length
+      because: ous.length
         ? `${ous.length} OU(s), nenhuma com ≥2 contas — o rótulo da conta já separa`
         : 'nenhuma OU declarada',
     };
@@ -206,7 +206,7 @@ function gatilhoOu(modelo, t) {
   if (!foraDaMaior.length && agrupam.length < 2)
     return {
       desenhar: false, ous,
-      porque: `todas as contas estão em "${agrupam[0]}" — rótulo constante é subtítulo, não faixa`,
+      because: `todas as contas estão em "${agrupam[0]}" — rótulo constante é subtítulo, não faixa`,
     };
 
   // O GATILHO é decidido pelas OUs que agrupam; o DESENHO cobre todas as
@@ -216,21 +216,21 @@ function gatilhoOu(modelo, t) {
   // inteira.
   return {
     desenhar: true, ous, agrupam, porOu,
-    porque: `${agrupam.length} OU(s) com ≥2 contas: ` +
+    because: `${agrupam.length} OU(s) com ≥2 contas: ` +
       agrupam.map(o => `${o}×${porOu.get(o).length}`).join(', '),
   };
 }
 
 /** As arestas cujas duas pontas moram em contas DIFERENTES. Entrar da rua não conta. */
-function travessias(arestas, t) {
-  return arestas.filter(a => {
-    const ca = contaDe(t.porId.get(a.de), t);
-    const cb = contaDe(t.porId.get(a.para), t);
+function travessias(edges, t) {
+  return edges.filter(a => {
+    const ca = contaDe(t.porId.get(a.from), t);
+    const cb = contaDe(t.porId.get(a.to), t);
     return ca && cb && ca.id !== cb.id;
   }).map(a => ({
     ...a,
-    contaDe: contaDe(t.porId.get(a.de), t).id,
-    contaPara: contaDe(t.porId.get(a.para), t).id,
+    contaDe: contaDe(t.porId.get(a.from), t).id,
+    contaPara: contaDe(t.porId.get(a.to), t).id,
   }));
 }
 
@@ -255,30 +255,30 @@ function travessias(arestas, t) {
 const MAX_CONTAS_INTEGRACAO = 4;
 const MAX_TRAVESSIAS = 7;
 
-function modoDeContas(modelo, t, arestas) {
-  const contas = modelo.nos.filter(n => n.tipo === 'conta');
+function modoDeContas(modelo, t, edges) {
+  const contas = modelo.nodes.filter(n => n.kind === 'account');
   if (contas.length < 2)
-    return { modo: 'nenhum', contas: contas.length, travessias: 0, porque: `${contas.length} conta no modelo` };
+    return { modo: 'none', contas: contas.length, travessias: 0, because: `${contas.length} conta no modelo` };
 
-  const cruz = travessias(arestas || modelo.arestas || [], t);
+  const cruz = travessias(edges || modelo.edges || [], t);
   if (!cruz.length)
     return {
       modo: 'inventario', contas: contas.length, travessias: 0,
-      porque: `${contas.length} contas, nenhuma travessia — é mapa de colocação`,
+      because: `${contas.length} contas, nenhuma travessia — é mapa de colocação`,
     };
   if (contas.length > MAX_CONTAS_INTEGRACAO)
     return {
       modo: 'inventario', contas: contas.length, travessias: cruz.length,
-      porque: `${contas.length} contas passam das ${MAX_CONTAS_INTEGRACAO} que a vista de integração comporta (X1)`,
+      because: `${contas.length} contas passam das ${MAX_CONTAS_INTEGRACAO} que a vista de integração comporta (X1)`,
     };
   if (cruz.length > MAX_TRAVESSIAS)
     return {
       modo: 'inventario', contas: contas.length, travessias: cruz.length,
-      porque: `${cruz.length} travessias passam das ${MAX_TRAVESSIAS} que o corpus oficial mostra (D1)`,
+      because: `${cruz.length} travessias passam das ${MAX_TRAVESSIAS} que o corpus oficial mostra (D1)`,
     };
   return {
     modo: 'integracao', contas: contas.length, travessias: cruz.length,
-    porque: `${contas.length} contas e ${cruz.length} travessia(s) — a travessia é o assunto`,
+    because: `${contas.length} contas e ${cruz.length} travessia(s) — a travessia é o assunto`,
   };
 }
 
@@ -316,50 +316,50 @@ function modoDeContas(modelo, t, arestas) {
  * O que o IR já tem para responder isso é o par (rótulo, protocolo) — que é
  * semântica, não geometria.
  */
-function mesmaRelacao(arestas) {
-  const chave = a => `${a.rotulo || ''}|${a.protocolo || ''}`;
-  return new Set(arestas.map(chave)).size === 1;
+function mesmaRelacao(edges) {
+  const chave = a => `${a.label || ''}|${a.protocol || ''}`;
+  return new Set(edges.map(chave)).size === 1;
 }
 
 function politicaDeTravessia(modo, cruz, t) {
   if (modo !== 'integracao')
-    return { nivel: 1, mecanismo: 'suprimir', grupos: [], porque: 'vista de inventário — E1 suprime toda travessia' };
+    return { nivel: 1, mecanismo: 'suprimir', grupos: [], because: 'vista de inventário — E1 suprime toda travessia' };
 
   // fan-in: ≥2 contas de origem levando A MESMA COISA ao mesmo nó de destino
   const porDestino = new Map();
   for (const a of cruz) {
-    if (!porDestino.has(a.para)) porDestino.set(a.para, []);
-    porDestino.get(a.para).push(a);
+    if (!porDestino.has(a.to)) porDestino.set(a.to, []);
+    porDestino.get(a.to).push(a);
   }
   const fanIn = [...porDestino.entries()]
     .filter(([, as]) => new Set(as.map(a => a.contaDe)).size >= 2 && mesmaRelacao(as));
   if (fanIn.length)
     return {
       nivel: 3, mecanismo: 'agregada',
-      grupos: fanIn.map(([para, as]) => ({ para, contas: [...new Set(as.map(a => a.contaDe))].sort() })),
-      porque: `fan-in de ${new Set(fanIn[0][1].map(a => a.contaDe)).size} contas em "${fanIn[0][0]}" ` +
+      grupos: fanIn.map(([to, as]) => ({ to, contas: [...new Set(as.map(a => a.contaDe))].sort() })),
+      because: `fan-in de ${new Set(fanIn[0][1].map(a => a.contaDe)).size} contas em "${fanIn[0][0]}" ` +
         `com a mesma relação — E3 colapsa numa aresta rotulada`,
     };
 
   // barramento: a MESMA origem levando O MESMO VÍNCULO a ≥2 contas irmãs
   const porOrigem = new Map();
   for (const a of cruz) {
-    if (!porOrigem.has(a.de)) porOrigem.set(a.de, []);
-    porOrigem.get(a.de).push(a);
+    if (!porOrigem.has(a.from)) porOrigem.set(a.from, []);
+    porOrigem.get(a.from).push(a);
   }
   const barramento = [...porOrigem.entries()]
     .filter(([, as]) => new Set(as.map(a => a.contaPara)).size >= 2 && mesmaRelacao(as));
   if (barramento.length)
     return {
       nivel: 4, mecanismo: 'barramento',
-      grupos: barramento.map(([de, as]) => ({ de, contas: [...new Set(as.map(a => a.contaPara))].sort() })),
-      porque: `"${barramento[0][0]}" leva o mesmo vínculo a ` +
+      grupos: barramento.map(([from, as]) => ({ from, contas: [...new Set(as.map(a => a.contaPara))].sort() })),
+      because: `"${barramento[0][0]}" leva o mesmo vínculo a ` +
         `${new Set(barramento[0][1].map(a => a.contaPara)).size} contas — E4 roteia por barramento, 1 linha + N stubs`,
     };
 
   return {
     nivel: 6, mecanismo: 'direta', grupos: cruz.map(a => ({ aresta: a.id })),
-    porque: `${cruz.length} travessia(s) entre pares distintos — E10 desenha direto, sem cerimônia na borda (E8)`,
+    because: `${cruz.length} travessia(s) entre pares distintos — E10 desenha direto, sem cerimônia na borda (E8)`,
   };
 }
 
@@ -395,7 +395,7 @@ function derivar(modelo, opts = {}) {
   const nav = arvore(modelo);
   const camadas = camadasDeSubnets(modelo, nav, cat);
   const lacunas = lacunasDeCamada(modelo, nav, camadas);
-  const camadaDe = id => (camadas.get(id) || {}).camada || null;
+  const camadaDe = id => (camadas.get(id) || {}).layer || null;
 
   const t = arvore(modelo, camadaDe);
   const az = gatilhoAz(modelo, t);
@@ -407,8 +407,8 @@ function derivar(modelo, opts = {}) {
     ? az.azs.map(z => ({
         id: `az-${z}`,
         derivada: true,
-        rotulo: `Availability Zone · ${z}`,
-        membros: modelo.nos.filter(n => n.az === z).map(n => n.id),
+        label: `Availability Zone · ${z}`,
+        members: modelo.nodes.filter(n => n.az === z).map(n => n.id),
       }))
     : [];
 
@@ -430,20 +430,20 @@ function derivar(modelo, opts = {}) {
    * Critério: o passo numerado primeiro (é a ordem que o leitor vê), depois as
    * pontas. Semântica pura, como tudo mais que o motor deriva.
    */
-  const arestas = (modelo.arestas || []).map((a, i) => ({
+  const edges = (modelo.edges || []).map((a, i) => ({
     ...a,
-    id: a.id || `e-${a.de}-${a.para}${i}`,
+    id: a.id || `e-${a.from}-${a.to}${i}`,
     pai: paiDaAresta(),
-    comum: ancestralComum(t.porId.get(a.de), t.porId.get(a.para), t),
+    comum: ancestralComum(t.porId.get(a.from), t.porId.get(a.to), t),
   })).sort((a, b) =>
-    (a.ordem ?? Number.MAX_SAFE_INTEGER) - (b.ordem ?? Number.MAX_SAFE_INTEGER) ||
-    String(a.de).localeCompare(String(b.de)) ||
-    String(a.para).localeCompare(String(b.para)));
+    (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER) ||
+    String(a.from).localeCompare(String(b.from)) ||
+    String(a.to).localeCompare(String(b.to)));
 
   // multi-conta (#12) — mesma forma da AZ: gatilho derivado, faixa construída
   const ou = gatilhoOu(modelo, t);
-  const modo = modoDeContas(modelo, t, arestas);
-  const cruz = travessias(arestas, t);
+  const modo = modoDeContas(modelo, t, edges);
+  const cruz = travessias(edges, t);
   const politica = politicaDeTravessia(modo.modo, cruz, t);
 
   // A faixa de OU sai do MESMO construtor da faixa de AZ — união dos membros —
@@ -455,25 +455,25 @@ function derivar(modelo, opts = {}) {
     ? ou.ous.map(o => ({
         id: `ou-${o.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
         derivada: true,
-        render: 'rotulo',
-        rotulo: `OU – ${o}`,
-        membros: modelo.nos.filter(n => n.tipo === 'conta' && n.ou === o).map(n => n.id),
+        render: 'label',
+        label: `OU – ${o}`,
+        members: modelo.nodes.filter(n => n.kind === 'account' && n.ou === o).map(n => n.id),
       }))
     : [];
 
   // habilitador de permissão (E9): nó anexado, seta curta para DENTRO de quem
   // ele autoriza — nunca rótulo de aresta
-  const habilitadores = modelo.nos
-    .filter(n => n.habilita)
-    .map(n => ({ id: n.id, alvo: n.habilita }));
+  const habilitadores = modelo.nodes
+    .filter(n => n.enables)
+    .map(n => ({ id: n.id, target: n.enables }));
 
   // mesma razão para as faixas (a ordem delas é ordem Z entre bandas) e para os
   // habilitadores (viram aresta)
-  const faixas = [...(modelo.faixas || [])].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const bands = [...(modelo.bands || [])].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   habilitadores.sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
   return {
-    t, az, faixasAz, arestas, faixas,
+    t, az, faixasAz, edges, bands,
     ou, faixasOu, modo, travessias: cruz, politica, habilitadores,
     camadas, lacunas,
   };

@@ -18,24 +18,24 @@
  * ✅ E o enxerto ESTÁ aplicado desde a consolidação do #23 — quando este teste foi
  * escrito ele não estava, porque o motor era protótipo de outro ticket, e o que
  * se provava aqui era que ele CABIA. Continua provando, e agora prova o mais
- * forte: o portão que a suíte exercita à mão é o mesmo que `motor/gerar.cjs`
- * chama. A ponta a ponta pelo motor está em `tests/rodar.sh`, camada 5.
+ * forte: o portão que a suíte exercita à mão é o mesmo que `engine/generate.cjs`
+ * chama. A ponta a ponta pelo motor está em `tests/run.sh`, camada 5.
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const { portao, NIVEIS } = require(path.join(__dirname, '..', 'validador', 'portao.cjs'));
-const { CASOS, CONTROLE } = require(path.join(__dirname, 'casos', 'quebrados.cjs'));
-const { emitir, conferirXml } = require(path.join(RAIZ, 'motor', 'emitir.cjs'));
-const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
+const { portao, NIVEIS } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
+const { CASOS, CONTROLE } = require(path.join(__dirname, 'cases', 'broken.cjs'));
+const { emitir, conferirXml } = require(path.join(RAIZ, 'engine', 'emit.cjs'));
+const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
 
 let falhas = 0;
-const anota = (ok, o_que, detalhe) => {
+const anota = (ok, o_que, detail) => {
   if (!ok) falhas++;
   console.log(`  ${ok ? '✓' : '✗'} ${o_que}`);
-  if (detalhe) console.log(`      ${detalhe}`);
+  if (detail) console.log(`      ${detail}`);
 };
 
 // ------------------------------------------------- 1. o portão barra a mentira
@@ -65,7 +65,7 @@ const anota = (ok, o_que, detalhe) => {
       portao(mentiroso.plano, { modelo: mentiroso.modelo, nivel: 'veracidade' });
     } catch (e) { lancou = e; }
 
-    anota(!!lancou, `nível "veracidade" barra o plano que mente por ${id} ("${mentiroso.nome}")`,
+    anota(!!lancou, `nível "veracidade" barra o plano que mente por ${id} ("${mentiroso.name}")`,
       lancou ? `→ ${lancou.erros[0]}` : 'passou, e não devia');
     if (!lancou) continue;
     anota(Array.isArray(lancou.erros) && lancou.erros.length > 0,
@@ -80,15 +80,15 @@ const anota = (ok, o_que, detalhe) => {
 {
   // Um plano correto no nível `nenhum` tem de passar…
   let passou = true;
-  try { portao(CONTROLE.plano, { modelo: CONTROLE.modelo, nivel: 'nenhum' }); }
+  try { portao(CONTROLE.plano, { modelo: CONTROLE.modelo, nivel: 'none' }); }
   catch { passou = false; }
   anota(passou, 'nível "nenhum" deixa passar um plano correto');
 
   // …mas nem `nenhum` engole laudo incompleto. Simula-se removendo uma família
   // do índice não dá; o que se confere é que a regra existe e está ligada.
-  const laudo = require(path.join(__dirname, '..', 'validador', 'validar-geometria.cjs'))
+  const laudo = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'))
     .validarGeometria(CONTROLE.plano, { modelo: CONTROLE.modelo });
-  anota(laudo.cobertura.naoRodaram.length === 0 && !laudo.resultados.some(r => r.estado === 'erro'),
+  anota(laudo.cobertura.naoRodaram.length === 0 && !laudo.resultados.some(r => r.state === 'erro'),
     'o laudo do controle é completo (nenhuma checagem muda)',
     `${laudo.cobertura.rodaram}/${laudo.cobertura.esperadas} rodaram`);
 }
@@ -98,12 +98,12 @@ const anota = (ok, o_que, detalhe) => {
 {
   // O pipeline do #11 até o plano. `gerar` já faz tudo, então usa-se o plano que
   // ele devolve — é o mesmo objeto que existiria entre `planejar` e `emitir`.
-  const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'pedidos-serverless.json'), 'utf8'));
+  const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'orders-serverless.json'), 'utf8'));
   gerar(modelo).then(r => {
     let laudo = null;
     let barrou = null;
     try {
-      // é ISTO que entra em `gerar.cjs`, nas duas linhas documentadas em portao.cjs
+      // é ISTO que entra em `generate.cjs`, nas duas linhas documentadas em gate.cjs
       laudo = portao(r.plano, { nivel: 'veracidade' });
     } catch (e) { barrou = e; }
 
@@ -125,11 +125,11 @@ const anota = (ok, o_que, detalhe) => {
      * O #18 garante que *"um laudo incompleto nunca passa, EM NENHUM NÍVEL"*: se
      * uma família de checagem parou de rodar, o verde não quer dizer nada. É a
      * garantia mais fácil de perder no enxerto, e ela FOI perdida na primeira
-     * versão do #23 — `gerar.cjs` chamava `portao` dentro de um `try` e pulava a
+     * versão do #23 — `generate.cjs` chamava `portao` dentro de um `try` e pulava a
      * página quando ele lançava, então uma família quebrada saía como portão
      * verde sobre um laudo que não mediu nada.
      *
-     * Para exercitar isso é preciso quebrar uma família ANTES de `portao.cjs`
+     * Para exercitar isso é preciso quebrar uma família ANTES de `gate.cjs`
      * ser carregado — ele destrutura `validarGeometria` na carga, então trocar a
      * propriedade depois não alcança a referência que ele guardou. Daí o filho.
      */
@@ -137,7 +137,7 @@ const anota = (ok, o_que, detalhe) => {
     const roteiro = `
       const path = require('path');
       const RAIZ = ${JSON.stringify(RAIZ)};
-      const alvo = require.resolve(path.join(RAIZ, 'validador', 'validar-geometria.cjs'));
+      const alvo = require.resolve(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
       const real = require(alvo);
       // um laudo que se declara INCOMPLETO, e nada mais
       require.cache[alvo].exports = {
@@ -147,9 +147,9 @@ const anota = (ok, o_que, detalhe) => {
           return { ...l, cobertura: { ...l.cobertura, naoRodaram: ['A9.9'] } };
         },
       };
-      const { gerar } = require(path.join(RAIZ, 'motor', 'gerar.cjs'));
+      const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
       const fs = require('fs');
-      const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', 'web-multi-az.json'), 'utf8'));
+      const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'web-multi-az.json'), 'utf8'));
       gerar(m, { portao: 'nenhum' })
         .then(() => { console.log('PASSOU'); })
         .catch(e => { console.log('BARROU:' + e.message); });

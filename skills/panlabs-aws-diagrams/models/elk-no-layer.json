@@ -1,28 +1,28 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "elk-sem-camada",
-  "titulo": "A mesma lacuna, no caminho do ELK — aqui ela avisa",
-  "subtitulo": "Uma AZ só, então não há grade. A subnet sem camada não bloqueia: o ELK tem o grafo para ordenar, e o motor conta o que não soube.",
-  "vista": "tecnica",
-  "genero": "T1",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "elk-no-layer",
+  "title": "A mesma lacuna, no caminho do ELK — aqui ela avisa",
+  "subtitle": "Uma AZ só, então não há grade. A subnet sem camada não bloqueia: o ELK tem o grafo para ordenar, e o motor conta o que não soube.",
+  "view": "technical",
+  "genre": "T1",
 
-  "nos": [
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
-    { "id": "regiao", "tipo": "regiao", "rotulo": "eu-west-1", "dentro": "nuvem" },
-    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.80.0.0/16", "cidr": "10.80.0.0/16", "dentro": "regiao" },
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "region", "kind": "region", "label": "eu-west-1", "inside": "cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de produção · 10.80.0.0/16", "cidr": "10.80.0.0/16", "inside": "region" },
 
-    { "id": "app", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "eu-west-1a", "dentro": "vpc" },
-    { "id": "res", "tipo": "subnet", "rotulo": "Reserved subnet", "acesso": "privada", "az": "eu-west-1a", "cidr": "10.80.20.0/24", "dentro": "vpc" },
+    { "id": "app", "kind": "subnet", "label": "App subnet", "access": "private", "az": "eu-west-1a", "inside": "vpc" },
+    { "id": "res", "kind": "subnet", "label": "Reserved subnet", "access": "private", "az": "eu-west-1a", "cidr": "10.80.20.0/24", "inside": "vpc" },
 
-    { "id": "ecs", "tipo": "servico", "servico": "ecs", "rotulo": "API", "dentro": "app" },
-    { "id": "vpce", "tipo": "servico", "servico": "endpoints", "rotulo": "VPC endpoint", "dentro": "app" }
+    { "id": "ecs", "kind": "service", "service": "ecs", "label": "API", "inside": "app" },
+    { "id": "vpce", "kind": "service", "service": "endpoints", "label": "VPC endpoint", "inside": "app" }
   ],
 
-  "arestas": [
-    { "de": "ecs", "para": "vpce", "rotulo": "https", "protocolo": "https" }
+  "edges": [
+    { "from": "ecs", "to": "vpce", "label": "https", "protocol": "https" }
   ],
 
-  "notas": [
-    { "texto": "A 'Reserved subnet' está vazia igual à do modelo recusado — e aqui o motor desenha assim mesmo. A assimetria é a decisão do #22: a grade EXIGE o fato porque lá a ordem das linhas é o desenho; o ELK avisa, porque lá a camada só desempata irmãos que nenhuma aresta ordena.", "origem": "legenda" }
+  "notes": [
+    { "text": "A 'Reserved subnet' está vazia igual à do modelo recusado — e aqui o motor desenha assim mesmo. A assimetria é a decisão do #22: a grade EXIGE o fato porque lá a ordem das linhas é o desenho; o ELK avisa, porque lá a camada só desempata irmãos que nenhuma aresta ordena.", "origin": "legend" }
   ]
 }

@@ -8,20 +8,20 @@
  * cross-account" e "o arquivo não tem aresta cross-account" é a diferença entre
  * uma nota de reunião e um motor.
  *
- *   node tools/check-travessia.cjs
+ *   node tools/check-traversal.cjs
  */
 
 const fs = require('fs');
 const path = require('path');
-const { gerar } = require('../motor/gerar.cjs');
+const { gerar } = require('../engine/generate.cjs');
 
 const AQUI = path.join(__dirname, '..');
 let falhas = 0;
 
-function ok(nome, condicao, detalhe) {
-  if (condicao) { console.log(`  ✓ ${nome}${detalhe ? `  (${detalhe})` : ''}`); return; }
+function ok(name, condicao, detail) {
+  if (condicao) { console.log(`  ✓ ${name}${detail ? `  (${detail})` : ''}`); return; }
   falhas++;
-  console.log(`  ✗ ${nome}${detalhe ? `  — ${detalhe}` : ''}`);
+  console.log(`  ✗ ${name}${detail ? `  — ${detail}` : ''}`);
 }
 
 /** Só a primeira página: é ela a vista consolidada. */
@@ -30,12 +30,12 @@ function paginaConsolidada(xml) {
   return m ? m[0] : xml;
 }
 
-function celulasDeAresta(pagina) {
-  return [...pagina.matchAll(/<mxCell([^>]*edge="1"[^>]*)>/g)].map(m => m[1]);
+function celulasDeAresta(page) {
+  return [...page.matchAll(/<mxCell([^>]*edge="1"[^>]*)>/g)].map(m => m[1]);
 }
 
-function atributo(tag, nome) {
-  const m = new RegExp(`${nome}="([^"]*)"`).exec(tag);
+function atributo(tag, name) {
+  const m = new RegExp(`${name}="([^"]*)"`).exec(tag);
   return m ? m[1] : null;
 }
 
@@ -54,13 +54,13 @@ function contarInvasoes(celulas, travessias, caixaDaConta) {
       const [a, b] = [pts[i - 1], pts[i]];
       for (const [id, cx] of caixaDaConta) {
         if (id === t.contaDe || id === t.contaPara) continue;
-        const dentro = p => p.x > cx.x && p.x < cx.x + cx.w && p.y > cx.y && p.y < cx.y + cx.h;
+        const inside = p => p.x > cx.x && p.x < cx.x + cx.w && p.y > cx.y && p.y < cx.y + cx.h;
         // segmento ortogonal: pontas dentro, ou o segmento varando o retângulo
         const cruzaH = a.y === b.y && a.y > cx.y && a.y < cx.y + cx.h &&
           Math.min(a.x, b.x) < cx.x + cx.w && Math.max(a.x, b.x) > cx.x;
         const cruzaV = a.x === b.x && a.x > cx.x && a.x < cx.x + cx.w &&
           Math.min(a.y, b.y) < cx.y + cx.h && Math.max(a.y, b.y) > cx.y;
-        if (dentro(a) || dentro(b) || cruzaH || cruzaV) n++;
+        if (inside(a) || inside(b) || cruzaH || cruzaV) n++;
       }
     }
   }
@@ -68,34 +68,34 @@ function contarInvasoes(celulas, travessias, caixaDaConta) {
 }
 
 async function main() {
-  const modelo = f => JSON.parse(fs.readFileSync(path.join(AQUI, 'modelo', f), 'utf8'));
+  const modelo = f => JSON.parse(fs.readFileSync(path.join(AQUI, 'models', f), 'utf8'));
 
   // ---------------------------------------------------------------- E1
   console.log('\n1. E1 — a regra soberana: a vista consolidada de inventário não tem travessia');
-  const inv = modelo('landing-zone-6-contas.json');
+  const inv = modelo('landing-zone-6-accounts.json');
   const rInv = await gerar(inv);
   // conta de cada nó, subindo a cadeia de `dentro` — sem depender do motor,
   // para a checagem não conferir o motor contra ele mesmo
-  const porId = new Map(inv.nos.map(n => [n.id, n]));
+  const porId = new Map(inv.nodes.map(n => [n.id, n]));
   const contaDoNo = new Map();
-  for (const n of inv.nos) {
+  for (const n of inv.nodes) {
     let c = n, achou = null;
     while (c) {
-      if (c.tipo === 'conta') { achou = c.id; break; }
-      c = c.dentro ? porId.get(c.dentro) : null;
+      if (c.kind === 'account') { achou = c.id; break; }
+      c = c.inside ? porId.get(c.inside) : null;
     }
     contaDoNo.set(n.id, achou);
   }
 
-  const cruzamNoModelo = (inv.arestas || []).filter(a =>
-    contaDoNo.get(a.de) && contaDoNo.get(a.para) && contaDoNo.get(a.de) !== contaDoNo.get(a.para));
+  const cruzamNoModelo = (inv.edges || []).filter(a =>
+    contaDoNo.get(a.from) && contaDoNo.get(a.to) && contaDoNo.get(a.from) !== contaDoNo.get(a.to));
   ok('o modelo declara travessias', cruzamNoModelo.length > 0, `${cruzamNoModelo.length} no modelo`);
 
   const arestasDesenhadas = celulasDeAresta(paginaConsolidada(rInv.xml))
-    .map(t => ({ de: atributo(t, 'source'), para: atributo(t, 'target') }));
+    .map(t => ({ from: atributo(t, 'source'), to: atributo(t, 'target') }));
   const cruzamDesenhadas = arestasDesenhadas.filter(a =>
-    a.de && a.para && contaDoNo.get(a.de) && contaDoNo.get(a.para) &&
-    contaDoNo.get(a.de) !== contaDoNo.get(a.para));
+    a.from && a.to && contaDoNo.get(a.from) && contaDoNo.get(a.to) &&
+    contaDoNo.get(a.from) !== contaDoNo.get(a.to));
   ok('nenhuma delas foi desenhada na consolidada', cruzamDesenhadas.length === 0,
     cruzamDesenhadas.length ? `${cruzamDesenhadas.length} vazaram` : 'zero conectores cross-account');
   ok('as arestas INTRA-conta continuam desenhadas', arestasDesenhadas.length > 0,
@@ -103,10 +103,10 @@ async function main() {
 
   // ---------------------------------------------------------------- G2
   console.log('\n2. G2 — a OU não é container: rótulo flutuante, sem caixa');
-  ok('o motor decidiu desenhar faixas de OU', rInv.derivado.ou.desenhar, rInv.derivado.ou.porque);
+  ok('o motor decidiu desenhar faixas de OU', rInv.derived.ou.desenhar, rInv.derived.ou.because);
   const celulasOu = rInv.plano.celulas.filter(c => String(c.id).startsWith('ou-'));
-  ok('há uma célula por OU declarada', celulasOu.length === rInv.derivado.ou.ous.length,
-    `${celulasOu.length} células para ${rInv.derivado.ou.ous.length} OUs`);
+  ok('há uma célula por OU declarada', celulasOu.length === rInv.derived.ou.ous.length,
+    `${celulasOu.length} células para ${rInv.derived.ou.ous.length} OUs`);
   ok('nenhuma delas é container', celulasOu.every(c => !/container=1/.test(c.style)),
     'sem container=1 — o deck não tem shape de Organizational unit');
   ok('nenhuma delas tem borda', celulasOu.every(c => !/strokeColor=#/.test(c.style)),
@@ -143,7 +143,7 @@ async function main() {
   // ---------------------------------------------------------------- D2
   console.log('\n4. D2 — uma vista de detalhe por conta, SEMPRE (não é fallback)');
   const paginas = [...rInv.xml.matchAll(/<diagram id="([^"]+)"/g)].map(m => m[1]);
-  const contas = inv.nos.filter(n => n.tipo === 'conta');
+  const contas = inv.nodes.filter(n => n.kind === 'account');
   ok('há 1 consolidada + 1 página por conta', paginas.length === 1 + contas.length,
     `${paginas.length} páginas para ${contas.length} contas`);
   ok('cada conta tem a sua', contas.every(c => paginas.includes(`${inv.id}-${c.id}`)),
@@ -151,14 +151,14 @@ async function main() {
 
   // ------------------------------------------------------- X1 / E8 / E10
   console.log('\n5. X1/E8/E10 — na vista de integração a travessia é desenhada, e não vira espaguete');
-  const integ = modelo('plataforma-3-contas.json');
+  const integ = modelo('platform-3-accounts.json');
   const rInt = await gerar(integ);
-  ok('o motor entrou no modo de integração', rInt.derivado.modo.modo === 'integracao', rInt.derivado.modo.porque);
-  ok('escolheu um nível da hierarquia do #6 §6.4', rInt.derivado.politica.nivel > 1,
-    `nível ${rInt.derivado.politica.nivel} — ${rInt.derivado.politica.mecanismo}`);
+  ok('o motor entrou no modo de integração', rInt.derived.modo.modo === 'integracao', rInt.derived.modo.because);
+  ok('escolheu um nível da hierarquia do #6 §6.4', rInt.derived.politica.nivel > 1,
+    `nível ${rInt.derived.politica.nivel} — ${rInt.derived.politica.mecanismo}`);
 
-  const idsTravessia = new Set(rInt.derivado.travessias.map(t => t.id));
-  const desenhadas = rInt.plano.celulas.filter(c => c.tipo === 'aresta' && idsTravessia.has(c.id));
+  const idsTravessia = new Set(rInt.derived.travessias.map(t => t.id));
+  const desenhadas = rInt.plano.celulas.filter(c => c.kind === 'aresta' && idsTravessia.has(c.id));
   ok('toda travessia declarada foi desenhada', desenhadas.length === idsTravessia.size,
     `${desenhadas.length}/${idsTravessia.size}`);
 
@@ -206,7 +206,7 @@ async function main() {
     const base = pai ? { x: pai.geo.x, y: pai.geo.y } : { x: 0, y: 0 };
     caixaDaConta.set(c.id, { x: base.x + c.geo.x, y: base.y + c.geo.y, w: c.geo.w, h: c.geo.h });
   }
-  const invasoes = contarInvasoes(desenhadas, rInt.derivado.travessias, caixaDaConta);
+  const invasoes = contarInvasoes(desenhadas, rInt.derived.travessias, caixaDaConta);
   ok('nenhuma travessia corta o interior de uma conta alheia (A5.5)', invasoes === 0,
     invasoes ? `${invasoes} invasão(ões)` : 'as calhas e a canaleta seguraram');
 
@@ -214,9 +214,9 @@ async function main() {
   // prova nada — pode estar medindo a coisa errada e concordando consigo mesma.
   // Aqui a mesma rotina recebe a rota INGÊNUA (linha reta de ponta a ponta, que
   // é o que o motor fazia antes da canaleta) e tem de acusar.
-  const primeira = rInt.derivado.travessias[0];
-  const oAbs = rInt.plano.celulas.find(c => c.id === primeira.de);
-  const dAbs = rInt.plano.celulas.find(c => c.id === primeira.para);
+  const primeira = rInt.derived.travessias[0];
+  const oAbs = rInt.plano.celulas.find(c => c.id === primeira.from);
+  const dAbs = rInt.plano.celulas.find(c => c.id === primeira.to);
   if (oAbs && dAbs) {
     const meio = [...caixaDaConta.entries()].find(([id]) =>
       id !== primeira.contaDe && id !== primeira.contaPara);
@@ -224,10 +224,10 @@ async function main() {
       const [, cx] = meio;
       const y = cx.y + cx.h / 2;
       const reta = [{
-        id: primeira.id, tipo: 'aresta',
+        id: primeira.id, kind: 'aresta',
         pontos: [{ x: cx.x - 60, y }, { x: cx.x + cx.w + 60, y }],
       }];
-      const acusou = contarInvasoes(reta, rInt.derivado.travessias, caixaDaConta);
+      const acusou = contarInvasoes(reta, rInt.derived.travessias, caixaDaConta);
       ok('e a checagem ACUSA quando a rota é a ingênua (controle)', acusou > 0,
         acusou ? `${acusou} invasão(ões) detectada(s) na reta` : 'a checagem não viu — ela não mede o que diz medir');
     }
@@ -235,12 +235,12 @@ async function main() {
 
   // ---------------------------------------------------------------- #34
   console.log('\n6. #34 — o relatório não pode anunciar faixa de OU que o desenho não tem');
-  // `plataforma-3-contas` é o mesmo modelo da seção 5: 3 contas, `Workloads`
+  // `platform-3-accounts` é o mesmo modelo da seção 5: 3 contas, `Workloads`
   // com DUAS (c-workload e c-dados) e `c-rede` fora dela — o contraste que
-  // dispara `gatilhoOu` — e modo integração, onde `planejar.cjs` suprime a
+  // dispara `gatilhoOu` — e modo integração, onde `plan.cjs` suprime a
   // faixa. É o caso do corpus com OU em integração que o #34 pediu.
   ok('o gatilho de OU disparou (contraste real: Workloads×2 fora de Infrastructure)',
-    rInt.derivado.ou.desenhar, rInt.derivado.ou.porque);
+    rInt.derived.ou.desenhar, rInt.derived.ou.because);
   const ouNoXml = (rInt.xml.match(/OU – /g) || []).length;
   ok('a faixa de OU não está no .drawio (modo integração suprime)', ouNoXml === 0,
     `${ouNoXml} ocorrência(s) de "OU – " na saída`);

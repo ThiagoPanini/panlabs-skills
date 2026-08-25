@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Confere NO PIXEL que o tema chegou no render — não só na style string.
 
-    python3 tools/verificar-tema.py saida/temas/a-claro.png claro
-    python3 tools/verificar-tema.py --todos
+    python3 tools/verify-theme.py output/temas/a-claro.png claro
+    python3 tools/verify-theme.py --todos
 
 A lição que obriga esta ferramenta é do #17: 24 checagens estáticas estavam
 verdes quando o PNG revelou o SageMaker saindo com o ícone errado. Style string

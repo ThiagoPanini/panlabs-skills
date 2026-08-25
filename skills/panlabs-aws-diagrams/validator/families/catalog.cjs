@@ -27,8 +27,8 @@ function catalogo() {
     const cru = cat.catalogo || {};
     const titulos = [];
     const ids = new Set();
-    for (const grupo of ['services', 'resources', 'groups', 'other']) {
-      const entradas = cru[grupo];
+    for (const group of ['services', 'resources', 'groups', 'other']) {
+      const entradas = cru[group];
       if (!entradas) continue;
       for (const rec of Array.isArray(entradas) ? entradas : Object.values(entradas)) {
         if (!rec || typeof rec !== 'object') continue;
@@ -37,8 +37,8 @@ function catalogo() {
       }
     }
     cache = {
-      servico: nome => { try { return cat.servico(nome); } catch { return null; } },
-      grupo: nome => { try { return cat.grupo(nome); } catch { return null; } },
+      service: name => { try { return cat.service(name); } catch { return null; } },
+      group: name => { try { return cat.group(name); } catch { return null; } },
       titulos,
       ids,
       vigencia: (cat.meta && cat.meta.drawio && cat.meta.drawio.date) || null,

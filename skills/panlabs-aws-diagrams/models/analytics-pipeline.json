@@ -1,50 +1,50 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "pipeline-analitico",
-  "titulo": "Telemetria de loja · pipeline analítico",
-  "subtitulo": "Vista técnica T2 · cadeia de serviços gerenciados fora de VPC — nenhuma sub-rede, nenhum andar de rede a ler",
-  "vista": "tecnica",
-  "genero": "T2",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "analytics-pipeline",
+  "title": "Telemetria de loja · pipeline analítico",
+  "subtitle": "Vista técnica T2 · cadeia de serviços gerenciados fora de VPC — nenhuma sub-rede, nenhum andar de rede a ler",
+  "view": "technical",
+  "genre": "T2",
 
-  "nos": [
-    { "id": "loja", "tipo": "ator", "servico": "users", "rotulo": "Lojas",
-      "qualificador": "300 pontos de venda" },
+  "nodes": [
+    { "id": "loja", "kind": "actor", "service": "users", "label": "Lojas",
+      "qualifier": "300 pontos de venda" },
 
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
-    { "id": "regiao", "tipo": "regiao", "rotulo": "sa-east-1", "dentro": "nuvem" },
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "region", "kind": "region", "label": "sa-east-1", "inside": "cloud" },
 
-    { "id": "ingestao", "tipo": "servico", "servico": "kinesis data firehose", "rotulo": "Data Firehose", "dentro": "regiao",
-      "qualificador": "recebe e entrega em lotes de 5 min" },
-    { "id": "bruto", "tipo": "servico", "servico": "s3", "rotulo": "Zona bruta", "dentro": "regiao",
-      "qualificador": "particionado por dia e loja" },
-    { "id": "catalogo", "tipo": "servico", "servico": "glue", "rotulo": "Glue", "dentro": "regiao",
-      "qualificador": "cataloga e transforma" },
-    { "id": "curado", "tipo": "servico", "servico": "s3", "rotulo": "Zona curada", "dentro": "regiao",
-      "qualificador": "colunar, pronto para consulta" },
-    { "id": "consulta", "tipo": "servico", "servico": "athena", "rotulo": "Athena", "dentro": "regiao",
-      "qualificador": "SQL sobre a zona curada" },
-    { "id": "painel", "tipo": "servico", "servico": "quicksight", "rotulo": "QuickSight", "dentro": "regiao",
-      "qualificador": "painel de vendas por região" }
+    { "id": "ingestao", "kind": "service", "service": "kinesis data firehose", "label": "Data Firehose", "inside": "region",
+      "qualifier": "recebe e entrega em lotes de 5 min" },
+    { "id": "bruto", "kind": "service", "service": "s3", "label": "Zona bruta", "inside": "region",
+      "qualifier": "particionado por dia e loja" },
+    { "id": "catalogo", "kind": "service", "service": "glue", "label": "Glue", "inside": "region",
+      "qualifier": "cataloga e transforma" },
+    { "id": "curado", "kind": "service", "service": "s3", "label": "Zona curada", "inside": "region",
+      "qualifier": "colunar, pronto para consulta" },
+    { "id": "consulta", "kind": "service", "service": "athena", "label": "Athena", "inside": "region",
+      "qualifier": "SQL sobre a zona curada" },
+    { "id": "painel", "kind": "service", "service": "quicksight", "label": "QuickSight", "inside": "region",
+      "qualifier": "painel de vendas por região" }
   ],
 
-  "arestas": [
-    { "de": "loja", "para": "ingestao", "rotulo": "envia telemetria", "protocolo": "https", "ordem": 1 },
-    { "de": "ingestao", "para": "bruto", "rotulo": "entrega em lote", "ordem": 2 },
-    { "de": "catalogo", "para": "bruto", "rotulo": "lê e cataloga", "dados": "volta", "ordem": 3 },
-    { "de": "catalogo", "para": "curado", "rotulo": "grava colunar", "ordem": 4 },
-    { "de": "consulta", "para": "curado", "rotulo": "consulta", "protocolo": "sql", "dados": "volta", "ordem": 5 },
-    { "de": "painel", "para": "consulta", "rotulo": "renderiza", "dados": "volta", "ordem": 6 }
+  "edges": [
+    { "from": "loja", "to": "ingestao", "label": "envia telemetria", "protocol": "https", "order": 1 },
+    { "from": "ingestao", "to": "bruto", "label": "entrega em lote", "order": 2 },
+    { "from": "catalogo", "to": "bruto", "label": "lê e cataloga", "data": "back", "order": 3 },
+    { "from": "catalogo", "to": "curado", "label": "grava colunar", "order": 4 },
+    { "from": "consulta", "to": "curado", "label": "consulta", "protocol": "sql", "data": "back", "order": 5 },
+    { "from": "painel", "to": "consulta", "label": "renderiza", "data": "back", "order": 6 }
   ],
 
-  "notas": [
+  "notes": [
     { "id": "nota-sem-rede",
-      "texto": "Nenhum serviço desta cadeia vive em sub-rede — é o gênero T2 em estado puro, e o caminho do ELK layouta a hierarquia inteira numa passada. Não há andar de rede a ordenar porque não há sub-rede.",
-      "origem": "legenda" }
+      "text": "Nenhum serviço desta cadeia vive em sub-rede — é o gênero T2 em estado puro, e o caminho do ELK layouta a hierarquia inteira numa passada. Não há andar de rede a ordenar porque não há sub-rede.",
+      "origin": "legend" }
   ],
 
-  "dossie": {
+  "dossier": {
     "_comentario": "T2 do corpus do #26. Existe para provar que o gênero pipeline de dados atravessa o motor sem passar por VPC nenhuma, e para dar à revisão de lacunas um caso onde a regra de sub-rede pública TEM de ficar muda.",
-    "eixos": {
+    "axes": {
       "E1": "gerenciado sem compute próprio",
       "E2": "lote agendado, com entrega por janela",
       "E3": "objeto / data lake com camada analítica",

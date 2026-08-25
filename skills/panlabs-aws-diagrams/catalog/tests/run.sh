@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Suite do catálogo, ponta a ponta.
 #
-#   ./tests/rodar.sh [repo-drawio] [binario-drawio]
+#   ./tests/run.sh [repo-drawio] [binario-drawio]
 #
 # Duas camadas, e a diferença entre elas importa:
 #
@@ -38,8 +38,8 @@ if [ ! -x "$DRAWIO" ]; then
   echo "    tools/drawio.cjs é quem sabe onde o binário mora)"
 else
   xvfb-run -a "$DRAWIO" -x -f png -s 2 --no-sandbox --disable-gpu \
-    -o "$AQUI/amostra.png" "$AQUI/amostra.drawio" 2>/dev/null
-  python3 "$CAT/tools/verificar-render.py" "$AQUI/amostra.png" "$AQUI/amostra.manifesto.json" || falhou=1
+    -o "$AQUI/sample.png" "$AQUI/sample.drawio" 2>/dev/null
+  python3 "$CAT/tools/verify-render.py" "$AQUI/sample.png" "$AQUI/sample.manifest.json" || falhou=1
 fi
 
 echo

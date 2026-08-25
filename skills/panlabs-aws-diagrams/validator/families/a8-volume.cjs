@@ -10,43 +10,43 @@
  */
 
 const path = require('path');
-const { lim } = require(path.join(__dirname, '..', 'indice.cjs'));
-const { ok, aviso, falha, inaplicavel, pulada, arredonda } = require(path.join(__dirname, 'comum.cjs'));
+const { lim } = require(path.join(__dirname, '..', 'index.cjs'));
+const { ok, aviso, falha, notApplicable, pulada, arredonda } = require(path.join(__dirname, 'common.cjs'));
 
 module.exports = function a8(cena) {
   const saida = [];
-  const { nos, arestas } = cena;
+  const { nodes, edges } = cena;
 
   // ---------------------------------------------------------------- A8.1
   {
-    const V = nos.length;                       // caixas de grupo não contam
-    const alvo = lim('elementosAlvo');
+    const V = nodes.length;                       // caixas de grupo não contam
+    const target = lim('elementosAlvo');
     const teto = lim('elementosFalha');
-    const medida = { nos: V, grupos: cena.grupos.length, faixas: cena.faixas.length, alvo, teto };
+    const medida = { nodes: V, grupos: cena.grupos.length, bands: cena.bands.length, target, teto };
     const decompor = { o_que: `o remédio da literatura é decompor em diagramas menores, não apagar elementos (Moody & Heymans, RE'09)`, ids: [] };
-    saida.push(V <= alvo ? ok('A8.1', { medida, mensagem: `${V} nó(s) de primeira classe (alvo ≤ ${alvo})` })
-      : V <= teto ? aviso('A8.1', { medida, mensagem: `${V} nós — acima do alvo de ${alvo}`, ocorrencias: [decompor] })
-        : falha('A8.1', { medida, mensagem: `${V} nós — acima do corte de ${teto}, onde node-link perde para matriz na maioria das tarefas`, ocorrencias: [decompor] }));
+    saida.push(V <= target ? ok('A8.1', { medida, mensagem: `${V} nó(s) de primeira classe (alvo ≤ ${target})` })
+      : V <= teto ? aviso('A8.1', { medida, mensagem: `${V} nós — acima do alvo de ${target}`, occurrences: [decompor] })
+        : falha('A8.1', { medida, mensagem: `${V} nós — acima do corte de ${teto}, onde node-link perde para matriz na maioria das tarefas`, occurrences: [decompor] }));
   }
 
   // ---------------------------------------------------------------- A8.2
   {
-    const V = nos.length;
-    const E = arestas.length;
-    if (V < 2) saida.push(inaplicavel('A8.2', 'menos de dois nós'));
+    const V = nodes.length;
+    const E = edges.length;
+    if (V < 2) saida.push(notApplicable('A8.2', 'menos de dois nós'));
     else {
       const possiveis = (V * (V - 1)) / 2;
       const d = arredonda(E / possiveis);
       const linear = arredonda(E / V, 2);
       const teto = lim('densidadeMaxima');
-      const alvo = lim('elementosAlvo');
-      const medida = { densidade: d, densidade_linear: linear, nos: V, arestas: E, teto };
+      const target = lim('elementosAlvo');
+      const medida = { density: d, densidade_linear: linear, nodes: V, edges: E, teto };
       // A rubrica pede a CONJUNÇÃO: densidade alta só preocupa em grafo grande.
-      saida.push(d > teto && V > alvo
+      saida.push(d > teto && V > target
         ? aviso('A8.2', {
           medida,
           mensagem: `densidade ${d} > ${teto} com ${V} nós — a combinação que a literatura evita`,
-          ocorrencias: [{ o_que: 'acima de 20% de densidade a literatura só usa matriz ou edge bundling', ids: [] }],
+          occurrences: [{ o_que: 'acima de 20% de densidade a literatura só usa matriz ou edge bundling', ids: [] }],
         })
         : ok('A8.2', { medida, mensagem: `densidade ${d} (${E} arestas para ${V} nós)` }));
     }
@@ -54,7 +54,7 @@ module.exports = function a8(cena) {
 
   // ---------------------------------------------------------------- A8.3
   {
-    if (!cena.grau.size) saida.push(inaplicavel('A8.3', arestas.length
+    if (!cena.grau.size) saida.push(notApplicable('A8.3', edges.length
       ? 'nenhuma aresta liga dois ids que existem no plano'
       : 'o diagrama não tem arestas'));
     else {
@@ -65,7 +65,7 @@ module.exports = function a8(cena) {
         .map(([id, d]) => ({ o_que: `"${id}" tem grau ${d} (acima de ${teto}, a resolução angular de A6.1 fica mecanicamente impossível)`, ids: [id] }));
       const medida = { grau_maximo: maximo, teto, nos_com_aresta: grau.size };
       saida.push(estourados.length
-        ? aviso('A8.3', { medida, mensagem: `grau máximo ${maximo}, acima de ${teto}`, ocorrencias: estourados })
+        ? aviso('A8.3', { medida, mensagem: `grau máximo ${maximo}, acima de ${teto}`, occurrences: estourados })
         : ok('A8.3', { medida, mensagem: `grau máximo ${maximo}` }));
     }
   }

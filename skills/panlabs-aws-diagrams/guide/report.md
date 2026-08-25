@@ -4,10 +4,10 @@ O laudo sai **sempre**, em `relatorio.geometria` e no `--explicar`. Bloquear é 
 é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
 ```bash
-node tools/check-geometria.cjs <modelo.json>          # o laudo, legível
-node tools/check-geometria.cjs <modelo.json> --json    # para ler no código
-node tools/check-geometria.cjs --exemplos              # o corpus inteiro
-node motor/gerar.cjs <modelo.json> --portao veracidade # bloqueia se o desenho mentir
+node tools/check-geometry.cjs <modelo.json>          # o laudo, legível
+node tools/check-geometry.cjs <modelo.json> --json    # para ler no código
+node tools/check-geometry.cjs --exemplos              # o corpus inteiro
+node engine/generate.cjs <modelo.json> --portao veracidade # bloqueia se o desenho mentir
 ```
 
 ## Guarda de veracidade, não linter de beleza
@@ -62,18 +62,18 @@ exaustiva e sem sobreposição, e travada por teste.
 | `A8` | 4 | volume e saturação |
 
 O nome, o que mede, o limiar e a **fonte** de cada uma estão em
-[`../validador/indice.cjs`](../validador/indice.cjs) — é uma tabela, não código de
+[`../validator/index.cjs`](../validator/index.cjs) — é uma tabela, não código de
 cálculo, e existe para responder *"quais das 62, com que severidade"* sem
 executar nada.
 
 ```bash
-node -e "require('./validador/indice.cjs').CHECAGENS.filter(c=>c.familia==='A5').forEach(c=>console.log(c.id,c.severidade,c.nome))"
+node -e "require('./validator/index.cjs').CHECAGENS.filter(c=>c.familia==='A5').forEach(c=>console.log(c.id,c.severidade,c.nome))"
 ```
 
 **Os limiares não foram inventados.** As métricas contínuas estão calibradas nos
 percentis de 4.890 desenhos de especialistas. Oito checagens não têm base
 experimental e estão marcadas `calibravel: true`, com `porque: null` em
-`limiares.json` — o campo vazio é um pedido de medição, não um número
+`thresholds.json` — o campo vazio é um pedido de medição, não um número
 respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
 
 ## Os quatro níveis, e por que o default é `nenhum`
@@ -109,7 +109,7 @@ o XML ainda não — e é **função pura**.
 Um laço de correção comandado pelo validador seria um segundo otimizador
 competindo com o ELK **sem gradiente nem função objetivo**: as 62 não se combinam
 num escore (a rubrica proíbe), e sem escalar não há o que descer. O motor já
-corrige no lugar certo — `alinhar.cjs` desfaz a passada que piora, porque tem as
+corrige no lugar certo — `align.cjs` desfaz a passada que piora, porque tem as
 alavancas.
 
 ## O piso do corpus — o que NÃO tentar consertar
@@ -121,7 +121,7 @@ motivo é dívida registrada, não defeito do seu modelo:
 | | | por quê |
 |---|---|---|
 | `A1.2` `A1.3` | ✗ 35/35 | **nenhum diagrama emite legenda.** O vocabulário fechado do tema não contrai essa dívida — e não a contrai de propósito: legenda é a dívida de quem inventa notação, e o tema não deixa inventar |
-| `A1.11` | ⚠ 35/35 | pede `data`, `versao`, `autor`; `modelo@1` é `additionalProperties: false` e não tem esses campos |
+| `A1.11` | ⚠ 35/35 | pede `data`, `versao`, `autor`; `model@1` é `additionalProperties: false` e não tem esses campos |
 | `A3.9` | ⚠ 35/35 | `calibravel` — o limiar é default de engenharia |
 | `A4.5` | ⚠ 33/35 | padding de grupo uniforme |
 | `A7.4` | ⚠ 32/35 | `calibravel`, idem |
@@ -151,7 +151,7 @@ defeito das duas checagens, não do seu modelo**: a nota é objeto desenhado
 legítimo, e as duas precisam aprender a classe. Até lá, entra no piso.
 
 Morde o protocolo: a revisão de lacunas **exige** nota ligada por `viaNota` para
-todo achado recusado. Ver [`sabatina.md`](sabatina.md).
+todo achado recusado. Ver [`inquiry.md`](inquiry.md).
 
 **"Tem falha" não distingue bom de quebrado neste corpus.** O que distingue é
 `semanticas.length`, e ele está em **zero** no corpus inteiro.

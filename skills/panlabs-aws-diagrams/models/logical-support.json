@@ -1,58 +1,58 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "logica-atendimento",
-  "titulo": "Atendimento · capacidades e fronteiras",
-  "subtitulo": "L1 · blocos lógicos agrupados por fronteira de responsabilidade, sem passo numerado e sem um nome de serviço",
-  "vista": "logica",
-  "genero": "L1",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "logical-support",
+  "title": "Atendimento · capacidades e fronteiras",
+  "subtitle": "L1 · blocos lógicos agrupados por fronteira de responsabilidade, sem passo numerado e sem um nome de serviço",
+  "view": "logical",
+  "genre": "L1",
 
-  "nos": [
-    { "id": "cliente", "tipo": "ator", "servico": "users", "rotulo": "Cliente final",
-      "qualificador": "web, app e telefone" },
-    { "id": "atendente", "tipo": "ator", "servico": "user", "rotulo": "Atendente",
-      "qualificador": "opera pelo console interno" },
+  "nodes": [
+    { "id": "cliente", "kind": "actor", "service": "users", "label": "Cliente final",
+      "qualifier": "web, app e telefone" },
+    { "id": "atendente", "kind": "actor", "service": "user", "label": "Atendente",
+      "qualifier": "opera pelo console interno" },
 
-    { "id": "canais", "tipo": "grupo", "rotulo": "Canais",
-      "qualificador": "dono: time de experiência" },
-    { "id": "recepcao", "tipo": "bloco", "rotulo": "Recepção de contato", "dentro": "canais",
-      "qualificador": "identifica e classifica" },
-    { "id": "roteamento", "tipo": "bloco", "rotulo": "Roteamento de fila", "dentro": "canais",
-      "qualificador": "escolhe quem atende" },
+    { "id": "canais", "kind": "group", "label": "Canais",
+      "qualifier": "dono: time de experiência" },
+    { "id": "recepcao", "kind": "block", "label": "Recepção de contato", "inside": "canais",
+      "qualifier": "identifica e classifica" },
+    { "id": "roteamento", "kind": "block", "label": "Roteamento de fila", "inside": "canais",
+      "qualifier": "escolhe quem atende" },
 
-    { "id": "nucleo", "tipo": "grupo", "rotulo": "Núcleo de atendimento",
-      "qualificador": "dono: time de operações" },
-    { "id": "caso", "tipo": "bloco", "rotulo": "Gestão de casos", "dentro": "nucleo",
-      "qualificador": "abre, transfere, encerra" },
-    { "id": "conhecimento", "tipo": "bloco", "rotulo": "Base de conhecimento", "dentro": "nucleo",
-      "qualificador": "respostas revisadas" },
+    { "id": "nucleo", "kind": "group", "label": "Núcleo de atendimento",
+      "qualifier": "dono: time de operações" },
+    { "id": "caso", "kind": "block", "label": "Gestão de casos", "inside": "nucleo",
+      "qualifier": "abre, transfere, encerra" },
+    { "id": "conhecimento", "kind": "block", "label": "Base de conhecimento", "inside": "nucleo",
+      "qualifier": "respostas revisadas" },
 
-    { "id": "governanca", "tipo": "grupo", "rotulo": "Governança",
-      "qualificador": "dono: jurídico e compliance" },
-    { "id": "trilha", "tipo": "bloco", "rotulo": "Trilha de auditoria", "dentro": "governanca",
-      "qualificador": "quem viu o quê, e quando" },
-    { "id": "retencao", "tipo": "bloco", "rotulo": "Política de retenção", "dentro": "governanca",
-      "qualificador": "cinco anos, imutável" }
+    { "id": "governanca", "kind": "group", "label": "Governança",
+      "qualifier": "dono: jurídico e compliance" },
+    { "id": "trilha", "kind": "block", "label": "Trilha de auditoria", "inside": "governanca",
+      "qualifier": "quem viu o quê, e quando" },
+    { "id": "retencao", "kind": "block", "label": "Política de retenção", "inside": "governanca",
+      "qualifier": "cinco anos, imutável" }
   ],
 
-  "arestas": [
-    { "de": "cliente", "para": "recepcao", "rotulo": "abre contato" },
-    { "de": "recepcao", "para": "roteamento", "rotulo": "classifica" },
-    { "de": "roteamento", "para": "caso", "rotulo": "abre caso" },
-    { "de": "atendente", "para": "caso", "rotulo": "trabalha o caso" },
-    { "de": "caso", "para": "conhecimento", "rotulo": "consulta resposta", "dados": "volta" },
-    { "de": "caso", "para": "trilha", "rotulo": "registra acesso" },
-    { "de": "trilha", "para": "retencao", "rotulo": "obedece" }
+  "edges": [
+    { "from": "cliente", "to": "recepcao", "label": "abre contato" },
+    { "from": "recepcao", "to": "roteamento", "label": "classifica" },
+    { "from": "roteamento", "to": "caso", "label": "abre caso" },
+    { "from": "atendente", "to": "caso", "label": "trabalha o caso" },
+    { "from": "caso", "to": "conhecimento", "label": "consulta resposta", "data": "back" },
+    { "from": "caso", "to": "trilha", "label": "registra acesso" },
+    { "from": "trilha", "to": "retencao", "label": "obedece" }
   ],
 
-  "notas": [
+  "notes": [
     { "id": "nota-fronteira",
-      "texto": "Os três grupos são fronteiras de RESPONSABILIDADE, não contas AWS (#15 §6). Esta vista é mostrada a produto, jurídico e diretoria — o vocabulário é de capacidade, e nenhum nome de tecnologia aparece.",
-      "origem": "premissa" }
+      "text": "Os três grupos são fronteiras de RESPONSABILIDADE, não contas AWS (#15 §6). Esta vista é mostrada a produto, jurídico e diretoria — o vocabulário é de capacidade, e nenhum nome de tecnologia aparece.",
+      "origin": "assumption" }
   ],
 
-  "dossie": {
+  "dossier": {
     "_comentario": "L1 do corpus do #26: o gênero de blocos lógicos SEM passo numerado, que é o regime em que eixoDaGrade devolve `coluna` e o ELK fica com o grafo inteiro.",
-    "eixos": {
+    "axes": {
       "E1": "não decidido — a vista lógica é anterior à postura de computação",
       "E2": "síncrono no contato, assíncrono na trilha",
       "E3": "casos com histórico longo e retenção legal",

@@ -3,8 +3,8 @@
 /**
  * O MESMO modelo, nos dois motores — a régua que escolheu o motor de produção.
  *
- *   node tools/medir-antes-depois.cjs            # laudo geométrico lado a lado
- *   node tools/medir-antes-depois.cjs --bytes    # e o tamanho do XML
+ *   node tools/measure-before-after.cjs            # laudo geométrico lado a lado
+ *   node tools/measure-before-after.cjs --bytes    # e o tamanho do XML
  *
  * O #23 pede a escolha "por medição, não por data", e depois pede que toda
  * conclusão geométrica que não sobreviver seja registrada. Esta ferramenta é o
@@ -23,8 +23,8 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const ANTES = path.join(RAIZ, 'prototypes', 'q11', 'motor', 'gerar.cjs');
-const { validarGeometria } = require(path.join(RAIZ, 'validador', 'validar-geometria.cjs'));
+const ANTES = path.join(RAIZ, 'prototypes', 'q11', 'engine', 'generate.cjs');
+const { validarGeometria } = require(path.join(RAIZ, 'validator', 'validate-geometry.cjs'));
 
 async function main() {
   if (!fs.existsSync(ANTES)) {
@@ -34,10 +34,10 @@ async function main() {
   }
   const motores = {
     antes: require(ANTES).gerar,
-    depois: require(path.join(RAIZ, 'motor', 'gerar.cjs')).gerar,
+    depois: require(path.join(RAIZ, 'engine', 'generate.cjs')).gerar,
   };
   const comBytes = process.argv.includes('--bytes');
-  const modelos = fs.readdirSync(path.join(RAIZ, 'modelo')).filter(f => f.endsWith('.json')).sort();
+  const modelos = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).sort();
 
   console.log('\n  o mesmo modelo nos dois motores — laudo do validador do #18\n');
   const L = comBytes ? 32 : 26;
@@ -46,13 +46,13 @@ async function main() {
 
   let mudouSemantica = 0, mudouFalha = 0, naoGerou = 0;
   for (const arq of modelos) {
-    const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'modelo', arq), 'utf8'));
+    const m = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', arq), 'utf8'));
     const col = {};
     for (const [rot, gerar] of Object.entries(motores)) {
       try {
         const r = await gerar(JSON.parse(JSON.stringify(m)));
         const l = validarGeometria(r.plano);
-        col[rot] = { falha: l.resumo.falha, sem: l.semanticas.map(s => `${s.id}×${s.ocorrencias.length}`),
+        col[rot] = { falha: l.resumo.falha, sem: l.semanticas.map(s => `${s.id}×${s.occurrences.length}`),
           ids: l.falhas.map(f => f.id), bytes: r.xml.length };
       } catch (e) { col[rot] = { erro: e.message.slice(0, 40) }; }
     }
@@ -81,7 +81,7 @@ async function main() {
   if (naoGerou) console.log(`  modelos que um dos motores não gerou:              ${naoGerou}`);
   console.log('\n  Leitura: falha semântica é o desenho MENTINDO (tolerância zero). Mudança na');
   console.log('  contagem total é achado do #18 sobre a escala nova, não regressão — o');
-  console.log('  `check-bons.cjs` separa os dois eixos.\n');
+  console.log('  `check-good.cjs` separa os dois eixos.\n');
   return 0;
 }
 

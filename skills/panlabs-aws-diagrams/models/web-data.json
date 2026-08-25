@@ -1,27 +1,27 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "web-dados",
-  "titulo": "Web · Data — a linha em que o alfabeto invertia os andares",
-  "subtitulo": "Linha 2 da tabela do #22. Por rótulo sairia Data em cima de Web; por conteúdo sai Web em cima de Data.",
-  "vista": "tecnica",
-  "genero": "T1",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "web-data",
+  "title": "Web · Data — a linha em que o alfabeto invertia os andares",
+  "subtitle": "Linha 2 da tabela do #22. Por rótulo sairia Data em cima de Web; por conteúdo sai Web em cima de Data.",
+  "view": "technical",
+  "genre": "T1",
 
-  "nos": [
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
-    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "dentro": "nuvem" },
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
 
-    { "id": "web-a", "tipo": "subnet", "rotulo": "Web subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
-    { "id": "web-b", "tipo": "subnet", "rotulo": "Web subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
-    { "id": "dado-a", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1a", "dentro": "vpc" },
-    { "id": "dado-b", "tipo": "subnet", "rotulo": "Data subnet", "acesso": "privada", "az": "us-east-1b", "dentro": "vpc" },
+    { "id": "web-a", "kind": "subnet", "label": "Web subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "web-b", "kind": "subnet", "label": "Web subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "dado-a", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "dado-b", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
 
-    { "id": "ec2-a", "tipo": "servico", "servico": "ec2", "rotulo": "Front-end", "dentro": "web-a" },
-    { "id": "ec2-b", "tipo": "servico", "servico": "ec2", "rotulo": "Front-end", "dentro": "web-b" },
-    { "id": "aurora-a", "tipo": "servico", "servico": "aurora", "rotulo": "Aurora writer", "dentro": "dado-a" },
-    { "id": "aurora-b", "tipo": "servico", "servico": "aurora", "rotulo": "Aurora reader", "dentro": "dado-b" }
+    { "id": "ec2-a", "kind": "service", "service": "ec2", "label": "Front-end", "inside": "web-a" },
+    { "id": "ec2-b", "kind": "service", "service": "ec2", "label": "Front-end", "inside": "web-b" },
+    { "id": "aurora-a", "kind": "service", "service": "aurora", "label": "Aurora writer", "inside": "dado-a" },
+    { "id": "aurora-b", "kind": "service", "service": "aurora", "label": "Aurora reader", "inside": "dado-b" }
   ],
 
-  "notas": [
-    { "texto": "'D' vem antes de 'W' no alfabeto, e é por isso que o desempate por rótulo punha a camada de dados em cima — a leitura que a convenção de rede não quer. O motor não lê o rótulo: lê EC2 ('compute', aplicação) e Aurora ('database', dados).", "origem": "legenda" }
+  "notes": [
+    { "text": "'D' vem antes de 'W' no alfabeto, e é por isso que o desempate por rótulo punha a camada de dados em cima — a leitura que a convenção de rede não quer. O motor não lê o rótulo: lê EC2 ('compute', aplicação) e Aurora ('database', dados).", "origin": "legend" }
   ]
 }

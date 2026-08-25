@@ -2,7 +2,7 @@
 /**
  * O validador geométrico — a fachada.
  *
- *   const { validarGeometria } = require('./validador/validar-geometria.cjs');
+ *   const { validarGeometria } = require('./validator/validate-geometry.cjs');
  *   const r = validarGeometria(plano);
  *   if (!r.ok) console.error(r.falhas.map(f => f.mensagem));
  *
@@ -29,7 +29,7 @@
  *   Um laço desses ou não converge, ou converge para o que a última checagem
  *   por acaso empurrou.
  *
- *   O precedente: o motor JÁ corrige, e no lugar certo. `alinhar.cjs` faz
+ *   O precedente: o motor JÁ corrige, e no lugar certo. `align.cjs` faz
  *   `temSobreposicao` → `refitar` → `rerrotear` e DESFAZ a passada quando ela
  *   piora. Isso funciona porque acontece dentro do passo que tem os parâmetros
  *   na mão e sabe o que está trocando. O validador não tem nem uma coisa nem
@@ -42,21 +42,21 @@
  */
 
 const path = require('path');
-const { criarCena } = require(path.join(__dirname, 'cena.cjs'));
-const { CHECAGENS, DO_VALIDADOR, porId } = require(path.join(__dirname, 'indice.cjs'));
+const { criarCena } = require(path.join(__dirname, 'scene.cjs'));
+const { CHECAGENS, DO_VALIDADOR, porId } = require(path.join(__dirname, 'index.cjs'));
 
 // A ordem é a do §Resumo de prioridade da rubrica, não a alfabética.
 const FAMILIAS = [
-  ['A3', require(path.join(__dirname, 'familias', 'a3-sobreposicao.cjs'))],
-  ['A4', require(path.join(__dirname, 'familias', 'a4-agrupamento.cjs'))],
-  ['A1', require(path.join(__dirname, 'familias', 'a1-completude.cjs'))],
-  ['A5', require(path.join(__dirname, 'familias', 'a5-arestas.cjs'))],
-  ['A7', require(path.join(__dirname, 'familias', 'a7-acessibilidade.cjs'))],
-  ['A2', require(path.join(__dirname, 'familias', 'a2-notacao.cjs'))],
-  ['A6', require(path.join(__dirname, 'familias', 'a6-distribuicao.cjs'))],
-  ['A8', require(path.join(__dirname, 'familias', 'a8-volume.cjs'))],
+  ['A3', require(path.join(__dirname, 'families', 'a3-overlap.cjs'))],
+  ['A4', require(path.join(__dirname, 'families', 'a4-grouping.cjs'))],
+  ['A1', require(path.join(__dirname, 'families', 'a1-completeness.cjs'))],
+  ['A5', require(path.join(__dirname, 'families', 'a5-edges.cjs'))],
+  ['A7', require(path.join(__dirname, 'families', 'a7-accessibility.cjs'))],
+  ['A2', require(path.join(__dirname, 'families', 'a2-notation.cjs'))],
+  ['A6', require(path.join(__dirname, 'families', 'a6-distribution.cjs'))],
+  ['A8', require(path.join(__dirname, 'families', 'a8-volume.cjs'))],
 ];
-const extras = require(path.join(__dirname, 'familias', 'extras.cjs'));
+const extras = require(path.join(__dirname, 'families', 'extras.cjs'));
 
 /**
  * @param {object} plano   o plano do motor (pós-`planejar`, pré-`emitir`)
@@ -67,7 +67,7 @@ function validarGeometria(plano, opts = {}) {
   const cena = criarCena(plano, opts);
 
   const resultados = [];
-  for (const [familia, roda] of FAMILIAS) {
+  for (const [family, roda] of FAMILIAS) {
     let obtidos;
     try {
       obtidos = roda(cena);
@@ -75,10 +75,10 @@ function validarGeometria(plano, opts = {}) {
       // Uma família que estoura não pode derrubar as outras sete, e muito menos
       // sair calada: o erro vira falha reportada, com o id da família.
       obtidos = [{
-        id: familia, nome: `família ${familia}`, familia, insumo: 'geometria',
+        id: family, name: `família ${family}`, family, input: 'geometria',
         severidadeMaxima: 'fail', semantica: false, calibravel: false,
-        estado: 'erro', mensagem: `a família ${familia} estourou: ${e.message}`,
-        medida: { pilha: String(e.stack || '').split('\n').slice(0, 3) }, ocorrencias: [],
+        state: 'erro', mensagem: `a família ${family} estourou: ${e.message}`,
+        medida: { pilha: String(e.stack || '').split('\n').slice(0, 3) }, occurrences: [],
       }];
     }
     resultados.push(...obtidos);
@@ -90,21 +90,21 @@ function validarGeometria(plano, opts = {}) {
 
   const achadosExtras = extras(cena);
 
-  const falhas = [...resultados, ...achadosExtras].filter(r => r.estado === 'falha' || r.estado === 'erro');
-  const avisos = [...resultados, ...achadosExtras].filter(r => r.estado === 'aviso');
+  const falhas = [...resultados, ...achadosExtras].filter(r => r.state === 'falha' || r.state === 'erro');
+  const avisos = [...resultados, ...achadosExtras].filter(r => r.state === 'aviso');
   const semanticas = falhas.filter(r => r.semantica);
 
-  const conta = estado => resultados.filter(r => r.estado === estado).length;
+  const account = state => resultados.filter(r => r.state === state).length;
   const resumo = {
     total: resultados.length,
-    ok: conta('ok'),
-    aviso: conta('aviso'),
-    falha: conta('falha'),
-    inaplicavel: conta('inaplicavel'),
-    pulada: conta('pulada'),
-    erro: conta('erro'),
+    ok: account('ok'),
+    aviso: account('aviso'),
+    falha: account('falha'),
+    notApplicable: account('notApplicable'),
+    pulada: account('pulada'),
+    erro: account('erro'),
     falhas_semanticas: semanticas.length,
-    ocorrencias: [...resultados, ...achadosExtras].reduce((s, r) => s + r.ocorrencias.length, 0),
+    occurrences: [...resultados, ...achadosExtras].reduce((s, r) => s + r.occurrences.length, 0),
   };
 
   return {
@@ -117,29 +117,29 @@ function validarGeometria(plano, opts = {}) {
   };
 }
 
-const SIMBOLO = { ok: '✓', aviso: '⚠', falha: '✗', inaplicavel: '·', pulada: '↷', erro: '‼' };
+const SIMBOLO = { ok: '✓', aviso: '⚠', falha: '✗', notApplicable: '·', pulada: '↷', erro: '‼' };
 
 /** O laudo em texto. `opts.tudo` mostra também o que passou. */
 function formatar(r, opts = {}) {
   const linhas = [];
-  const mostrar = x => opts.tudo || ['falha', 'aviso', 'erro'].includes(x.estado);
+  const mostrar = x => opts.tudo || ['falha', 'aviso', 'erro'].includes(x.state);
 
   let familiaAtual = null;
   for (const x of [...r.resultados, ...r.extras]) {
     if (!mostrar(x)) continue;
-    if (x.familia !== familiaAtual) { linhas.push(''); familiaAtual = x.familia; }
-    const marca = x.semantica && x.estado === 'falha' ? '  ← falha semântica' : '';
-    linhas.push(`  ${SIMBOLO[x.estado] || '?'} ${x.id.padEnd(5)} ${x.nome}${marca}`);
+    if (x.family !== familiaAtual) { linhas.push(''); familiaAtual = x.family; }
+    const marca = x.semantica && x.state === 'falha' ? '  ← falha semântica' : '';
+    linhas.push(`  ${SIMBOLO[x.state] || '?'} ${x.id.padEnd(5)} ${x.name}${marca}`);
     if (x.mensagem) linhas.push(`        ${x.mensagem}`);
-    for (const o of x.ocorrencias.slice(0, opts.ocorrencias || 5)) linhas.push(`        · ${o.o_que}`);
-    if (x.ocorrencias.length > (opts.ocorrencias || 5))
-      linhas.push(`        · … e mais ${x.ocorrencias.length - (opts.ocorrencias || 5)}`);
+    for (const o of x.occurrences.slice(0, opts.occurrences || 5)) linhas.push(`        · ${o.o_que}`);
+    if (x.occurrences.length > (opts.occurrences || 5))
+      linhas.push(`        · … e mais ${x.occurrences.length - (opts.occurrences || 5)}`);
   }
 
   const s = r.resumo;
   linhas.push('');
   linhas.push(`  ${s.total} checagens: ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ` +
-    `${s.inaplicavel} inaplicável · ${s.pulada} do render${s.erro ? ` · ${s.erro} erro` : ''}`);
+    `${s.notApplicable} inaplicável · ${s.pulada} do render${s.erro ? ` · ${s.erro} erro` : ''}`);
   if (r.cobertura.naoRodaram.length)
     linhas.push(`  ‼ ${r.cobertura.naoRodaram.length} checagem(ns) do validador não rodaram: ${r.cobertura.naoRodaram.join(', ')}`);
   if (s.falhas_semanticas)

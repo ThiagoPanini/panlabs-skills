@@ -1,22 +1,22 @@
 {
-  "esquema": "panlabs-aws-diagrams/modelo@1",
-  "id": "subnet-vazia",
-  "titulo": "A subnet vazia — o caso que o #22 mandou mostrar",
-  "subtitulo": "Este modelo NÃO gera. Ele existe para provar o que o motor faz quando o fato que ordena não está em lugar nenhum.",
-  "vista": "tecnica",
-  "genero": "T1",
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "empty-subnet",
+  "title": "A subnet vazia — o caso que o #22 mandou mostrar",
+  "subtitle": "Este modelo NÃO gera. Ele existe para provar o que o motor faz quando o fato que ordena não está em lugar nenhum.",
+  "view": "technical",
+  "genre": "T1",
 
-  "nos": [
-    { "id": "nuvem", "tipo": "nuvem", "rotulo": "AWS Cloud" },
-    { "id": "vpc", "tipo": "vpc", "rotulo": "VPC reservada · 10.60.0.0/16", "cidr": "10.60.0.0/16", "dentro": "nuvem" },
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC reservada · 10.60.0.0/16", "cidr": "10.60.0.0/16", "inside": "cloud" },
 
-    { "id": "app-a", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "eu-west-1a", "dentro": "vpc" },
-    { "id": "app-b", "tipo": "subnet", "rotulo": "App subnet", "acesso": "privada", "az": "eu-west-1b", "dentro": "vpc" },
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "eu-west-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "eu-west-1b", "inside": "vpc" },
 
-    { "id": "res-a", "tipo": "subnet", "rotulo": "Reserved subnet", "acesso": "privada", "az": "eu-west-1a", "cidr": "10.60.20.0/24", "dentro": "vpc" },
-    { "id": "res-b", "tipo": "subnet", "rotulo": "Reserved subnet", "acesso": "privada", "az": "eu-west-1b", "cidr": "10.60.21.0/24", "dentro": "vpc" },
+    { "id": "res-a", "kind": "subnet", "label": "Reserved subnet", "access": "private", "az": "eu-west-1a", "cidr": "10.60.20.0/24", "inside": "vpc" },
+    { "id": "res-b", "kind": "subnet", "label": "Reserved subnet", "access": "private", "az": "eu-west-1b", "cidr": "10.60.21.0/24", "inside": "vpc" },
 
-    { "id": "ecs-a", "tipo": "servico", "servico": "ecs", "rotulo": "API", "dentro": "app-a" },
-    { "id": "ecs-b", "tipo": "servico", "servico": "ecs", "rotulo": "API", "dentro": "app-b" }
+    { "id": "ecs-a", "kind": "service", "service": "ecs", "label": "API", "inside": "app-a" },
+    { "id": "ecs-b", "kind": "service", "service": "ecs", "label": "API", "inside": "app-b" }
   ]
 }

@@ -8,7 +8,7 @@
  *   > sessoes — o modelo ainda vale? A skill detecta divergencia?
  *
  * "Detectar divergencia" com um hash do arquivo inteiro nao serve, e isto e
- * MEDIDO em `tools/medir-impressao.cjs`, nao suposto: abrir e salvar no proprio
+ * MEDIDO em `tools/medir-fingerprint.cjs`, nao suposto: abrir e salvar no proprio
  * draw.io, sem tocar em nada, ja reescreve o XML. Hash de arquivo acusa um
  * arquivo intocado. E, pior, ele nao distingue mover uma caixa (inofensivo) de
  * apagar um servico (o modelo virou mentira).
@@ -41,13 +41,13 @@
  * uma subnet privada de publica e ainda chama o arquivo de intacto.
  *
  * Por isso a fatia semantica do style inclui `strokeColor` e `fillColor`. O
- * experimento de controle em `medir-impressao.cjs` prova que a fatia sem cor
+ * experimento de controle em `medir-fingerprint.cjs` prova que a fatia sem cor
  * deixa esse caso passar.
  */
 
 const crypto = require('crypto');
 const path = require('path');
-const { esc, conferirXml, limparGremlins } = require(path.join(__dirname, '..', 'motor', 'emitir.cjs'));
+const { esc, conferirXml, limparGremlins } = require(path.join(__dirname, '..', 'engine', 'emit.cjs'));
 
 const sha = s => 'sha256:' + crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 
@@ -76,7 +76,7 @@ function desescapar(s) {
  * atributo, aspas, tag que fecha sozinha.
  */
 function varrer(xml) {
-  const raiz = { nome: '#raiz', attrs: {}, filhos: [] };
+  const raiz = { name: '#raiz', attrs: {}, filhos: [] };
   const pilha = [raiz];
   const re = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<\/([A-Za-z_][\w.-]*)\s*>|<([A-Za-z_][\w.-]*)((?:\s+[\w.:-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/g;
   let m;
@@ -86,15 +86,15 @@ function varrer(xml) {
     const attrs = {};
     for (const a of String(m[3] || '').matchAll(/([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
       attrs[a[1]] = desescapar(a[2] !== undefined ? a[2] : a[3]);
-    const no = { nome: m[2], attrs, filhos: [] };
+    const no = { name: m[2], attrs, filhos: [] };
     pilha[pilha.length - 1].filhos.push(no);
     if (!m[4]) pilha.push(no);
   }
   return raiz;
 }
 
-function acharTodos(no, nome, out = []) {
-  for (const f of no.filhos) { if (f.nome === nome) out.push(f); acharTodos(f, nome, out); }
+function acharTodos(no, name, out = []) {
+  for (const f of no.filhos) { if (f.name === name) out.push(f); acharTodos(f, name, out); }
   return out;
 }
 
@@ -118,13 +118,13 @@ function lerPaginas(xml) {
 
     const container = modelo ? acharTodos(modelo, 'root')[0] : null;
     for (const filho of (container ? container.filhos : [])) {
-      let id, valor, dados = null, mx;
-      if (filho.nome === 'object' || filho.nome === 'UserObject') {
+      let id, valor, data = null, mx;
+      if (filho.name === 'object' || filho.name === 'UserObject') {
         id = filho.attrs.id;
         valor = filho.attrs.label;
-        dados = filho.attrs;
-        mx = filho.filhos.find(f => f.nome === 'mxCell');
-      } else if (filho.nome === 'mxCell') {
+        data = filho.attrs;
+        mx = filho.filhos.find(f => f.name === 'mxCell');
+      } else if (filho.name === 'mxCell') {
         id = filho.attrs.id; valor = filho.attrs.value; mx = filho;
       } else continue;
       if (!mx) continue;
@@ -134,21 +134,21 @@ function lerPaginas(xml) {
       // de a celula SUMIR das impressoes: bastava batizar um atributo qualquer
       // de `panlabsX` e a edicao daquela celula passaria despercebida. Num
       // detector de divergencia isso nao e detalhe.
-      if (id === ID_SELO || (dados && dados.panlabsEsquema !== undefined)) {
+      if (id === ID_SELO || (data && data.panlabsEsquema !== undefined)) {
         selo = {};
-        for (const [k, v] of Object.entries(dados || {})) if (k.startsWith(PREFIXO)) selo[k] = v;
+        for (const [k, v] of Object.entries(data || {})) if (k.startsWith(PREFIXO)) selo[k] = v;
         continue;
       }
       if (id === '0' || id === '1') continue;
 
-      const geo = mx.filhos.find(f => f.nome === 'mxGeometry');
+      const geo = mx.filhos.find(f => f.name === 'mxGeometry');
       const pontos = geo ? acharTodos(geo, 'mxPoint').map(p => ({ x: +p.attrs.x || 0, y: +p.attrs.y || 0 })) : [];
       celulas.push({
         id,
         valor: valor === undefined ? '' : valor,
         style: mx.attrs.style || '',
         pai: mx.attrs.parent,
-        de: mx.attrs.source, para: mx.attrs.target,
+        from: mx.attrs.source, to: mx.attrs.target,
         aresta: mx.attrs.edge === '1',
         visivel: mx.attrs.visible !== '0',
         // `collapsed` nao e style nem geometria, e um container recolhido esconde
@@ -159,7 +159,7 @@ function lerPaginas(xml) {
         pontos,
       });
     }
-    paginas.push({ id: diagrama.attrs.id, nome: diagrama.attrs.name, selo, celulas });
+    paginas.push({ id: diagrama.attrs.id, name: diagrama.attrs.name, selo, celulas });
   }
   return { host: mxfile ? mxfile.attrs.host : undefined, paginas };
 }
@@ -189,7 +189,7 @@ function fatiaSemantica(c, comCor = true) {
   for (const x of chaves) if (k[x] !== undefined) forma[x] = k[x];
   return {
     id: c.id, valor: c.valor, pai: c.pai, aresta: c.aresta,
-    de: c.de, para: c.para, visivel: c.visivel, forma,
+    from: c.from, to: c.to, visivel: c.visivel, forma,
   };
 }
 
@@ -198,7 +198,7 @@ function fatiaSemantica(c, comCor = true) {
  * todo o resto do style.
  *
  * A primeira versao chamava isto de "impressao geometrica" e so olhava x/y/w/h.
- * A medicao de `medir-impressao.cjs` derrubou: quem troca a fonte ou recolhe um
+ * A medicao de `medir-fingerprint.cjs` derrubou: quem troca a fonte ou recolhe um
  * container nao mexe em coordenada nenhuma, e o arquivo saia como INTACTO — quer
  * dizer, "pode regerar a vontade", jogando fora o ajuste do humano em silencio.
  *
@@ -252,7 +252,7 @@ function impressaoSemantica(celulas, opts = {}) {
  * ninguem tocou lia como `remanejado`, que e a skill avisando "regerar apaga o
  * seu ajuste" sobre um ajuste que nao existe.
  *
- * O caso de controle continua guardado: `check-impressao.cjs` move uma celula
+ * O caso de controle continua guardado: `check-fingerprint.cjs` move uma celula
  * para outra posicao ENTRE IRMAOS e exige `remanejado`.
  */
 function impressaoDeAparencia(celulas) {
@@ -311,7 +311,7 @@ function reescreverSelos(xml, faz) {
 }
 
 /** A impressao que a aprovacao pendura: o recorte do acordo, canonizado. */
-const impressaoDoAcordo = recorte => sha(canonicalizar(recorte));
+const impressaoDoAcordo = snapshot => sha(canonicalizar(snapshot));
 
 // --------------------------------------------------------------- a diferenca
 
@@ -324,50 +324,50 @@ const impressaoDoAcordo = recorte => sha(canonicalizar(recorte));
 function diferenca(antes, depois) {
   const a = new Map(antes.map(c => [c.id, c]));
   const d = new Map(depois.map(c => [c.id, c]));
-  const achados = [];
+  const findings = [];
 
   for (const [id, c] of a)
-    if (!d.has(id)) achados.push({ tipo: 'sumiu', id, o: c.aresta ? 'aresta' : 'no', era: c.valor });
+    if (!d.has(id)) findings.push({ kind: 'sumiu', id, o: c.aresta ? 'aresta' : 'no', era: c.valor });
 
   for (const [id, c] of d) {
-    if (!a.has(id)) { achados.push({ tipo: 'apareceu', id, o: c.aresta ? 'aresta' : 'no', virou: c.valor }); continue; }
+    if (!a.has(id)) { findings.push({ kind: 'apareceu', id, o: c.aresta ? 'aresta' : 'no', virou: c.valor }); continue; }
     const antiga = a.get(id);
     const fa = fatiaSemantica(antiga), fd = fatiaSemantica(c);
-    if (fa.valor !== fd.valor) achados.push({ tipo: 'rotulo', id, era: fa.valor, virou: fd.valor });
-    if (fa.pai !== fd.pai) achados.push({ tipo: 'mudou-de-pai', id, era: fa.pai, virou: fd.pai });
-    if (fa.de !== fd.de || fa.para !== fd.para)
-      achados.push({ tipo: 'extremos', id, era: `${fa.de}->${fa.para}`, virou: `${fd.de}->${fd.para}` });
-    if (fa.visivel !== fd.visivel) achados.push({ tipo: 'visibilidade', id, era: fa.visivel, virou: fd.visivel });
+    if (fa.valor !== fd.valor) findings.push({ kind: 'label', id, era: fa.valor, virou: fd.valor });
+    if (fa.pai !== fd.pai) findings.push({ kind: 'mudou-de-pai', id, era: fa.pai, virou: fd.pai });
+    if (fa.from !== fd.from || fa.to !== fd.to)
+      findings.push({ kind: 'extremos', id, era: `${fa.from}->${fa.to}`, virou: `${fd.from}->${fd.to}` });
+    if (fa.visivel !== fd.visivel) findings.push({ kind: 'visibilidade', id, era: fa.visivel, virou: fd.visivel });
     if (canonicalizar(fa.forma) !== canonicalizar(fd.forma))
-      achados.push({ tipo: 'forma', id, era: canonicalizar(fa.forma), virou: canonicalizar(fd.forma) });
+      findings.push({ kind: 'forma', id, era: canonicalizar(fa.forma), virou: canonicalizar(fd.forma) });
   }
-  return achados;
+  return findings;
 }
 
 /**
  * O que a divergencia CUSTA de conserto. A classificacao nao conserta nada — ela
  * diz se o modelo tem onde guardar o que o humano desenhou.
  *
- * `absorvivel`: existe campo no `sessao@1` que expressa a mudanca. A skill pode
+ * `absorvivel`: existe campo no `session@1` que expressa a mudanca. A skill pode
  *               propor a absorcao — proximo passo, uma confirmacao.
  * `opaca`:      o humano desenhou algo que o modelo nao sabe dizer. Nao ha o que
  *               absorver; ou ele descreve o que fez, ou o desenho e a verdade e
  *               o modelo foi abandonado.
  */
-function classificar(achados) {
+function classificar(findings) {
   const ONDE = {
-    rotulo: 'campo `rotulo`',
+    label: 'campo `rotulo`',
     sumiu: 'tirar o elemento do modelo',
     apareceu: 'no novo — mas a skill nao sabe QUE capacidade ele serve; absorver custa uma pergunta',
     'mudou-de-pai': 'campo `dentro`',
     extremos: 'campos `de` / `para`',
   };
-  return achados.map(a => {
-    let onde = ONDE[a.tipo] || null;
+  return findings.map(a => {
+    let onde = ONDE[a.kind] || null;
     // Trocar o icone e expressavel: e outro `servico` do catalogo. Trocar o
     // style para algo que nao carrega icone nenhum nao e — o modelo nao tem
     // vocabulario para "uma caixa que o usuario desenhou do jeito dele".
-    if (a.tipo === 'forma' && /Icon/.test(String(a.virou))) onde = 'campo `servico` ou `tipo`';
+    if (a.kind === 'forma' && /Icon/.test(String(a.virou))) onde = 'campo `servico` ou `tipo`';
     return { ...a, classe: onde ? 'absorvivel' : 'opaca', onde };
   });
 }

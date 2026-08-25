@@ -3,7 +3,7 @@
 /**
  * M1 — ONDE, dentro de um `.drawio`, um metadado sobrevive?
  *
- *   node tools/medir-hospedeiro.cjs [binario-drawio]
+ *   node tools/measure-host.cjs [binario-drawio]
  *
  * O #2 provou por leitura de codigo que atributo de `<object>` faz round-trip, e
  * o #11 confirmou com o binario. Nenhum dos dois testou as ALTERNATIVAS — e o
@@ -24,7 +24,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { varrer, acharTodos } = require('../sessao/impressao.cjs');
+const { varrer, acharTodos } = require('../session/fingerprint.cjs');
 
 const { binario } = require(path.join(__dirname, 'drawio.cjs'));
 const DRAWIO = binario(process.argv[2]);
@@ -82,7 +82,7 @@ function achar(raiz, attr) {
   const pilha = [raiz];
   while (pilha.length) {
     const n = pilha.pop();
-    if (n.attrs && n.attrs[attr] !== undefined) return { valor: n.attrs[attr], em: n.nome };
+    if (n.attrs && n.attrs[attr] !== undefined) return { valor: n.attrs[attr], em: n.name };
     for (const f of n.filhos || []) pilha.push(f);
   }
   return null;
@@ -136,11 +136,11 @@ function main() {
   console.log('    hospedeiro                              sobreviveu  intacto');
   console.log('    ' + '─'.repeat(66));
   const resultado = [];
-  for (const [attr, nome] of HOSPEDEIROS) {
-    const achado = achar(depois, attr);
-    const intacto = achado ? achado.valor === CARGA : false;
-    resultado.push({ attr, nome, sobreviveu: !!achado, intacto });
-    console.log(`    ${nome.padEnd(40)} ${(achado ? 'sim' : 'NAO').padEnd(11)} ${achado ? (intacto ? 'sim' : 'ALTERADO') : '—'}`);
+  for (const [attr, name] of HOSPEDEIROS) {
+    const finding = achar(depois, attr);
+    const intacto = finding ? finding.valor === CARGA : false;
+    resultado.push({ attr, name, sobreviveu: !!finding, intacto });
+    console.log(`    ${name.padEnd(40)} ${(finding ? 'sim' : 'NAO').padEnd(11)} ${finding ? (intacto ? 'sim' : 'ALTERADO') : '—'}`);
   }
 
   const mx = acharTodos(depois, 'mxfile')[0];
@@ -152,7 +152,7 @@ function main() {
   const vencedores = resultado.filter(r => r.sobreviveu && r.intacto);
   console.log(`\n  ${vencedores.length}/${HOSPEDEIROS.length} hospedeiros preservam o payload byte a byte.`);
   for (const r of resultado.filter(r => !r.sobreviveu || !r.intacto))
-    console.log(`    ✗ ${r.nome}`);
+    console.log(`    ✗ ${r.name}`);
 
   // O selo tem de estar num hospedeiro que sobreviveu; e o que a decisao usa.
   const escolhido = resultado.find(r => r.attr === 'objectAttr');

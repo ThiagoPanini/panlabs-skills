@@ -147,127 +147,127 @@
     "fonteMinimaRotuloDeAresta": {
       "valor": 12,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "A3.9 — 'piso prático abaixo do qual o texto deixa de ser legível em impressão/slide'; a rubrica avisa que NÃO é regra WCAG (WCAG normatiza contraste, não tamanho)"
     },
     "fonteMinimaNomeDeElemento": {
       "valor": 14,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "A3.9 — mesma origem"
     },
     "proximidadeMaxima": {
       "valor": 0.6,
       "unidade": "ρ",
-      "porque": null,
+      "because": null,
       "rubrica": "A4.7 — 'Valor do limiar é default de engenharia, não medido'"
     },
     "dobrasAlvo": {
       "valor": 1,
       "unidade": "dobras por aresta",
-      "porque": null,
+      "because": null,
       "rubrica": "A5.3 — 'O valor 2 é default de engenharia'; 1 é o alvo declarado"
     },
     "dobrasAviso": {
       "valor": 2,
       "unidade": "dobras por aresta",
-      "porque": null,
+      "because": null,
       "rubrica": "A5.3 — o número que a rubrica marcou"
     },
     "dobrasFalha": {
       "valor": 4,
       "unidade": "dobras por aresta",
-      "porque": null,
+      "because": null,
       "rubrica": "A5.3 — 'fail em > 4'"
     },
     "anguloDeDobraAlvo": {
       "valor": 90,
       "unidade": "graus",
-      "porque": null,
+      "because": null,
       "rubrica": "A5.4 — derivado de Gestalt/continuação, sem experimento próprio"
     },
     "anguloDeDobraFalha": {
       "valor": 60,
       "unidade": "graus",
-      "porque": null,
+      "because": null,
       "rubrica": "A5.4 — 'fail abaixo de 60°'"
     },
     "fluxoConsistenteMinimo": {
       "valor": 0.9,
       "unidade": "fração de arestas",
-      "porque": null,
+      "because": null,
       "rubrica": "A5.7 — 'O valor 0,90 é default de engenharia'"
     },
     "alinhamentoMinimo": {
       "valor": 0.7,
       "unidade": "fração de nós",
-      "porque": null,
+      "because": null,
       "rubrica": "A6.4 — 'O valor 70% é default de engenharia'"
     },
     "passoDaGrade": {
       "valor": 8,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "A6.4 — o passo de grade é exemplo na rubrica ('ex.: 8 px')"
     },
     "deltaE00Minimo": {
       "valor": 10,
       "unidade": "ΔE00",
-      "porque": null,
+      "because": null,
       "rubrica": "A7.4 — 'operacionalização de engenharia (o W3C não prescreve ΔE). Marque como default calibrável'"
     },
     "folgaEntreCaixas": {
       "valor": 8,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "A3.1 — 'gap ≥ 8 px (ou ≥ 0.25 × altura do ícone)'; a rubrica dá duas formas do mesmo número e não escolhe"
     },
     "paddingDeGrupo": {
       "valor": 8,
       "unidade": "px",
-      "porque": "CALIBRADO NA RECERTIFICAÇÃO DO #23, e o 12 era um espelho. O #18 herdou o número do `PAD = 12` que o motor do #11 usava, e nesse regime a checagem media o motor contra ele mesmo. Com a camada de tema (#13) o motor passou a derivar a folga de uma grade base 8 — e a medição fica sem margem para interpretação: com limiar 12, A4.1 acusa 77 ocorrências em 14 dos 15 modelos do corpus, e TODAS reportam exatamente 8 px; com limiar 8, acusa zero. Nenhuma delas é contenção defeituosa, todas são a escala nova. E 8 não é um número escolhido para o teste passar: `passoDaGrade` e `folgaEntreCaixas` já valiam 8 nesta mesma tabela, e a base 8 do tema sai dos ícones normativos da AWS (48 e 40 px, A9/A6 do #5) e do piso N7 de 0,05\" ≈ 4,8 px, cujo degrau seguinte é 8. Os três números passam a concordar em vez de um contradizer os outros dois. O que A4.1 protege — filho DENTRO do pai, sem encostar — continua protegido; quem guarda pertencimento é o A4.2, intocado.",
+      "because": "CALIBRADO NA RECERTIFICAÇÃO DO #23, e o 12 era um espelho. O #18 herdou o número do `PAD = 12` que o motor do #11 usava, e nesse regime a checagem media o motor contra ele mesmo. Com a camada de tema (#13) o motor passou a derivar a folga de uma grade base 8 — e a medição fica sem margem para interpretação: com limiar 12, A4.1 acusa 77 ocorrências em 14 dos 15 modelos do corpus, e TODAS reportam exatamente 8 px; com limiar 8, acusa zero. Nenhuma delas é contenção defeituosa, todas são a escala nova. E 8 não é um número escolhido para o teste passar: `passoDaGrade` e `folgaEntreCaixas` já valiam 8 nesta mesma tabela, e a base 8 do tema sai dos ícones normativos da AWS (48 e 40 px, A9/A6 do #5) e do piso N7 de 0,05\" ≈ 4,8 px, cujo degrau seguinte é 8. Os três números passam a concordar em vez de um contradizer os outros dois. O que A4.1 protege — filho DENTRO do pai, sem encostar — continua protegido; quem guarda pertencimento é o A4.2, intocado.",
       "rubrica": "A4.1 — padding interno mínimo em todos os quatro lados"
     },
     "desvioDePaddingMaximo": {
       "valor": 4,
       "unidade": "px (σ)",
-      "porque": null,
+      "because": null,
       "rubrica": "A4.5 — 'σ ≤ 4 px intra-grupo'"
     },
     "margemDoCanvas": {
       "valor": 16,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "A3.7 — 'margem ≥ 16 px'"
     },
     "separacaoDeArestasParalelas": {
       "valor": 6,
       "unidade": "px (Hausdorff)",
-      "porque": null,
+      "because": null,
       "rubrica": "A5.8 — 'distância de Hausdorff < 6 px'"
     },
     "toleranciaDeAncoragem": {
       "valor": 2,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "A3.6 — '±2 px' sobre o perímetro"
     },
     "paddingDeRotulo": {
       "valor": 2,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "A3.2 — 'padding de 2 px' na interseção de bounding boxes de texto"
     },
     "toleranciaDeRazaoDeAspecto": {
       "valor": 0.2,
       "unidade": "fração",
-      "porque": null,
+      "because": null,
       "rubrica": "A6.3 — 'difere da razão do canvas em mais de 20%'"
     },
     "fanOutMaximo": {
       "valor": 8,
       "unidade": "grau",
-      "porque": null,
+      "because": null,
       "rubrica": "A8.3 — o U8 da rubrica lista deg ≤ 8 entre os \"default de engenharia\"; a derivação de A6.1 é raciocínio, não medição"
     },
     "coberturaDeTinta": {
@@ -276,37 +276,37 @@
         0.6
       ],
       "unidade": "fração do canvas",
-      "porque": null,
+      "because": null,
       "rubrica": "A8.4 — o U8 lista a faixa de cobertura entre os \"default de engenharia\"; a própria rubrica a chama de sinal diagnóstico, não reprovação"
     },
     "larguraMediaDeCaractere": {
       "valor": 6.6,
       "unidade": "px por caractere a 12px",
-      "porque": null,
-      "rubrica": "nenhuma — é do validador. Avanco medio de glifo em Helvetica 12px (~0,55em). O motor calibrou 6,7 por conta propria (resolver.cjs); a concordancia e esperada, e o valor da checagem nao esta na constante e sim em compor as caixas de rotulo e cruza-las, que o motor nunca faz"
+      "because": null,
+      "rubrica": "nenhuma — é do validador. Avanco medio de glifo em Helvetica 12px (~0,55em). O motor calibrou 6,7 por conta propria (resolve.cjs); a concordancia e esperada, e o valor da checagem nao esta na constante e sim em compor as caixas de rotulo e cruza-las, que o motor nunca faz"
     },
     "alturaDeLinha": {
       "valor": 17,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "nenhuma — e do validador. Entrelinha do rotulo de folha a 12px"
     },
     "alturaMinimaDeRotulo": {
       "valor": 23,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "nenhuma — e do validador. Piso da faixa de rotulo de uma linha"
     },
     "larguraMaximaDeRotulo": {
       "valor": 120,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "nenhuma — e do validador. Largura em que o rotulo do service icon quebra"
     },
     "alturaDaFaixaDeTitulo": {
       "valor": 34,
       "unidade": "px",
-      "porque": null,
+      "because": null,
       "rubrica": "nenhuma — e do validador. Faixa de titulo reservada no topo de um container"
     }
   }

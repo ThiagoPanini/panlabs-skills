@@ -107,7 +107,7 @@ async function main() {
     }
     // e o tema tem de reconstruir: id, fundo e os grupos de token
     const t = JSON.parse(atributo(depois, 'panlabsTema') || '{}');
-    const grupos = ['page', 'ink', 'text', 'aresta', 'gap', 'note', 'block', 'card'];
+    const grupos = ['page', 'ink', 'text', 'edge', 'gap', 'note', 'block', 'card'];
     const faltando = grupos.filter(g => !(g in (t.tokens || {})));
     if (faltando.length || !t.id || !t.background) {
       console.log(`   ✗ ${name}: payload incompleto (faltam ${faltando.join(', ') || 'id/fundo'})`);

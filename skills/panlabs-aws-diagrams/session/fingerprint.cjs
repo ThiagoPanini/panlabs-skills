@@ -149,7 +149,7 @@ function lerPaginas(xml) {
         style: mx.attrs.style || '',
         pai: mx.attrs.parent,
         from: mx.attrs.source, to: mx.attrs.target,
-        aresta: mx.attrs.edge === '1',
+        edge: mx.attrs.edge === '1',
         visivel: mx.attrs.visible !== '0',
         // `collapsed` nao e style nem geometria, e um container recolhido esconde
         // o que ele tem dentro. Fica na aparencia: quem recolheu quer o desenho
@@ -183,12 +183,12 @@ const SEMANTICO_ARESTA = ['startArrow', 'endArrow', 'startFill', 'endFill'];
 
 function fatiaSemantica(c, comCor = true) {
   const k = chavesDeStyle(c.style);
-  const chaves = (c.aresta ? SEMANTICO_ARESTA : SEMANTICO_VERTICE)
+  const chaves = (c.edge ? SEMANTICO_ARESTA : SEMANTICO_VERTICE)
     .filter(x => comCor || !/Color$/.test(x));
   const forma = {};
   for (const x of chaves) if (k[x] !== undefined) forma[x] = k[x];
   return {
-    id: c.id, valor: c.valor, pai: c.pai, aresta: c.aresta,
+    id: c.id, valor: c.valor, pai: c.pai, edge: c.edge,
     from: c.from, to: c.to, visivel: c.visivel, forma,
   };
 }
@@ -210,7 +210,7 @@ function fatiaSemantica(c, comCor = true) {
 function fatiaDeAparencia(c, i) {
   const r = n => Math.round(n);
   const k = chavesDeStyle(c.style);
-  const semanticas = new Set(c.aresta ? SEMANTICO_ARESTA : SEMANTICO_VERTICE);
+  const semanticas = new Set(c.edge ? SEMANTICO_ARESTA : SEMANTICO_VERTICE);
   const resto = {};
   for (const [chave, v] of Object.entries(k)) if (!semanticas.has(chave)) resto[chave] = v;
   return {
@@ -289,7 +289,7 @@ function reescreverSelos(xml, faz) {
   if (!paginas.length) throw new Error('XML sem pagina nenhuma');
   const re = new RegExp(`[ \\t]*<object id="${ID_SELO}"[\\s\\S]*?</object>\\n?`, 'g');
   let i = 0;
-  const saida = xml.replace(re, () => {
+  const output = xml.replace(re, () => {
     const p = paginas[i] || paginas[paginas.length - 1];
     const attrs = Object.entries(faz(p, i))
       .filter(([, v]) => v !== undefined && v !== null)
@@ -305,9 +305,9 @@ function reescreverSelos(xml, faz) {
   if (i !== paginas.length)
     throw new Error(`o XML tem ${paginas.length} pagina(s) mas ${i} celula(s) ${ID_SELO} — ` +
       'alguma pagina ficou sem selo');
-  const erros = conferirXml(saida);
+  const erros = conferirXml(output);
   if (erros.length) { const e = new Error('a reescrita do selo produziu XML mal formado'); e.erros = erros; throw e; }
-  return { xml: saida, paginas };
+  return { xml: output, paginas };
 }
 
 /** A impressao que a aprovacao pendura: o recorte do acordo, canonizado. */
@@ -327,10 +327,10 @@ function diferenca(antes, depois) {
   const findings = [];
 
   for (const [id, c] of a)
-    if (!d.has(id)) findings.push({ kind: 'sumiu', id, o: c.aresta ? 'aresta' : 'no', era: c.valor });
+    if (!d.has(id)) findings.push({ kind: 'sumiu', id, o: c.edge ? 'edge' : 'no', era: c.valor });
 
   for (const [id, c] of d) {
-    if (!a.has(id)) { findings.push({ kind: 'apareceu', id, o: c.aresta ? 'aresta' : 'no', virou: c.valor }); continue; }
+    if (!a.has(id)) { findings.push({ kind: 'apareceu', id, o: c.edge ? 'edge' : 'no', virou: c.valor }); continue; }
     const antiga = a.get(id);
     const fa = fatiaSemantica(antiga), fd = fatiaSemantica(c);
     if (fa.valor !== fd.valor) findings.push({ kind: 'label', id, era: fa.valor, virou: fd.valor });

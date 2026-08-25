@@ -166,5 +166,5 @@ que o motor usa para reconhecer redundância zonal: `rotulo` faz dois trabalhos 
 texto exibido **e** chave de papel. O caminho de layout muda de **grade** para
 **elk** mesmo a arquitetura continuando zonalmente redundante.
 
-Se o pack impõe sufixo de AZ no rótulo, confira o `caminho` que o `--explicar`
+Se o pack impõe sufixo de AZ no rótulo, confira o `caminho` que o `--explain`
 reporta antes de aceitar o desenho.

@@ -153,16 +153,16 @@ function criar(tema, dirCatalogo) {
     };
   }
 
-  function faixa(f) {
+  function band(f) {
     const name = f.kind === 'auto-scaling' ? 'Auto Scaling group' : 'Generic group';
     const g = cat.group(name);
-    usados.push({ id: f.id, pediu: f.kind || 'generic', virou: g.title, via: 'faixa', correcoes: g.correcoes });
+    usados.push({ id: f.id, pediu: f.kind || 'generic', virou: g.title, via: 'band', correcoes: g.correcoes });
     // Uma faixa existe para CRUZAR outras caixas, então o rótulo dela nasce por
     // cima de bordas alheias — com 2 colunas de AZ o centro da faixa cai
     // exatamente na divisa entre as zonas, e a linha tracejada risca o texto.
     // O halo resolve sem tocar em cor nem em traço: a paleta continua sendo do
     // catálogo, a legibilidade é do motor.
-    const style = tema.faixa(g.style);
+    const style = tema.band(g.style);
     return {
       style,
       color: (style.match(/strokeColor=(#[0-9A-Fa-f]{6})/) || [])[1],
@@ -175,7 +175,7 @@ function criar(tema, dirCatalogo) {
   }
 
   return {
-    container, folha, faixa, faixaAz, cat, usados, tema,
+    container, folha, band, faixaAz, cat, usados, tema,
     linhasDoRotulo: (t, l) => linhasDoRotulo(t, l, M.largCar),
     larguraDoTexto: t => larguraDoTexto(t, M.largCar),
     larguraDaAresta: t => larguraDoTexto(t, M.largCarAresta),

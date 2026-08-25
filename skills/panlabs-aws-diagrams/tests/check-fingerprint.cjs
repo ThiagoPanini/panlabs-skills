@@ -127,7 +127,7 @@ const ESQUEMAS = [
 async function main() {
   const logical = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-logical.json'), 'utf8'));
   const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
-  const technical = elaborar(aprovar(logical, { em: '2026-08-21' }), elab);
+  const technical = elaborar(aprovar(logical, { at: '2026-08-21' }), elab);
   const base = (await desenhar(technical, 'technical')).xml;
 
   const temApp = fs.existsSync(DRAWIO);

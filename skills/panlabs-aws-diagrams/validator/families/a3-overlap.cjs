@@ -14,7 +14,7 @@ const { ok, aviso, falha, notApplicable, conforme, pares, arredonda, semTags, na
 
 
 module.exports = function a3(cena) {
-  const saida = [];
+  const output = [];
   const { nodes, grupos, edges, canvas } = cena;
   // Faixas ficam de fora de toda A3: elas existem para cruzar, e o `scene.cjs`
   // explica por quê. O que lhes cabe é a checagem de membros, em `extras`.
@@ -38,7 +38,7 @@ module.exports = function a3(cena) {
         if (d < gap) casos.push({ o_que: `${name(a)} e ${name(b)} têm folga de ${arredonda(d, 1)} px (mínimo ${gap})`, ids: [a.id, b.id] });
       }
     }
-    saida.push(conforme('A3.1', casos, {
+    output.push(conforme('A3.1', casos, {
       medida: { pares_conferidos: candidatos.length, violacoes: casos.length },
       mensagem: casos.length ? `${casos.length} par(es) sobrepostos ou apertados demais` : `${candidatos.length} pares conferidos, nenhum encostado`,
     }));
@@ -54,7 +54,7 @@ module.exports = function a3(cena) {
       const area = g.areaDaIntersecao(ra, b.rotuloCaixa);
       if (area > 0) casos.push({ o_que: `os rótulos de ${name(a)} e ${name(b)} se cruzam em ${arredonda(area, 0)} px²`, ids: [a.id, b.id] });
     }
-    saida.push(conforme('A3.2', casos, {
+    output.push(conforme('A3.2', casos, {
       medida: { rotulos: comRotulo.length, colisoes: casos.length },
       mensagem: casos.length ? `${casos.length} colisão(ões) de rótulo` : `${comRotulo.length} rótulos, nenhum encosta em outro`,
     }));
@@ -80,7 +80,7 @@ module.exports = function a3(cena) {
         casos.push({ o_que: `o rótulo de ${name(e)} transborda ${onde}`, ids: [e.id] });
       }
     }
-    saida.push(conforme('A3.3', casos, { medida: { transbordos: casos.length } }));
+    output.push(conforme('A3.3', casos, { medida: { transbordos: casos.length } }));
   }
 
   // ---------------------------------------------------------------- A3.4
@@ -99,13 +99,13 @@ module.exports = function a3(cena) {
         }
       }
     }
-    saida.push(edges.length ? conforme('A3.4', casos, { medida: { cruzamentos: casos.length } })
+    output.push(edges.length ? conforme('A3.4', casos, { medida: { cruzamentos: casos.length } })
       : notApplicable('A3.4', 'o diagrama não tem arestas'));
   }
 
   // ---------------------------------------------------------------- A3.5
   {
-    if (!edges.length) saida.push(notApplicable('A3.5', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A3.5', 'o diagrama não tem arestas'));
     else {
       const casos = [];
       for (const a of edges) {
@@ -116,7 +116,7 @@ module.exports = function a3(cena) {
             casos.push({ o_que: `a aresta "${a.id}" (${a.from}→${a.to}) atravessa ${name(n)}`, ids: [a.id, n.id] });
         }
       }
-      saida.push(conforme('A3.5', casos, { medida: { travessias: casos.length } }));
+      output.push(conforme('A3.5', casos, { medida: { travessias: casos.length } }));
     }
   }
 
@@ -126,7 +126,7 @@ module.exports = function a3(cena) {
   // jeito — medir aí seria conferir a própria reconstrução. A checagem diz
   // quantas ficaram por construção em vez de fingir que conferiu as duas.
   {
-    if (!edges.length) saida.push(notApplicable('A3.6', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A3.6', 'o diagrama não tem arestas'));
     else {
       const tol = lim('toleranciaDeAncoragem');
       const casos = [];
@@ -143,7 +143,7 @@ module.exports = function a3(cena) {
           casos.push({ o_que: `a aresta "${a.id}" termina fora do perímetro de ${name(destino)}`, ids: [a.id] });
       }
       const porConstrucao = edges.length - ancoradas;
-      saida.push(conforme('A3.6', casos, {
+      output.push(conforme('A3.6', casos, {
         medida: { ancoras_declaradas: ancoradas, por_construcao: porConstrucao },
         mensagem: porConstrucao
           ? `${ancoradas} âncora(s) conferida(s); ${porConstrucao} ponta(s) sem âncora declarada — o renderizador projeta no perímetro, então ali A3.6 vale por construção e não por medição`
@@ -155,11 +155,11 @@ module.exports = function a3(cena) {
   // ---------------------------------------------------------------- A3.7
   {
     const margin = lim('margemDoCanvas');
-    const tudo = [...cena.caixas, ...cena.molduras].map(e => e.caixa).filter(Boolean);
-    for (const a of edges) if (a.completa) for (const p of a.pontos) tudo.push({ x: p.x, y: p.y, w: 0, h: 0 });
-    const env = g.envolvente(tudo);
+    const all = [...cena.caixas, ...cena.molduras].map(e => e.caixa).filter(Boolean);
+    for (const a of edges) if (a.completa) for (const p of a.pontos) all.push({ x: p.x, y: p.y, w: 0, h: 0 });
+    const env = g.envolvente(all);
     const cabe = env && g.contem(canvas, env, margin);
-    saida.push(cabe
+    output.push(cabe
       ? ok('A3.7', { medida: { envolvente: env, canvas, margin }, mensagem: `tudo cabe no canvas com ≥ ${margin} px de margem` })
       : falha('A3.7', {
         medida: { envolvente: env, canvas, margin },
@@ -171,12 +171,12 @@ module.exports = function a3(cena) {
   // ---------------------------------------------------------------- A3.8
   {
     const centros = nodes.map(n => g.centro(n.caixa));
-    if (centros.length < 2) saida.push(notApplicable('A3.8', 'menos de dois nós — não há par de distâncias'));
+    if (centros.length < 2) output.push(notApplicable('A3.8', 'menos de dois nós — não há par de distâncias'));
     else {
       const ds = [...pares(centros)].map(([a, b]) => Math.hypot(a.x - b.x, a.y - b.y));
       const nr = Math.min(...ds) / Math.max(...ds);
       const q1 = lim('resolucaoDeNoQ1');
-      saida.push(nr < q1
+      output.push(nr < q1
         ? aviso('A3.8', { medida: { NR: arredonda(nr) }, mensagem: `NR = ${arredonda(nr)} < ${q1} (Q1 de especialistas); alvo ${lim('resolucaoDeNoMediana')}` })
         : ok('A3.8', { medida: { NR: arredonda(nr) }, mensagem: `NR = ${arredonda(nr)}` }));
     }
@@ -194,11 +194,11 @@ module.exports = function a3(cena) {
     }
     for (const a of edges) {
       if (!semTags(a.label)) continue;
-      const px = parseFloat(a.estilo.fontSize) || 12;
+      const px = parseFloat(a.style.fontSize) || 12;
       if (px < minAresta) casos.push({ o_que: `a aresta "${a.id}" rotula com ${px} px (rótulo de aresta pede ${minAresta})`, ids: [a.id] });
     }
-    saida.push(conforme('A3.9', casos, { medida: { abaixo_do_piso: casos.length } }));
+    output.push(conforme('A3.9', casos, { medida: { abaixo_do_piso: casos.length } }));
   }
 
-  return saida;
+  return output;
 };

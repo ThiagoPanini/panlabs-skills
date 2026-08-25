@@ -9,12 +9,12 @@
     "family": "Arial",
     "label": 11,
     "group": 12,
-    "aresta": 10,
+    "edge": 10,
     "title": 24,
     "subtitle": 12,
     "qualifier": true
   },
-  "aresta": {
+  "edge": {
     "color": "#545B64",
     "thickness": 1.4,
     "tip": "open",

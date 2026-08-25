@@ -119,7 +119,7 @@ laudo idêntico, medido.
 ```bash
 node -e "const {projetar}=require('./session/project.cjs');
   require('fs').writeFileSync('/tmp/proj.json',
-    JSON.stringify(projetar(require('./modelo/sessao/<caso>-logica.json'),'logica').modelo));"
+    JSON.stringify(projetar(require('./models/session/<caso>-logica.json'),'logica').modelo));"
 node tools/check-geometry.cjs /tmp/proj.json
 ```
 

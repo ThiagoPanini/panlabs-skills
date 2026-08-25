@@ -37,16 +37,16 @@ const icone = (preenche = '#ED7100', res = 'lambda') =>
   `aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.${res};`;
 
 /** Estilo de faixa (sobreposição), tracejada, sem preenchimento. */
-const faixa = (traco = '#7AA116') =>
+const band = (traco = '#7AA116') =>
   `fillColor=none;strokeColor=${traco};dashed=1;verticalAlign=top;fontStyle=0;fontColor=${traco};` +
   `whiteSpace=wrap;html=1;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;labelBackgroundColor=#FFFFFF;`;
 
-const aresta = (extra = '') =>
+const edge = (extra = '') =>
   `edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=${CINZA};strokeWidth=1.6;` +
   `endArrow=blockThin;endFill=1;fontSize=12;fontColor=${CINZA};labelBackgroundColor=#FFFFFF;${extra}`;
 
 const v = (id, pai, x, y, w, h, style, label = id) => ({ kind: 'vertice', id, pai, label, style, geo: { x, y, w, h } });
-const e = (id, from, to, label, style = aresta(), pontos = []) => ({ kind: 'aresta', id, pai: '1', from, to, label, style, pontos });
+const e = (id, from, to, label, style = edge(), pontos = []) => ({ kind: 'edge', id, pai: '1', from, to, label, style, pontos });
 
 /** Empacota células num plano, com o modelo embutido como o motor faz. */
 function montar(id, celulas, modelo, larg = 900, alt = 700) {
@@ -99,7 +99,7 @@ const CASOS = [
       v('esq', '1', 60, 160, 78, 78, icone()),
       v('dir', '1', 700, 160, 78, 78, icone('#C925D1', 'rds')),
       // a polilinha corta a caixa de vpc-meio na horizontal
-      e('e1', 'esq', 'dir', 'replica', aresta(), [{ x: 200, y: 199 }, { x: 660, y: 199 }]),
+      e('e1', 'esq', 'dir', 'replica', edge(), [{ x: 200, y: 199 }, { x: 660, y: 199 }]),
     ], mod([
       { id: 'vpc-meio', kind: 'vpc' },
       { id: 'inside', kind: 'service', service: 'vpc_endpoints', inside: 'vpc-meio' },
@@ -113,7 +113,7 @@ const CASOS = [
     because: 'a faixa afirma um atributo compartilhado — dizer que um EC2 está numa AZ em que ele não está é a mesma mentira de A4.2, por outro caminho',
     espera: ['F1'],
     ...montar('f1', [
-      v('az-a', '1', 60, 60, 320, 300, faixa()),
+      v('az-a', '1', 60, 60, 320, 300, band()),
       v('membro', '1', 100, 140, 78, 78, icone()),
       v('forasteiro', '1', 240, 140, 78, 78, icone('#C925D1', 'rds')),
     ], mod([
@@ -127,7 +127,7 @@ const CASOS = [
     because: 'o outro lado do mesmo defeito: o modelo afirma o atributo e o desenho não mostra',
     espera: ['F1'],
     ...montar('f1-b', [
-      v('asg', '1', 60, 60, 200, 200, faixa()),
+      v('asg', '1', 60, 60, 200, 200, band()),
       v('inside', '1', 100, 120, 78, 78, icone()),
       v('esquecido', '1', 500, 120, 78, 78, icone()),
     ], mod([
@@ -144,15 +144,15 @@ const CASOS = [
       '(medido em malha completa de 3 a 6 zonas): por isso o corpo de prova é plantado aqui.',
     espera: ['F2'],
     ...montar('f2', [
-      v('az-a', '1', 60, 60, 200, 300, faixa()),
-      v('az-b', '1', 300, 60, 200, 300, faixa()),
-      v('az-c', '1', 540, 60, 200, 300, faixa()),
+      v('az-a', '1', 60, 60, 200, 300, band()),
+      v('az-b', '1', 300, 60, 200, 300, band()),
+      v('az-c', '1', 540, 60, 200, 300, band()),
       v('n-a', '1', 100, 160, 78, 78, icone()),
       v('n-b', '1', 340, 160, 78, 78, icone()),
       v('n-c', '1', 580, 160, 78, 78, icone()),
       // reto de ponta a ponta, por dentro da faixa do meio — o traçado que o
       // #21 mediu como `A5.5` = 1 no desenho `b-az-linha-fluxo-horizontal`
-      e('replica', 'n-a', 'n-c', 'replica', aresta(), [{ x: 250, y: 199 }, { x: 520, y: 199 }]),
+      e('replica', 'n-a', 'n-c', 'replica', edge(), [{ x: 250, y: 199 }, { x: 520, y: 199 }]),
     ], mod([
       { id: 'n-a', kind: 'service', service: 'ec2' },
       { id: 'n-b', kind: 'service', service: 'ec2' },
@@ -190,7 +190,7 @@ const CASOS = [
       v('origin', '1', 60, 160, 78, 78, icone()),
       v('meio', '1', 380, 160, 78, 78, icone('#8C4FFF', 'vpc_endpoints')),
       v('destino', '1', 700, 160, 78, 78, icone('#C925D1', 'rds')),
-      e('e1', 'origin', 'destino', 'grava', aresta(), [{ x: 250, y: 199 }, { x: 620, y: 199 }]),
+      e('e1', 'origin', 'destino', 'grava', edge(), [{ x: 250, y: 199 }, { x: 620, y: 199 }]),
     ], mod([
       { id: 'origin', kind: 'service', service: 'lambda' },
       { id: 'meio', kind: 'service', service: 'vpc_endpoints' },
@@ -205,8 +205,8 @@ const CASOS = [
     ...montar('a5.8', [
       v('a', '1', 60, 160, 78, 78, icone()),
       v('b', '1', 600, 160, 78, 78, icone('#C925D1', 'rds')),
-      e('e1', 'a', 'b', 'lê', aresta(), [{ x: 300, y: 199 }]),
-      e('e2', 'a', 'b', 'escreve', aresta(), [{ x: 300, y: 201 }]),
+      e('e1', 'a', 'b', 'lê', edge(), [{ x: 300, y: 199 }]),
+      e('e2', 'a', 'b', 'escreve', edge(), [{ x: 300, y: 201 }]),
     ], mod([
       { id: 'a', kind: 'service', service: 'lambda' },
       { id: 'b', kind: 'service', service: 'rds' },
@@ -222,8 +222,8 @@ const CASOS = [
       v('a2', '1', 60, 300, 78, 78, icone()),
       v('b1', '1', 700, 130, 78, 78, icone('#C925D1', 'rds')),
       v('b2', '1', 700, 270, 78, 78, icone('#C925D1', 'rds')),
-      e('e1', 'a1', 'b2', 'um', aresta()),
-      e('e2', 'a2', 'b1', 'dois', aresta()),
+      e('e1', 'a1', 'b2', 'um', edge()),
+      e('e2', 'a2', 'b1', 'dois', edge()),
     ], mod([
       { id: 'a1', kind: 'service', service: 'lambda' }, { id: 'a2', kind: 'service', service: 'lambda' },
       { id: 'b1', kind: 'service', service: 'rds' }, { id: 'b2', kind: 'service', service: 'rds' },
@@ -307,7 +307,7 @@ const CASOS = [
     ...montar('a1', [
       v('anonimo', '1', 100, 100, 78, 78, icone(), ''),
       v('outro', '1', 400, 100, 78, 78, icone('#C925D1', 'rds')),
-      e('e1', 'anonimo', 'outro', 'conversa', aresta('startArrow=blockThin;startFill=1;')),
+      e('e1', 'anonimo', 'outro', 'conversa', edge('startArrow=blockThin;startFill=1;')),
     ], mod([
       { id: 'anonimo', kind: 'service', service: 'lambda' },
       { id: 'outro', kind: 'service', service: 'rds' },
@@ -352,7 +352,7 @@ const CONTROLE = montar('controle', [
   v('app', 'sub', 30, 60, 78, 78, icone()),
   v('banco', 'sub', 320, 60, 78, 78, icone('#C925D1', 'rds')),
   v('externo', 'cloud', 620, 120, 78, 78, icone('#8C4FFF', 'vpc_endpoints')),
-  e('e1', 'app', 'banco', 'consulta', aresta()),
+  e('e1', 'app', 'banco', 'consulta', edge()),
 ], mod([
   { id: 'cloud', kind: 'cloud' },
   { id: 'vpc', kind: 'vpc', inside: 'cloud' },

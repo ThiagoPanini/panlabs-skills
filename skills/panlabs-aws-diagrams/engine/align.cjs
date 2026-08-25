@@ -25,7 +25,7 @@ const SNAP = 30;         // acima disso o desalinhamento é deliberado
 const MAX_PASSES = 4;
 
 /** Índice plano da saída do ELK, com posição absoluta e ponteiro para o pai. */
-function indexar(saida) {
+function indexar(output) {
   const nodes = new Map();
   (function andar(n, paiId, ox, oy) {
     for (const c of n.children || []) {
@@ -36,7 +36,7 @@ function indexar(saida) {
       });
       andar(c, c.id, ox + c.x, oy + c.y);
     }
-  })(saida, null, 0, 0);
+  })(output, null, 0, 0);
   return nodes;
 }
 
@@ -73,8 +73,8 @@ function coluna(nodes, target) {
  * cobre a diferença nem por acidente: ele só CRESCE o container (`Math.max`), e
  * crescer resolve quem passa do pé, nunca quem sai pelo topo.
  */
-function temSobreposicao(saida, paddings) {
-  const nodes = indexar(saida);
+function temSobreposicao(output, paddings) {
+  const nodes = indexar(output);
   const porPai = new Map();
   for (const [id, r] of nodes) {
     if (!porPai.has(r.paiId)) porPai.set(r.paiId, []);
@@ -100,7 +100,7 @@ function temSobreposicao(saida, paddings) {
 }
 
 /** Cresce cada container para caber os filhos, de baixo para cima. */
-function refitar(saida, paddings) {
+function refitar(output, paddings) {
   (function sobe(n) {
     for (const c of n.children || []) sobe(c);
     if (!n.children || !n.children.length || n.id === 'root') return;
@@ -109,7 +109,7 @@ function refitar(saida, paddings) {
     const precisaW = Math.max(...n.children.map(c => c.x + c.width)) + pad.right;
     n.height = Math.max(n.height, precisaH);
     n.width = Math.max(n.width, precisaW);
-  })(saida);
+  })(output);
 }
 
 /**
@@ -130,15 +130,15 @@ function rerrotear(sec, u, v) {
 /**
  * @returns {{aplicados: Array, desfeitos: Array}}
  */
-function alinhar(saida, paddings) {
+function alinhar(output, paddings) {
   const aplicados = [], desfeitos = [];
 
   for (let passe = 0; passe < MAX_PASSES; passe++) {
-    const nodes = indexar(saida);
+    const nodes = indexar(output);
 
     // candidatos: aresta entre duas folhas, quase alinhadas, em colunas distintas
     const cands = [];
-    for (const e of saida.edges || []) {
+    for (const e of output.edges || []) {
       const u = nodes.get(e.sources[0]), v = nodes.get(e.targets[0]);
       if (!u || !v || !u.folha || !v.folha) continue;
       if (Math.abs(u.x - v.x) < 1) continue;                 // mesma coluna: não é faixa
@@ -155,21 +155,21 @@ function alinhar(saida, paddings) {
     for (const id of alvos) nodes.get(id).no.y += delta;
 
     const alturasAntes = [];
-    (function guarda(n) { alturasAntes.push([n, n.width, n.height]); for (const c of n.children || []) guarda(c); })(saida);
-    refitar(saida, paddings);
+    (function guarda(n) { alturasAntes.push([n, n.width, n.height]); for (const c of n.children || []) guarda(c); })(output);
+    refitar(output, paddings);
 
-    const problema = temSobreposicao(saida, paddings);
+    const problema = temSobreposicao(output, paddings);
     if (problema) {
       for (const a of antes) nodes.get(a.id).no.y = a.y;
       for (const [n, w, h] of alturasAntes) { n.width = w; n.height = h; }
-      desfeitos.push({ aresta: e.id, delta: Math.round(delta), because: problema });
+      desfeitos.push({ edge: e.id, delta: Math.round(delta), because: problema });
       break;                       // um encaixe que não cabe encerra o passe
     }
 
     // as pontas mudaram de lugar: o traçado do ELK não vale mais para quem tocou
     const movidos = new Set(alvos);
-    const depois = indexar(saida);
-    for (const outra of saida.edges || []) {
+    const depois = indexar(output);
+    for (const outra of output.edges || []) {
       const su = outra.sources[0], sv = outra.targets[0];
       if (!movidos.has(su) && !movidos.has(sv)) continue;
       const u = depois.get(su), v = depois.get(sv);
@@ -183,7 +183,7 @@ function alinhar(saida, paddings) {
         rerrotear(sec, u, v);
       }
     }
-    aplicados.push({ aresta: e.id, delta: Math.round(delta), moveu: alvos });
+    aplicados.push({ edge: e.id, delta: Math.round(delta), moveu: alvos });
   }
 
   return { aplicados, desfeitos };

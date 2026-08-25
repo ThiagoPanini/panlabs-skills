@@ -1,13 +1,13 @@
 # O laudo e o portão
 
-O laudo sai **sempre**, em `relatorio.geometria` e no `--explicar`. Bloquear é que
+O laudo sai **sempre**, em `relatorio.geometria` e no `--explain`. Bloquear é que
 é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
 ```bash
 node tools/check-geometry.cjs <modelo.json>          # o laudo, legível
 node tools/check-geometry.cjs <modelo.json> --json    # para ler no código
-node tools/check-geometry.cjs --exemplos              # o corpus inteiro
-node engine/generate.cjs <modelo.json> --portao veracidade # bloqueia se o desenho mentir
+node tools/check-geometry.cjs --examples              # o corpus inteiro
+node engine/generate.cjs <modelo.json> --gate veracidade # bloqueia se o desenho mentir
 ```
 
 ## Guarda de veracidade, não linter de beleza
@@ -78,7 +78,7 @@ respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
 
 ## Os quatro níveis, e por que o default é `nenhum`
 
-| `--portao` | barra quando |
+| `--gate` | barra quando |
 |---|---|
 | `nenhum` | nunca — **default** |
 | `veracidade` | há falha semântica |
@@ -145,7 +145,7 @@ nota de rodapé (sem sobre)  → limpo
 nota presa a nó (com sobre) → A1.5 e A1.12 acusam
 ```
 
-Nenhum modelo de `modelo/*.json` usa `sobre`, e por isso o corpus não pega — só o
+Nenhum modelo de `models/*.json` usa `sobre`, e por isso o corpus não pega — só o
 corpus de sessão usa, e o laudo dele não é asserido checagem a checagem. **É
 defeito das duas checagens, não do seu modelo**: a nota é objeto desenhado
 legítimo, e as duas precisam aprender a classe. Até lá, entra no piso.
@@ -168,7 +168,7 @@ Não "conserte" `A5.7` invertendo `dados`.
 
 ## Quando algo acusa de verdade
 
-1. **Rode `--explicar`** — as três trilhas de auditoria, descritas no
+1. **Rode `--explain`** — as três trilhas de auditoria, descritas no
    [`SKILL.md`](../SKILL.md).
 2. **Falha semântica → o fato está errado no modelo**, não a geometria. `A4.2`
    costuma ser `dentro` apontando para o lugar errado; `A5.5`, uma travessia que o

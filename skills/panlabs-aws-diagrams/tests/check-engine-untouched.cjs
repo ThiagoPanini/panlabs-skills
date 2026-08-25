@@ -4,7 +4,7 @@
  * O motor nao muda sem que alguem decida que muda.
  *
  *   node tests/check-engine-untouched.cjs            # confere
- *   node tests/check-engine-untouched.cjs --gravar   # regrava o manifesto
+ *   node tests/check-engine-untouched.cjs --write   # regrava o manifesto
  *
  * ⚠️ ESTE MANIFESTO MUDOU DE AFIRMACAO na recertificacao do #23, e vale dizer o
  * que ele afirmava antes.
@@ -21,7 +21,7 @@
  *
  * O que este arquivo passa a afirmar e mais modesto e continua util: os 12
  * arquivos do motor de PRODUCAO tem estes bytes. A proxima mudanca neles vai ser
- * deliberada — alguem roda `--gravar` e explica — em vez de descoberta tres
+ * deliberada — alguem roda `--write` e explica — em vez de descoberta tres
  * tickets depois.
  *
  * Por que manifesto e nao `git diff`: `git diff` compara com o que esta commitado,
@@ -52,24 +52,24 @@ const atual = {};
 for (const rel of arquivos(MOTOR))
   atual[rel] = crypto.createHash('sha256').update(fs.readFileSync(path.join(MOTOR, rel))).digest('hex').slice(0, 16);
 
-if (process.argv.includes('--gravar')) {
+if (process.argv.includes('--write')) {
   fs.writeFileSync(MANIFESTO, JSON.stringify(atual, null, 2) + '\n');
   console.log(`  manifesto gravado: ${Object.keys(atual).length} arquivos do motor de producao`);
   process.exit(0);
 }
 
 if (!fs.existsSync(MANIFESTO)) {
-  console.log('  manifesto ausente — rode com --gravar uma vez.');
+  console.log('  manifesto ausente — rode com --write uma vez.');
   process.exit(1);
 }
 const esperado = JSON.parse(fs.readFileSync(MANIFESTO, 'utf8'));
 
 const falhas = [];
 for (const [rel, h] of Object.entries(esperado)) {
-  if (atual[rel] === undefined) falhas.push(`sumiu: motor/${rel}`);
-  else if (atual[rel] !== h) falhas.push(`MUDOU: motor/${rel}  (${h} → ${atual[rel]})`);
+  if (atual[rel] === undefined) falhas.push(`sumiu: engine/${rel}`);
+  else if (atual[rel] !== h) falhas.push(`MUDOU: engine/${rel}  (${h} → ${atual[rel]})`);
 }
-for (const rel of Object.keys(atual)) if (esperado[rel] === undefined) falhas.push(`novo: motor/${rel}`);
+for (const rel of Object.keys(atual)) if (esperado[rel] === undefined) falhas.push(`novo: engine/${rel}`);
 
 console.log(`  arquivos do motor de producao conferidos: ${Object.keys(esperado).length}`);
 if (falhas.length) {

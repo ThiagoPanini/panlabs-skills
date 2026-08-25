@@ -75,7 +75,7 @@ const { semTags, arredonda, name } = require(path.join(__dirname, 'common.cjs'))
  * (o ramo `inaplicavel` e o ramo com veredito repetiam os sete campos).
  */
 const achadoDeFaixa = (id, nomeDaChecagem) => (state, mensagem, medida, occurrences = []) => ({
-  id, name: nomeDaChecagem, family: 'F', input: 'geometria',
+  id, name: nomeDaChecagem, family: 'F', input: 'geometry',
   severidadeMaxima: 'fail', semantica: true, calibravel: false,
   state, mensagem, medida, occurrences,
 });
@@ -127,18 +127,18 @@ function f2(cena) {
 }
 
 module.exports = function extras(cena) {
-  const saida = [];
+  const output = [];
   const { bands, nodes } = cena;
   const finding = achadoDeFaixa('F1', 'Faixa abraça exatamente seus membros');
 
   // ---------------------------------------------------------------- F1
   const conferiveis = bands.filter(f => Array.isArray(f.members));
   if (!conferiveis.length) {
-    saida.push(finding('notApplicable',
+    output.push(finding('notApplicable',
       bands.length ? 'as faixas do plano não declaram membros' : 'o diagrama não tem faixas',
       { bands: bands.length }));
-    saida.push(f2(cena));
-    return saida;
+    output.push(f2(cena));
+    return output;
   }
 
   const casos = [];
@@ -168,7 +168,7 @@ module.exports = function extras(cena) {
     }
   }
 
-  saida.push(finding(casos.length ? 'falha' : 'ok',
+  output.push(finding(casos.length ? 'falha' : 'ok',
     casos.length
       ? `${casos.length} divergência(s) entre o que a faixa desenha e o que ela declara`
       : `${conferiveis.length} faixa(s) abraçam exatamente seus membros`,
@@ -176,7 +176,7 @@ module.exports = function extras(cena) {
     casos));
 
   // ---------------------------------------------------------------- F2
-  saida.push(f2(cena));
+  output.push(f2(cena));
 
-  return saida;
+  return output;
 };

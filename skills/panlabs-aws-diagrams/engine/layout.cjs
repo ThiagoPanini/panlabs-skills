@@ -240,9 +240,9 @@ function sentidoDeLeitura(a) {
  * Desreverter é trocar as pontas e virar a lista de dobras. O traçado é o
  * mesmo — uma polilinha não tem sentido, só a leitura dela tem.
  */
-function desreverter(saida, revertidas) {
-  if (!revertidas || !revertidas.size) return saida;
-  for (const e of saida.edges || []) {
+function desreverter(output, revertidas) {
+  if (!revertidas || !revertidas.size) return output;
+  for (const e of output.edges || []) {
     if (!revertidas.has(e.id)) continue;
     [e.sources, e.targets] = [e.targets, e.sources];
     for (const sec of e.sections || []) {
@@ -254,7 +254,7 @@ function desreverter(saida, revertidas) {
         [sec.incomingShape, sec.outgoingShape] = [sec.outgoingShape, sec.incomingShape];
     }
   }
-  return saida;
+  return output;
 }
 
 /**
@@ -304,9 +304,9 @@ function desreverter(saida, revertidas) {
  * @param {number} [margem]          quanto respirar ao sair para fora de tudo
  * @returns {number} a coordenada da perna
  */
-function corredorLivre(faixa, obstaculos, perto, margin = 24) {
-  const lo = Math.min(faixa[0], faixa[1]);
-  const hi = Math.max(faixa[0], faixa[1]);
+function corredorLivre(band, obstaculos, perto, margin = 24) {
+  const lo = Math.min(band[0], band[1]);
+  const hi = Math.max(band[0], band[1]);
 
   const barram = obstaculos
     .filter(b => b.lo < hi && b.hi > lo)         // só quem a perna de fato atravessaria
@@ -566,12 +566,12 @@ function deficitDeTitulo(no, caixa, larguraObtida, res) {
 async function porElk(modelo, d, res) {
   const elk = new ELK();
   let medir = new Map();
-  let saida = null;
+  let output = null;
 
   for (let passada = 0; passada < 2; passada++) {
     const { grafo, caixas, paddings, rotuloMax, revertidas } = montarElk(modelo, d, res, medir);
-    saida = desreverter(limpar(await elk.layout(structuredClone(grafo))), revertidas);
-    if (passada === 1) return { saida, caixas, rotuloMax, passadas: 2, encaixe: alinhar(saida, paddings) };
+    output = desreverter(limpar(await elk.layout(structuredClone(grafo))), revertidas);
+    if (passada === 1) return { output, caixas, rotuloMax, passadas: 2, encaixe: alinhar(output, paddings) };
 
     const proximo = new Map();
     (function medirTitulos(n) {
@@ -581,8 +581,8 @@ async function porElk(modelo, d, res) {
         if (def > 0) proximo.set(c.id, def);
         medirTitulos(c);
       }
-    })(saida);
-    if (!proximo.size) return { saida, caixas, rotuloMax, passadas: 1, encaixe: alinhar(saida, paddings) };
+    })(output);
+    if (!proximo.size) return { output, caixas, rotuloMax, passadas: 1, encaixe: alinhar(output, paddings) };
     medir = proximo;
   }
 }
@@ -844,7 +844,7 @@ async function porGrade(modelo, d, res) {
   const porLinha = new Map();      // vpc -> Map(linha de papel -> [{calha, zonas}])
   const porRaia = new Map();       // índice da raia -> calha acumulada
   for (const f of (modelo.bands || [])) {
-    const calha = calhaDaFaixa(res.faixa(f).style);
+    const calha = calhaDaFaixa(res.band(f).style);
     calhas.set(f.id, calha);
     const members = f.members.map(m => {
       const s = d.t.ancestrais(d.t.porId.get(m)).find(a => a.kind === 'subnet') || d.t.porId.get(m);

@@ -2,7 +2,7 @@
   "schema": "panlabs-aws-diagrams/model@1",
   "id": "lying-band",
   "title": "A faixa que mente — o corpo de prova do portão de veracidade",
-  "subtitle": "Este modelo GERA, e o desenho que sai afirma um atributo que o modelo nega. Existe para provar, ponta a ponta, que --portao veracidade recusa.",
+  "subtitle": "Este modelo GERA, e o desenho que sai afirma um atributo que o modelo nega. Existe para provar, ponta a ponta, que --gate veracidade recusa.",
   "view": "technical",
 
   "nodes": [

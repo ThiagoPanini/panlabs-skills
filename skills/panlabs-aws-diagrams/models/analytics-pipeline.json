@@ -17,7 +17,7 @@
       "qualifier": "recebe e entrega em lotes de 5 min" },
     { "id": "bruto", "kind": "service", "service": "s3", "label": "Zona bruta", "inside": "region",
       "qualifier": "particionado por dia e loja" },
-    { "id": "catalogo", "kind": "service", "service": "glue", "label": "Glue", "inside": "region",
+    { "id": "catalog", "kind": "service", "service": "glue", "label": "Glue", "inside": "region",
       "qualifier": "cataloga e transforma" },
     { "id": "curado", "kind": "service", "service": "s3", "label": "Zona curada", "inside": "region",
       "qualifier": "colunar, pronto para consulta" },
@@ -30,8 +30,8 @@
   "edges": [
     { "from": "loja", "to": "ingestao", "label": "envia telemetria", "protocol": "https", "order": 1 },
     { "from": "ingestao", "to": "bruto", "label": "entrega em lote", "order": 2 },
-    { "from": "catalogo", "to": "bruto", "label": "lê e cataloga", "data": "back", "order": 3 },
-    { "from": "catalogo", "to": "curado", "label": "grava colunar", "order": 4 },
+    { "from": "catalog", "to": "bruto", "label": "lê e cataloga", "data": "back", "order": 3 },
+    { "from": "catalog", "to": "curado", "label": "grava colunar", "order": 4 },
     { "from": "consulta", "to": "curado", "label": "consulta", "protocol": "sql", "data": "back", "order": 5 },
     { "from": "painel", "to": "consulta", "label": "renderiza", "data": "back", "order": 6 }
   ],

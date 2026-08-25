@@ -55,7 +55,7 @@
         },
         "label": { "$ref": "#/definitions/pt" },
         "group": { "$ref": "#/definitions/pt" },
-        "aresta": { "$ref": "#/definitions/pt" },
+        "edge": { "$ref": "#/definitions/pt" },
         "title": { "$ref": "#/definitions/pt" },
         "subtitle": { "$ref": "#/definitions/pt" },
         "qualifier": {
@@ -65,7 +65,7 @@
       }
     },
 
-    "aresta": {
+    "edge": {
       "type": "object", "additionalProperties": false,
       "properties": {
         "color": { "$ref": "#/definitions/color" },

@@ -9,7 +9,7 @@
  * O #23 pede a escolha "por medição, não por data", e depois pede que toda
  * conclusão geométrica que não sobreviver seja registrada. Esta ferramenta é o
  * instrumento das duas coisas: ela gera cada modelo do corpus com o motor de
- * ANTES — o que vive em `prototypes/q11/motor/`, sem a camada de tema — e com o
+ * ANTES — o que vive em `prototypes/q11/engine/`, sem a camada de tema — e com o
  * de produção, e passa os dois pelo validador do #18.
  *
  * Ela é ferramenta e não checagem de propósito: um dia `prototypes/` sai da
@@ -41,7 +41,7 @@ async function main() {
 
   console.log('\n  o mesmo modelo nos dois motores — laudo do validador do #18\n');
   const L = comBytes ? 32 : 26;
-  console.log('  ' + 'modelo'.padEnd(30) + 'antes'.padEnd(L) + 'depois');
+  console.log('  ' + 'model'.padEnd(30) + 'antes'.padEnd(L) + 'depois');
   console.log('  ' + '─'.repeat(30 + 2 * L));
 
   let mudouSemantica = 0, mudouFalha = 0, naoGerou = 0;

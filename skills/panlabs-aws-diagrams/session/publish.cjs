@@ -191,29 +191,29 @@ function avisoDeDossie(sessao) {
 function main() {
   const fs = require('fs');
   const path = require('path');
-  // ⚠️ `--saida x.drawio y.drawio` — o valor de uma flag NÃO é a entrada. A
+  // ⚠️ `--output x.drawio y.drawio` — o valor de uma flag NÃO é a entrada. A
   // primeira versão usava `args.find(a => !a.startsWith('--'))` e, com a flag
   // na frente, publicava o arquivo de SAÍDA.
   const args = process.argv.slice(2);
-  const iSaida = args.indexOf('--saida');
+  const iSaida = args.indexOf('--output');
   if (iSaida >= 0 && args[iSaida + 1] === undefined) {
-    console.error('--saida precisa de um caminho');
+    console.error('--output precisa de um caminho');
     process.exit(2);
   }
-  // ⚠️ `i !== iSaida + 1` pula o valor de `--saida` — mas com `iSaida = -1` ele
+  // ⚠️ `i !== iSaida + 1` pula o valor de `--output` — mas com `iSaida = -1` ele
   // pulava o ÍNDICE 0, que é justamente o argumento posicional da forma sem
-  // `--saida`. `node session/publish.cjs output/retail.drawio` respondia com o
+  // `--output`. `node session/publish.cjs output/retail.drawio` respondia com o
   // texto de uso, o que faz a linha do README parecer errada quando quem está
   // errado é a guarda. Achado no #24, ao regerar a cópia publicada.
-  const entrada = args.find((a, i) => !a.startsWith('--') && !(iSaida >= 0 && i === iSaida + 1));
-  if (!entrada) {
-    console.error('uso: node session/publish.cjs <trabalho.drawio> [--saida <copia>.drawio]');
+  const input = args.find((a, i) => !a.startsWith('--') && !(iSaida >= 0 && i === iSaida + 1));
+  if (!input) {
+    console.error('uso: node session/publish.cjs <trabalho.drawio> [--output <copia>.drawio]');
     console.error('  Produz a copia que CIRCULA: sem candidatas descartadas, sem o motivo das');
     console.error('  recusas, sem estacionamento e sem quem aprovou. Ela NAO retoma a sessao.');
     process.exit(2);
   }
-  const saida = iSaida >= 0 ? args[iSaida + 1] : entrada.replace(/\.drawio$/, '') + '.publicado.drawio';
-  const xml = fs.readFileSync(entrada, 'utf8');
+  const output = iSaida >= 0 ? args[iSaida + 1] : input.replace(/\.drawio$/, '') + '.publicado.drawio';
+  const xml = fs.readFileSync(input, 'utf8');
   let copia;
   try { copia = publicar(xml); }
   catch (e) { console.error(`\n✗ ${e.message}`); for (const l of e.erros || []) console.error(`    · ${l}`); process.exit(1); }
@@ -224,9 +224,9 @@ function main() {
   } catch (e) { /* sem selo legivel */ }
   const antes = sessao ? contarDeliberacao(sessao) : 0;
 
-  fs.mkdirSync(path.dirname(path.resolve(saida)), { recursive: true });
-  fs.writeFileSync(saida, copia);
-  console.log(`  → ${saida}  (${copia.length} bytes, era ${xml.length})`);
+  fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
+  fs.writeFileSync(output, copia);
+  console.log(`  → ${output}  (${copia.length} bytes, era ${xml.length})`);
   console.log(antes
     ? `  podado: ${antes} item(ns) de deliberacao — ` +
       DELIBERACAO.map(r => r.onde).join(', ')

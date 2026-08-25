@@ -4,18 +4,18 @@
  * O validador geométrico pela linha de comando.
  *
  *   node tools/check-geometry.cjs <modelo.json> [...]   valida o que o motor gerar
- *   node tools/check-geometry.cjs --exemplos            valida os modelos do #11
- *   node tools/check-geometry.cjs ... --tudo            mostra também o que passou
+ *   node tools/check-geometry.cjs --examples            valida os modelos do #11
+ *   node tools/check-geometry.cjs ... --all            mostra também o que passou
  *   node tools/check-geometry.cjs ... --json            laudo em JSON
- *   node tools/check-geometry.cjs ... --estrito         aviso também reprova
- *   node tools/check-geometry.cjs ... --tema <nome>     avalia com este tema (padrão: claro)
+ *   node tools/check-geometry.cjs ... --strict         aviso também reprova
+ *   node tools/check-geometry.cjs ... --theme <nome>     avalia com este tema (padrão: claro)
  *
  * O código de saída é 1 quando há falha — é o que permite pendurar isto num
- * portão de CI. Com `--estrito`, aviso conta como falha.
+ * portão de CI. Com `--strict`, aviso conta como falha.
  *
- * SEM `--tema`, o laudo sempre avaliou o tema padrão — e é cego para o que só
- * outro tema liga (#33), como `texto.qualificador`. `--tema` existe para o
- * laudo poder ver o mesmo que `--tema` liga em `engine/generate.cjs`.
+ * SEM `--theme`, o laudo sempre avaliou o tema padrão — e é cego para o que só
+ * outro tema liga (#33), como `texto.qualificador`. `--theme` existe para o
+ * laudo poder ver o mesmo que `--theme` liga em `engine/generate.cjs`.
  *
  * A entrada é um MODELO, não um `.drawio`: o validador lê o `plano`, que é a
  * costura interna do motor (pós-`planejar`, pré-`emitir`), e é ali que a
@@ -32,17 +32,17 @@ const { validarGeometria, formatar } = require(path.join(__dirname, '..', 'valid
 
 async function main() {
   const args = process.argv.slice(2);
-  const tudo = args.includes('--tudo');
+  const all = args.includes('--all');
   const json = args.includes('--json');
-  const estrito = args.includes('--estrito');
-  const exemplos = args.includes('--exemplos');
-  const iTema = args.indexOf('--tema');
+  const strict = args.includes('--strict');
+  const examples = args.includes('--examples');
+  const iTema = args.indexOf('--theme');
   const nomeTema = iTema >= 0 ? args[iTema + 1] : 'light';
-  let entradas = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--tema');
+  let entradas = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--theme');
 
-  if (exemplos) entradas = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).map(f => path.join(RAIZ, 'models', f));
+  if (examples) entradas = fs.readdirSync(path.join(RAIZ, 'models')).filter(f => f.endsWith('.json')).map(f => path.join(RAIZ, 'models', f));
   if (!entradas.length) {
-    console.error('uso: node check-geometry.cjs <modelo.json> [...] | --exemplos  [--tudo] [--json] [--estrito] [--tema <nome>]');
+    console.error('uso: node check-geometry.cjs <modelo.json> [...] | --examples  [--all] [--json] [--strict] [--theme <nome>]');
     process.exit(2);
   }
 
@@ -56,11 +56,11 @@ async function main() {
   const laudos = [];
   let ruim = 0;
 
-  for (const entrada of entradas) {
-    const name = path.basename(entrada, '.json');
+  for (const input of entradas) {
+    const name = path.basename(input, '.json');
     let r;
     try {
-      r = await gerar(JSON.parse(fs.readFileSync(entrada, 'utf8')), { tema: nomeTema });
+      r = await gerar(JSON.parse(fs.readFileSync(input, 'utf8')), { tema: nomeTema });
     } catch (erro) {
       console.error(`\n✗ ${name}: o motor não gerou — ${erro.message}`);
       for (const linha of erro.erros || []) console.error(`    · ${linha}`);
@@ -69,7 +69,7 @@ async function main() {
     }
 
     const laudo = validarGeometria(r.plano);
-    const reprovado = laudo.falhas.length > 0 || (estrito && laudo.avisos.length > 0);
+    const reprovado = laudo.falhas.length > 0 || (strict && laudo.avisos.length > 0);
     if (reprovado || laudo.cobertura.naoRodaram.length) ruim++;
 
     if (json) {
@@ -86,7 +86,7 @@ async function main() {
     }
 
     console.log(`\n${'='.repeat(72)}\n${name}  (caminho "${r.caminho}", ${r.plano.celulas.length} células)\n${'='.repeat(72)}`);
-    console.log(formatar(laudo, { tudo }));
+    console.log(formatar(laudo, { all }));
   }
 
   if (json) console.log(JSON.stringify(laudos, null, 2));

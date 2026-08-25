@@ -95,7 +95,7 @@ plausíveis, 45 resolvem certo e os dois erros são ambos substring:
 | `kinesis firehose` | **Kinesis** | `kinesis data firehose` → Data Firehose |
 | `vpc endpoint` | **VPC** (um grupo!) | escreva o serviço que o endpoint expõe |
 
-`--explicar` mostra a via de cada nó. Qualquer coisa lendo `servico:substring`
+`--explain` mostra a via de cada nó. Qualquer coisa lendo `servico:substring`
 merece uma segunda olhada.
 
 Renomes e sinônimos funcionam e não são armadilha: `opensearch` →

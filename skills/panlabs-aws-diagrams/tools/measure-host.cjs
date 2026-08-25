@@ -82,7 +82,7 @@ function achar(raiz, attr) {
   const pilha = [raiz];
   while (pilha.length) {
     const n = pilha.pop();
-    if (n.attrs && n.attrs[attr] !== undefined) return { valor: n.attrs[attr], em: n.name };
+    if (n.attrs && n.attrs[attr] !== undefined) return { valor: n.attrs[attr], at: n.name };
     for (const f of n.filhos || []) pilha.push(f);
   }
   return null;
@@ -99,8 +99,8 @@ const HOSPEDEIROS = [
 ];
 
 function main() {
-  const entrada = path.join(TMP, 'sonda.drawio');
-  fs.writeFileSync(entrada, ARQUIVO);
+  const input = path.join(TMP, 'sonda.drawio');
+  fs.writeFileSync(input, ARQUIVO);
 
   if (!fs.existsSync(DRAWIO)) {
     console.log(`  draw.io headless ausente em ${DRAWIO} — esta medicao PRECISA do app e nao roda sem ele.`);
@@ -113,13 +113,13 @@ function main() {
   // estoura; deixar estourar transforma uma maquina carregada num vermelho que
   // nao fala do codigo. Duas tentativas, e depois disso a medicao se declara
   // impossivel em vez de reprovada.
-  const saida = path.join(TMP, 'volta.drawio');
+  const output = path.join(TMP, 'volta.drawio');
   let bruto = null;
   for (let tentativa = 1; tentativa <= 2 && bruto === null; tentativa++) {
     try {
-      execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', saida, entrada],
+      execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, input],
         { stdio: ['ignore', 'ignore', 'ignore'] });
-      bruto = fs.readFileSync(saida, 'utf8');
+      bruto = fs.readFileSync(output, 'utf8');
     } catch (e) {
       console.log(`  tentativa ${tentativa}: o app nao exportou (${e.status === undefined ? e.message : 'saiu com ' + e.status}).`);
     }

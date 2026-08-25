@@ -158,7 +158,7 @@ async function main() {
     `nível ${rInt.derived.politica.nivel} — ${rInt.derived.politica.mecanismo}`);
 
   const idsTravessia = new Set(rInt.derived.travessias.map(t => t.id));
-  const desenhadas = rInt.plano.celulas.filter(c => c.kind === 'aresta' && idsTravessia.has(c.id));
+  const desenhadas = rInt.plano.celulas.filter(c => c.kind === 'edge' && idsTravessia.has(c.id));
   ok('toda travessia declarada foi desenhada', desenhadas.length === idsTravessia.size,
     `${desenhadas.length}/${idsTravessia.size}`);
 
@@ -224,7 +224,7 @@ async function main() {
       const [, cx] = meio;
       const y = cx.y + cx.h / 2;
       const reta = [{
-        id: primeira.id, kind: 'aresta',
+        id: primeira.id, kind: 'edge',
         pontos: [{ x: cx.x - 60, y }, { x: cx.x + cx.w + 60, y }],
       }];
       const acusou = contarInvasoes(reta, rInt.derived.travessias, caixaDaConta);

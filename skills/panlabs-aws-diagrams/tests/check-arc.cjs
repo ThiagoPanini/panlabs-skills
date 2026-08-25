@@ -40,7 +40,7 @@ const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
 const { validar } = require(path.join(RAIZ, 'session', 'validate.cjs'));
-const { aprovar, conferir } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
+const { aprovar, check } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
 const { desenhar } = require(path.join(RAIZ, 'session', 'draw.cjs'));
 const { abrir } = require(path.join(RAIZ, 'session', 'open.cjs'));
 const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
@@ -142,8 +142,8 @@ const PUBLICADO = path.join(RAIZ, 'output', 'predictive-fleet.publicado.drawio')
   console.log('\npasso 5 · a aprovação não é um booleano — é o recorte, e ele confere\n');
   let aprovado;
   {
-    aprovado = aprovar(sessao, { em: '2026-08-23', por: 'diretoria de operações', candidate: 'cand-a' });
-    const d = conferir(aprovado);
+    aprovado = aprovar(sessao, { at: '2026-08-23', by: 'diretoria de operações', candidate: 'cand-a' });
+    const d = check(aprovado);
     anota(d.ok, '`conferir(aprovado).ok` logo depois de aprovar');
     anota(/^sha256:[0-9a-f]{64}$/.test(aprovado.dossier.agreement.fingerprint),
       'o acordo guarda a impressão do recorte, não um `true`',
@@ -152,16 +152,16 @@ const PUBLICADO = path.join(RAIZ, 'output', 'predictive-fleet.publicado.drawio')
     // e o controle: mexer no que foi aprovado tem de QUEBRAR o acordo
     const mexido = JSON.parse(JSON.stringify(aprovado));
     mexido.nodes.find(n => n.id === 'pontuar-risco').label = 'Pontuação de risco (v2)';
-    anota(!conferir(mexido).ok,
+    anota(!check(mexido).ok,
       'CONTROLE: mudar um rótulo aprovado quebra o acordo — senão o acordo não media nada',
-      `${(conferir(mexido).diferencas || []).length} diferença(s) apontada(s)`);
+      `${(check(mexido).diferencas || []).length} diferença(s) apontada(s)`);
 
     const r = await desenhar(aprovado, 'logical');
     fs.mkdirSync(path.dirname(SAIDA), { recursive: true });
     fs.writeFileSync(SAIDA, r.xml);
     anota(fs.existsSync(SAIDA), 'a vista lógica está gravada', `${r.xml.length} bytes, caminho "${r.caminho}"`);
 
-    const semanticas = r.relatorio.geometria.reduce((s, x) => s + x.laudo.semanticas.length, 0);
+    const semanticas = r.relatorio.geometry.reduce((s, x) => s + x.laudo.semanticas.length, 0);
     anota(semanticas === 0, 'a vista lógica não tem falha semântica', `${semanticas} semânticas`);
   }
 
@@ -185,7 +185,7 @@ const PUBLICADO = path.join(RAIZ, 'output', 'predictive-fleet.publicado.drawio')
       `dentro = "${target.inside}" (era "analise")`);
 
     // …e a projeção lógica sai IDÊNTICA assim mesmo
-    const d = conferir(technical);
+    const d = check(technical);
     anota(d.ok, 'E3 · `conferir()` continua ok — a projeção lógica de hoje é byte a byte a aprovada',
       d.ok ? 'o colapso de contenção passa por cima dos níveis só-técnicos'
         : (d.diferencas || []).map(x => x.text).join(' · '));
@@ -194,9 +194,9 @@ const PUBLICADO = path.join(RAIZ, 'output', 'predictive-fleet.publicado.drawio')
     const rt = await desenhar(technical, 'technical');
     fs.writeFileSync(SAIDA, costurar([rl.xml, rt.xml]));
 
-    const sem = rt.relatorio.geometria.reduce((s, x) => s + x.laudo.semanticas.length, 0);
+    const sem = rt.relatorio.geometry.reduce((s, x) => s + x.laudo.semanticas.length, 0);
     anota(sem === 0, 'E4 · a vista técnica passa no portão de veracidade — zero falhas semânticas',
-      `${rt.relatorio.geometria.length} página(s), ${sem} semânticas`);
+      `${rt.relatorio.geometry.length} página(s), ${sem} semânticas`);
 
     // e nenhum nome de serviço vazou para a vista lógica
     const logical = projetar(technical, 'logical').modelo;

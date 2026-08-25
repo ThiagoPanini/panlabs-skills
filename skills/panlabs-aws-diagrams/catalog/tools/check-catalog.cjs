@@ -20,7 +20,7 @@ const dir = path.join(__dirname, '..');
 const { carregar, aplicarTemplate, corrigirGrupo } = require(path.join(dir, 'aws-shapes.cjs'));
 
 const cat = carregar(dir);
-const catalogo = cat.catalogo;
+const catalog = cat.catalog;
 const correcoes = cat.correcoes;
 
 const falhas = [];
@@ -33,17 +33,17 @@ function checar(name, ok, detail) {
 // ------------------------------------------------- 1. integridade do catálogo
 
 checar('extração sem referência quebrada',
-  catalogo.meta.referenciasQuebradas.length === 0,
-  `${catalogo.meta.stencilsDeclarados} stencils declarados no aws4.xml`);
+  catalog.meta.referenciasQuebradas.length === 0,
+  `${catalog.meta.stencilsDeclarados} stencils declarados no aws4.xml`);
 
-const semStencil = [...catalogo.services, ...catalogo.resources].filter(e => !e.stencil);
+const semStencil = [...catalog.services, ...catalog.resources].filter(e => !e.stencil);
 checar('toda entrada tem stencil', semStencil.length === 0,
-  semStencil.length ? semStencil.map(e => e.title).join(', ') : `${catalogo.services.length + catalogo.resources.length} entradas`);
+  semStencil.length ? semStencil.map(e => e.title).join(', ') : `${catalog.services.length + catalog.resources.length} entradas`);
 
-const hexRuim = Object.entries(catalogo.categories)
+const hexRuim = Object.entries(catalog.categories)
   .filter(([, c]) => !/^#[0-9A-Fa-f]{6}$/.test(c.fill || ''));
 checar('toda categoria tem cor hex válida', hexRuim.length === 0,
-  hexRuim.length ? hexRuim.map(([k]) => k).join(', ') : `${Object.keys(catalogo.categories).length} categorias`);
+  hexRuim.length ? hexRuim.map(([k]) => k).join(', ') : `${Object.keys(catalog.categories).length} categorias`);
 
 // ------------------------------------------------------- 2. os dois caminhos
 
@@ -62,7 +62,7 @@ for (const name of doisCaminhos) {
 // ---------------------------------------------------------- 3. renomes/siglas
 
 const stencilsConhecidos = new Set(
-  [...catalogo.services, ...catalogo.resources].map(e => e.stencil));
+  [...catalog.services, ...catalog.resources].map(e => e.stencil));
 
 for (const grupoTabela of ['renomes', 'sinonimos']) {
   const tabela = correcoes[grupoTabela];
@@ -98,7 +98,7 @@ for (const grupoTabela of ['renomes', 'sinonimos']) {
 const legados = Object.keys(correcoes.paletaLegada).filter(k => !k.startsWith('_'));
 let corrigidos = 0, semContainer = [], comLegado = [];
 
-for (const g of catalogo.groups) {
+for (const g of catalog.groups) {
   const r = cat.group(g.title);
   if (!r) { falhas.push(`  FALHA grupo não resolve: ${g.title}`); continue; }
   if (!/(^|;)container=1(;|$)/.test(r.style)) semContainer.push(g.title);
@@ -107,13 +107,13 @@ for (const g of catalogo.groups) {
 }
 
 checar('nenhum grupo sem container=1 depois da correção',
-  semContainer.length === 0, semContainer.join(', ') || `${catalogo.groups.length} grupos`);
+  semContainer.length === 0, semContainer.join(', ') || `${catalog.groups.length} grupos`);
 checar('nenhuma cor da paleta pré-2022 sobrevive num grupo',
   comLegado.length === 0, comLegado.join(', ') || legados.join(' '));
 checar('as correções de fato pegaram', corrigidos > 0, `${corrigidos} grupos corrigidos`);
 
 // Os grupos que o upstream entrega sem container=1 (pesquisa §3.5).
-const semContainerUpstream = catalogo.groups
+const semContainerUpstream = catalog.groups
   .filter(g => !/container=1/.test(g.style)).map(g => g.title);
 checar('os 4 retângulos puros do upstream foram identificados',
   semContainerUpstream.length === 4, semContainerUpstream.join(', '));
@@ -123,7 +123,7 @@ checar('os 4 retângulos puros do upstream foram identificados',
 // Um título de service icon que aparece em duas paletas com cor (ou stencil)
 // diferente é uma bomba-relógio: sem tabela, a escolha vira ordem de paleta.
 const porTitulo = new Map();
-for (const s of catalogo.services) {
+for (const s of catalog.services) {
   const n = cat.normalizar(s.title);
   if (!porTitulo.has(n)) porTitulo.set(n, []);
   porTitulo.get(n).push(s);
@@ -162,16 +162,16 @@ if (repo && fs.existsSync(repo)) {
   fs.unlinkSync(tmp);
 
   checar('reextração é determinística',
-    JSON.stringify(fresco) === JSON.stringify(catalogo),
+    JSON.stringify(fresco) === JSON.stringify(catalog),
     'mesmo commit -> mesmo JSON');
 
   // Reconstrói cada style a partir do template e compara com o upstream.
   let divergentes = 0, literais = 0, reconstruidos = 0;
-  for (const [lista, tplKey] of [[catalogo.services, 'svc'], [catalogo.resources, 'res']]) {
+  for (const [lista, tplKey] of [[catalog.services, 'svc'], [catalog.resources, 'res']]) {
     for (const e of lista) {
       if (e.style) { literais++; continue; }       // guardado verbatim, nada a reconstruir
       const fill = e.fill || cat.corDaCategoria(e.palette);
-      const montado = aplicarTemplate(catalogo.templates[tplKey].style, { fill, stencil: e.stencil });
+      const montado = aplicarTemplate(catalog.templates[tplKey].style, { fill, stencil: e.stencil });
       const upstream = (tplKey === 'svc' ? fresco.services : fresco.resources)
         .find(x => x.stencil === e.stencil && x.title === e.title && x.palette === e.palette);
       const esperado = upstream && upstream.style
@@ -190,7 +190,7 @@ if (repo && fs.existsSync(repo)) {
   const declarados = new Set([...xml.matchAll(/<shape [^>]*name="([^"]*)"/g)]
     .map(m => m[1].replace(/ /g, '_').toLowerCase()));
   const citados = new Set([...stencilsConhecidos,
-    ...catalogo.groups.filter(g => g.grIcon).map(g => g.grIcon)]);
+    ...catalog.groups.filter(g => g.grIcon).map(g => g.grIcon)]);
   const ausentes = [...citados].filter(s => !declarados.has(s));
   checar('todo stencil citado existe em aws4.xml', ausentes.length === 0,
     ausentes.join(', ') || `${citados.size} stencils`);
@@ -200,7 +200,7 @@ if (repo && fs.existsSync(repo)) {
 
 // ----------------------------------------------------------------- resultado
 
-console.log(`catálogo aws4 — draw.io ${catalogo.meta.drawio && catalogo.meta.drawio.version}, commit ${(catalogo.meta.commit || '').slice(0, 8)}`);
+console.log(`catálogo aws4 — draw.io ${catalog.meta.drawio && catalog.meta.drawio.version}, commit ${(catalog.meta.commit || '').slice(0, 8)}`);
 console.log(notes.join('\n'));
 if (falhas.length) {
   console.log(falhas.join('\n'));

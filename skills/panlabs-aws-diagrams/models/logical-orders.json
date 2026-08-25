@@ -14,7 +14,7 @@
       "qualifier": "autentica e limita taxa" },
     { "id": "processa", "kind": "block", "label": "Processamento de pedido",
       "qualifier": "valida, calcula, persiste" },
-    { "id": "catalogo", "kind": "block", "label": "Catálogo de produtos",
+    { "id": "catalog", "kind": "block", "label": "Catálogo de produtos",
       "qualifier": "leitura consistente" },
     { "id": "registro", "kind": "block", "label": "Registro de pedidos",
       "qualifier": "escrita de alto volume" }
@@ -23,7 +23,7 @@
   "edges": [
     { "from": "cliente", "to": "edge", "label": "faz pedido", "order": 1 },
     { "from": "edge", "to": "processa", "label": "encaminha", "order": 2 },
-    { "from": "processa", "to": "catalogo", "label": "consulta preço", "order": 3 },
+    { "from": "processa", "to": "catalog", "label": "consulta preço", "order": 3 },
     { "from": "processa", "to": "registro", "label": "grava", "order": 4 }
   ],
 

@@ -17,9 +17,9 @@ na terceira sessão; ausência de palavra, não.
 > **A régua para abrir uma palavra nova:** só quando o token comprovadamente não
 > consegue inventar canal de significado novo.
 
-Quatro temas, todos versionados em [`../tema/`](../tema/):
+Quatro temas, todos versionados em [`../theme/`](../theme/):
 
-| `--tema` | |
+| `--theme` | |
 |---|---|
 | `claro` | o default |
 | `escuro` | não é invenção da casa — a AWS publica **dois** decks |
@@ -41,15 +41,15 @@ desaba** — e a lista da medição é exatamente a lista do deck escuro da AWS.
 isso o escuro existe e o off-white não.
 
 Se pedirem "o cinza institucional da empresa" no fundo: o tema `armadilha` é
-literalmente esse pedido, e o portão o reprova. Gere com `--forcar` para mostrar o
+literalmente esse pedido, e o portão o reprova. Gere com `--force` para mostrar o
 estrago, não para entregar.
 
 ## O portão de contraste reprova, e não é o mesmo do laudo
 
 | | quando | o que faz |
 |---|---|---|
-| **portão de contraste** (tema) | sempre, em `gerar` | **reprova** — `--forcar` gera assim mesmo |
-| **portão geométrico** (laudo) | opt-in, `--portao` | ver [`report.md`](report.md) |
+| **portão de contraste** (tema) | sempre, em `gerar` | **reprova** — `--force` gera assim mesmo |
+| **portão geométrico** (laudo) | opt-in, `--gate` | ver [`report.md`](report.md) |
 
 Ele reprova porque **rótulo que some não dá erro em lugar nenhum**: o arquivo
 abre, o PNG sai, e o diagrama passa a omitir informação em silêncio. Roda sobre o
@@ -83,7 +83,7 @@ não aperta o desenho — derruba texto em cima de borda.
 motor já cuida disso. Sem ela o SVG exportado **muda de cor conforme o tema do
 sistema de quem abre**. O dark mode do app é filtro CSS e não altera o arquivo.
 
-| `--fluxo` | PNG | SVG / HTML |
+| `--flow` | PNG | SVG / HTML |
 |---|---|---|
 | `solido` | ✅ | ✅ |
 | `tracejado` | ✅ | ✅ |
@@ -93,7 +93,7 @@ sistema de quem abre**. O dark mode do app é filtro CSS e não altera o arquivo
 tracejado — é um quadro congelado. Se pedirem fluxo animado, **exporte em SVG** e
 avise. A CLI também avisa.
 
-`--fluxo` é override de invocação sobre o token do tema: a mesma arquitetura com o
+`--flow` é override de invocação sobre o token do tema: a mesma arquitetura com o
 mesmo tema pode querer marcar o caminho quente numa entrega e não na outra.
 
 ## Três armadilhas de estilo, todas medidas
@@ -118,7 +118,7 @@ repetiria exatamente o erro diagnosticado.
 ## A cópia que circula
 
 ```bash
-node session/publish.cjs output/<caso>.drawio --saida output/<caso>.publicado.drawio
+node session/publish.cjs output/<caso>.drawio --output output/<caso>.publicado.drawio
 ```
 
 O arquivo de trabalho carrega a deliberação em texto legível por qualquer um em

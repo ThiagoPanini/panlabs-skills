@@ -6,7 +6,7 @@
  *   d-armadilha    DIZÍVEL e errado. O off-white corporativo que todo mundo pede
  *                  (#F2F3F5), tinta cinza-clara e seta fininha. Nenhuma linha do
  *                  tema é proibida pelo vocabulário; quem reprova é o PORTÃO DE
- *                  CONTRASTE, e só depois do plano existir. Gerado com --forcar.
+ *                  CONTRASTE, e só depois do plano existir. Gerado com --force.
  *
  *   e-indizivel    INDIZÍVEL. `sketch=1`, cor de grupo trocada e `rounded=1` em
  *                  vértice AWS4. Não existe token para nenhum dos três, então
@@ -45,7 +45,7 @@ function remendar(xml) {
 
 async function main() {
   // --- d: dizível e errado -------------------------------------------------
-  const d = await gerar(MODELO, { tema: 'trap', forcar: true });
+  const d = await gerar(MODELO, { tema: 'trap', force: true });
   fs.writeFileSync(path.join(RAIZ, 'output', 'themes', 'd-armadilha.drawio'), d.xml);
   console.log('d-armadilha  — o portão reprovaria assim:');
   for (const l of contraste.resumir(d.relatorio.contraste)) console.log('   ✗ ' + l);

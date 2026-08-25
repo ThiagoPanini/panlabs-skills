@@ -99,11 +99,11 @@ const corDe = (e, chave) => (color.ehCor(e[chave]) ? e[chave] : null);
  * motor RESERVA espaço e nunca CONFERE se a reserva bastou, e é a conferência
  * que A3.2, A3.3 e A3.4 fazem. A palavra final continua sendo do render (B7).
  */
-function caixaDeRotulo(caixa, label, estilo) {
+function caixaDeRotulo(caixa, label, style) {
   const text = String(label || '').replace(/<[^>]+>/g, '').trim();
   if (!text) return null;
 
-  const fonte = num(estilo, 'fontSize', 12);
+  const fonte = num(style, 'fontSize', 12);
   const escala = fonte / 12;
   const largMax = v('larguraMaximaDeRotulo');
   const porCaractere = v('larguraMediaDeCaractere') * escala;
@@ -122,10 +122,10 @@ function caixaDeRotulo(caixa, label, estilo) {
   };
 
   // Container: o rótulo mora na faixa de título, no canto superior esquerdo.
-  if (estilo.container === '1') {
+  if (style.container === '1') {
     // `estilo` já vem parseado: procurar "grIcon=" no JSON dele nunca casa,
     // porque serializado o par vira `"grIcon":"..."`. A chave é que se testa.
-    const recuo = 'grIcon' in estilo || estilo.spacingLeft ? num(estilo, 'spacingLeft', 30) : 8;
+    const recuo = 'grIcon' in style || style.spacingLeft ? num(style, 'spacingLeft', 30) : 8;
     return {
       x: caixa.x + recuo, y: caixa.y,
       w: Math.min(caixa.w - recuo, text.length * porCaractere),
@@ -135,7 +135,7 @@ function caixaDeRotulo(caixa, label, estilo) {
   }
 
   // Folha com rótulo por fora: faixa centrada logo abaixo do ícone.
-  if (estilo.verticalLabelPosition === 'bottom') {
+  if (style.verticalLabelPosition === 'bottom') {
     const larg = Math.min(largMax, text.length * porCaractere);
     return {
       x: caixa.x + (caixa.w - larg) / 2, y: caixa.y + caixa.h,
@@ -174,9 +174,9 @@ function pontaNoPerimetro(caixa, target) {
   return { x: c.x + dx * t, y: c.y + dy * t };
 }
 
-function ancoraDeclarada(caixa, estilo, prefixo) {
-  const ax = parseFloat(estilo[`${prefixo}X`]);
-  const ay = parseFloat(estilo[`${prefixo}Y`]);
+function ancoraDeclarada(caixa, style, prefixo) {
+  const ax = parseFloat(style[`${prefixo}X`]);
+  const ay = parseFloat(style[`${prefixo}Y`]);
   if (!Number.isFinite(ax) || !Number.isFinite(ay)) return null;
   return { x: caixa.x + ax * caixa.w, y: caixa.y + ay * caixa.h, declarada: true };
 }
@@ -218,18 +218,18 @@ function criarCena(plano, opts = {}) {
   // 3. classificar. A ordem do laço é a ordem z (quem vem antes fica atrás).
   const elementos = [];
   celulas.forEach((c, z) => {
-    const estilo = lerEstilo(c.style);
-    if (c.kind === 'aresta') {
+    const style = lerEstilo(c.style);
+    if (c.kind === 'edge') {
       elementos.push({
-        id: c.id, classe: 'aresta', pai: c.pai, z, estilo, estiloBruto: c.style || '',
+        id: c.id, classe: 'edge', pai: c.pai, z, style, estiloBruto: c.style || '',
         label: c.label || '', from: c.from, to: c.to, dobras: c.pontos || [],
         // os mesmos campos que as caixas ganham: sem isto cada família reparseia
         // a style à mão, e A3.9 e A7.1 já divergiram no default de `fontSize`
-        traco: corDe(estilo, 'strokeColor'),
-        corDaFonte: corDe(estilo, 'fontColor') || '#000000',
-        tamanhoDaFonte: num(estilo, 'fontSize', 12),
-        negrito: estilo.fontStyle === '1' || estilo.fontStyle === '3',
-        halo: corDe(estilo, 'labelBackgroundColor'),
+        traco: corDe(style, 'strokeColor'),
+        corDaFonte: corDe(style, 'fontColor') || '#000000',
+        tamanhoDaFonte: num(style, 'fontSize', 12),
+        negrito: style.fontStyle === '1' || style.fontStyle === '3',
+        halo: corDe(style, 'labelBackgroundColor'),
       });
       return;
     }
@@ -238,33 +238,33 @@ function criarCena(plano, opts = {}) {
     const oculto = c.visivel === false;
     let classe;
     if (oculto || CHROME.has(c.id)) classe = c.id === 'panlabs-modelo' || oculto ? 'oculto' : 'moldura';
-    else if (idsDeFaixa.has(c.id) || /^az-/.test(c.id)) classe = 'faixa';
-    else if (estilo.container === '1') classe = 'group';
-    else if (estilo._flags.includes('text')) classe = 'moldura';
+    else if (idsDeFaixa.has(c.id) || /^az-/.test(c.id)) classe = 'band';
+    else if (style.container === '1') classe = 'group';
+    else if (style._flags.includes('text')) classe = 'moldura';
     else classe = 'no';
 
     elementos.push({
-      id: c.id, classe, pai: c.pai, z, caixa, estilo, estiloBruto: c.style || '',
+      id: c.id, classe, pai: c.pai, z, caixa, style, estiloBruto: c.style || '',
       label: c.label || '',
       tipoSemantico: (noDoModelo.get(c.id) || {}).kind || null,
       noModelo: noDoModelo.get(c.id) || null,
       members: membrosDaFaixa.get(c.id) || null,
-      rotuloCaixa: caixa && !oculto ? caixaDeRotulo(caixa, c.label, estilo) : null,
-      preenchimento: corDe(estilo, 'fillColor'),
-      traco: corDe(estilo, 'strokeColor'),
-      corDaFonte: corDe(estilo, 'fontColor') || '#000000',
-      tamanhoDaFonte: num(estilo, 'fontSize', 12),
-      negrito: estilo.fontStyle === '1' || estilo.fontStyle === '3',
-      opacidade: num(estilo, 'opacity', 100) / 100,
+      rotuloCaixa: caixa && !oculto ? caixaDeRotulo(caixa, c.label, style) : null,
+      preenchimento: corDe(style, 'fillColor'),
+      traco: corDe(style, 'strokeColor'),
+      corDaFonte: corDe(style, 'fontColor') || '#000000',
+      tamanhoDaFonte: num(style, 'fontSize', 12),
+      negrito: style.fontStyle === '1' || style.fontStyle === '3',
+      opacidade: num(style, 'opacity', 100) / 100,
     });
   });
 
   const from = classe => elementos.filter(e => e.classe === classe);
   const nodes = from('no');
   const grupos = from('group');
-  const bands = from('faixa');
+  const bands = from('band');
   const molduras = from('moldura');
-  const edges = from('aresta');
+  const edges = from('edge');
   const caixas = [...nodes, ...grupos, ...bands];
   const porElemento = new Map(elementos.map(e => [e.id, e]));
 
@@ -289,15 +289,15 @@ function criarCena(plano, opts = {}) {
     filhosDe.get(pai).push(e);
   }
   function ancestrais(id) {
-    const saida = [];
+    const output = [];
     let atual = porElemento.get(id);
     while (atual && atual.pai && atual.pai !== '1') {
       const pai = porElemento.get(atual.pai);
-      if (!pai || saida.includes(pai)) break;
-      saida.push(pai);
+      if (!pai || output.includes(pai)) break;
+      output.push(pai);
       atual = pai;
     }
-    return saida;
+    return output;
   }
   const ehDescendente = (id, ancestralId) => ancestrais(id).some(a => a.id === ancestralId);
 
@@ -308,8 +308,8 @@ function criarCena(plano, opts = {}) {
     if (!origin || !destino) { a.pontos = a.dobras.slice(); a.completa = false; continue; }
     const rumoInicio = a.dobras[0] || geo.centro(destino.caixa);
     const rumoFim = a.dobras[a.dobras.length - 1] || geo.centro(origin.caixa);
-    const inicio = ancoraDeclarada(origin.caixa, a.estilo, 'exit') || pontaNoPerimetro(origin.caixa, rumoInicio);
-    const fim = ancoraDeclarada(destino.caixa, a.estilo, 'entry') || pontaNoPerimetro(destino.caixa, rumoFim);
+    const inicio = ancoraDeclarada(origin.caixa, a.style, 'exit') || pontaNoPerimetro(origin.caixa, rumoInicio);
+    const fim = ancoraDeclarada(destino.caixa, a.style, 'entry') || pontaNoPerimetro(destino.caixa, rumoFim);
     a.pontos = [inicio, ...a.dobras, fim];
     a.completa = true;
     a.ancorada = !!(inicio.declarada && fim.declarada);
@@ -320,11 +320,11 @@ function criarCena(plano, opts = {}) {
   function caixaDeRotuloDeAresta(a) {
     const text = String(a.label).replace(/<[^>]+>/g, '').trim();
     if (!text) return null;
-    const fonte = num(a.estilo, 'fontSize', 12);
+    const fonte = num(a.style, 'fontSize', 12);
     const larg = text.length * v('larguraMediaDeCaractere') * (fonte / 12);
     const alt = v('alturaDeLinha') * (fonte / 12);
     const meio = pontoNoMeio(a.pontos);
-    return { x: meio.x - larg / 2, y: meio.y - alt / 2, w: larg, h: alt, onde: 'aresta' };
+    return { x: meio.x - larg / 2, y: meio.y - alt / 2, w: larg, h: alt, onde: 'edge' };
   }
 
   function pontoNoMeio(pontos) {
@@ -386,7 +386,7 @@ function criarCena(plano, opts = {}) {
    * caixa dele, e quem decide é o teste de contenção, não o corte de z.
    */
   function fundoDoRotulo(e) {
-    const halo = corDe(e.estilo, 'labelBackgroundColor');
+    const halo = corDe(e.style, 'labelBackgroundColor');
     if (halo) return halo;
     const caixa = e.rotuloCaixa;
     if (!caixa) return plano.background || '#FFFFFF';

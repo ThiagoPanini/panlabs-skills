@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const { carregar } = require(path.join(__dirname, '..', 'aws-shapes.cjs'));
 
-const saida = process.argv[2] || path.join(__dirname, '..', 'tests');
+const output = process.argv[2] || path.join(__dirname, '..', 'tests');
 const cat = carregar(path.join(__dirname, '..'));
 
 const MARCADOR = '#FF00FF';
@@ -166,9 +166,9 @@ ${celulas.join('\n')}
 </mxfile>
 `;
 
-fs.mkdirSync(saida, { recursive: true });
-fs.writeFileSync(path.join(saida, 'sample.drawio'), xml);
-fs.writeFileSync(path.join(saida, 'sample.manifest.json'), JSON.stringify({
+fs.mkdirSync(output, { recursive: true });
+fs.writeFileSync(path.join(output, 'sample.drawio'), xml);
+fs.writeFileSync(path.join(output, 'sample.manifest.json'), JSON.stringify({
   meta: {
     drawio: cat.meta.drawio, commit: cat.meta.commit,
     servicos: SERVICOS.length, recursos: RECURSOS.length, grupos: GRUPOS.length
@@ -182,5 +182,5 @@ console.error([
   `resource icons ${RECURSOS.length}`,
   `grupos         ${GRUPOS.length}`,
   `células        ${manifesto.length} (+ ${GRUPOS.length} filhos aninhados + 2 marcadores)`,
-  `saída          ${path.join(saida, 'sample.drawio')}`
+  `saída          ${path.join(output, 'sample.drawio')}`
 ].join('\n'));

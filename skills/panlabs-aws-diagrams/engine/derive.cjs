@@ -358,7 +358,7 @@ function politicaDeTravessia(modo, cruz, t) {
     };
 
   return {
-    nivel: 6, mecanismo: 'direta', grupos: cruz.map(a => ({ aresta: a.id })),
+    nivel: 6, mecanismo: 'direta', grupos: cruz.map(a => ({ edge: a.id })),
     because: `${cruz.length} travessia(s) entre pares distintos — E10 desenha direto, sem cerimônia na borda (E8)`,
   };
 }

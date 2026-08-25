@@ -70,7 +70,7 @@ async function main() {
   // `acordo` é escrito por `aprovar`, então a marca de quem aprovou entra por lá
   const POR = marcaDe('agreement', 'by');
 
-  const technical = elaborar(aprovar(semeado, { em: '2026-08-21', por: POR }), elab);
+  const technical = elaborar(aprovar(semeado, { at: '2026-08-21', by: POR }), elab);
 
   /**
    * A plantação, derivada da régua. Roda DEPOIS de `elaborar` porque é ele quem

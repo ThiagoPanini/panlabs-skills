@@ -8,7 +8,7 @@
  * causa. Aqui cada variante volta a passar pelo motor, então todo arquivo
  * testado é um arquivo que o motor de fato emitiria.
  *
- *   node tools/bisect-model.cjs modelo/x.json
+ *   node tools/bisect-model.cjs models/x.json
  */
 
 const fs = require('fs');

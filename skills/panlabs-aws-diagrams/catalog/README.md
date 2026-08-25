@@ -11,8 +11,8 @@ A matéria-prima foi a pesquisa de shapes do #17. Ela está cristalizada aqui:
 
 > **Decidido: ele mora aqui.** A estrutura da skill deixou de ser névoa — o
 > documento que o agente lê é [`../SKILL.md`](../SKILL.md), com a prosa de
-> operação em [`../guia/`](../guia/), e `catalog/` continua sendo um diretório de
-> código irmão de `motor/`. Quem quiser saber como o motor resolve um nome por
+> operação em [`../guide/`](../guide/), e `catalog/` continua sendo um diretório de
+> código irmão de `engine/`. Quem quiser saber como o motor resolve um nome por
 > aqui: [`../guide/model.md`](../guide/model.md).
 
 ## Os arquivos

@@ -38,7 +38,7 @@ const cat = resolverMod.criar(require(path.join(RAIZ, 'theme', 'theme.cjs')).car
  * rodar a candidata rival só nos modelos feitos sob medida para a vencedora
  * seria fazer a régua concordar comigo.
  *
- * Na árvore de produção o corpus mora todo em `modelo/`, então a separação que
+ * Na árvore de produção o corpus mora todo em `models/`, então a separação que
  * antes era de DIRETÓRIO passa a ser esta lista. É a mesma linha, escrita.
  */
 const DO_22 = new Set(['app-data', 'elk-no-layer', 'ingest-core', 'declared-empty-subnet',

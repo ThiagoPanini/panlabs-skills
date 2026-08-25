@@ -2,8 +2,8 @@
 # Expõe a skill nos dois lugares onde os harnesses da casa procuram.
 #
 #   tools/install.sh              instala (ou reaponta) os dois links
-#   tools/install.sh --conferir   só confere, não escreve nada
-#   tools/install.sh --forcar     substitui até diretório real (perigoso)
+#   tools/install.sh --check   só confere, não escreve nada
+#   tools/install.sh --force     substitui até diretório real (perigoso)
 #
 # A premissa 7 do mapa exige a skill auto-contida e publicável: zero binário,
 # zero rede, zero `npm install` em runtime. Instalar, então, é só apontar — e
@@ -33,8 +33,8 @@ NOME="$(basename "$SKILL_LOCAL")"
 CONFERIR=0; FORCAR=0
 for a in "$@"; do
   case "$a" in
-    --conferir) CONFERIR=1 ;;
-    --forcar)   FORCAR=1 ;;
+    --check) CONFERIR=1 ;;
+    --force)   FORCAR=1 ;;
     *) echo "argumento desconhecido: $a"; exit 2 ;;
   esac
 done
@@ -70,7 +70,7 @@ ruim() { echo "  ✗ $1"; falhou=1; }
 # ⚠️ Os dois últimos são coisas diferentes, e confundi-los foi um bug real aqui.
 # O link de `~/.claude/` carrega um caminho RELATIVO (`../../.agents/…`), e
 # `readlink -f` sobre uma string relativa resolve contra o diretório de trabalho
-# de quem chama — não contra o diretório do link. O `--conferir` reprovava um
+# de quem chama — não contra o diretório do link. O `--check` reprovava um
 # link perfeitamente correto. Quem decide é o DESTINO FINAL: os dois links têm de
 # acabar na mesma raiz da skill, qualquer que seja o texto que carreguem.
 ligar() {
@@ -90,7 +90,7 @@ ligar() {
   elif [ -e "$link" ]; then
     # diretório REAL: pode ser uma skill de outra origem. Não se apaga por conta.
     if [ "$FORCAR" != 1 ]; then
-      ruim "$link já existe e NÃO é link — não vou substituir sem --forcar"
+      ruim "$link já existe e NÃO é link — não vou substituir sem --force"
       return
     fi
     [ "$CONFERIR" = 1 ] && { ruim "$link existe e não é link"; return; }

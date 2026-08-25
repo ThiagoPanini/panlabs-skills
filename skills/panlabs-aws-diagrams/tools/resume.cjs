@@ -5,7 +5,7 @@
  * elabora a vista tecnica por cima do que foi aprovado.
  *
  *   node tools/resume.cjs <arq.drawio>                          so o briefing
- *   node tools/resume.cjs <arq.drawio> --delta <elaboracao.json> [--saida y.drawio]
+ *   node tools/resume.cjs <arq.drawio> --delta <elaboracao.json> [--output y.drawio]
  *
  * Sao os dois passos no mesmo comando porque sao a mesma leitura: reconhecer o
  * arquivo, classificar as paginas e devolver o briefing e o passo 1; aplicar o
@@ -43,7 +43,7 @@ const { abrir, diferir, politica, podeRegerar } = require(path.join(RAIZ, 'sessi
 const { briefing } = require(path.join(RAIZ, 'session', 'briefing.cjs'));
 const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
 const { validar } = require(path.join(RAIZ, 'session', 'validate.cjs'));
-const { conferir } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
+const { check } = require(path.join(RAIZ, 'session', 'agreement.cjs'));
 const { desenhar } = require(path.join(RAIZ, 'session', 'draw.cjs'));
 const { costurar } = require(path.join(RAIZ, 'session', 'save.cjs'));
 const { lerPaginas } = require(path.join(RAIZ, 'session', 'fingerprint.cjs'));
@@ -53,7 +53,7 @@ const AJUDA = `
 
     --delta <elaboracao.json>  aplica o delta da fase tecnica (passo 6 do arco).
                                Sem ele, o comando so imprime o briefing (passo 1).
-    --saida <y.drawio>         onde gravar as duas vistas   (default: o proprio arquivo)
+    --output <y.drawio>         onde gravar as duas vistas   (default: o proprio arquivo)
 
   Sem argumento nenhum, roda o caso do corpus (output/retail.drawio com
   models/session/retail-elaboration.json).
@@ -64,7 +64,7 @@ const AJUDA = `
     2  uma pagina divergiu, ou a elaboracao mudou o que foi aprovado
 `;
 
-const COM_VALOR = ['delta', 'saida'];
+const WITH_VALUE = ['delta', 'output'];
 
 function parse(args) {
   const opts = {}; const soltos = [];
@@ -72,7 +72,7 @@ function parse(args) {
     const a = args[i];
     if (!a.startsWith('--')) { soltos.push(a); continue; }
     const name = a.slice(2);
-    if (COM_VALOR.includes(name)) { opts[name] = args[++i]; continue; }
+    if (WITH_VALUE.includes(name)) { opts[name] = args[++i]; continue; }
     opts[name] = true;
   }
   return { opts, soltos };
@@ -82,7 +82,7 @@ async function main() {
   const { opts, soltos } = parse(process.argv.slice(2));
   if (opts.help || opts.h) { console.log(AJUDA); return; }
 
-  const entrada = soltos[0] || path.join(RAIZ, 'output', 'retail.drawio');
+  const input = soltos[0] || path.join(RAIZ, 'output', 'retail.drawio');
   // O default do delta so vale quando a ENTRADA tambem e a do corpus. Herdar o
   // delta do retail num arquivo qualquer aplicaria o casaco tecnico errado — e
   // `elaborar` recusaria pelo `sobre`, mas com uma mensagem que nao explica a
@@ -90,14 +90,14 @@ async function main() {
   const delta = opts.delta
     || (soltos.length === 0 ? path.join(RAIZ, 'models', 'session', 'retail-elaboration.json') : null);
 
-  if (!fs.existsSync(entrada)) {
-    console.error(`\n  ✗ nao achei ${entrada}`);
+  if (!fs.existsSync(input)) {
+    console.error(`\n  ✗ nao achei ${input}`);
     console.error(AJUDA);
     process.exit(1);
   }
 
-  const xml = fs.readFileSync(entrada, 'utf8');
-  console.log(`\n  RETOMAR · ${path.relative(process.cwd(), entrada)}`);
+  const xml = fs.readFileSync(input, 'utf8');
+  console.log(`\n  RETOMAR · ${path.relative(process.cwd(), input)}`);
 
   // 1 e 2 -------------------------------------------------------------------
   const aberto = abrir(xml);
@@ -107,7 +107,7 @@ async function main() {
   const remanejadas = aberto.paginas.filter(p => p.state === 'remanejado');
 
   // 3 -----------------------------------------------------------------------
-  const acordoAntes = conferir(aberto.sessao);
+  const acordoAntes = check(aberto.sessao);
   for (const l of briefing(aberto, { agreement: acordoAntes })) console.log(l);
 
   // O bloqueio vem DEPOIS do briefing de proposito: mesmo quando nao da para
@@ -175,7 +175,7 @@ async function main() {
   for (const a of v.avisos) console.log(`  ⚠ ${a}`);
   if (!v.ok) { console.error(`\n  ✗ modelo invalido (${v.fase})`); for (const e of v.erros) console.error(`      · ${e}`); process.exit(1); }
 
-  const depois = conferir(technical);
+  const depois = check(technical);
   console.log(`  conferir    ${depois.ok ? '✓ a projecao logica do modelo TECNICO e byte a byte a que foi aprovada' : '✗ ' + depois.motivo}`);
   for (const d of depois.diferencas) console.log(`      · ${d.text}`);
   if (!depois.ok) {
@@ -203,10 +203,10 @@ async function main() {
   if (!igual) process.exitCode = 1;
 
   const juntos = costurar([rl.xml, rt.xml]);
-  const saida = opts.saida || entrada;
-  fs.writeFileSync(saida, juntos);
+  const output = opts.output || input;
+  fs.writeFileSync(output, juntos);
   const nPag = lerPaginas(juntos).paginas.length;
-  console.log(`\n  → ${path.relative(process.cwd(), saida)}  (${juntos.length} bytes, ${nPag} paginas: ` +
+  console.log(`\n  → ${path.relative(process.cwd(), output)}  (${juntos.length} bytes, ${nPag} paginas: ` +
     `1 logica + ${nPag - 1} da vista tecnica)`);
   console.log('    A vista aprovada e a tecnica no mesmo arquivo. Nao ha um segundo lugar para dessincronizar.\n');
 }

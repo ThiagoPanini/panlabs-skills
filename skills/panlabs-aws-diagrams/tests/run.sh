@@ -53,7 +53,7 @@ passo "paridade model@1 × casaco técnico (#37)"   node "$AQUI/check-technical-
 passo "produção não alcança prototypes/"           node "$AQUI/check-no-prototype.cjs"
 # O teto de 30 MB e DURO e so aparece na hora do upload. Medi-lo aqui e o que
 # impede a arvore de voltar a 29 MB sem ninguem perceber — foi onde ela estava.
-passo "o pacote cabe no teto de 30 MB"            "$RAIZ/tools/package.sh" --conferir
+passo "o pacote cabe no teto de 30 MB"            "$RAIZ/tools/package.sh" --check
 
 echo
 echo "════ camada 1 · a fronteira ════"
@@ -70,11 +70,11 @@ echo
 echo "════ camada 3 · o motor ════"
 passo "validação (reprova o que deve, e explica)"  node "$AQUI/check-validation.cjs"
 passo "geração do corpus inteiro"                  bash -c '
-  for m in "'"$RAIZ"'"/modelo/*.json; do
+  for m in "'"$RAIZ"'"/models/*.json; do
     n="$(basename "$m" .json)"
-    node "'"$RAIZ"'/engine/generate.cjs" "$m" --saida "'"$RAIZ"'/output/$n.drawio" > /dev/null || exit 1
+    node "'"$RAIZ"'/engine/generate.cjs" "$m" --output "'"$RAIZ"'/output/$n.drawio" > /dev/null || exit 1
   done
-  echo "   ✓ $(ls "'"$RAIZ"'"/modelo/*.json | wc -l) modelos gerados"'
+  echo "   ✓ $(ls "'"$RAIZ"'"/models/*.json | wc -l) modelos gerados"'
 passo "determinismo (3 frentes, com reordenação)"  node "$AQUI/check-determinism.cjs"
 passo "camada de rede: a ordem sai do conteúdo"    node "$AQUI/check-layer.cjs"
 passo "a caixa da folha mede o rótulo (#33)"        node "$AQUI/check-leaf-box.cjs"
@@ -93,14 +93,14 @@ passo "partição: pintura pinta, métrica mede"      node "$AQUI/check-partitio
 passo "os 4 estilos do #12 saem de token"          node "$AQUI/check-tokens-of-12.cjs"
 passo "o portão reprova o tema errado"             bash -c '
   M="'"$RAIZ"'/models/orders-serverless.json"
-  if node "'"$RAIZ"'/engine/generate.cjs" "$M" --tema armadilha --saida /dev/null > /dev/null 2>&1; then
-    echo "   ✗ o tema \"armadilha\" PASSOU no portão"; exit 1
+  if node "'"$RAIZ"'/engine/generate.cjs" "$M" --theme trap --output /dev/null > /dev/null 2>&1; then
+    echo "   ✗ o tema \"trap\" PASSOU no portão"; exit 1
   fi
-  echo "   ✓ \"armadilha\" reprovado sem --forcar"
-  if node "'"$RAIZ"'/engine/generate.cjs" "$M" --tema armadilha --forcar --saida /dev/null > /dev/null 2>&1; then
-    echo "   ✓ --forcar gera assim mesmo, para o estrago poder ser visto"
+  echo "   ✓ \"trap\" reprovado sem --force"
+  if node "'"$RAIZ"'/engine/generate.cjs" "$M" --theme trap --force --output /dev/null > /dev/null 2>&1; then
+    echo "   ✓ --force gera assim mesmo, para o estrago poder ser visto"
   else
-    echo "   ✗ --forcar não gerou — a válvula de escape quebrou"; exit 1
+    echo "   ✗ --force não gerou — a válvula de escape quebrou"; exit 1
   fi'
 
 echo
@@ -108,7 +108,7 @@ echo "════ camada 5 · a geometria do corpus ════"
 passo "o portão barra o que mente e cabe no meio"  node "$AQUI/check-geometry-gate.cjs"
 passo "o corpus laudado (sem quarentena aberta)"   node "$AQUI/check-good.cjs"
 passo "o orçamento de roteamento do #24"           node "$AQUI/check-routing.cjs"
-passo "check-geometry.cjs aceita --tema (#33)"     node "$AQUI/check-theme-geometry.cjs"
+passo "check-geometry.cjs aceita --theme (#33)"     node "$AQUI/check-theme-geometry.cjs"
 # ⚠️ O CORPO DE PROVA MUDOU NO #24, e o motivo é o ticket ter dado certo.
 #
 # Até aqui o portão era exercitado contra `web-flow-3-az`, que mentia (`A5.5`
@@ -129,16 +129,16 @@ passo "check-geometry.cjs aceita --tema (#33)"     node "$AQUI/check-theme-geome
 passo "e o portão está ENXERTADO no motor"         bash -c '
   G="'"$RAIZ"'/engine/generate.cjs"
   M="'"$RAIZ"'/models/refusal/lying-band.json"
-  if node "$G" "$M" --portao veracidade --saida /dev/null > /dev/null 2>&1; then
+  if node "$G" "$M" --gate veracidade --output /dev/null > /dev/null 2>&1; then
     echo "   ✗ o motor DESENHOU um plano que mente, com o portão pedido"; exit 1
   fi
-  echo "   ✓ --portao veracidade recusa o desenho que mente"
+  echo "   ✓ --gate veracidade recusa o desenho que mente"
   # e o controle: o mesmo nível deixa passar um que não mente
-  node "$G" "'"$RAIZ"'/models/web-multi-az.json" --portao veracidade --saida /dev/null > /dev/null 2>&1 \
+  node "$G" "'"$RAIZ"'/models/web-multi-az.json" --gate veracidade --output /dev/null > /dev/null 2>&1 \
     && echo "   ✓ e deixa passar o que não mente" \
     || { echo "   ✗ recusou um desenho que não mente"; exit 1; }
   # sem portão, o motor desenha — mas AVISA
-  node "$G" "$M" --saida /dev/null 2>&1 | grep -q "⛔ F1" \
+  node "$G" "$M" --output /dev/null 2>&1 | grep -q "⛔ F1" \
     && echo "   ✓ e sem portão desenha, mas avisa da falha semântica" \
     || { echo "   ✗ desenhou em silêncio um plano que mente"; exit 1; }'
 
@@ -146,7 +146,7 @@ echo
 echo "════ camada 6 · a sessão ════"
 passo "o manifesto do motor de produção"           node "$AQUI/check-engine-untouched.cjs"
 passo "a projeção, com 12 mutações de controle"    node "$AQUI/check-projection.cjs"
-passo "passo 5 — a vista lógica, aprovada"        node "$RAIZ/tools/approve.cjs" "$RAIZ/models/session/retail-logical.json" --em 2026-08-21 --saida "$RAIZ/output/retail.drawio"
+passo "passo 5 — a vista lógica, aprovada"        node "$RAIZ/tools/approve.cjs" "$RAIZ/models/session/retail-logical.json" --at 2026-08-21 --output "$RAIZ/output/retail.drawio"
 passo "passos 1 e 6 — retomada e vista técnica"   node "$RAIZ/tools/resume.cjs" "$RAIZ/output/retail.drawio" --delta "$RAIZ/models/session/retail-elaboration.json"
 passo "o arco ponta a ponta, num caso novo (#26)"  node "$AQUI/check-arc.cjs"
 passo "a privacidade do dossiê"                    node "$AQUI/check-dossier.cjs"
@@ -202,7 +202,7 @@ else
     done
     exit $falhou'
   if command -v python3 > /dev/null && python3 -c "import PIL" 2>/dev/null; then
-    passo "o tema chegou no PIXEL (a lição do #17)"  python3 "$RAIZ/tools/verify-theme.py" --todos
+    passo "o tema chegou no PIXEL (a lição do #17)"  python3 "$RAIZ/tools/verify-theme.py" --all
   else
     echo "   Pillow ausente — verificação de pixel pulada."
   fi

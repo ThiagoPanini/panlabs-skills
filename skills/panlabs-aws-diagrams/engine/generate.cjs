@@ -3,8 +3,8 @@
 /**
  * Motor de geração — IR › layout › mxGraph XML.
  *
- *   node engine/generate.cjs modelo.json --saida diagrama.drawio
- *   node engine/generate.cjs modelo.json --explicar        # só o relatório, sem escrever
+ *   node engine/generate.cjs modelo.json --output diagrama.drawio
+ *   node engine/generate.cjs modelo.json --explain        # só o relatório, sem escrever
  *
  * O pipeline inteiro, e a fronteira que ele defende:
  *
@@ -34,7 +34,7 @@ const planejar = require('./plan.cjs');
 const { emitir, conferirXml } = require('./emit.cjs');
 const temaMod = require('../theme/theme.cjs');
 const contraste = require('./contrast.cjs');
-const { portao, NIVEIS } = require('../validator/gate.cjs');
+const { gate, NIVEIS } = require('../validator/gate.cjs');
 
 // O esquema é ÚNICO e mora na raiz da skill, não dentro do motor: ele é o
 // contrato de quem escreve o modelo, e o motor é só o primeiro consumidor dele.
@@ -121,16 +121,16 @@ async function gerar(modelo, opts = {}) {
   relatorio.avisos.push(...v.avisos);
   marco('validar', { nodes: modelo.nodes.length, edges: (modelo.edges || []).length });
 
-  // `--fluxo` é override de invocação sobre o token do tema: a mesma arquitetura
+  // `--flow` é override de invocação sobre o token do tema: a mesma arquitetura
   // com o mesmo tema pode querer marcar o caminho quente numa entrega e não na
   // outra. Sobrescreve o token, e NÃO mutando o objeto de quem chamou — um tema
   // é um valor, e `comPatch` devolve outro.
   const base = (opts.tema && typeof opts.tema === 'object') ? opts.tema
     : temaMod.carregar(opts.tema || 'light');
-  const tema = opts.flow ? temaMod.comPatch(base, { aresta: { flow: opts.flow } }) : base;
-  marco('tema', { id: tema.id, background: tema.background, density: tema.tokens.gap.density, flow: tema.tokens.aresta.flow });
+  const tema = opts.flow ? temaMod.comPatch(base, { edge: { flow: opts.flow } }) : base;
+  marco('theme', { id: tema.id, background: tema.background, density: tema.tokens.gap.density, flow: tema.tokens.edge.flow });
 
-  const res = resolverMod.criar(tema, opts.catalogo);
+  const res = resolverMod.criar(tema, opts.catalog);
 
   const d = derivar(modelo, { cat: res.cat });
   marco('derivar', { faixasAz: d.az.desenhar, because: d.az.because, azs: d.az.azs });
@@ -217,9 +217,9 @@ async function gerar(modelo, opts = {}) {
     marco('dispor', { passadas: layout.passadas });
     if (layout.encaixe) {
       for (const a of layout.encaixe.aplicados)
-        relatorio.avisos.push(`encaixe: "${a.aresta}" alinhada movendo ${a.moveu.join('+')} em ${a.delta}px`);
+        relatorio.avisos.push(`encaixe: "${a.edge}" alinhada movendo ${a.moveu.join('+')} em ${a.delta}px`);
       for (const x of layout.encaixe.desfeitos)
-        relatorio.avisos.push(`encaixe DESFEITO em "${x.aresta}" (${x.delta}px): ${x.because}`);
+        relatorio.avisos.push(`encaixe DESFEITO em "${x.edge}" (${x.delta}px): ${x.because}`);
     }
   }
   marco('planejar', {
@@ -235,11 +235,11 @@ async function gerar(modelo, opts = {}) {
    * é protótipo de outro ticket"). A consolidação do #23 aplica, e escolhe o
    * default com cuidado:
    *
-   *   O LAUDO SAI SEMPRE. Ele viaja em `relatorio.geometria` e o `--explicar` o
+   *   O LAUDO SAI SEMPRE. Ele viaja em `relatorio.geometria` e o `--explain` o
    *   imprime. Um portão que só existe quando alguém pede é um portão que
    *   ninguém sabe que existe.
    *
-   *   BLOQUEAR É OPT-IN (`--portao`). O próprio #18 chama `veracidade` de
+   *   BLOQUEAR É OPT-IN (`--gate`). O próprio #18 chama `veracidade` de
    *   "default recomendado para um portão de PUBLICAÇÃO" — publicar, não
    *   desenhar. Bloquear em `gerar` faria o motor recusar `web-flow-3-az`, que
    *   é dívida real, nomeada e de dono conhecido (#24): a geração pararia por um
@@ -255,7 +255,7 @@ async function gerar(modelo, opts = {}) {
    *   verde sobre um laudo que não mediu nada. Chamar `portao()` com o nível
    *   pedido e deixar ele lançar é ao mesmo tempo a correção e a simplificação.
    */
-  const nivel = opts.portao || 'none';
+  const nivel = opts.gate || 'none';
   if (!(nivel in NIVEIS)) {
     const e = new Error(`nível de portão desconhecido: "${nivel}"`);
     e.erros = [`níveis: ${Object.keys(NIVEIS).join(', ')}`];
@@ -265,20 +265,20 @@ async function gerar(modelo, opts = {}) {
   for (const [i, p] of [plano, ...paginas].entries()) {
     const page = p.id || `p${i}`;
     try {
-      laudos.push({ page, laudo: portao(p, { nivel }) });
+      laudos.push({ page, laudo: gate(p, { nivel }) });
     } catch (e) {
       e.message = `a página "${page}": ${e.message}`;
       throw e;
     }
   }
-  relatorio.geometria = laudos;
+  relatorio.geometry = laudos;
   const semanticas = laudos.flatMap(l => l.laudo.semanticas);
   const falhas = laudos.flatMap(l => l.laudo.falhas);
-  marco('geometria', {
+  marco('geometry', {
     paginas: laudos.length,
     falha: falhas.length,
     semanticas: semanticas.length,
-    portao: nivel,
+    gate: nivel,
   });
   // uma falha SEMÂNTICA é o desenho mentindo, e isso vale um aviso mesmo quando
   // ninguém pediu portão — senão o motor entrega em silêncio o que a rubrica
@@ -306,16 +306,16 @@ async function gerar(modelo, opts = {}) {
    */
   const c = contraste.medirTodos([plano, ...paginas]);
   relatorio.contraste = c;
-  if (!c.ok && !opts.forcar) {
+  if (!c.ok && !opts.force) {
     const e = new Error(`o tema "${tema.id}" reprova no portão de contraste (A7 da rubrica #8)`);
-    e.erros = [...contraste.resumir(c), '', 'para gerar assim mesmo e VER o estrago: --forcar'];
+    e.erros = [...contraste.resumir(c), '', 'para gerar assim mesmo e VER o estrago: --force'];
     throw e;
   }
-  if (!c.ok) relatorio.avisos.push(`--forcar: ${c.falhas.length} par(es) abaixo do limiar WCAG, gerado assim mesmo`);
+  if (!c.ok) relatorio.avisos.push(`--force: ${c.falhas.length} par(es) abaixo do limiar WCAG, gerado assim mesmo`);
   // A7.2a é ÁREA: avisa e não reprova (ver o cabeçalho de contrast.cjs)
   for (const l of contraste.resumir(c, c.avisos)) relatorio.avisos.push(l);
   const n = v => Number.isFinite(v) ? v.toFixed(2) : '-';
-  marco('conferir', { ok: true, bytes: xml.length,
+  marco('check', { ok: true, bytes: xml.length,
     contraste: c.ok ? 'passa' : 'FORÇADO',
     piorTexto: n(c.piorTexto), piorTraco: n(c.piorGrafismo), piorArea: n(c.piorArea) });
 
@@ -333,34 +333,34 @@ async function gerar(modelo, opts = {}) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const entrada = args.find(a => !a.startsWith('--'));
-  if (!entrada) {
-    console.error('uso: node engine/generate.cjs <modelo.json> [--saida arquivo.drawio] [--tema ' +
-      temaMod.listar().join('|') + '] [--fluxo solido|tracejado|animado] [--forcar]\n' +
-      '                            [--portao ' + Object.keys(NIVEIS).join('|') + '] [--explicar]');
+  const input = args.find(a => !a.startsWith('--'));
+  if (!input) {
+    console.error('uso: node engine/generate.cjs <modelo.json> [--output arquivo.drawio] [--theme ' +
+      temaMod.listar().join('|') + '] [--flow solido|tracejado|animado] [--force]\n' +
+      '                            [--gate ' + Object.keys(NIVEIS).join('|') + '] [--explain]');
     process.exit(2);
   }
-  const iSaida = args.indexOf('--saida');
-  const saida = iSaida >= 0 ? args[iSaida + 1] : entrada.replace(/\.json$/, '.drawio');
-  const explicar = args.includes('--explicar');
-  const iFluxo = args.indexOf('--fluxo');
+  const iSaida = args.indexOf('--output');
+  const output = iSaida >= 0 ? args[iSaida + 1] : input.replace(/\.json$/, '.drawio');
+  const explain = args.includes('--explain');
+  const iFluxo = args.indexOf('--flow');
   const flow = iFluxo >= 0 ? args[iFluxo + 1] : null;
   if (flow && !['solid', 'dashed', 'animated'].includes(flow)) {
-    console.error(`--fluxo aceita solido | tracejado | animado (veio "${flow}")`);
+    console.error(`--flow aceita solido | tracejado | animado (veio "${flow}")`);
     process.exit(2);
   }
-  const iTema = args.indexOf('--tema');
+  const iTema = args.indexOf('--theme');
   const nomeTema = iTema >= 0 ? args[iTema + 1] : 'light';
-  const forcar = args.includes('--forcar');
-  const iPortao = args.indexOf('--portao');
+  const force = args.includes('--force');
+  const iPortao = args.indexOf('--gate');
   const nivelPortao = iPortao >= 0 ? args[iPortao + 1] : 'none';
 
   let modelo;
-  try { modelo = JSON.parse(fs.readFileSync(entrada, 'utf8')); }
-  catch (e) { console.error(`não consegui ler ${entrada}: ${e.message}`); process.exit(1); }
+  try { modelo = JSON.parse(fs.readFileSync(input, 'utf8')); }
+  catch (e) { console.error(`não consegui ler ${input}: ${e.message}`); process.exit(1); }
 
   let r;
-  try { r = await gerar(modelo, { flow: flow || undefined, tema: nomeTema, forcar, portao: nivelPortao }); }
+  try { r = await gerar(modelo, { flow: flow || undefined, tema: nomeTema, force, gate: nivelPortao }); }
   catch (e) {
     console.error(`\n✗ ${e.message}`);
     for (const linha of e.erros || []) console.error(`    · ${linha}`);
@@ -371,11 +371,11 @@ async function main() {
     console.log(`  ${p.name.padEnd(10)} ${Object.entries(p).filter(([k]) => k !== 'name')
       .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('/') : v}`).join('  ')}`);
   for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  if (r.tema.tokens.aresta.flow === 'animated')
+  if (r.tema.tokens.edge.flow === 'animated')
     console.log('  ⚠ fluxo "animado" só se vê em SVG ou HTML. O #4 mediu e este motor confirmou: ' +
       'exportado para PNG vira um tracejado ESTÁTICO, sem erro nenhum. Exporte com -f svg.');
 
-  if (explicar) {
+  if (explain) {
     console.log('\n  resolução de nomes pelo catálogo:');
     // o motor resolve o mesmo nó mais de uma vez (pré-medição + layout);
     // a trilha de auditoria interessa por nó, não por chamada
@@ -394,11 +394,11 @@ async function main() {
           (c.evidencia.length ? `  ← ${c.evidencia.map(e => `${e.service}(${e.categoria})`).join(', ')}` : ''));
     }
 
-    // O laudo geométrico (#18), pagina a pagina. Sai aqui porque o `--explicar`
+    // O laudo geométrico (#18), pagina a pagina. Sai aqui porque o `--explain`
     // e a trilha de auditoria do motor: quem quer saber POR QUE o desenho ficou
     // assim quer as duas listas, a do catalogo e a da rubrica.
     console.log('\n  laudo geométrico (#18):');
-    for (const { page, laudo } of r.relatorio.geometria) {
+    for (const { page, laudo } of r.relatorio.geometry) {
       const s = laudo.resumo;
       console.log(`    ${String(page).padEnd(38)} ${s.ok} ok · ${s.aviso} aviso · ${s.falha} falha · ` +
         `${s.notApplicable} inaplicável · ${s.pulada} do render`);
@@ -410,9 +410,9 @@ async function main() {
     return;
   }
 
-  fs.mkdirSync(path.dirname(path.resolve(saida)), { recursive: true });
-  fs.writeFileSync(saida, r.xml);
-  console.log(`\n  → ${saida}  (${r.xml.length} bytes, caminho "${r.caminho}")`);
+  fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
+  fs.writeFileSync(output, r.xml);
+  console.log(`\n  → ${output}  (${r.xml.length} bytes, caminho "${r.caminho}")`);
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });

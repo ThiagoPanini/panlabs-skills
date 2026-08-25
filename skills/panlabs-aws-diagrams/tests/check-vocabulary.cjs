@@ -58,7 +58,7 @@ const PROIBIDOS = [
     because: '#4 §4.2: PNG depende da fonte instalada no renderizador' },
   { name: 'cantos arredondados em vértice AWS4', tema: { icone: { corners: 8 } },
     because: '#4 §3.3: no-op silencioso — AWS4 não está em roundableShapes' },
-  { name: 'estilo de aresta exótico', tema: { aresta: { estilo: 'isometricEdgeStyle' } },
+  { name: 'estilo de aresta exótico', tema: { edge: { style: 'isometricEdgeStyle' } },
     because: 'N10: linhas retas e ângulos retos; isometric não existe em arquitetura AWS' },
   { name: 'math / MathJax', tema: { math: true },
     because: '#4 §1.4: custo de render puro se o gerador não emite LaTeX' },
@@ -90,7 +90,7 @@ async function testarSaida() {
       // tema que nem chegou a gerar — e o cabeçalho deste arquivo diz que
       // checagem que não sabe falhar não prova nada.
       try {
-        r = await gerar(modelo, { tema: id, forcar: true });
+        r = await gerar(modelo, { tema: id, force: true });
       } catch (e) {
         findings.push(`${arquivo} + tema ${id}: geração falhou (${e.message}) — não dá para conferir a saída`);
         continue;
@@ -123,7 +123,7 @@ async function main() {
   sabotado.properties.adaptiveColors = { type: 'string' };
   sabotado.properties.math = { type: 'boolean' };
   sabotado.properties.text.properties.family = { type: 'string' };
-  sabotado.properties.aresta.properties.estilo = { type: 'string' };
+  sabotado.properties.edge.properties.style = { type: 'string' };
   const acusados = testarEntrada(sabotado);
   const esperado = PROIBIDOS.length;
   console.log(`  esquema sabotado aceita ${acusados.length} de ${esperado} tokens proibidos`);

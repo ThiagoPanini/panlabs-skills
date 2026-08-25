@@ -36,7 +36,7 @@ const ok = (cond, title, detail) => {
   if (!cond) falhas++;
 };
 
-function carregar(name, dir = 'modelo') {
+function carregar(name, dir = 'models') {
   const m = JSON.parse(fs.readFileSync(path.join(RAIZ, dir, `${name}.json`), 'utf8'));
   const v = validar(m, ESQUEMA);
   if (!v.ok) throw new Error(`${name}: modelo inválido (${v.fase}) — ${v.erros[0]}`);

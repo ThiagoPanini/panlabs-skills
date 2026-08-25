@@ -25,7 +25,7 @@ const { ok, notApplicable, conforme, pares, media, desvio, arredonda, semTags, n
 
 
 module.exports = function a4(cena) {
-  const saida = [];
+  const output = [];
   const { nodes, grupos } = cena;
   const solidos = [...nodes, ...grupos];
 
@@ -43,7 +43,7 @@ module.exports = function a4(cena) {
         casos.push({ o_que: `${name(e)} não respeita ${padding} px dentro de "${pai.id}" (${apertado})`, ids: [e.id, pai.id] });
       }
     }
-    saida.push(conforme('A4.1', casos, { medida: { filhos: solidos.filter(e => cena.porElemento.get(e.pai)).length, violacoes: casos.length } }));
+    output.push(conforme('A4.1', casos, { medida: { filhos: solidos.filter(e => cena.porElemento.get(e.pai)).length, violacoes: casos.length } }));
   }
 
   // ---------------------------------------------------------------- A4.2
@@ -66,7 +66,7 @@ module.exports = function a4(cena) {
         }
       }
     }
-    saida.push(conforme('A4.2', casos, {
+    output.push(conforme('A4.2', casos, {
       medida: { violacoes: casos.length },
       mensagem: casos.length
         ? `${casos.length} pertencimento(s) falso(s) — tolerância é zero`
@@ -83,7 +83,7 @@ module.exports = function a4(cena) {
       const area = g.areaDaIntersecao(a.caixa, b.caixa);
       if (area > 0) casos.push({ o_que: `os grupos irmãos "${a.id}" e "${b.id}" se sobrepõem em ${arredonda(area, 0)} px²`, ids: [a.id, b.id] });
     }
-    saida.push(candidatos.length ? conforme('A4.3', casos, { medida: { pares: candidatos.length, sobrepostos: casos.length } })
+    output.push(candidatos.length ? conforme('A4.3', casos, { medida: { pares: candidatos.length, sobrepostos: casos.length } })
       : notApplicable('A4.3', 'não há dois grupos irmãos para comparar'));
   }
 
@@ -101,7 +101,7 @@ module.exports = function a4(cena) {
       if (idGeo !== idDec)
         casos.push({ o_que: `${name(e)} é desenhado dentro de "${idGeo}" e declarado dentro de "${idDec}"`, ids: [e.id] });
     }
-    saida.push(conforme('A4.4', casos, {
+    output.push(conforme('A4.4', casos, {
       medida: { elementos: solidos.length, divergencias: casos.length },
       mensagem: casos.length
         ? `${casos.length} elemento(s) onde o desenho e o modelo contam topologias diferentes`
@@ -133,7 +133,7 @@ module.exports = function a4(cena) {
       if (s > sigmaMax)
         casos.push({ o_que: `grupos do tipo "${kind}" usam paddings diferentes entre si (σ = ${arredonda(s, 2)})`, ids: lista.map(x => x.id) });
     }
-    saida.push(grupos.length ? conforme('A4.5', casos, { medida: { grupos: grupos.length, irregulares: casos.length } })
+    output.push(grupos.length ? conforme('A4.5', casos, { medida: { grupos: grupos.length, irregulares: casos.length } })
       : notApplicable('A4.5', 'o diagrama não tem grupos'));
   }
 
@@ -155,7 +155,7 @@ module.exports = function a4(cena) {
           break;
         }
     }
-    saida.push(comRotulo ? conforme('A4.6', casos, { medida: { grupos_rotulados: comRotulo, fora_do_canone: casos.length } })
+    output.push(comRotulo ? conforme('A4.6', casos, { medida: { grupos_rotulados: comRotulo, fora_do_canone: casos.length } })
       : notApplicable('A4.6', 'nenhum grupo tem rótulo'));
   }
 
@@ -172,15 +172,15 @@ module.exports = function a4(cena) {
       const d = Math.hypot(...['x', 'y'].map(k => g.centro(a.caixa)[k] - g.centro(b.caixa)[k]));
       (grupoDe(a) === grupoDe(b) ? intra : inter).push(d);
     }
-    if (!intra.length || !inter.length) saida.push(notApplicable('A4.7', 'não há pares intra e inter grupo para comparar'));
+    if (!intra.length || !inter.length) output.push(notApplicable('A4.7', 'não há pares intra e inter grupo para comparar'));
     else {
       const rho = media(intra) / media(inter);
-      saida.push(rho <= teto
+      output.push(rho <= teto
         ? ok('A4.7', { medida: { rho: arredonda(rho), intra: arredonda(media(intra), 1), inter: arredonda(media(inter), 1) }, mensagem: `ρ = ${arredonda(rho)} ≤ ${teto}` })
         : conforme('A4.7', [{ o_que: `ρ = ${arredonda(rho)} > ${teto}: nós do mesmo grupo não estão mais próximos entre si do que de nós de fora`, ids: [] }],
           { medida: { rho: arredonda(rho), intra: arredonda(media(intra), 1), inter: arredonda(media(inter), 1) } }));
     }
   }
 
-  return saida;
+  return output;
 };

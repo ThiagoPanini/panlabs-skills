@@ -35,7 +35,7 @@ function limparGremlins(s) {
 
 const r = n => Math.round(n);
 
-function geometria(g, extra = '') {
+function geometry(g, extra = '') {
   return `<mxGeometry x="${r(g.x)}" y="${r(g.y)}" width="${r(g.w)}" height="${r(g.h)}" as="geometry"${extra ? '>' + extra + '</mxGeometry>' : '/>'}`;
 }
 
@@ -43,7 +43,7 @@ function vertice(c, ind) {
   const p = ' '.repeat(ind);
   const attrs = `id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" vertex="1" parent="${esc(c.pai)}"` +
     (c.visivel === false ? ' visible="0"' : '');
-  return `${p}<mxCell ${attrs}>\n${p}  ${geometria(c.geo)}\n${p}</mxCell>`;
+  return `${p}<mxCell ${attrs}>\n${p}  ${geometry(c.geo)}\n${p}</mxCell>`;
 }
 
 /**
@@ -56,7 +56,7 @@ function verticeComDados(c, ind) {
     .map(([k, v]) => `${k}="${esc(limparGremlins(v))}"`).join(' ');
   return `${p}<object id="${esc(c.id)}" label="${esc(c.label || '')}" ${data}>\n` +
     `${p}  <mxCell style="${esc(c.style)}" vertex="1" parent="${esc(c.pai)}"${c.visivel === false ? ' visible="0"' : ''}>\n` +
-    `${p}    ${geometria(c.geo)}\n` +
+    `${p}    ${geometry(c.geo)}\n` +
     `${p}  </mxCell>\n${p}</object>`;
 }
 
@@ -69,7 +69,7 @@ function verticeComDados(c, ind) {
  * `target` só fica onde foi posta se a geometria trouxer `sourcePoint`/
  * `targetPoint` — sem isso a aresta colapsa na origem, e o draw.io não reclama.
  */
-function aresta(c, ind) {
+function edge(c, ind) {
   const p = ' '.repeat(ind);
   const pontos = (c.pontos || []).map(pt => `\n${p}      <mxPoint x="${r(pt.x)}" y="${r(pt.y)}"/>`).join('');
   const arr = pontos ? `\n${p}    <Array as="points">${pontos}\n${p}    </Array>` : '';
@@ -93,7 +93,7 @@ function aresta(c, ind) {
 
 function page(plano) {
   const corpo = plano.celulas.map(c =>
-    c.kind === 'aresta' ? aresta(c, 8)
+    c.kind === 'edge' ? edge(c, 8)
       : c.data ? verticeComDados(c, 8)
       : vertice(c, 8)).join('\n');
 

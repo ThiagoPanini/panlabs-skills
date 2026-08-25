@@ -24,9 +24,9 @@ proof_bench
 # A sibling file, a parent-directory file, and a directory target with a
 # trailing slash -- the exact shape this repo's own README.md uses today.
 # Without this, "always red" would clear every case below.
-mkdir -p "$PROOF_BENCH/healthy/guia"
-printf -- '[guia](guia/)\n[modelo](guia/modelo.md)\n' > "$PROOF_BENCH/healthy/SKILL.md"
-printf -- '[back to SKILL.md](../SKILL.md)\n' > "$PROOF_BENCH/healthy/guia/modelo.md"
+mkdir -p "$PROOF_BENCH/healthy/guide"
+printf -- '[guide](guide/)\n[model](guide/model.md)\n' > "$PROOF_BENCH/healthy/SKILL.md"
+printf -- '[back to SKILL.md](../SKILL.md)\n' > "$PROOF_BENCH/healthy/guide/model.md"
 out="$("$CHECK" "$PROOF_BENCH/healthy" 2>&1)"; code=$?
 expect "in-tree links to a sibling, a parent, and a directory all pass" green "" "$out" "$code"
 
@@ -50,14 +50,14 @@ expect "a link inside the tree that resolves to nothing turns red, with its own 
 # deeper and touches no byte inside it -- the same "../SKILL.md" now names a
 # path that was never there. This is the `decisoes.md` incident, reproduced by
 # moving the file rather than described.
-mkdir -p "$PROOF_BENCH/mv/guia"
+mkdir -p "$PROOF_BENCH/mv/guide"
 : > "$PROOF_BENCH/mv/SKILL.md"
-printf -- '[root](../SKILL.md)\n' > "$PROOF_BENCH/mv/guia/decisoes.md"
+printf -- '[root](../SKILL.md)\n' > "$PROOF_BENCH/mv/guide/decisions.md"
 out="$("$CHECK" "$PROOF_BENCH/mv" 2>&1)"; code=$?
 expect "one hop deep, the link is correct before the move" green "" "$out" "$code"
 
 mkdir -p "$PROOF_BENCH/mv/docs/aws-diagrams"
-mv "$PROOF_BENCH/mv/guia/decisoes.md" "$PROOF_BENCH/mv/docs/aws-diagrams/decisoes.md"
+mv "$PROOF_BENCH/mv/guide/decisions.md" "$PROOF_BENCH/mv/docs/aws-diagrams/decisions.md"
 out="$("$CHECK" "$PROOF_BENCH/mv" 2>&1)"; code=$?
 expect "moved a level deeper with the link untouched, it now dangles" red "does not exist" "$out" "$code"
 

@@ -106,26 +106,26 @@ function projetar(sessao, view) {
     const { pai, jumps } = paiNaVista(n);
     if (jumps > 0) trilha.colapsados.push({ id: n.id, from: n.inside, to: pai, jumps });
 
-    const saida = { id: n.id, kind: facet.kind };
+    const output = { id: n.id, kind: facet.kind };
     const label = facet.label !== undefined ? facet.label : n.label;
-    if (label !== undefined) saida.label = label;
-    if (pai !== undefined) saida.inside = pai;
+    if (label !== undefined) output.label = label;
+    if (pai !== undefined) output.inside = pai;
     // As chaves aqui NAO sao decoracao: sem elas o `else` gruda no `if` de
     // dentro do `for` e a projecao LOGICA nunca copia `nota` — o casaco logico
     // declara o campo, o esquema o documenta, e ele some sem erro nenhum.
     if (view === 'technical') {
-      for (const c of CAMPOS_TECNICOS) if (facet[c] !== undefined) saida[c] = facet[c];
+      for (const c of CAMPOS_TECNICOS) if (facet[c] !== undefined) output[c] = facet[c];
     } else {
-      for (const c of CAMPOS_LOGICOS) if (facet[c] !== undefined) saida[c] = facet[c];
+      for (const c of CAMPOS_LOGICOS) if (facet[c] !== undefined) output[c] = facet[c];
     }
-    nodes.push(saida);
+    nodes.push(output);
   }
 
   // ---------------------------------------------------- 3. arestas
   const arestasDaVista = (sessao.edges || []).filter(a => existeNa(a, view));
   for (const a of (sessao.edges || []))
     if (!existeNa(a, view))
-      trilha.descartados.push({ o: 'aresta', id: a.id || `${a.from}->${a.to}`, because: 'so existe na vista tecnica' });
+      trilha.descartados.push({ o: 'edge', id: a.id || `${a.from}->${a.to}`, because: 'so existe na vista tecnica' });
 
   const saindoDe = new Map();
   for (const a of arestasDaVista) {
@@ -140,13 +140,13 @@ function projetar(sessao, view) {
    * manda para os dois consumidores dele.
    */
   function alcancaveis(idInicial, visitados) {
-    if (vive.has(idInicial)) return [{ id: idInicial, por: [] }];
+    if (vive.has(idInicial)) return [{ id: idInicial, by: [] }];
     if (visitados.has(idInicial)) return [];
     visitados.add(idInicial);
     const out = [];
     for (const seguinte of (saindoDe.get(idInicial) || []))
       for (const target of alcancaveis(seguinte.to, visitados))
-        out.push({ id: target.id, por: [idInicial, ...target.by] });
+        out.push({ id: target.id, by: [idInicial, ...target.by] });
     return out;
   }
 
@@ -194,7 +194,7 @@ function projetar(sessao, view) {
       edges.push(e);
 
       if (target.by.length)
-        trilha.contraidas.push({ from: a.from, to: target.id, por: target.by, label });
+        trilha.contraidas.push({ from: a.from, to: target.id, by: target.by, label });
     }
   }
 

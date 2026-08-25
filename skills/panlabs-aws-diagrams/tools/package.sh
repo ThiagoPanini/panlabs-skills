@@ -2,7 +2,7 @@
 # O pacote que sai de casa, e a única medida do teto que importa.
 #
 #   tools/package.sh              mede e empacota em ../<nome>.skill
-#   tools/package.sh --conferir   só mede, não escreve nada
+#   tools/package.sh --check   só mede, não escreve nada
 #
 # ⚠️ `.gitignore` NÃO PROTEGE O PACOTE, e essa é a razão de este arquivo existir.
 #
@@ -30,7 +30,7 @@ TETO=$((30 * 1024 * 1024))
 CONFERIR=0
 for a in "$@"; do
   case "$a" in
-    --conferir) CONFERIR=1 ;;
+    --check) CONFERIR=1 ;;
     *) echo "argumento desconhecido: $a"; exit 2 ;;
   esac
 done
@@ -107,7 +107,7 @@ fi
 [ "$CONFERIR" -eq 1 ] && exit 0
 
 # ------------------------------------------------------------------ o zip
-command -v zip > /dev/null || { echo "  ✗ zip não encontrado — instale, ou use --conferir"; exit 1; }
+command -v zip > /dev/null || { echo "  ✗ zip não encontrado — instale, ou use --check"; exit 1; }
 ALVO="$(dirname "$RAIZ")/$NOME.skill"
 rm -f "$ALVO"
 ( cd "$(dirname "$RAIZ")" && printf '%s\n' "${ARQUIVOS[@]#$(dirname "$RAIZ")/}" | zip -q -@ "$ALVO" )

@@ -69,13 +69,13 @@ for (const arq of arquivos) {
 
   // 2. o app decodifica e re-serializa pelo codec dele
   if (!temApp) continue;
-  const saida = path.join(TMP, `rt-${name}.drawio`);
+  const output = path.join(TMP, `rt-${name}.drawio`);
   try {
-    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', saida, caminho],
+    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, caminho],
       { stdio: ['ignore', 'ignore', 'ignore'] });
   } catch (e) { console.log(`    round-trip pelo app          ✗ (falhou ao exportar)`); falhas++; continue; }
 
-  const depois = fs.readFileSync(saida, 'utf8');
+  const depois = fs.readFileSync(output, 'utf8');
   const lido2 = extrair(depois);
   const ok2 = lido2 && iguais(lido2, fonte);
   console.log(`    round-trip pelo app          ${ok2 ? '✓' : '✗'}  (${depois.length} bytes, host=${/host="([^"]*)"/.exec(depois)?.[1]})`);
@@ -87,7 +87,7 @@ for (const arq of arquivos) {
     console.log(`    dossiê opaco intacto         ${ok3 ? '✓' : '✗'}`);
     if (!ok3) falhas++;
   }
-  fs.unlinkSync(saida);
+  fs.unlinkSync(output);
 }
 
 console.log(falhas ? `\n  ✗ ${falhas} falha(s) de round-trip` : '\n  ✓ o modelo sobrevive ao próprio codec do draw.io.');

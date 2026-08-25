@@ -53,7 +53,7 @@ function leiturasDoRequire(modulo) {
 }
 
 /** Todo .json da árvore de produção que se declare um JSON Schema. */
-function esquemas(dir, fora = new Set(['prototypes', 'node_modules', 'saida'])) {
+function esquemas(dir, fora = new Set(['prototypes', 'node_modules', 'output'])) {
   const findings = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (fora.has(e.name)) continue;

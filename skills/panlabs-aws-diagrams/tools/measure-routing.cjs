@@ -21,7 +21,7 @@
  *
  * As duas VISTAS da sessão entram junto com o corpus de propósito: a vista
  * técnica do #14 é o artefato que reprovou na inspeção humana, e ela não é
- * nenhum dos `modelo/*.json` — nasce de `retail-logical` + `retail-elaboration`
+ * nenhum dos `models/*.json` — nasce de `retail-logical` + `retail-elaboration`
  * passando pela projeção. Medir só o corpus deixaria de fora exatamente o
  * desenho que o ticket existe para consertar.
  */
@@ -39,7 +39,7 @@ const { projetar } = require(path.join(RAIZ, 'session', 'project.cjs'));
 /** O modelo técnico da sessão do #14, sem passar por arquivo nenhum. */
 function modelosDaSessao() {
   const ler = f => JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', f), 'utf8'));
-  const aprovado = aprovar(ler('retail-logical.json'), { em: '2026-08-21', por: 'usuario', candidate: 'cand-a' });
+  const aprovado = aprovar(ler('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
   const technical = elaborar(aprovado, ler('retail-elaboration.json'));
   return [
     { name: 'sessao:retail/logica', modelo: projetar(technical, 'logical').modelo },
@@ -57,7 +57,7 @@ function entradas() {
 const SIMBOLO = { ok: 'ok   ', aviso: 'AVISO', falha: 'FALHA', notApplicable: 'n/a  ', pulada: 'render', erro: 'ERRO ' };
 
 async function main() {
-  const soAlvo = process.argv.includes('--alvo');
+  const soAlvo = process.argv.includes('--target');
   const ALVO = ['A5.5', 'A3.5', 'A3.4', 'A5.1', 'A4.2', 'A4.4', 'A3.2'];
   let totalSemantica = 0, totalFalha = 0;
 

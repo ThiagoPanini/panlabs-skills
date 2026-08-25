@@ -75,7 +75,7 @@ function validarGeometria(plano, opts = {}) {
       // Uma família que estoura não pode derrubar as outras sete, e muito menos
       // sair calada: o erro vira falha reportada, com o id da família.
       obtidos = [{
-        id: family, name: `família ${family}`, family, input: 'geometria',
+        id: family, name: `família ${family}`, family, input: 'geometry',
         severidadeMaxima: 'fail', semantica: false, calibravel: false,
         state: 'erro', mensagem: `a família ${family} estourou: ${e.message}`,
         medida: { pilha: String(e.stack || '').split('\n').slice(0, 3) }, occurrences: [],
@@ -122,7 +122,7 @@ const SIMBOLO = { ok: '✓', aviso: '⚠', falha: '✗', notApplicable: '·', pu
 /** O laudo em texto. `opts.tudo` mostra também o que passou. */
 function formatar(r, opts = {}) {
   const linhas = [];
-  const mostrar = x => opts.tudo || ['falha', 'aviso', 'erro'].includes(x.state);
+  const mostrar = x => opts.all || ['falha', 'aviso', 'erro'].includes(x.state);
 
   let familiaAtual = null;
   for (const x of [...r.resultados, ...r.extras]) {

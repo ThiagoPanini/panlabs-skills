@@ -138,17 +138,17 @@ let pointsDeduplicados = 0;
 function dedupPoints(style) {
   const partes = style.split(';');
   const vistos = new Set();
-  const saida = [];
+  const output = [];
   let mexeu = false;
   for (const p of partes) {
     if (p.startsWith('points=')) {
       if (vistos.has(p)) { mexeu = true; continue; }
       vistos.add(p);
     }
-    saida.push(p);
+    output.push(p);
   }
   if (mexeu) pointsDeduplicados++;
-  return saida.join(';');
+  return output.join(';');
 }
 
 function canonicalize(style, stencil, fill) {

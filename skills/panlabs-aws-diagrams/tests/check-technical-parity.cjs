@@ -71,15 +71,15 @@ const { CAMPOS_TECNICOS } = require(path.join(RAIZ, 'session', 'project.cjs'));
 const modelo = JSON.parse(fs.readFileSync(path.join(RAIZ, 'schema.json'), 'utf8'));
 const sessao = JSON.parse(fs.readFileSync(path.join(RAIZ, 'session', 'schema.json'), 'utf8'));
 
-const propsNo = Object.keys(modelo.definitions.no.properties);
+const nodeProps = Object.keys(modelo.definitions.node.properties);
 const propsCasaco = Object.keys(sessao.definitions.technicalFacet.properties);
 
 console.log('\n1 · os dois ESQUEMAS — model@1.no contra session@1.casacoTecnico\n');
-console.log(`  campos de model@1.no:              ${propsNo.length}  (${propsNo.slice().sort().join(', ')})`);
+console.log(`  campos de model@1.no:              ${nodeProps.length}  (${nodeProps.slice().sort().join(', ')})`);
 console.log(`  campos de session@1.casacoTecnico:   ${propsCasaco.length}  (${propsCasaco.slice().sort().join(', ')})`);
 console.log(`  estruturais, de fora por construção: ${[...ESTRUTURAIS].join(', ')}`);
 
-const realEsquema = divergencias(propsNo, propsCasaco);
+const realEsquema = divergencias(nodeProps, propsCasaco);
 ok(realEsquema.soEmA.length === 0,
   'nenhum campo de model@1.no ficou de fora de casacoTecnico',
   realEsquema.soEmA.length ? realEsquema.soEmA.join(', ') : 'none');
@@ -111,13 +111,13 @@ ok(realProjecao.soEmB.length === 0,
 console.log('\n3 · prova de controle — remover um campo de um dos lados, ela acusa\n');
 
 const semQualificador = propsCasaco.filter(p => p !== 'qualifier');
-const perdaDetectada = divergencias(propsNo, semQualificador);
+const perdaDetectada = divergencias(nodeProps, semQualificador);
 ok(perdaDetectada.soEmA.includes('qualifier'),
   'CONTROLE: tirando "qualificador" do casaco simulado, a paridade de esquema acusa',
   perdaDetectada.soEmA.join(', '));
 
 const comCampoOrfao = [...propsCasaco, 'inventado'];
-const orfaoDetectado = divergencias(propsNo, comCampoOrfao);
+const orfaoDetectado = divergencias(nodeProps, comCampoOrfao);
 ok(orfaoDetectado.soEmB.includes('inventado'),
   'CONTROLE: acrescentando "inventado" só no casaco simulado, a paridade de esquema acusa',
   orfaoDetectado.soEmB.join(', '));
@@ -127,7 +127,7 @@ ok(orfaoDetectado.soEmB.includes('inventado'),
 // comparação é contra o resultado JÁ CONFERIDO acima, não contra zero: isolar
 // exatamente o que a exclusão de "dentro" muda, sem depender de o corpus real
 // estar limpo de outras divergências no momento em que isto roda.
-const semDentroNoModelo = propsNo.filter(p => p !== 'inside');
+const semDentroNoModelo = nodeProps.filter(p => p !== 'inside');
 const controleEstrutural = divergencias(semDentroNoModelo, propsCasaco);
 ok(!controleEstrutural.soEmA.includes('inside') && !controleEstrutural.soEmB.includes('inside') &&
    controleEstrutural.soEmA.length === realEsquema.soEmA.length &&

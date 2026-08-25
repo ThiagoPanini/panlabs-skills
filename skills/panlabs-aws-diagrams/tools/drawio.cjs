@@ -15,8 +15,8 @@
  *   2. `$DRAWIO`, para a suíte exportar uma vez e todo mundo herdar;
  *   3. o caminho onde o #10 instalou.
  *
- * ⚠️ É DEPENDÊNCIA DE DESENVOLVIMENTO (premissa 8). Nada em `motor/`,
- * `validador/`, `tema/` ou `sessao/` importa este arquivo — e `check-sem-prototipo`
+ * ⚠️ É DEPENDÊNCIA DE DESENVOLVIMENTO (premissa 8). Nada em `engine/`,
+ * `validator/`, `theme/` ou `session/` importa este arquivo — e `check-sem-prototipo`
  * cobra isso medindo o `require.cache` do pipeline.
  */
 

@@ -32,7 +32,7 @@ const GEOMETRIA = [
   'margin', 'margin', 'padding', 'recuo', 'spacing', 'espacamento', 'gap', 'calha', 'lane',
   'align', 'alinhamento', 'anchor', 'ancora', 'grid', 'grade', 'scale', 'escala',
   'z', 'zorder', 'zindex', 'linha', 'coluna', 'row', 'col', 'column', 'eixo', 'axis',
-  'style', 'estilo', 'color', 'color', 'fill', 'stroke',
+  'style', 'style', 'color', 'color', 'fill', 'stroke',
 ];
 
 const falhas = [];

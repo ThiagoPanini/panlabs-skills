@@ -5,7 +5,7 @@
  * não de grep.
  *
  * O critério de aceite do #23 é literal: *"`node <raiz>/engine/generate.cjs <modelo>
- * --saida <x>` funciona a partir da raiz da skill, sem depender de nada dentro de
+ * --output <x>` funciona a partir da raiz da skill, sem depender de nada dentro de
  * `prototypes/`"*. Um grep por `prototypes` acharia o caminho escrito à mão e
  * perderia o caminho montado (`path.join(dir, '..', '..')`), que é justamente
  * como todos os protótipos se referenciavam.
@@ -91,16 +91,16 @@ async function main() {
   const { execFileSync } = require('child_process');
   const os = require('os');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sem-proto-'));
-  const saida = path.join(tmp, 'x.drawio');
+  const output = path.join(tmp, 'x.drawio');
   let cli = true;
   try {
     execFileSync(process.execPath,
-      [path.join(RAIZ, 'engine', 'generate.cjs'), path.join(RAIZ, 'models', 'web-multi-az.json'), '--saida', saida],
+      [path.join(RAIZ, 'engine', 'generate.cjs'), path.join(RAIZ, 'models', 'web-multi-az.json'), '--output', output],
       { stdio: 'ignore', cwd: RAIZ });
   } catch (e) { cli = false; }
-  ok(cli && fs.existsSync(saida) && fs.statSync(saida).size > 0,
-    'node engine/generate.cjs <modelo> --saida <x> roda a partir da raiz da skill',
-    cli ? `${fs.statSync(saida).size} bytes` : 'a CLI falhou');
+  ok(cli && fs.existsSync(output) && fs.statSync(output).size > 0,
+    'node engine/generate.cjs <modelo> --output <x> roda a partir da raiz da skill',
+    cli ? `${fs.statSync(output).size} bytes` : 'a CLI falhou');
   fs.rmSync(tmp, { recursive: true, force: true });
 
   console.log(falhas

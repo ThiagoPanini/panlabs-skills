@@ -71,7 +71,7 @@ const CASOS = [
     because: 'traço fino reprova a 3:1 — é o par que a WCAG 1.4.11 nomeia',
     rule: 'A7.2',
     plano: { background: '#FFFFFF', celulas: [
-      { id: 'e1', kind: 'aresta', pai: '1', from: 'a', to: 'b', label: '',
+      { id: 'e1', kind: 'edge', pai: '1', from: 'a', to: 'b', label: '',
         style: 'edgeStyle=orthogonalEdgeStyle;strokeColor=#DDDDDD;' } ] },
   },
   {

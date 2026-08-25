@@ -52,12 +52,12 @@ const PINTURA = [
   ['tinta.forte', { ink: { strong: '#111111' } }],
   ['tinta.fraca', { ink: { weak: '#444444' } }],
   ['tinta.halo', { ink: { halo: '#FFFFF0' } }],
-  ['aresta.cor', { aresta: { color: '#545B64' } }],
-  ['aresta.espessura', { aresta: { thickness: 2.4 } }],
-  ['aresta.ponta', { aresta: { tip: 'open' } }],
-  ['aresta.cantos', { aresta: { corners: 0 } }],
-  ['aresta.saltos', { aresta: { jumps: 'none' } }],
-  ['aresta.fluxo', { aresta: { flow: 'dashed' } }],
+  ['aresta.cor', { edge: { color: '#545B64' } }],
+  ['aresta.espessura', { edge: { thickness: 2.4 } }],
+  ['aresta.ponta', { edge: { tip: 'open' } }],
+  ['aresta.cantos', { edge: { corners: 0 } }],
+  ['aresta.saltos', { edge: { jumps: 'none' } }],
+  ['aresta.fluxo', { edge: { flow: 'dashed' } }],
   ['nota.fundo', { note: { background: '#EEEEEE' } }],
   ['nota.borda', { note: { edge: '#555555' } }],
   ['nota.tinta', { note: { ink: '#000000' } }],
@@ -82,7 +82,7 @@ const METRICA = [
   ['pagina.margem', { page: { margin: 56 } }],
   ['texto.rotulo', { text: { label: 16 } }],
   ['texto.grupo', { text: { group: 18 } }],
-  ['texto.aresta', { text: { aresta: 16 } }],
+  ['texto.aresta', { text: { edge: 16 } }],
   ['texto.titulo', { text: { title: 30 } }],
   ['texto.subtitulo', { text: { subtitle: 18 } }],
   ['texto.qualificador', { text: { qualifier: true } }],
@@ -108,10 +108,10 @@ function semPayload(xml) {
 }
 
 /** Assinatura de geometria: id -> x,y,w,h. Pintura não pode mudar nenhuma. */
-function geometria(plano) {
+function geometry(plano) {
   const m = new Map();
   for (const c of plano.celulas) {
-    if (c.kind === 'aresta') { m.set(c.id, JSON.stringify(c.pontos || [])); continue; }
+    if (c.kind === 'edge') { m.set(c.id, JSON.stringify(c.pontos || [])); continue; }
     m.set(c.id, `${Math.round(c.geo.x)},${Math.round(c.geo.y)},${Math.round(c.geo.w)},${Math.round(c.geo.h)}`);
   }
   return m;
@@ -128,10 +128,10 @@ function diferencas(a, b) {
 }
 
 async function main() {
-  const base = await gerar(MODELO, { tema: 'light', forcar: true });
-  const g0 = geometria(base.plano);
-  const baseLog = await gerar(LOGICO, { tema: 'light', forcar: true });
-  const gLog = geometria(baseLog.plano);
+  const base = await gerar(MODELO, { tema: 'light', force: true });
+  const g0 = geometry(base.plano);
+  const baseLog = await gerar(LOGICO, { tema: 'light', force: true });
+  const gLog = geometry(baseLog.plano);
   let falhou = 0;
 
   console.log(`referência: tema "claro" · técnico ${g0.size} células · lógico ${gLog.size} células\n`);
@@ -140,8 +140,8 @@ async function main() {
     const modelo = ehLogico ? LOGICO : MODELO;
     const ref = ehLogico ? gLog : g0;
     const refXml = ehLogico ? baseLog.xml : base.xml;
-    const r = await gerar(modelo, { tema: temaMod.comPatch('light', patch), forcar: true });
-    const d = diferencas(ref, geometria(r.plano));
+    const r = await gerar(modelo, { tema: temaMod.comPatch('light', patch), force: true });
+    const d = diferencas(ref, geometry(r.plano));
     const inerte = semPayload(r.xml) === semPayload(refXml);
     if (d.length) {
       console.log(`  ✗ ${name.padEnd(20)} moveu ${d.length} célula(s): ${d.slice(0, 2).join(' · ')}`);
@@ -157,8 +157,8 @@ async function main() {
 
   console.log('\nMÉTRICA — tem de mover alguma coisa');
   for (const [name, patch] of METRICA) {
-    const r = await gerar(MODELO, { tema: temaMod.comPatch('light', patch), forcar: true });
-    const d = diferencas(g0, geometria(r.plano));
+    const r = await gerar(MODELO, { tema: temaMod.comPatch('light', patch), force: true });
+    const d = diferencas(g0, geometry(r.plano));
     if (!d.length) { console.log(`  ✗ ${name.padEnd(20)} NÃO moveu nada — o motor está ignorando o token`); falhou = 1; }
     else console.log(`  ✓ ${name.padEnd(20)} moveu ${String(d.length).padStart(2)} célula(s)`);
   }

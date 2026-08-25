@@ -70,8 +70,8 @@ const PADRAO = {
     page: { color: '#FFFFFF', margin: 32 },
     group:  { tint: 'derived' },
     ink:  { strong: '#232F3E', weak: '#5A6C86', halo: '#FFFFFF' },
-    text:  { family: 'Arial,Helvetica', label: 12, group: 12, aresta: 10, title: 19, subtitle: 12, qualifier: false },
-    aresta: { color: '#232F3E', thickness: 1.6, tip: 'blockThin', corners: 12, jumps: 'arc', flow: 'solid' },
+    text:  { family: 'Arial,Helvetica', label: 12, group: 12, edge: 10, title: 19, subtitle: 12, qualifier: false },
+    edge: { color: '#232F3E', thickness: 1.6, tip: 'blockThin', corners: 12, jumps: 'arc', flow: 'solid' },
     gap:  { base: 8, density: 1.0 },
     note:   { background: '#FFF8E1', edge: '#B7791F', ink: '#6B4E00' },
     block:  { background: '#FFFFFF', edge: '#232F3E', corners: 12 },
@@ -92,8 +92,8 @@ const PADRAO = {
     // passaria) confunde duas coisas diferentes no mesmo hex — e torna impossível
     // afirmar no pixel que o rótulo cinza do VPC não sobrou em lugar nenhum.
     ink:  { strong: '#FFFFFF', weak: '#B4B4B4', halo: '#1C1C1C' },
-    text:  { family: 'Arial,Helvetica', label: 12, group: 12, aresta: 10, title: 19, subtitle: 12, qualifier: false },
-    aresta: { color: '#EDEDED', thickness: 1.6, tip: 'blockThin', corners: 12, jumps: 'arc', flow: 'solid' },
+    text:  { family: 'Arial,Helvetica', label: 12, group: 12, edge: 10, title: 19, subtitle: 12, qualifier: false },
+    edge: { color: '#EDEDED', thickness: 1.6, tip: 'blockThin', corners: 12, jumps: 'arc', flow: 'solid' },
     gap:  { base: 8, density: 1.0 },
     note:   { background: '#2A2416', edge: '#8A6D3B', ink: '#F3DFAE' },
     block:  { background: '#242424', edge: '#FFFFFF', corners: 12 },
@@ -191,7 +191,7 @@ function montar(bruto, t) {
   const metrica = {
     largCar: porPt(t.text.label),
     altLinha: 17 * (t.text.label / 12),
-    largCarAresta: porPt(t.text.aresta),
+    largCarAresta: porPt(t.text.edge),
     largCarGrupo: porPt(t.text.group),
   };
 
@@ -249,7 +249,7 @@ function montar(bruto, t) {
     },
 
     /** Folha AWS: fonte e tinta. A cor do quadrado é da categoria — intocável. */
-    service(style, entrada) {
+    service(style, input) {
       const chaves = { fontColor: t.ink.strong, fontFamily: t.text.family, fontSize: t.text.label };
       /**
        * `strokeColor` num shape aws4 pinta o GLIFO, não a borda (#4 §3.2). Nos
@@ -266,13 +266,13 @@ function montar(bruto, t) {
        *
        * Enquanto o motor e o validador rodavam separados, ninguém tinha visto.
        */
-      if (entrada && PALETAS_MONO.has(entrada.palette) && t.background === 'dark')
+      if (input && PALETAS_MONO.has(input.palette) && t.background === 'dark')
         chaves.fillColor = norm.mono;
       return aplicar(style, chaves);
     },
 
     /** Faixa derivada (AZ, Auto Scaling): halo no rótulo, que nasce sobre borda alheia. */
-    faixa(style) {
+    band(style) {
       return aplicar(style, {
         fontColor: t.ink.strong, fontFamily: t.text.family, fontSize: t.text.group,
         labelBackgroundColor: t.ink.halo,
@@ -290,17 +290,17 @@ function montar(bruto, t) {
       `fontFamily=${t.text.family};align=left;verticalAlign=middle;`,
 
     /** Aresta. N9/A11 do #5: a seta oficial é SEMPRE sólida — tracejado paga dívida. */
-    aresta(extra = {}) {
+    edge(extra = {}) {
       const base = {
         edgeStyle: 'orthogonalEdgeStyle', html: 1, jettySize: 'auto', orthogonalLoop: 1,
-        rounded: t.aresta.corners > 0 ? 1 : 0,
-        strokeColor: t.aresta.color, strokeWidth: t.aresta.thickness,
-        endArrow: t.aresta.tip, endFill: t.aresta.tip === 'open' ? 0 : 1, endSize: 6,
-        fontSize: t.text.aresta, fontFamily: t.text.family, fontColor: t.ink.strong,
+        rounded: t.edge.corners > 0 ? 1 : 0,
+        strokeColor: t.edge.color, strokeWidth: t.edge.thickness,
+        endArrow: t.edge.tip, endFill: t.edge.tip === 'open' ? 0 : 1, endSize: 6,
+        fontSize: t.text.edge, fontFamily: t.text.family, fontColor: t.ink.strong,
         labelBackgroundColor: t.ink.halo,
-        ...(t.aresta.corners > 0 ? { arcSize: t.aresta.corners } : {}),
-        ...(t.aresta.jumps !== 'none' ? { jumpStyle: t.aresta.jumps, jumpSize: 6 } : {}),
-        ...FLUXO[t.aresta.flow],
+        ...(t.edge.corners > 0 ? { arcSize: t.edge.corners } : {}),
+        ...(t.edge.jumps !== 'none' ? { jumpStyle: t.edge.jumps, jumpSize: 6 } : {}),
+        ...FLUXO[t.edge.flow],
         ...extra,
       };
       return Object.entries(base).map(([k, v]) => `${k}=${v}`).join(';') + ';';
@@ -348,13 +348,13 @@ function montar(bruto, t) {
       `fontFamily=${t.text.family};align=left;verticalAlign=middle;`,
 
     /** `E4`/`X3`: a linha do barramento. Sem ponta — quem tem ponta é o stub. */
-    barramento: () => `endArrow=none;html=1;strokeColor=${t.aresta.color};` +
-      `strokeWidth=${t.aresta.thickness};`,
+    barramento: () => `endArrow=none;html=1;strokeColor=${t.edge.color};` +
+      `strokeWidth=${t.edge.thickness};`,
 
     /** O stub perpendicular que entra na conta, e a aresta agregada do `E3`. */
-    stub: () => `edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=${t.aresta.color};` +
-      `strokeWidth=${t.aresta.thickness};endArrow=${t.aresta.tip};` +
-      `endFill=${t.aresta.tip === 'open' ? 0 : 1};endSize=6;fontSize=${t.text.aresta};` +
+    stub: () => `edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=${t.edge.color};` +
+      `strokeWidth=${t.edge.thickness};endArrow=${t.edge.tip};` +
+      `endFill=${t.edge.tip === 'open' ? 0 : 1};endSize=6;fontSize=${t.text.edge};` +
       `fontFamily=${t.text.family};fontColor=${t.ink.strong};labelBackgroundColor=${t.ink.halo};`,
 
     /**
@@ -363,8 +363,8 @@ function montar(bruto, t) {
      * distinção que o subtítulo faz no bloco de título.
      */
     habilitador: () => `edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=${t.ink.weak};` +
-      `strokeWidth=1.4;dashed=1;dashPattern=6 4;endArrow=${t.aresta.tip};` +
-      `endFill=${t.aresta.tip === 'open' ? 0 : 1};endSize=6;`,
+      `strokeWidth=1.4;dashed=1;dashPattern=6 4;endArrow=${t.edge.tip};` +
+      `endFill=${t.edge.tip === 'open' ? 0 : 1};endSize=6;`,
 
     /**
      * O rótulo da folha. `qualificador` é o O21 do #5 — "Amazon Route 53 /

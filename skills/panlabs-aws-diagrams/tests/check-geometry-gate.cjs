@@ -26,7 +26,7 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..');
-const { portao, NIVEIS } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
+const { gate, NIVEIS } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
 const { CASOS, CONTROLE } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 const { emitir, conferirXml } = require(path.join(RAIZ, 'engine', 'emit.cjs'));
 const { gerar } = require(path.join(RAIZ, 'engine', 'generate.cjs'));
@@ -62,7 +62,7 @@ const anota = (ok, o_que, detail) => {
     if (!mentiroso) { anota(false, `há um caso plantado para ${id}`); continue; }
     let lancou = null;
     try {
-      portao(mentiroso.plano, { modelo: mentiroso.modelo, nivel: 'veracidade' });
+      gate(mentiroso.plano, { modelo: mentiroso.modelo, nivel: 'veracidade' });
     } catch (e) { lancou = e; }
 
     anota(!!lancou, `nível "veracidade" barra o plano que mente por ${id} ("${mentiroso.name}")`,
@@ -80,7 +80,7 @@ const anota = (ok, o_que, detail) => {
 {
   // Um plano correto no nível `nenhum` tem de passar…
   let passou = true;
-  try { portao(CONTROLE.plano, { modelo: CONTROLE.modelo, nivel: 'none' }); }
+  try { gate(CONTROLE.plano, { modelo: CONTROLE.modelo, nivel: 'none' }); }
   catch { passou = false; }
   anota(passou, 'nível "nenhum" deixa passar um plano correto');
 
@@ -104,7 +104,7 @@ const anota = (ok, o_que, detail) => {
     let barrou = null;
     try {
       // é ISTO que entra em `generate.cjs`, nas duas linhas documentadas em gate.cjs
-      laudo = portao(r.plano, { nivel: 'veracidade' });
+      laudo = gate(r.plano, { nivel: 'veracidade' });
     } catch (e) { barrou = e; }
 
     anota(!barrou, 'o diagrama bom do #11 passa o portão de veracidade',

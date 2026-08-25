@@ -53,7 +53,7 @@ function corpus() {
   }
 
   const w = Math.max(...linhas.map(l => l.name.length));
-  console.log(`  ${'modelo'.padEnd(w)}  nós  ach  teto        regras que dispararam`);
+  console.log(`  ${'model'.padEnd(w)}  nós  ach  teto        regras que dispararam`);
   for (const l of linhas)
     console.log(`  ${l.name.padEnd(w)}  ${String(l.nodes).padStart(3)}  ${String(l.n).padStart(3)}  ` +
       `${String(l.teto).padStart(4)} ${l.ok ? ' ' : '⛔'}   ${l.regras}`);

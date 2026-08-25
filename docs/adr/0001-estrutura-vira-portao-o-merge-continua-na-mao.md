@@ -17,6 +17,8 @@ A [`docs/agents/workflow.md`](../agents/workflow.md) fechava prometendo este doc
 A reabertura veio de outra dor: **implementações de skill saindo desalinhadas, sem diretiva que diga a um agente o que se espera dele antes de escrever, e sem nada medindo o que ele escreveu.** Não é a dor que o gatilho vigiava.
 
 **Uma marca no contador, e uma não é duas.** A leitura que produziu este documento achou **uma** ocorrência da forma que o gatilho de fato vigia: `7d20bfa` mudou `motor/planejar.cjs` sem regenerar `tests/motor.manifesto.json`, e a suíte de `panlabs-aws-diagrams` está vermelha na `origin/main` desde então — *"o motor mudou desde a última medição da suíte"*. É exatamente a classe que a doutrina já nomeia em **Derivado não se mergeia, se regenera**. Mas o gatilho pede **duas** no mesmo mês, e esta é uma — então ele continua sem ter disparado, e este ADR **não se apoia nela**. Fica registrada como a primeira marca no contador dele, para quem for conferir depois.
+>
+> **Desfecho.** O vermelho foi apagado pelo [#53](https://github.com/ThiagoPanini/panlabs-skills/issues/53), que renomeou a árvore inteira e por isso teve de regenerar o manifesto de qualquer forma — pela regra do derivado, `--write`, não escolha de lado. A [#80](https://github.com/ThiagoPanini/panlabs-skills/issues/80), aberta só para esse conserto, foi absorvida ali. **A marca no contador continua valendo**: ela conta o merge verde que quebrou a árvore, e esse merge aconteceu — quem o consertou, e quando, não desconta o evento. Os dois caminhos citados acima hoje se chamam `engine/plan.cjs` e `tests/engine.manifest.json`.
 
 ### O gatilho mede quebra; a dor é deriva
 

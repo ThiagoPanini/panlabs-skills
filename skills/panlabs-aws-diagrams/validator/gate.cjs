@@ -26,7 +26,7 @@
  *   aviso mesmo sem ninguém pedir portão. Um portão que só existe quando alguém
  *   pede é um portão que ninguém sabe que existe.
  *
- *   BLOQUEAR É OPT-IN (`--portao <nível>`, default `nenhum`) — e isto é o que
+ *   BLOQUEAR É OPT-IN (`--gate <nível>`, default `nenhum`) — e isto é o que
  *   esta seção já dizia com outras palavras: `veracidade` é o default de um
  *   portão de PUBLICAÇÃO. Publicar e desenhar não são o mesmo ato, e recusar
  *   desenhar tem hora.
@@ -53,7 +53,7 @@ const NIVEIS = {
   none: () => false,
   veracidade: laudo => laudo.semanticas.length > 0,
   falha: laudo => laudo.falhas.length > 0,
-  estrito: laudo => laudo.falhas.length > 0 || laudo.avisos.length > 0,
+  strict: laudo => laudo.falhas.length > 0 || laudo.avisos.length > 0,
 };
 
 /**
@@ -67,7 +67,7 @@ const NIVEIS = {
  * @returns {object} o laudo, quando passa
  * @throws {Error} com `.erros` (linhas legíveis) e `.laudo`, quando barra
  */
-function portao(plano, opts = {}) {
+function gate(plano, opts = {}) {
   const laudo = validarGeometria(plano, opts);
   const nivel = opts.nivel || (opts.bloquear ? 'falha' : 'none');
   const barra = NIVEIS[nivel];
@@ -90,7 +90,7 @@ function portao(plano, opts = {}) {
     linhas.push(`${r.id} ${r.name}${r.semantica ? ' (o desenho afirma o que o modelo nega)' : ''}: ${r.mensagem}`);
     for (const o of r.occurrences.slice(0, 3)) linhas.push(`    · ${o.o_que}`);
   }
-  if (nivel === 'estrito') for (const r of laudo.avisos) linhas.push(`${r.id} ${r.name}: ${r.mensagem}`);
+  if (nivel === 'strict') for (const r of laudo.avisos) linhas.push(`${r.id} ${r.name}: ${r.mensagem}`);
 
   const erro = new Error(incompleto
     ? 'laudo geométrico incompleto — há checagem que não rodou'
@@ -100,4 +100,4 @@ function portao(plano, opts = {}) {
   throw erro;
 }
 
-module.exports = { portao, NIVEIS, formatar };
+module.exports = { gate, NIVEIS, formatar };

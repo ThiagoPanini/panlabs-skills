@@ -119,12 +119,12 @@ function costurar(xmlsPorPagina, opts = {}) {
   const repetidos = ids.filter((x, i) => ids.indexOf(x) !== i);
   if (repetidos.length) throw new Error(`paginas com o mesmo id: ${repetidos.join(', ')}`);
 
-  const saida = `<mxfile host="${esc(opts.host || 'panlabs-aws-diagrams')}" compressed="false">\n` +
+  const output = `<mxfile host="${esc(opts.host || 'panlabs-aws-diagrams')}" compressed="false">\n` +
     diagramas.join('\n') + '\n</mxfile>\n';
 
-  const erros = conferirXml(saida);
+  const erros = conferirXml(output);
   if (erros.length) { const e = new Error('a costura produziu XML mal formado'); e.erros = erros; throw e; }
-  return saida;
+  return output;
 }
 
 module.exports = { selar, costurar, ESQUEMA_SELO };

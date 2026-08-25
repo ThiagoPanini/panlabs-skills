@@ -27,7 +27,7 @@ function pisoDeTexto(px, negrito) {
 }
 
 module.exports = function a7(cena) {
-  const saida = [];
+  const output = [];
   const { nodes, grupos, bands, edges } = cena;
   const rotulaveis = [...nodes, ...grupos, ...bands];
 
@@ -55,7 +55,7 @@ module.exports = function a7(cena) {
       if (razao < piso) casos.push({ o_que: `a aresta "${a.id}": ${a.corDaFonte} sobre ${background} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1)`, ids: [a.id] });
     }
     const pior = medidos.length ? medidos.reduce((m, x) => (x.razao < m.razao ? x : m)) : null;
-    saida.push(medidos.length
+    output.push(medidos.length
       ? conforme('A7.1', casos, { medida: { textos: medidos.length, pior: pior && { id: pior.id, razao: pior.razao }, abaixo_do_piso: casos.length } })
       : notApplicable('A7.1', 'não há texto para medir'));
   }
@@ -89,7 +89,7 @@ module.exports = function a7(cena) {
       const tip = a.pontos[a.pontos.length - 1];
       contra(a.id, a.traco, tip, a.z, `a ponta de seta de "${a.id}"`);
     }
-    saida.push(medidos ? conforme('A7.2', casos, { medida: { elementos_medidos: medidos, abaixo_do_piso: casos.length, piso } })
+    output.push(medidos ? conforme('A7.2', casos, { medida: { elementos_medidos: medidos, abaixo_do_piso: casos.length, piso } })
       : notApplicable('A7.2', 'não há traço nem preenchimento para medir'));
   }
 
@@ -104,8 +104,8 @@ module.exports = function a7(cena) {
       if (!porSignificado.has(chave))
         porSignificado.set(chave, {
           preenchimento: e.preenchimento, traco: e.traco,
-          estiloDeTraco: e.estilo.dashed === '1' ? 'dashed' : 'solid',
-          forma: e.estilo.shape || (e.estilo.container === '1' ? 'container' : 'caixa'),
+          estiloDeTraco: e.style.dashed === '1' ? 'dashed' : 'solid',
+          forma: e.style.shape || (e.style.container === '1' ? 'container' : 'caixa'),
           ids: [],
         });
       porSignificado.get(chave).ids.push(e.id);
@@ -116,7 +116,7 @@ module.exports = function a7(cena) {
         && a.estiloDeTraco === b.estiloDeTraco && a.forma === b.forma && a.traco === b.traco;
       if (soCor) casos.push({ o_que: `"${na}" e "${nb}" só se distinguem pela cor de preenchimento (${a.preenchimento} vs ${b.preenchimento})`, ids: [...a.ids.slice(0, 3), ...b.ids.slice(0, 3)] });
     }
-    saida.push(porSignificado.size > 1
+    output.push(porSignificado.size > 1
       ? conforme('A7.3', casos, { medida: { significados: porSignificado.size, so_por_cor: casos.length } })
       : notApplicable('A7.3', 'há menos de dois significados distintos para comparar'));
   }
@@ -139,7 +139,7 @@ module.exports = function a7(cena) {
       anotaCor(e.traco, chave);
     }
     const cores = [...porCor.keys()];
-    if (cores.length < 2) saida.push(notApplicable('A7.4', 'menos de duas cores em uso'));
+    if (cores.length < 2) output.push(notApplicable('A7.4', 'menos de duas cores em uso'));
     else {
       const casos = [];
       let pior = { deltaE: Infinity };
@@ -155,7 +155,7 @@ module.exports = function a7(cena) {
             casos.push({ o_que: `${a} e ${b} ficam a ΔE00 = ${arredonda(d, 2)} sob ${kind} (mínimo ${minimo}) — ${[...ma].join('/')} vs ${[...mb].join('/')}`, ids: [] });
         }
       }
-      saida.push(conforme('A7.4', casos, {
+      output.push(conforme('A7.4', casos, {
         medida: { cores: cores.length, canais: 'preenchimento e traço', pior_par: pior.deltaE === Infinity ? null : pior, minimo },
         mensagem: casos.length ? `${casos.length} par(es) de cores indistinguíveis sob alguma deficiência` : 'as cores de significados distintos se separam nas três simulações',
       }));
@@ -171,25 +171,25 @@ module.exports = function a7(cena) {
   // ela ocupa a linha do relatório e devolve verde.
   {
     if (!cena.legend.length) {
-      saida.push(notApplicable('A7.5', 'não há legenda para medir — a ausência dela já é reportada por A1.2, e contar duas vezes inflaria o mesmo defeito'));
+      output.push(notApplicable('A7.5', 'não há legenda para medir — a ausência dela já é reportada por A1.2, e contar duas vezes inflaria o mesmo defeito'));
     } else {
       const casos = [];
       const background = cena.background;
-      for (const [i, entrada] of cena.legend.entries()) {
-        const quem = entrada.id || `legenda[${i}]`;
-        const text = semTags(entrada.significado || entrada.text || '');
-        const px = Number(entrada.tamanhoDaFonte) || 12;
-        const corTexto = color.ehCor(entrada.corDaFonte) ? entrada.corDaFonte : '#000000';
-        const fundoDaEntrada = color.ehCor(entrada.background) ? entrada.background : background;
+      for (const [i, input] of cena.legend.entries()) {
+        const quem = input.id || `legenda[${i}]`;
+        const text = semTags(input.significado || input.text || '');
+        const px = Number(input.tamanhoDaFonte) || 12;
+        const corTexto = color.ehCor(input.corDaFonte) ? input.corDaFonte : '#000000';
+        const fundoDaEntrada = color.ehCor(input.background) ? input.background : background;
 
         if (text) {
           const razao = color.contraste(corTexto, fundoDaEntrada);
-          const { piso, grande } = pisoDeTexto(px, !!entrada.negrito);
+          const { piso, grande } = pisoDeTexto(px, !!input.negrito);
           if (razao !== null && razao < piso)
             casos.push({ o_que: `${quem}: o texto ${corTexto} sobre ${fundoDaEntrada} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1 para ${grande ? 'texto grande' : `${px} px`})`, ids: [quem] });
         }
         // a amostra de cor é objeto gráfico, não texto: piso de A7.2
-        const amostra = entrada.simbolo && entrada.simbolo.color ? entrada.simbolo.color : entrada.color;
+        const amostra = input.simbolo && input.simbolo.color ? input.simbolo.color : input.color;
         if (color.ehCor(amostra)) {
           const razao = color.contraste(amostra, fundoDaEntrada);
           const piso = lim('contrasteNaoTextual');
@@ -197,12 +197,12 @@ module.exports = function a7(cena) {
             casos.push({ o_que: `${quem}: a amostra ${amostra} sobre ${fundoDaEntrada} dá ${arredonda(razao, 2)}:1 (piso ${piso}:1)`, ids: [quem] });
         }
       }
-      saida.push(conforme('A7.5', casos, {
+      output.push(conforme('A7.5', casos, {
         medida: { entradas: cena.legend.length, abaixo_do_piso: casos.length },
         mensagem: casos.length ? `${casos.length} entrada(s) de legenda abaixo do piso` : `${cena.legend.length} entrada(s) de legenda dentro dos pisos`,
       }));
     }
   }
 
-  return saida;
+  return output;
 };

@@ -32,7 +32,7 @@ julgamento, o critério está escrito como comando.
 |---|---|
 | necessidade em prosa, ata de reunião, foto de quadro branco | nada — siga para o passo 2 |
 | um `.drawio` de sessão anterior | `node tools/resume.cjs <arquivo>` |
-| um modelo já escrito (`model@1`) | `node engine/generate.cjs <modelo.json> --saida x.drawio` — e pare aqui, o arco acabou |
+| um modelo já escrito (`model@1`) | `node engine/generate.cjs <modelo.json> --output x.drawio` — e pare aqui, o arco acabou |
 
 **Fecha quando** a porta certa foi acionada: na segunda, o **briefing** já está
 impresso. Ele devolve o acordo, as candidatas descartadas com o motivo, os achados
@@ -101,12 +101,12 @@ A aprovação não é um booleano. `aprovar()` guarda o **recorte** da projeçã
 lógica aprovada; `conferir()` reprojeta o modelo de hoje e compara.
 
 ```bash
-node tools/approve.cjs <caso>-logica.json --por <quem> --saida output/<caso>.drawio
+node tools/approve.cjs <caso>-logica.json --by <quem> --output output/<caso>.drawio
 ```
 
-`--candidata` sai do próprio dossiê: a sabatina marcou a vencedora com
+`--candidate` sai do próprio dossiê: a sabatina marcou a vencedora com
 `estado: "escolhida"` no passo 3, e o comando lê de lá em vez de pedir de volta o
-que já recebeu. Passe `--candidata <id>` só quando nenhuma estiver marcada.
+que já recebeu. Passe `--candidate <id>` só quando nenhuma estiver marcada.
 
 **Fecha quando** o comando imprime `conferir  ✓ o acordo confere` e o `.drawio`
 está gravado.
@@ -148,7 +148,7 @@ que a resposta certa é aprovação nova, não desenho novo.
 - `conferir()` continua `ok` — a projeção lógica de hoje ainda é byte a byte a
   aprovada, mesmo depois de a fase técnica ter enfiado VPC e subnet entre a folha
   e a fronteira;
-- `node engine/generate.cjs <modelo> --portao veracidade` passa — nenhuma falha
+- `node engine/generate.cjs <modelo> --gate veracidade` passa — nenhuma falha
   semântica, isto é, o desenho não afirma fronteira de rede que o modelo nega.
 
 ### 7 · Publique a cópia que circula
@@ -159,7 +159,7 @@ o time recusou, fala de reunião, quem aprovou —, tudo legível em *Extras ›
 diagrama*.
 
 ```bash
-node session/publish.cjs output/<caso>.drawio --saida output/<caso>.publicado.drawio
+node session/publish.cjs output/<caso>.drawio --output output/<caso>.publicado.drawio
 ```
 
 **Fecha quando** o selo da cópia diz `published@1` e o comando reporta quantos
@@ -170,16 +170,16 @@ tomados**; fica o que é sobre a arquitetura desenhada.
 
 | | |
 |---|---|
-| `node engine/generate.cjs <m.json> --saida x.drawio` | desenha. `--tema claro\|escuro\|corporativo` · `--fluxo solido\|tracejado\|animado` · `--portao nenhum\|veracidade\|falha\|estrito` · `--explicar` |
-| `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--exemplos` roda o corpus, `--json` para ler no código |
+| `node engine/generate.cjs <m.json> --output x.drawio` | desenha. `--theme claro\|escuro\|corporativo` · `--flow solido\|tracejado\|animado` · `--gate nenhum\|veracidade\|falha\|estrito` · `--explain` |
+| `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda o corpus, `--json` para ler no código |
 | `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas do passo 4. `--corpus` roda a régua inteira |
 | `node catalog/aws-shapes.cjs <nome>...` | resolve nome → shape, com as correções aplicadas |
-| `node tools/approve.cjs <sessao.json>` | passo 5: aprova a vista lógica e grava o `.drawio` que retoma. `--por` · `--candidata` · `--em` · `--saida` |
+| `node tools/approve.cjs <sessao.json>` | passo 5: aprova a vista lógica e grava o `.drawio` que retoma. `--by` · `--candidate` · `--at` · `--output` |
 | `node tools/resume.cjs <arq.drawio>` | passos 1 e 6: reconhece o arquivo, classifica as páginas e imprime o briefing. Com `--delta <d.json>`, elabora a vista técnica e grava as duas |
 | `node session/publish.cjs <arq.drawio>` | a cópia que sai de casa |
 | `./tests/run.sh` | a régua inteira, em 8 camadas |
 
-`--explicar` é a trilha de auditoria: mostra como cada nome caiu no catálogo, de
+`--explain` é a trilha de auditoria: mostra como cada nome caiu no catálogo, de
 onde saiu a camada de rede de cada subnet, e o laudo geométrico página a página.
 É a primeira coisa a rodar quando o desenho saiu diferente do esperado.
 
@@ -190,9 +190,9 @@ consertar.
 
 | recusa | porque |
 |---|---|
-| modelo fora do esquema | o contrato é o contrato — e a mensagem sugere o vizinho (`"dentroo"` → *você quis dizer "dentro"?*) |
+| modelo fora do esquema | o contrato é o contrato — e a mensagem sugere o vizinho (`"insidee"` → *você quis dizer "inside"?*) |
 | XML mal formado | o draw.io renderiza **truncado com código 0**. O renderizador não reclama, então quem reclama é o gerador |
-| tema que reprova no contraste | rótulo que some não dá erro em lugar nenhum. `--forcar` gera assim mesmo, para o estrago poder ser visto |
+| tema que reprova no contraste | rótulo que some não dá erro em lugar nenhum. `--force` gera assim mesmo, para o estrago poder ser visto |
 | subnet sem camada de rede, no caminho da grade | a ordem das linhas **é** o desenho, e ordem inventada põe a camada de dados em cima |
 | nó que o caminho da grade não modela | omitir em silêncio é o diagrama que mente por ausência |
 | laudo incompleto, em qualquer nível de portão | se uma família de checagem parou de rodar, o verde não quer dizer nada |

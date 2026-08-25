@@ -32,7 +32,7 @@ function bfs(inicio, vizinhos) {
 }
 
 module.exports = function a6(cena) {
-  const saida = [];
+  const output = [];
   const { nodes, edges, canvas } = cena;
   const centros = new Map(nodes.map(n => [n.id, g.centro(n.caixa)]));
 
@@ -57,7 +57,7 @@ module.exports = function a6(cena) {
       registra(a.to, a.pontos[a.pontos.length - 1], a.pontos[a.pontos.length - 2] || a.pontos[0]);
     }
     const comGrau = [...incidentes.entries()].filter(([, angs]) => angs.length > 1);
-    if (!comGrau.length) saida.push(notApplicable('A6.1', 'nenhum nó tem duas ou mais arestas incidentes'));
+    if (!comGrau.length) output.push(notApplicable('A6.1', 'nenhum nó tem duas ou mais arestas incidentes'));
     else {
       const q1 = lim('resolucaoAngularQ1');
       const pisoAbsoluto = lim('anguloIncidenteMinimo');
@@ -89,7 +89,7 @@ module.exports = function a6(cena) {
         AR, nos_com_grau_maior_que_um: comGrau.length, piso_absoluto: pisoAbsoluto,
         angulos_reconstruidos: algumSemAncora,
       };
-      saida.push(apertados.length
+      output.push(apertados.length
         ? falha('A6.1', { medida, mensagem: `${apertados.length} par(es) de arestas incidentes indistinguíveis`, occurrences: apertados })
         : reconstruidos.length
           ? aviso('A6.1', {
@@ -105,7 +105,7 @@ module.exports = function a6(cena) {
 
   // ---------------------------------------------------------------- A6.2
   {
-    if (nodes.length < 2) saida.push(notApplicable('A6.2', 'menos de dois nós'));
+    if (nodes.length < 2) output.push(notApplicable('A6.2', 'menos de dois nós'));
     else {
       const V = nodes.length;
       const env = g.envolvente(nodes.map(n => n.caixa));
@@ -127,7 +127,7 @@ module.exports = function a6(cena) {
       const NU = arredonda(dMax > 0 ? 1 - soma / dMax : 1);
       const q1 = lim('uniformidadeDeNosQ1');
       const medida = { NU, grade: `${colunas}×${linhas}`, nodes: V };
-      saida.push(NU < q1
+      output.push(NU < q1
         ? aviso('A6.2', { medida, mensagem: `NU = ${NU} < ${q1} (Q1) — há aglomerado e vazio`, occurrences: [{ o_que: `${[...celula.values()].filter(v => v === 0).length || T - celula.size} célula(s) da grade estão vazias`, ids: [] }] })
         : ok('A6.2', { medida, mensagem: `NU = ${NU}` }));
     }
@@ -136,7 +136,7 @@ module.exports = function a6(cena) {
   // ---------------------------------------------------------------- A6.3
   {
     const env = g.envolvente(cena.caixas.map(e => e.caixa));
-    if (!env || !env.w || !env.h) saida.push(notApplicable('A6.3', 'o desenho não tem área'));
+    if (!env || !env.w || !env.h) output.push(notApplicable('A6.3', 'o desenho não tem área'));
     else {
       // `Asp` é a métrica de Mooney e é `min/max` por definição — ela mede
       // alongamento, não orientação. Mas a SEGUNDA metade de A6.3, que compara
@@ -157,14 +157,14 @@ module.exports = function a6(cena) {
       const motivos = [];
       if (asp < q1) motivos.push({ o_que: `Asp = ${asp} < ${q1} (Q1): o desenho é uma faixa muito alongada`, ids: [] });
       if (diferenca > tol) motivos.push({ o_que: `a razão do desenho difere da do canvas em ${arredonda(diferenca * 100, 0)}% (tolerância ${arredonda(tol * 100, 0)}%): sobram faixas vazias`, ids: [] });
-      saida.push(motivos.length ? aviso('A6.3', { medida, mensagem: motivos.map(m => m.o_que).join('; '), occurrences: motivos })
+      output.push(motivos.length ? aviso('A6.3', { medida, mensagem: motivos.map(m => m.o_que).join('; '), occurrences: motivos })
         : ok('A6.3', { medida, mensagem: `Asp = ${asp}` }));
     }
   }
 
   // ---------------------------------------------------------------- A6.4
   {
-    if (nodes.length < 2) saida.push(notApplicable('A6.4', 'menos de dois nós'));
+    if (nodes.length < 2) output.push(notApplicable('A6.4', 'menos de dois nós'));
     else {
       const passo = lim('passoDaGrade');
       const minimo = lim('alinhamentoMinimo');
@@ -176,7 +176,7 @@ module.exports = function a6(cena) {
       const fracao = arredonda(alinhados.length / nodes.length);
       const medida = { fracao_alinhada: fracao, minimo, passo, nodes: nodes.length };
       const soltos = nodes.filter(n => !alinhados.includes(n)).map(n => ({ o_que: `${n.id} não compartilha eixo com nenhum outro nó`, ids: [n.id] }));
-      saida.push(fracao >= minimo
+      output.push(fracao >= minimo
         ? ok('A6.4', { medida, mensagem: `${arredonda(fracao * 100, 0)}% dos nós alinhados a pelo menos um outro` })
         : aviso('A6.4', { medida, mensagem: `só ${arredonda(fracao * 100, 0)}% alinhados (mínimo ${arredonda(minimo * 100, 0)}%)`, occurrences: soltos }));
     }
@@ -185,7 +185,7 @@ module.exports = function a6(cena) {
   // ---------------------------------------------------------------- A6.5
   {
     const comAresta = edges.filter(a => a.completa && centros.has(a.from) && centros.has(a.to));
-    if (comAresta.length < 2 || nodes.length < 3) saida.push(notApplicable('A6.5', 'grafo pequeno demais para stress ou preservação de vizinhança'));
+    if (comAresta.length < 2 || nodes.length < 3) output.push(notApplicable('A6.5', 'grafo pequeno demais para stress ou preservação de vizinhança'));
     else {
       const vizinhos = new Map(nodes.map(n => [n.id, []]));
       for (const a of comAresta) { vizinhos.get(a.from).push(a.to); vizinhos.get(a.to).push(a.from); }
@@ -200,7 +200,7 @@ module.exports = function a6(cena) {
         if (d === undefined) continue;
         paresConectados.push({ a, b, d, euclidiana: Math.hypot(centros.get(a.id).x - centros.get(b.id).x, centros.get(a.id).y - centros.get(b.id).y) });
       }
-      if (!paresConectados.length) saida.push(notApplicable('A6.5', 'o grafo é totalmente desconexo'));
+      if (!paresConectados.length) output.push(notApplicable('A6.5', 'o grafo é totalmente desconexo'));
       else {
         // escala ótima: minimiza Σ (α·euclidiana − d)²/d²  →  α = Σ(e/d) / Σ(e²/d²)
         const num = paresConectados.reduce((s, p) => s + p.euclidiana / p.d, 0);
@@ -232,12 +232,12 @@ module.exports = function a6(cena) {
         const motivos = [];
         if (NP < q1NP) motivos.push({ o_que: `NP = ${NP} < ${q1NP} (Q1)`, ids: [] });
         if (KSM < q1KSM) motivos.push({ o_que: `KSM = ${KSM} < ${q1KSM} (Q1)`, ids: [] });
-        saida.push(motivos.length
+        output.push(motivos.length
           ? aviso('A6.5', { medida, mensagem: `${motivos.map(m => m.o_que).join('; ')} — mas ver a ressalva: aqui a posição vem dos grupos, não do grafo`, occurrences: motivos })
           : ok('A6.5', { medida, mensagem: `NP = ${NP}, KSM = ${KSM}` }));
       }
     }
   }
 
-  return saida;
+  return output;
 };

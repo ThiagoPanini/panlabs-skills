@@ -91,16 +91,16 @@ medir() {
   echo "  ── $ROT"
   linha "#11 fronteira"        node "$Q11/tools/check-fronteira.cjs"
   linha "#11 validacao"        node "$Q11/tools/check-validation.cjs"
-  for m in "$Q11"/modelo/*.json; do
+  for m in "$Q11"/models/*.json; do
     linha "#11 gerar $(basename "$m" .json)" \
-      node "$Q11/engine/generate.cjs" "$m" --saida "$Q11/output/$(basename "$m" .json).drawio"
+      node "$Q11/engine/generate.cjs" "$m" --output "$Q11/output/$(basename "$m" .json).drawio"
   done
   linha "#11 determinismo"     node "$Q11/tools/check-determinism.cjs"
   linha "#12 gatilhos"         node "$Q12/tools/check-triggers.cjs"
-  for m in "$Q12"/modelo/*.json; do
+  for m in "$Q12"/models/*.json; do
     nome="$(basename "$m" .json)"
     linha "#12 gerar $nome" node "$Q11/engine/generate.cjs" "$m" \
-      --saida "$Q12/output/$(echo "$nome" | sed 's/-[0-9]*-contas$//;s/-3-az$//').drawio"
+      --output "$Q12/output/$(echo "$nome" | sed 's/-[0-9]*-contas$//;s/-3-az$//').drawio"
   done
   linha "#12 travessia"        node "$Q12/tools/check-traversal.cjs"
   linha "#12 determinismo"     node "$Q11/tools/check-determinism.cjs" "$Q12/modelo"
@@ -140,8 +140,8 @@ for f in align.cjs derive.cjs layout.cjs emit.cjs generate.cjs plan.cjs resolve.
     git -C "$REPO" show "$2" > "$b" 2>/dev/null || : > "$b"
     diff -u "$a" "$b" | grep -c '^[+-][^+-]' || true
   }
-  t="$(conta "$BASE:$P/q11/motor/$f" "$REF:$P/q13/motor/$f")"
-  m="$(conta "$BASE:$P/q11/motor/$f" "$REF:$P/q11/motor/$f")"
+  t="$(conta "$BASE:$P/q11/engine/$f" "$REF:$P/q13/engine/$f")"
+  m="$(conta "$BASE:$P/q11/engine/$f" "$REF:$P/q11/engine/$f")"
   soma_t=$((soma_t + t)); soma_m=$((soma_m + m))
   printf '  %-16s %10s %10s\n' "$f" "$t" "$m"
 done

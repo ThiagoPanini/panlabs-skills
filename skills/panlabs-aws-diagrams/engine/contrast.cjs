@@ -100,7 +100,7 @@ function paresDe(cel, porId, fundoPagina) {
   const pares = [];
   const label = String(cel.label || '').replace(/<[^>]+>/g, '').trim();
 
-  if (cel.kind === 'aresta') {
+  if (cel.kind === 'edge') {
     const halo = color(chave(st, 'labelBackgroundColor'));
     const traco = color(chave(st, 'strokeColor'));
     if (traco) pares.push({ rule: 'A7.2', o_que: 'traço da aresta', frente: traco, background: fundoPagina, target: 3.0 });
@@ -183,7 +183,7 @@ function corNaoEUnicoCanal(celulas) {
   const assinaturas = new Map();
   for (const c of celulas) {
     const st = c.style || '';
-    if (c.kind === 'aresta' || !ehAws4(st)) continue;
+    if (c.kind === 'edge' || !ehAws4(st)) continue;
     const fill = chave(st, 'fillColor') || '-';
     const outros = [chave(st, 'strokeColor') || '-', chave(st, 'dashed') || '0',
       chave(st, 'resIcon') || chave(st, 'grIcon') || (/shape=([^;]*)/.exec(st) || [])[1] || '-'].join('|');

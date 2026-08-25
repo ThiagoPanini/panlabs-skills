@@ -100,7 +100,7 @@ function pisoDaVarredura(modelo) {
 function medirF2(r) {
   let bands = 0;
   const casos = [];
-  for (const { laudo } of r.relatorio.geometria) {
+  for (const { laudo } of r.relatorio.geometry) {
     if (laudo.cena) bands += laudo.cena.bands.length;
     const f2 = (laudo.extras || []).find(x => x.id === 'F2');
     if (!f2) continue;
@@ -111,7 +111,7 @@ function medirF2(r) {
 
 function account(r, id) {
   let n = 0;
-  for (const { laudo } of r.relatorio.geometria) {
+  for (const { laudo } of r.relatorio.geometry) {
     const x = laudo.resultados.find(y => y.id === id);
     if (x) n += x.occurrences.length;
   }
@@ -125,9 +125,9 @@ async function medir(modelo, label) {
   catch (e) { return { label, erro: e.message, ...p }; }
   const f2 = medirF2(r);
   return {
-    label, ...p, bands: f2.bands, f2: f2.casos.length, exemplos: f2.casos.slice(0, 2),
+    label, ...p, bands: f2.bands, f2: f2.casos.length, examples: f2.casos.slice(0, 2),
     a55: account(r, 'A5.5'), a51: account(r, 'A5.1'), a32: account(r, 'A3.2'),
-    semanticas: r.relatorio.geometria.reduce((s, x) => s + x.laudo.semanticas.length, 0),
+    semanticas: r.relatorio.geometry.reduce((s, x) => s + x.laudo.semanticas.length, 0),
   };
 }
 
@@ -150,8 +150,8 @@ async function main() {
   console.log('  ' + cab.map((c, i) => c.padEnd(larg[i])).join('  '));
   for (const c of corpo) console.log('  ' + c.map((v, i) => v.padEnd(larg[i])).join('  '));
   for (const l of linhas) if (l.erro) console.log(`\n  ${l.label}: ${l.erro}`);
-  for (const l of linhas) if (l.exemplos && l.exemplos.length)
-    console.log(`\n  ${l.label} — F2: ${l.exemplos.join(' | ')}`);
+  for (const l of linhas) if (l.examples && l.examples.length)
+    console.log(`\n  ${l.label} — F2: ${l.examples.join(' | ')}`);
 
   console.log('\n  piso  = previsão da varredura de raias (|i−j|−1 por aresta, minimizado)');
   console.log('  F2    = medido no desenho: aresta cruzando a caixa de uma faixa alheia');

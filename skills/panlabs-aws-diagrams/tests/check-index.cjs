@@ -21,7 +21,7 @@
  */
 
 const path = require('path');
-const { CHECAGENS, LIMIARES, porId, SEVERIDADES, INSUMOS } = require(
+const { CHECAGENS, LIMIARES, porId, SEVERIDADES, INPUTS } = require(
   path.join(__dirname, '..', 'validator', 'index.cjs'));
 
 // Os 62 ids de (A), congelados da rubrica de qualidade que originou o validador.
@@ -92,7 +92,7 @@ for (const c of CHECAGENS) {
     anota(`${c.id} está como "${c.severity}" e a rubrica diz "${SEVERIDADE_DA_RUBRICA[c.id]}"`);
   if (ESCALONAM.includes(c.id) && !c.escalona) anota(`${c.id} tem dois níveis na rubrica e não traz escalona: true`);
   if (!ESCALONAM.includes(c.id) && c.escalona) anota(`${c.id} se diz escalonável, e a rubrica lhe dá um nível só`);
-  if (!INSUMOS.includes(c.input)) anota(`${c.id} tem insumo "${c.input}", fora de ${INSUMOS.join('|')}`);
+  if (!INPUTS.includes(c.input)) anota(`${c.id} tem insumo "${c.input}", fora de ${INPUTS.join('|')}`);
   if (!c.mede) anota(`${c.id} não diz o que mede`);
   if (!c.fonte) anota(`${c.id} não cita a fonte — a rubrica cita, o índice tem de citar`);
 }

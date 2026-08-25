@@ -11,7 +11,7 @@
 const path = require('path');
 const { lim } = require(path.join(__dirname, '..', 'index.cjs'));
 const { ok, aviso, falha, notApplicable, pulada, conforme, arredonda, semTags, name } = require(path.join(__dirname, 'common.cjs'));
-const { catalogo, preenchimentoDe, stencilDe } = require(path.join(__dirname, 'catalog.cjs'));
+const { catalog, preenchimentoDe, stencilDe } = require(path.join(__dirname, 'catalog.cjs'));
 
 
 /** Pontas de seta que os presets do deck AWS cobrem. */
@@ -19,16 +19,16 @@ const SETAS_PRESET = new Set(['none', 'block', 'blockThin', 'open', 'openThin', 
 
 /** Marcas de chartjunk: efeito que não carrega dado. */
 const CHARTJUNK = [
-  ['shadow', e => e.estilo.shadow === '1', 'sombra'],
-  ['glass', e => e.estilo.glass === '1', 'brilho de vidro'],
-  ['sketch', e => e.estilo.sketch === '1', 'traço rascunhado'],
-  ['gradiente', e => e.estilo.gradientColor && e.estilo.gradientColor !== 'none', 'gradiente'],
-  ['perspectiva', e => e.estilo.shape === 'cube' || e.estilo.isometric === '1', 'perspectiva/isometria'],
+  ['shadow', e => e.style.shadow === '1', 'sombra'],
+  ['glass', e => e.style.glass === '1', 'brilho de vidro'],
+  ['sketch', e => e.style.sketch === '1', 'traço rascunhado'],
+  ['gradiente', e => e.style.gradientColor && e.style.gradientColor !== 'none', 'gradiente'],
+  ['perspectiva', e => e.style.shape === 'cube' || e.style.isometric === '1', 'perspectiva/isometria'],
 ];
 
 module.exports = function a2(cena) {
-  const saida = [];
-  const cat = catalogo();
+  const output = [];
+  const cat = catalog();
   const { nodes, grupos, bands, edges } = cena;
   const desenhaveis = [...nodes, ...grupos, ...bands];
 
@@ -36,13 +36,13 @@ module.exports = function a2(cena) {
   // Conta TIPOS de símbolo, não instâncias — "vinte Lambdas = 1 entrada".
   {
     const simbolos = new Set(desenhaveis.map(e =>
-      [e.preenchimento, e.traco, e.estilo.dashed === '1' ? 'dashed' : 'solid', e.estilo.shape || (e.estilo.container === '1' ? 'container' : 'caixa')].join('|')));
-    for (const a of edges) simbolos.add(['aresta', a.estilo.strokeColor, a.estilo.dashed === '1' ? 'dashed' : 'solid', a.estilo.endArrow].join('|'));
+      [e.preenchimento, e.traco, e.style.dashed === '1' ? 'dashed' : 'solid', e.style.shape || (e.style.container === '1' ? 'container' : 'caixa')].join('|')));
+    for (const a of edges) simbolos.add(['edge', a.style.strokeColor, a.style.dashed === '1' ? 'dashed' : 'solid', a.style.endArrow].join('|'));
     const n = simbolos.size;
     const target = lim('complexidadeGraficaAlvo');
     const teto = lim('complexidadeGraficaFalha');
     const medida = { entradas_necessarias: n, target, teto };
-    saida.push(n <= target ? ok('A2.1', { medida, mensagem: `${n} tipo(s) de símbolo (alvo ≤ ${target})` })
+    output.push(n <= target ? ok('A2.1', { medida, mensagem: `${n} tipo(s) de símbolo (alvo ≤ ${target})` })
       : n <= teto ? aviso('A2.1', { medida, mensagem: `${n} tipos de símbolo — acima do alvo de ${target}, ainda dentro de ${teto}`, occurrences: [{ o_que: `a legenda precisaria de ${n} entradas`, ids: [] }] })
         : falha('A2.1', { medida, mensagem: `${n} tipos de símbolo — acima do limite de ${teto} (span of absolute judgement)`, occurrences: [{ o_que: `a legenda precisaria de ${n} entradas; Moody põe o teto efetivo em ${target}`, ids: [] }] }));
   }
@@ -51,7 +51,7 @@ module.exports = function a2(cena) {
   {
     const casos = [];
     for (const e of desenhaveis) {
-      const s = e.estilo;
+      const s = e.style;
       const deformacoes = [];
       if (s.flipH === '1') deformacoes.push('espelhado na horizontal');
       if (s.flipV === '1') deformacoes.push('espelhado na vertical');
@@ -59,13 +59,13 @@ module.exports = function a2(cena) {
       if (s.direction && s.direction !== 'east') deformacoes.push(`direção "${s.direction}"`);
       if (deformacoes.length) casos.push({ o_que: `${name(e)} está ${deformacoes.join(' e ')}`, ids: [e.id] });
     }
-    saida.push(conforme('A2.2', casos, { medida: { objetos: desenhaveis.length, deformados: casos.length } }));
+    output.push(conforme('A2.2', casos, { medida: { objetos: desenhaveis.length, deformados: casos.length } }));
   }
 
   // ---------------------------------------------------------------- A2.3
   {
-    if (!cat) saida.push(notApplicable('A2.3', 'o catálogo de shapes não está disponível'));
-    else if (!cena.modelo) saida.push(notApplicable('A2.3', 'o plano não carrega o modelo, então não há como saber que serviço cada nó pediu'));
+    if (!cat) output.push(notApplicable('A2.3', 'o catálogo de shapes não está disponível'));
+    else if (!cena.modelo) output.push(notApplicable('A2.3', 'o plano não carrega o modelo, então não há como saber que serviço cada nó pediu'));
     else {
       const porIdModelo = new Map((cena.modelo.nodes || []).map(n => [n.id, n]));
       const casos = [];
@@ -81,7 +81,7 @@ module.exports = function a2(cena) {
         if (esperado && e.preenchimento && esperado.toLowerCase() !== e.preenchimento.toLowerCase())
           casos.push({ o_que: `${name(e)} pinta ${e.preenchimento} e o catálogo prescreve ${esperado} para "${oficial.title}"`, ids: [e.id] });
       }
-      saida.push(conforme('A2.3', casos, {
+      output.push(conforme('A2.3', casos, {
         medida: { conferidos, divergentes: casos.length },
         mensagem: `${conferidos} ícone(s) conferido(s) contra a cor declarada no catálogo — o hash de pixel é do render`,
       }));
@@ -90,7 +90,7 @@ module.exports = function a2(cena) {
 
   // ---------------------------------------------------------------- A2.4
   {
-    if (!cat) saida.push(notApplicable('A2.4', 'o catálogo de shapes não está disponível'));
+    if (!cat) output.push(notApplicable('A2.4', 'o catálogo de shapes não está disponível'));
     else {
       const casos = [];
       let comStencil = 0;
@@ -100,7 +100,7 @@ module.exports = function a2(cena) {
         comStencil++;
         if (!cat.ids.has(id)) casos.push({ o_que: `${name(e)} usa o stencil "${id}", que não está no catálogo vigente`, ids: [e.id] });
       }
-      saida.push(conforme('A2.4', casos, {
+      output.push(conforme('A2.4', casos, {
         medida: { com_stencil: comStencil, fora_do_catalogo: casos.length, vigencia: cat.vigencia },
         mensagem: `catálogo de ${cat.vigencia || 'data desconhecida'}; ${comStencil} ícone(s) com stencil declarado`,
       }));
@@ -123,7 +123,7 @@ module.exports = function a2(cena) {
       if (razao !== 1)
         casos.push({ o_que: `a classe "${classe}" usa larguras de ${Math.min(...larguras)} a ${Math.max(...larguras)} px (razão ${arredonda(razao, 2)})`, ids: lista.map(e => e.id) });
     }
-    saida.push(porClasse.size ? conforme('A2.5', casos, { medida: { classes: porClasse.size, irregulares: casos.length } })
+    output.push(porClasse.size ? conforme('A2.5', casos, { medida: { classes: porClasse.size, irregulares: casos.length } })
       : notApplicable('A2.5', 'o diagrama não tem nós'));
   }
 
@@ -159,18 +159,18 @@ module.exports = function a2(cena) {
     for (const [kind, lista] of porTipo) {
       if (lista.length < 2) continue;
       for (const canal of canais) {
-        const valores = new Set(lista.map(e => e.estilo[canal] === undefined ? '(ausente)' : e.estilo[canal]));
+        const valores = new Set(lista.map(e => e.style[canal] === undefined ? '(ausente)' : e.style[canal]));
         if (valores.size > 1)
           casos.push({ o_que: `o tipo "${kind}" usa ${valores.size} valores de ${canal}: ${[...valores].join(', ')}`, ids: lista.map(e => e.id) });
       }
     }
-    saida.push(porTipo.size ? conforme('A2.6', casos, { medida: { tipos: porTipo.size, inconsistencias: casos.length } })
+    output.push(porTipo.size ? conforme('A2.6', casos, { medida: { tipos: porTipo.size, inconsistencias: casos.length } })
       : notApplicable('A2.6', 'o diagrama não tem elementos tipados'));
   }
 
   // ---------------------------------------------------------------- A2.7
   {
-    if (!edges.length) saida.push(notApplicable('A2.7', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A2.7', 'o diagrama não tem arestas'));
     else {
       // O significado de uma relação é o TIPO DE RELAÇÃO que o modelo declara —
       // aqui, `protocolo`. Derivar significado do par de tipos das pontas seria
@@ -185,24 +185,24 @@ module.exports = function a2(cena) {
       const porEstilo = new Map();
       const porSignificado = new Map();
       for (const a of comTipo) {
-        const estilo = a.estilo.dashed === '1' ? `tracejado(${a.estilo.dashPattern || 'padrão'})` : 'solid';
+        const style = a.style.dashed === '1' ? `tracejado(${a.style.dashPattern || 'padrão'})` : 'solid';
         const significado = tipoDeclarado.get(`${a.from}→${a.to}`);
-        if (!porEstilo.has(estilo)) porEstilo.set(estilo, new Set());
-        porEstilo.get(estilo).add(significado);
+        if (!porEstilo.has(style)) porEstilo.set(style, new Set());
+        porEstilo.get(style).add(significado);
         if (!porSignificado.has(significado)) porSignificado.set(significado, new Set());
-        porSignificado.get(significado).add(estilo);
+        porSignificado.get(significado).add(style);
       }
       if (porSignificado.size < 2) {
-        saida.push(notApplicable('A2.7', comTipo.length
+        output.push(notApplicable('A2.7', comTipo.length
           ? 'só há um tipo de relação declarado — não há bijeção a conferir'
           : 'nenhuma aresta declara tipo de relação (protocolo); sem taxonomia não há o que mapear'));
       } else {
         const casos = [];
-        for (const [estilo, significados] of porEstilo)
-          if (significados.size > 1) casos.push({ o_que: `o traço "${estilo}" carrega ${significados.size} significados: ${[...significados].join(', ')}`, ids: comTipo.map(a => a.id) });
+        for (const [style, significados] of porEstilo)
+          if (significados.size > 1) casos.push({ o_que: `o traço "${style}" carrega ${significados.size} significados: ${[...significados].join(', ')}`, ids: comTipo.map(a => a.id) });
         for (const [significado, estilos] of porSignificado)
           if (estilos.size > 1) casos.push({ o_que: `a relação "${significado}" é desenhada de ${estilos.size} jeitos: ${[...estilos].join(', ')}`, ids: [] });
-        saida.push(conforme('A2.7', casos, { medida: { estilos: porEstilo.size, significados: [...porSignificado.keys()], quebras_de_bijecao: casos.length } }));
+        output.push(conforme('A2.7', casos, { medida: { estilos: porEstilo.size, significados: [...porSignificado.keys()], quebras_de_bijecao: casos.length } }));
       }
     }
   }
@@ -220,29 +220,29 @@ module.exports = function a2(cena) {
     for (const e of grupos) {
       const t = e.tipoSemantico;
       if (!t || !contencao.has(t)) continue;
-      if (e.estilo.dashed === '1') casos.push({ o_que: `o grupo de contenção "${e.id}" (${t}) desenha tracejado, e tracejado é convenção de zona`, ids: [e.id] });
+      if (e.style.dashed === '1') casos.push({ o_que: `o grupo de contenção "${e.id}" (${t}) desenha tracejado, e tracejado é convenção de zona`, ids: [e.id] });
     }
     for (const f of bands)
-      if (f.estilo.dashed !== '1') casos.push({ o_que: `a faixa "${f.id}" desenha sólido, e sólido é convenção de contenção`, ids: [f.id] });
-    saida.push((grupos.length + bands.length) ? conforme('A2.8', casos, { medida: { grupos: grupos.length, bands: bands.length, fora_da_convencao: casos.length } })
+      if (f.style.dashed !== '1') casos.push({ o_que: `a faixa "${f.id}" desenha sólido, e sólido é convenção de contenção`, ids: [f.id] });
+    output.push((grupos.length + bands.length) ? conforme('A2.8', casos, { medida: { grupos: grupos.length, bands: bands.length, fora_da_convencao: casos.length } })
       : notApplicable('A2.8', 'o diagrama não tem grupos nem faixas'));
   }
 
   // ---------------------------------------------------------------- A2.9
-  saida.push(pulada('A2.9'));
+  output.push(pulada('A2.9'));
 
   // ---------------------------------------------------------------- A2.10
   {
-    if (!edges.length) saida.push(notApplicable('A2.10', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A2.10', 'o diagrama não tem arestas'));
     else {
       const casos = [];
       for (const a of edges)
         for (const tip of ['startArrow', 'endArrow']) {
-          const v = a.estilo[tip];
+          const v = a.style[tip];
           if (v === undefined) continue;
           if (!SETAS_PRESET.has(v)) casos.push({ o_que: `a aresta "${a.id}" usa ${tip}="${v}", fora dos presets`, ids: [a.id] });
         }
-      saida.push(conforme('A2.10', casos, { medida: { edges: edges.length, fora_dos_presets: casos.length } }));
+      output.push(conforme('A2.10', casos, { medida: { edges: edges.length, fora_dos_presets: casos.length } }));
     }
   }
 
@@ -252,8 +252,8 @@ module.exports = function a2(cena) {
     for (const e of [...desenhaveis, ...edges])
       for (const [, testa, comoSeChama] of CHARTJUNK)
         if (testa(e)) casos.push({ o_que: `${e.id} usa ${comoSeChama} — tinta que não carrega dado`, ids: [e.id] });
-    saida.push(conforme('A2.11', casos, { medida: { objetos: desenhaveis.length + edges.length, com_chartjunk: casos.length } }));
+    output.push(conforme('A2.11', casos, { medida: { objetos: desenhaveis.length + edges.length, com_chartjunk: casos.length } }));
   }
 
-  return saida;
+  return output;
 };

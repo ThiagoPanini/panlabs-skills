@@ -41,7 +41,7 @@ const { elaborar } = require(path.join(RAIZ, 'session', 'elaborate.cjs'));
 const { projetar } = require(path.join(RAIZ, 'session', 'project.cjs'));
 
 /**
- * A VISTA TÉCNICA NÃO É UM `modelo/*.json`.
+ * A VISTA TÉCNICA NÃO É UM `models/*.json`.
  *
  * Ela nasce da sessão do #14 — `retail-logical` aprovada, `retail-elaboration`
  * aplicada por cima, e a projeção recortando a camada técnica. Medir só o
@@ -51,7 +51,7 @@ const { projetar } = require(path.join(RAIZ, 'session', 'project.cjs'));
  */
 function vistaTecnica() {
   const ler = f => JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', f), 'utf8'));
-  const aprovado = aprovar(ler('retail-logical.json'), { em: '2026-08-21', por: 'usuario', candidate: 'cand-a' });
+  const aprovado = aprovar(ler('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
   return projetar(elaborar(aprovado, ler('retail-elaboration.json')), 'technical').modelo;
 }
 

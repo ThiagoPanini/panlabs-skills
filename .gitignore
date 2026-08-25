@@ -22,9 +22,9 @@
 # skills, agentes) mora ali e é para ser versionada.
 .claude/worktrees/
 
-# `saida/` da skill de diagramas e RASCUNHO: e onde `tests/rodar.sh` escreve o
-# corpus gerado e o render. Determinista — `node tools/gerar-temas.cjs` e o
-# proprio `rodar.sh` reconstroem byte a byte.
+# `output/` da skill de diagramas e RASCUNHO: e onde `tests/run.sh` escreve o
+# corpus gerado e o render. Determinista — `node tools/generate-themes.cjs` e o
+# proprio `run.sh` reconstroem byte a byte.
 #
 # Nao existe mais copia versionada dele. Ate o #62 este comentario apontava para
 # `docs/aws-diagrams/corpus/` como "a evidencia renderizada que vale a pena
@@ -32,7 +32,7 @@
 # commitado, e nada na regua comparava os dois. Render versionado que ninguem
 # compara nao e evidencia, e envelhece em silencio. O que prova o render e a
 # camada 7 da regua, rodando.
-skills/panlabs-aws-diagrams/saida/
+skills/panlabs-aws-diagrams/output/
 
 .claude/settings.local.json
 tmp/

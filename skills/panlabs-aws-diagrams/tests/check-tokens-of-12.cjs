@@ -81,18 +81,18 @@ const t = light.tokens;
  * prova; o que ela precisa afirmar é que **o valor do token é o valor que o #12
  * escreveu à mão**, e isso é uma comparação.
  */
-for (const [token, valor, estilo, chave] of [
+for (const [token, valor, style, chave] of [
   ['tinta.forte', t.ink.strong, 'ou', 'fontColor'],
   ['tinta.fraca', t.ink.weak, 'habilitador', 'strokeColor'],
   ['tinta.halo', t.ink.halo, 'stub', 'labelBackgroundColor'],
-  ['aresta.cor', t.aresta.color, 'barramento', 'strokeColor'],
-  ['aresta.espessura', t.aresta.thickness, 'barramento', 'strokeWidth'],
-  ['aresta.ponta', t.aresta.tip, 'stub', 'endArrow'],
-  ['texto.aresta', t.text.aresta, 'stub', 'fontSize'],
+  ['aresta.cor', t.edge.color, 'barramento', 'strokeColor'],
+  ['aresta.espessura', t.edge.thickness, 'barramento', 'strokeWidth'],
+  ['aresta.ponta', t.edge.tip, 'stub', 'endArrow'],
+  ['texto.aresta', t.text.edge, 'stub', 'fontSize'],
   ['texto.grupo + 1', t.text.group + 1, 'ou', 'fontSize'],
 ]) {
-  const noLiteral = chaves(LITERAIS[estilo])[chave];
-  ok(String(valor) === String(noLiteral), `${String(token).padEnd(18)} → S_${estilo.toUpperCase()}.${chave}`,
+  const noLiteral = chaves(LITERAIS[style])[chave];
+  ok(String(valor) === String(noLiteral), `${String(token).padEnd(18)} → S_${style.toUpperCase()}.${chave}`,
     `token ${valor} · literal do #12 ${noLiteral}`);
 }
 

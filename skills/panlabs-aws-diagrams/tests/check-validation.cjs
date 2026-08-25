@@ -36,8 +36,8 @@ const casos = [
   },
   {
     name: 'erro de digitação com vizinho óbvio',
-    modelo: com({ nodes: [{ id: 'a', kind: 'service', service: 'lambda', dentroo: 'cloud' }] }),
-    espera: 'você quis dizer "dentro"',
+    modelo: com({ nodes: [{ id: 'a', kind: 'service', service: 'lambda', insidee: 'cloud' }] }),
+    espera: 'você quis dizer "inside"',
   },
   {
     name: 'pai que não existe',

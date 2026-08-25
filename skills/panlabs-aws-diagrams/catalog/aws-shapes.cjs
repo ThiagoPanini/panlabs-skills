@@ -119,10 +119,10 @@ function corrigirGrupo(style, correcoes, title) {
 
 function carregar(dir) {
   const base = dir || __dirname;
-  const catalogo = JSON.parse(fs.readFileSync(path.join(base, 'aws4.catalog.json'), 'utf8'));
+  const catalog = JSON.parse(fs.readFileSync(path.join(base, 'aws4.catalog.json'), 'utf8'));
   const correcoes = JSON.parse(fs.readFileSync(path.join(base, 'corrections.json'), 'utf8'));
 
-  const corDaCategoria = cat => (catalogo.categories[cat] || {}).fill || '#232F3D';
+  const corDaCategoria = cat => (catalog.categories[cat] || {}).fill || '#232F3D';
 
   // ---- índices -------------------------------------------------------
 
@@ -130,28 +130,28 @@ function carregar(dir) {
   const porStencil = new Map();   // stencil -> entrada (service icon vence)
   const gruposPorNome = new Map();
 
-  function indexar(entrada, kind) {
-    const rec = { ...entrada, kind };
-    for (const v of variantes(entrada.title)) {
+  function indexar(input, kind) {
+    const rec = { ...input, kind };
+    for (const v of variantes(input.title)) {
       if (!porNome.has(v)) porNome.set(v, []);
       porNome.get(v).push(rec);
     }
-    const sn = normalizar(entrada.stencil);
+    const sn = normalizar(input.stencil);
     if (sn && !porNome.has(sn)) porNome.set(sn, []);
     if (sn) porNome.get(sn).push(rec);
 
     // service icon tem precedência sobre resource icon no mesmo stencil
-    if (!porStencil.has(entrada.stencil) || kind === 'service') {
-      if (!(porStencil.get(entrada.stencil) || {}).kind || kind === 'service') {
-        porStencil.set(entrada.stencil, rec);
+    if (!porStencil.has(input.stencil) || kind === 'service') {
+      if (!(porStencil.get(input.stencil) || {}).kind || kind === 'service') {
+        porStencil.set(input.stencil, rec);
       }
     }
     return rec;
   }
 
-  for (const s of catalogo.services) indexar(s, 'service');
-  for (const r of catalogo.resources) indexar(r, 'recurso');
-  for (const g of catalogo.groups) {
+  for (const s of catalog.services) indexar(s, 'service');
+  for (const r of catalog.resources) indexar(r, 'recurso');
+  for (const g of catalog.groups) {
     for (const v of variantes(g.title)) {
       if (!gruposPorNome.has(v)) gruposPorNome.set(v, g);   // 1ª variante vence
     }
@@ -163,7 +163,7 @@ function carregar(dir) {
     if (rec.style) {                       // fora do template: literal do upstream
       return { style: rec.style, literal: true };
     }
-    const tpl = rec.kind === 'service' ? catalogo.templates.svc.style : catalogo.templates.res.style;
+    const tpl = rec.kind === 'service' ? catalog.templates.svc.style : catalog.templates.res.style;
     const fill = rec.fill || corDaCategoria(rec.palette);
     return { style: aplicarTemplate(tpl, { fill, stencil: rec.stencil }), literal: false };
   }
@@ -248,7 +248,7 @@ function carregar(dir) {
 
     if (opts.categoria) {
       const cat = normalizar(opts.categoria);
-      const porCategoria = catalogo.services.find(
+      const porCategoria = catalog.services.find(
         s => s.palette === cat.replace(/ /g, '_') && normalizar(s.title) === cat);
       if (porCategoria) return entregar({ ...porCategoria, kind: 'service' }, 'categoria');
       const iconeCat = buscar(opts.categoria);
@@ -277,11 +277,11 @@ function carregar(dir) {
   }
 
   return {
-    catalogo, correcoes,
-    meta: catalogo.meta,
+    catalog, correcoes,
+    meta: catalog.meta,
     service, group, buscar, normalizar,
-    grupos: () => catalogo.groups.map(g => g.title),
-    categorias: () => catalogo.categories,
+    grupos: () => catalog.groups.map(g => g.title),
+    categorias: () => catalog.categories,
     corDaCategoria
   };
 }
@@ -295,7 +295,7 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   if (!args.length) {
     console.log(`catálogo aws4 — draw.io ${cat.meta.drawio && cat.meta.drawio.version} (${cat.meta.commit && cat.meta.commit.slice(0, 8)})`);
-    console.log(`  ${cat.catalogo.services.length} service icons · ${cat.catalogo.resources.length} resource icons · ${cat.catalogo.groups.length} grupos`);
+    console.log(`  ${cat.catalog.services.length} service icons · ${cat.catalog.resources.length} resource icons · ${cat.catalog.groups.length} grupos`);
     console.log(`uso: node aws-shapes.cjs <nome do serviço|grupo> ...`);
     process.exit(0);
   }

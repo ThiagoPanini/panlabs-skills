@@ -121,7 +121,7 @@ async function main() {
   //
   // O que distingue é a VERACIDADE: o desenho afirma alguma coisa que o modelo
   // nega? Aí a separação é limpa, e é ela que o portão usa como nível default.
-  const { portao } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
+  const { gate } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
   const { CASOS } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 
   console.log('\n  a separação, no eixo da veracidade:\n');
@@ -129,7 +129,7 @@ async function main() {
   let barrados = 0;
   for (const c of mentirosos) {
     let barrou = false;
-    try { portao(c.plano, { modelo: c.modelo, nivel: 'veracidade' }); } catch { barrou = true; }
+    try { gate(c.plano, { modelo: c.modelo, nivel: 'veracidade' }); } catch { barrou = true; }
     if (barrou) barrados++;
     else { falhou = 1; console.log(`  ✗ "${c.name}" passou o portão de veracidade`); }
   }
@@ -139,7 +139,7 @@ async function main() {
   for (const arquivo of modelos) {
     const name = path.basename(arquivo, '.json');
     const r = await gerar(JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', arquivo), 'utf8')));
-    try { portao(r.plano, { nivel: 'veracidade' }); passaram++; }
+    try { gate(r.plano, { nivel: 'veracidade' }); passaram++; }
     catch (e) {
       // o portão barra o que mente, e a quarentena não o desliga: ele CONTINUA
       // barrando o `web-flow-3-az`, que é o comportamento certo. O que a

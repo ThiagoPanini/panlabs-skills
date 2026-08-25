@@ -94,7 +94,7 @@ function main() {
 
   console.log('\n=== 4. QUE SERVIÇO O TEMA ESCURO NÃO SUPORTA ===\n');
   const porCategoria = new Map();
-  for (const s of cat.catalogo.services) {
+  for (const s of cat.catalog.services) {
     if (!porCategoria.has(s.palette)) porCategoria.set(s.palette, 0);
     porCategoria.set(s.palette, porCategoria.get(s.palette) + 1);
   }

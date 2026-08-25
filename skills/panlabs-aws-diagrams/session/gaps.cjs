@@ -399,18 +399,18 @@ const NOMES = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publi
  * varrerem **o mesmo corpus**. Duas listas de diretório é a porta para a régua
  * ficar verde contra metade dele.
  */
-const DIRS_DO_CORPUS = ['modelo', 'modelo/recusa'];
+const CORPUS_DIRS = ['models', 'models/refusal'];
 
 function arquivosDoCorpus(raiz) {
   const fs = require('fs');
-  const saida = [];
-  for (const d of DIRS_DO_CORPUS) {
+  const output = [];
+  for (const d of CORPUS_DIRS) {
     const dir = path.join(raiz, d);
     if (!fs.existsSync(dir)) continue;
     for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json')).sort())
-      saida.push(path.join(d, f));
+      output.push(path.join(d, f));
   }
-  return saida;
+  return output;
 }
 
 /**
@@ -436,6 +436,6 @@ function revisar(modelo, opts = {}) {
 }
 
 module.exports = {
-  revisar, REGRAS, NOMES, arquivosDoCorpus, DIRS_DO_CORPUS,
+  revisar, REGRAS, NOMES, arquivosDoCorpus, CORPUS_DIRS,
   ehStateful, ehEgresso, ehAssincrono, ehComputacao,
 };

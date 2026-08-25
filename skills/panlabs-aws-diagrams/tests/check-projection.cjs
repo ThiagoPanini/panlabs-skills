@@ -22,7 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { aprovar, conferir } = require('../session/agreement.cjs');
+const { aprovar, check } = require('../session/agreement.cjs');
 const { elaborar } = require('../session/elaborate.cjs');
 const { validar } = require('../session/validate.cjs');
 const { projetar } = require('../session/project.cjs');
@@ -97,13 +97,13 @@ const NAO_PODE_QUEBRAR = [
 function main() {
   const logical = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-logical.json'), 'utf8'));
   const elab = JSON.parse(fs.readFileSync(path.join(RAIZ, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
-  const aprovado = aprovar(logical, { em: '2026-08-21', por: 'usuario', candidate: 'cand-a' });
+  const aprovado = aprovar(logical, { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
   const technical = elaborar(aprovado, elab);
 
   let falhas = 0;
 
   // -------------------------------------------------------- 1. o caso normal
-  const base = conferir(technical);
+  const base = check(technical);
   console.log('\n  1 · O caso normal\n');
   console.log(`    a projecao logica do modelo tecnico bate com a aprovada .... ${base.ok ? '✓' : '✗'}`);
   if (!base.ok) { falhas++; for (const d of base.diferencas) console.log(`        · ${d.text}`); }
@@ -151,9 +151,9 @@ function main() {
     // as duas camadas existem para isso, e a checagem so falharia se NENHUMA
     // pegasse.
     const v = validar(m);
-    let pego = !v.ok, via = 'validador';
+    let pego = !v.ok, via = 'validator';
     let r = null;
-    if (!pego) { r = conferir(m); pego = !r.ok; via = 'agreement'; }
+    if (!pego) { r = check(m); pego = !r.ok; via = 'agreement'; }
     console.log(`    ${mut.name.padEnd(52)} ${pego ? '✓ pego' : '✗ PASSOU'}  (${pego ? via : '—'})`);
     if (!pego) falhas++;
     else if (r) for (const d of r.diferencas.slice(0, 2)) console.log(`        · ${d.text}`);
@@ -165,7 +165,7 @@ function main() {
     const m = clonar(technical);
     mut.faz(m);
     const v = validar(m);
-    const r = v.ok ? conferir(m) : { ok: false, motivo: v.erros[0] };
+    const r = v.ok ? check(m) : { ok: false, motivo: v.erros[0] };
     console.log(`    ${mut.name.padEnd(52)} ${r.ok ? '✓ passou' : '✗ QUEBROU'}`);
     if (!r.ok) { falhas++; console.log(`        · ${(r.motivo || '').slice(0, 110)}`); for (const d of r.diferencas || []) console.log(`        · ${d.text}`); }
   }

@@ -56,7 +56,7 @@ if (!fs.existsSync(DRAWIO)) {
 
 console.log('\n  Pelo codec do proprio app (-x -f xml)\n');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'sessao-rt-'));
-const saida = path.join(TMP, 'volta.drawio');
+const output = path.join(TMP, 'volta.drawio');
 
 /**
  * O #19 achou que XML invalido faz o draw.io RENDERIZAR truncado com codigo de
@@ -74,14 +74,14 @@ const saida = path.join(TMP, 'volta.drawio');
 let bruto = null;
 for (let tentativa = 1; tentativa <= 2 && bruto === null; tentativa++) {
   try {
-    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', saida, ARQ],
+    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, ARQ],
       { stdio: ['ignore', 'ignore', 'ignore'] });
   } catch (e) {
     console.log('    o app falhou ao exportar — nesta maquina o electron morre sob pressao de memoria.');
     fs.rmSync(TMP, { recursive: true, force: true });
     process.exit(falhas ? 1 : 0);
   }
-  const lido = fs.readFileSync(saida, 'utf8');
+  const lido = fs.readFileSync(output, 'utf8');
   const paginas = (lido.match(/<diagram\b/g) || []).length;
   if (paginas === antes.paginas.length) { bruto = lido; break; }
   console.log(`    ⚠ tentativa ${tentativa}: o app devolveu ${paginas} de ${antes.paginas.length} pagina(s), ` +

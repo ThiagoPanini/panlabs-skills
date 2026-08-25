@@ -221,7 +221,7 @@ function validar(modelo) {
   const d = dossier(modelo);
   const erros = [...c.erros, ...d.erros];
   const avisos = [...c.avisos, ...d.avisos];
-  if (erros.length) return { ok: false, fase: 'sessao', erros, avisos };
+  if (erros.length) return { ok: false, fase: 'session', erros, avisos };
   return { ok: true, fase: null, erros: [], avisos, porId };
 }
 

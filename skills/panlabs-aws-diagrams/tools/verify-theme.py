@@ -2,7 +2,7 @@
 """Confere NO PIXEL que o tema chegou no render — não só na style string.
 
     python3 tools/verify-theme.py output/temas/a-claro.png claro
-    python3 tools/verify-theme.py --todos
+    python3 tools/verify-theme.py --all
 
 A lição que obriga esta ferramenta é do #17: 24 checagens estáticas estavam
 verdes quando o PNG revelou o SageMaker saindo com o ícone errado. Style string
@@ -128,13 +128,13 @@ def verificar(png, tema):
 
 
 def main():
-    if '--todos' in sys.argv:
+    if '--all' in sys.argv:
         mapa = {'a-claro': 'claro', 'b-escuro': 'escuro',
                 'c-corporativo': 'corporativo', 'd-armadilha': 'armadilha',
                 'e-indizivel': 'indizivel', 'g-vista-logica': 'logica'}
         falhou = 0
         for nome, tema in mapa.items():
-            png = AQUI / 'saida' / 'temas' / f'{nome}.png'
+            png = AQUI / 'output' / 'themes' / f'{nome}.png'
             if not png.exists():
                 print(f'\n{png.name} não existe — render pulado (premissa 8)')
                 continue

@@ -24,17 +24,17 @@ const { impressaoDoAcordo, canonicalizar } = require('./fingerprint.cjs');
 function aprovar(sessao, quem = {}) {
   const { modelo } = projetar(sessao, 'logical');
   const snapshot = recorteDoAcordo(modelo);
-  const saida = JSON.parse(JSON.stringify(sessao));
-  saida.dossier = saida.dossier || {};
-  saida.dossier.agreement = {
+  const output = JSON.parse(JSON.stringify(sessao));
+  output.dossier = output.dossier || {};
+  output.dossier.agreement = {
     view: 'logical',
     fingerprint: impressaoDoAcordo(snapshot),
     snapshot,
-    ...(quem.at ? { em: quem.at } : {}),
-    ...(quem.by ? { por: quem.by } : {}),
+    ...(quem.at ? { at: quem.at } : {}),
+    ...(quem.by ? { by: quem.by } : {}),
     ...(quem.candidate ? { candidate: quem.candidate } : {}),
   };
-  return saida;
+  return output;
 }
 
 /**
@@ -45,7 +45,7 @@ function aprovar(sessao, quem = {}) {
  * certo — e nada garante que esteja. Com um IR, a resposta e uma projecao e uma
  * comparacao de strings.
  */
-function conferir(sessao) {
+function check(sessao) {
   const agreement = sessao.dossier && sessao.dossier.agreement;
   if (!agreement) return { ok: false, motivo: 'sem acordo', diferencas: [] };
 
@@ -94,4 +94,4 @@ function diferencaDoRecorte(antes, depois) {
   return out;
 }
 
-module.exports = { aprovar, conferir, diferencaDoRecorte };
+module.exports = { aprovar, check, diferencaDoRecorte };

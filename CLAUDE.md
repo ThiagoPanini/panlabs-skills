@@ -8,7 +8,7 @@
 
 Escapa uma coisa só: **interface alheia, grafada como o dono a grafa.**
 
-> **Dívida conhecida, e ela é grande.** A árvore de `skills/panlabs-aws-diagrams/` nasceu mista — `tests/`, `tools/`, `catalog/`, `docs/` e `agents/` em inglês; `modelo/`, `motor/`, `sessao/`, `tema/`, `guia/` e `validador/` em português, com 81 dos 539 arquivos rastreados sob eles, mais os nomes portugueses dentro dos diretórios ingleses (`rodar.sh`, `check-arco.cjs`, `check-lacunas.cjs`). A regra **vale para código novo a partir de agora**; a conversão do que existe é um `movimento-de-terra` (ver `docs/agents/workflow.md`) e por isso roda sozinha, depois que a fila atual esvaziar.
+> **A dívida da `panlabs-aws-diagrams` foi paga, e o que ela ensinou fica.** A árvore nasceu mista e foi convertida inteira pelo [#53](https://github.com/ThiagoPanini/panlabs-skills/issues/53): 145 caminhos renomeados, as 165 chaves dos quatro contratos, os enums, os ids do corpus, as flags de linha de comando e os identificadores do código. **A fronteira mora numa camada:** identificador é inglês — chave de contrato inclusive —, e a prosa que explica continua portuguesa, o que vale para o `SKILL.md`, para o `guide/` e para as `description` dentro dos próprios esquemas. A lição que sobrou é que uma conversão dessas não é achar-e-trocar: chave de contrato tem **duas pontas**, quem escreve e quem lê, e converter uma só produz um verde que mente — o motor montou um grafo com id nulo por exatamente isso.
 
 ## Markdown não leva quebra de linha rígida
 
@@ -24,7 +24,7 @@ Várias sessões trabalham aqui ao mesmo tempo, um ticket cada. A doutrina intei
 
 - **Declare o território primeiro.** `gh issue edit <n> --add-assignee @me`, e um comentário com os caminhos que o ticket **possui** e os que ele só **acrescenta**. Dois tickets cujas posses se cruzam não rodam ao mesmo tempo — pegue outro ticket.
 - **Rode a união antes de aterrissar.** Compare o seu diff com o que entrou na `origin/main` enquanto você trabalhava — os dois `git diff --name-only` estão em [`docs/agents/workflow.md`](docs/agents/workflow.md). O git só reprova uma das quatro colisões de trabalho paralelo; as outras três mergeiam verdes, e essa comparação é o que as pega.
-- **Registro é append-only.** `SKILL.md`, `tests/rodar.sh` e este arquivo são listas ordenadas — acrescente no **fim** da seção, nunca no meio.
+- **Registro é append-only.** `SKILL.md`, `tests/run.sh` e este arquivo são listas ordenadas — acrescente no **fim** da seção, nunca no meio.
 - **Ticket que move ou apaga caminho rastreado roda sozinho** (rótulo `movimento-de-terra`). Nada mais aterrissa enquanto ele estiver aberto.
 
 **Terminar é o código estar na `main`** — não numa branch, não num PR aberto: união verde → suíte da skill verde contra o rebase → `gh pr merge --squash` → o commit aparecendo em `git log origin/main`. A `main` local nunca recebe commit; ela só fast-forwarda.

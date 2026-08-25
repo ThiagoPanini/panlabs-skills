@@ -116,7 +116,7 @@ function calhaDaFaixa(style) {
 //
 // ⚠️ E é por causa desta linha que o `web-multi-az` deixou de sair byte a byte
 // igual ao do #11/#12: a escala mudou de "números chegados um a um" para
-// "múltiplos de 8". Ver `docs/recertificacao.md`.
+// "múltiplos de 8".
 
 /**
  * A escala de folga, derivada da grade base do tema (#13).

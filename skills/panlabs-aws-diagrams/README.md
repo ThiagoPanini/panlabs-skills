@@ -48,7 +48,7 @@ do Node).
 | | |
 |---|---|
 | **`SKILL.md`** | **O documento.** O arco em sete passos, cada um com critério de parada checável |
-| `guia/` | O que o arco revela por ponteiro: sabatina, modelo, context pack, laudo, visual, decisões |
+| `guia/` | O que o arco revela por ponteiro: sabatina, modelo, context pack, laudo, visual |
 | **`esquema.json`** | **O contrato.** `modelo@1` — o IR que o agente escreve. Na raiz de propósito: é de quem escreve o modelo, e o motor é só o primeiro leitor |
 | `motor/` | O pipeline. `gerar` › `validar` › `resolver` › `derivar` › `dispor` › `planejar` › `emitir` › `conferir`, mais o portão de contraste |
 | `validador/` | As 62 checagens da rubrica viradas código — 60 no validador obrigatório, 2 no render. É **portão**, não otimizador |
@@ -60,11 +60,9 @@ do Node).
 | `agents/` | O empacotamento multi-harness. `openai.yaml` copia a forma das outras 25 skills instaladas em `~/.claude/skills/*/agents/` — `interface.display_name` + `interface.short_description`, e nada mais. É **metadado de vitrine**, não instrução: um harness não-Claude aprende o NOME da skill por aqui e o resto por `SKILL.md`. Se algum harness precisar de mais, é aqui que cresce |
 | `tools/` | Os comandos do arco (`aprovar`, `retomar`, `check-geometria`, `revisar-lacunas`, `instalar`) e as ferramentas de bancada — bisseção, render, as medições. `drawio.cjs` é o único lugar que sabe onde o binário mora |
 | `saida/` | **Rascunho, e ignorado pelo git.** É onde `tests/rodar.sh` escreve o corpus gerado e o render |
-| `docs/` | O registro de engenharia: o critério do corpus e o que ele disse, o que a recertificação mediu, o que o roteamento consertou |
 
-`guia/` é o que o agente lê para **operar** a skill; `docs/` é o que se lê para
-saber **o que foi medido**. Um ponteiro leva de um ao outro onde a medição é a
-resposta.
+`guia/` é o que o agente lê para **operar** a skill — nada aqui se lê para
+modificá-la, e nada daqui aponta para fora da árvore.
 
 ### O que NÃO está aqui, e por quê
 
@@ -117,9 +115,6 @@ não com grep.
 O draw.io headless é **dependência de desenvolvimento**: a camada 7 da suíte
 precisa dele e, sem o binário, avisa e segue.
 
-## Onde ler o porquê
-
-[`guia/decisoes.md`](guia/decisoes.md) carrega toda decisão da construção com o
-gatilho que a reabre. As duas medições longas estão em
-[`docs/recertificacao.md`](docs/recertificacao.md) — o que a união dos motores
-mediu, o que caiu e o que sobreviveu — e em [`docs/roteamento.md`](docs/roteamento.md).
+O registro de engenharia — decisões da construção, corpus, recertificação e
+roteamento — mora no workspace irmão, fora desta árvore: quem instala a skill
+não paga por ele, e nada aqui dentro aponta de volta para lá.

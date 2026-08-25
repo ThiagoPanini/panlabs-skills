@@ -40,7 +40,7 @@
   ],
 
   "dossie": {
-    "_comentario": "O caso do corpus do #26 para a regra `dado-em-subnet-publica`. O critério (docs/corpus.md §4.2, L2) exige que TODA regra dispare em pelo menos um modelo — regra que nunca dispara nunca foi testada. Antes deste modelo, essa era a única das seis sem sujeito no corpus inteiro. Existe também para lembrar o que a skill é: um consultor desenha a arquitetura QUE EXISTE e aponta o problema, em vez de desenhar a que gostaria de ter visto.",
+    "_comentario": "O caso do corpus do #26 para a regra `dado-em-subnet-publica`. O critério (L2) exige que TODA regra dispare em pelo menos um modelo — regra que nunca dispara nunca foi testada. Antes deste modelo, essa era a única das seis sem sujeito no corpus inteiro. Existe também para lembrar o que a skill é: um consultor desenha a arquitetura QUE EXISTE e aponta o problema, em vez de desenhar a que gostaria de ter visto.",
     "eixos": {
       "E1": "instâncias próprias",
       "E2": "síncrono request/response",

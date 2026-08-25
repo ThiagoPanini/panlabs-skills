@@ -55,8 +55,7 @@
  *
  * Então F2 entra armado e calado, e é isso que ele compra: no dia em que uma
  * mudança de roteamento reintroduzir o cruzamento, o portão `veracidade` barra
- * em vez de o desenho sair mentindo. O fallback em si continua névoa nomeada —
- * ver `docs/corpus.md` §Parte 2.
+ * em vez de o desenho sair mentindo. O fallback em si continua névoa nomeada.
  */
 
 const path = require('path');

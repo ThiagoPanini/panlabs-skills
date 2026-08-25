@@ -293,7 +293,7 @@ com a mensagem que ele mesmo tinha preparado, e a entrada foi apagada.
 Fica registrado o que aquela exceção mediu, porque continua verdadeiro e não tem
 mais quem prove: o **denominador do teto está errado** — achado escala com
 superfície de arquitetura (contas, VPCs, pontos de entrada), não com contagem de
-nós. Ver [`../docs/corpus.md`](../docs/corpus.md) §13.
+nós.
 
 **`retencao-sem-regra` não virou regra**, e é bom dizer por quê: ele aparece no
 dossiê do corpus de sessão, mas retenção é fato de política de dado que o

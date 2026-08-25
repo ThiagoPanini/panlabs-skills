@@ -12,10 +12,17 @@ não poder ser publicada. O que quem instala não usa mora aqui.
 | [`corpus/`](corpus/) | O corpus renderizado — 24 modelos em `.drawio` e PNG, mais as variantes de tema. **Reconstrutível**: `tests/rodar.sh` regenera byte a byte, e a igualdade é medida |
 | [`casos/`](casos/) | Os casos de uso rodados ponta a ponta contra a skill, cada um com a necessidade em prosa, o modelo, o diagrama e o laudo |
 | [`auditoria.md`](auditoria.md) | A auditoria de 2026-08-23: o que foi medido contra a spec de Agent Skills, o que mudou e os cinco defeitos que os casos acharam |
+| [`corpus.md`](corpus.md) | O critério do corpus — o que cada modelo prova, e o que falta provar |
+| [`recertificacao.md`](recertificacao.md) | A recertificação do motor: o que a união dos dois candidatos mediu, o que caiu e o que sobreviveu |
+| [`roteamento.md`](roteamento.md) | O conserto do roteamento de aresta, com o antes/depois em imagem |
+| [`decisoes.md`](decisoes.md) | Toda decisão da construção com o gatilho que a reabre — lido para **modificar** a skill, nunca para executá-la |
 
-O registro de engenharia em prosa — o critério do corpus, a recertificação do
-motor, o conserto do roteamento — ficou **dentro** da skill, em
-[`skills/panlabs-aws-diagrams/docs/`](../../skills/panlabs-aws-diagrams/docs/).
-São 412 KB e o [`guia/`](../../skills/panlabs-aws-diagrams/guia/) aponta para
-eles: uma skill que aponta para fora de si mesma quebra na mão de quem a instala,
-e essa batalha já foi travada uma vez neste repositório.
+O registro de engenharia em prosa e o guia de decisões de construção **saíram**
+da skill (#36): moravam em `skills/panlabs-aws-diagrams/docs/` e
+`skills/panlabs-aws-diagrams/guia/decisoes.md`, apontados pelo `guia/` — e uma
+skill que aponta para fora de si mesma quebra na mão de quem a instala, batalha
+já travada uma vez neste repositório. A correção desta vez não é mover o alvo e
+manter o ponteiro: é **cortar o ponteiro**. Nada em
+[`skills/panlabs-aws-diagrams/`](../../skills/panlabs-aws-diagrams/) referencia
+os quatro arquivos acima; a direção é uma via só, e é esta página que aponta
+para dentro da skill, nunca o contrário.

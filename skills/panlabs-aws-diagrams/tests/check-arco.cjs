@@ -7,8 +7,8 @@
  *   node tests/check-arco.cjs
  *
  * O #26 pede a skill rodando *necessidade vaga → sabatina → candidatas →
- * aprovação da vista lógica → vista técnica → `.drawio`*. O critério está em
- * `docs/corpus.md` §5, e a primeira linha dele é a que decide o sujeito:
+ * aprovação da vista lógica → vista técnica → `.drawio`*. O critério tem uma
+ * primeira linha que decide o sujeito:
  *
  *   > E1 · o arco roda contra um caso que NÃO EXISTIA antes deste ticket —
  *   >      validar o arco contra a própria fixture dele não mede nada.

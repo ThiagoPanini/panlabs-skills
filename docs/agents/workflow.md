@@ -202,12 +202,19 @@ mergeado, e a sessão sai achando que não mergeou.
 `git pull --ff-only`. Se o `--ff-only` recusar, alguém commitou direto na `main`
 local: isso é o defeito, não o pull.
 
-Está assim agora, e a medição é de três minutos: `8b71c7e` e `6c5f29d` estão na
-`main` local e em **remoto nenhum** (`git branch -r --contains main` sai vazio) — e
-o SHA do topo mudou entre duas leituras desta mesma sessão, `759918e` → `8b71c7e`
-com o mesmo assunto. Ou seja, **a `main` local não só recebe commit como está sendo
-reescrita por outra sessão enquanto esta lê.** É o pior lugar possível para guardar
-trabalho, e o histórico já guarda os dois nomes que essa prática deixa:
+**E isto já custou trabalho de verdade.** Quando esta doutrina foi escrita, `8b71c7e`
+e `6c5f29d` estavam na `main` local e em **remoto nenhum** (`git branch -r --contains
+main` saía vazio) — e o SHA do topo mudou entre duas leituras da mesma sessão,
+`759918e` → `8b71c7e` com o mesmo assunto. Ou seja, **a `main` local não só recebia
+commit como estava sendo reescrita por outra sessão enquanto era lida.**
+
+O `6c5f29d` não era redundante: ele trazia `modelo/ator-externo-3-contas.json`, um
+arquivo que **não existia na `origin/main`**. Foi resgatado no
+[#54](https://github.com/ThiagoPanini/panlabs-skills/issues/54), e o resgate é o
+manual da regra do derivado — o cherry-pick conflitou em `motor.manifesto.json`, e a
+resolução saiu de `check-motor-intocado.cjs --gravar`, não de escolher um lado.
+
+O histórico guarda os outros dois nomes que essa prática deixa:
 `a2a08ae Reconcilia com o PR #29, que mergeou a mesma branch na origin` e
 `331b61c Traz para a main os 9 commits do #26 que ficaram na branch`.
 

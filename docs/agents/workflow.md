@@ -83,14 +83,23 @@ UNION RED - the clean merge would lie.
 ```
 
 **E ele prova que mede antes de ser usado como régua.**
-`scripts/check-union.proof.sh` planta as três colisões num repo descartável e exige
-vermelho em cada uma, mais um controle de território disjunto que tem de passar e o
-modo de duas refs medido de uma terceira branch — cinco casos, cinco verdes. As
-três checagens passariam por vacuidade se a consulta estivesse errada, e nenhuma
-delas dispara na árvore real com frequência suficiente para ser vista falhar por
-acidente — **checagem só vista verde é documentação**. O caso da interseção ainda
-assevera a premissa antes de medir: *o git mergeia aquele par sem conflito* — e é
-por isso que a régua precisa existir.
+`scripts/check-union.proof.sh` planta as quatro colisões silenciosas num repo
+descartável e exige vermelho em cada uma, mais três controles que têm de passar —
+território disjunto, o modo de duas refs medido de uma terceira branch, e o mesmo
+`git mv` com o link corrigido. **Sete casos, sete verdes.** As quatro checagens
+passariam por vacuidade se a consulta estivesse errada, e nenhuma delas dispara na
+árvore real com frequência suficiente para ser vista falhar por acidente —
+**checagem só vista verde é documentação**. O caso da interseção ainda assevera a
+premissa antes de medir: *o git mergeia aquele par sem conflito* — e é por isso que
+a régua precisa existir.
+
+**A quarta checagem — `self-dangling` — nasceu de um defeito que passou.** O `git mv`
+move os bytes e não reescreve os links relativos **dentro** do arquivo movido: o
+#36 aterrissou com `docs/aws-diagrams/decisoes.md` apontando para `docs/SKILL.md`,
+que nunca existiu. Uma revisão humana pegou o link irmão em `recertificacao.md` e
+deixou este passar. O check 3 era cego a isso por construção — ele procura o que o
+**outro** lado moveu, e aqui quem moveu e quem apontava eram a mesma branch. Ver
+[#56](https://github.com/ThiagoPanini/panlabs-skills/issues/56).
 
 ## Um ticket, um worktree, uma branch
 

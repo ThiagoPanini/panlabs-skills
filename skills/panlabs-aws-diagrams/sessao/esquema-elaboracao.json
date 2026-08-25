@@ -29,16 +29,19 @@
 
     "casacos": {
       "type": "object",
-      "description": "{ id: casacoTecnico }. Veste um nó JÁ APROVADO de serviço AWS. Cada valor tem a forma de `casacoTecnico` (sessao@1) — validada depois do merge, não aqui."
+      "additionalProperties": true,
+      "description": "{ id: casacoTecnico }. Veste um nó JÁ APROVADO de serviço AWS. Cada valor tem a forma de `casacoTecnico` (sessao@1) — validada depois do merge, não aqui. `additionalProperties: true` é deliberado, mesmo idioma de `modelo@1.dossie`: aberto por contrato, não por esquecimento."
     },
 
     "dentro": {
       "type": "object",
+      "additionalProperties": true,
       "description": "{ id: novoPai }. Reparenta um nó aprovado para dentro de um nível que só a camada técnica tem — a operação de risco: a projeção lógica tem de sair idêntica mesmo assim."
     },
 
     "refina": {
       "type": "object",
+      "additionalProperties": true,
       "description": "{ idAresta: { por: [ids], rotulos: [...] } }. Transforma uma aresta aprovada num CAMINHO técnico, declarando os saltos — os extremos continuam sendo os mesmos objetos, e a contração da projeção reconstrói o par original."
     },
 
@@ -51,6 +54,7 @@
 
     "arestasCasaco": {
       "type": "object",
+      "additionalProperties": true,
       "description": "{ idAresta: { rotulo, protocolo, ordem } }. Dá rótulo técnico a uma aresta aprovada, sem mexer nos extremos."
     },
 
@@ -62,6 +66,7 @@
 
     "dossie": {
       "type": "object",
+      "additionalProperties": true,
       "description": "Mesma forma de dossie.estacionamento e dossie.achados em sessao@1 — elaborar.cjs funde por chave (nome/regra+alvo) em vez de substituir a lista inteira."
     }
   },
@@ -70,7 +75,8 @@
     "identificador": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*$",
-      "maxLength": 64
+      "maxLength": 64,
+      "description": "kebab-case derivado do dominio. O MESMO id que atravessa modelo@1 e sessao@1 — um delta que inventasse seu proprio formato de id seria uma quarta convencao para a mesma coisa."
     },
 
     "noNovo": {
@@ -86,6 +92,7 @@
         "dentro": { "$ref": "#/definitions/identificador" },
         "tecnico": {
           "type": "object",
+          "additionalProperties": true,
           "description": "Casaco técnico do nó novo — forma de `casacoTecnico` (sessao@1), validada depois do merge."
         }
       }

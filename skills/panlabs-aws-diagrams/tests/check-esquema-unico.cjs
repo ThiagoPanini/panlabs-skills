@@ -42,6 +42,18 @@ const ok = (cond, titulo, detalhe) => {
   if (!cond) falhas++;
 };
 
+/** Os caminhos que um `require(modulo)` abre via `fs.readFileSync`, medidos de verdade. */
+function leiturasDoRequire(modulo) {
+  const lidos = [];
+  const real = fs.readFileSync;
+  fs.readFileSync = function (p, ...r) { lidos.push(String(p)); return real.call(fs, p, ...r); };
+  try {
+    delete require.cache[require.resolve(modulo)];
+    require(modulo);
+  } finally { fs.readFileSync = real; }
+  return lidos;
+}
+
 /** Todo .json da árvore de produção que se declare um JSON Schema. */
 function esquemas(dir, fora = new Set(['prototypes', 'node_modules', 'saida'])) {
   const achados = [];
@@ -86,13 +98,7 @@ ok(daElaboracao.length === 1 && daElaboracao[0] === 'sessao/esquema-elaboracao.j
 
 console.log('\n3 · é esse arquivo que o motor carrega (medido)\n');
 {
-  const lidos = [];
-  const real = fs.readFileSync;
-  fs.readFileSync = function (p, ...r) { lidos.push(String(p)); return real.call(fs, p, ...r); };
-  try {
-    delete require.cache[require.resolve(path.join(RAIZ, 'motor', 'gerar.cjs'))];
-    require(path.join(RAIZ, 'motor', 'gerar.cjs'));
-  } finally { fs.readFileSync = real; }
+  const lidos = leiturasDoRequire(path.join(RAIZ, 'motor', 'gerar.cjs'));
   const alvo = path.join(RAIZ, 'esquema.json');
   ok(lidos.includes(alvo), 'motor/gerar.cjs abriu <raiz>/esquema.json',
     lidos.filter(p => p.endsWith('esquema.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'nenhum');
@@ -100,13 +106,7 @@ console.log('\n3 · é esse arquivo que o motor carrega (medido)\n');
 
 console.log('\n3b · e é esse arquivo que elaborar.cjs carrega para o delta (medido)\n');
 {
-  const lidos = [];
-  const real = fs.readFileSync;
-  fs.readFileSync = function (p, ...r) { lidos.push(String(p)); return real.call(fs, p, ...r); };
-  try {
-    delete require.cache[require.resolve(path.join(RAIZ, 'sessao', 'elaborar.cjs'))];
-    require(path.join(RAIZ, 'sessao', 'elaborar.cjs'));
-  } finally { fs.readFileSync = real; }
+  const lidos = leiturasDoRequire(path.join(RAIZ, 'sessao', 'elaborar.cjs'));
   const alvo = path.join(RAIZ, 'sessao', 'esquema-elaboracao.json');
   ok(lidos.includes(alvo), 'sessao/elaborar.cjs abriu sessao/esquema-elaboracao.json',
     lidos.filter(p => p.endsWith('.json')).map(p => path.relative(RAIZ, p)).join(', ') || 'nenhum');

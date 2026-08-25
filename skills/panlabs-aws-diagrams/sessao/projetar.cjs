@@ -47,10 +47,13 @@ const VISTAS = ['logica', 'tecnica'];
  * ele, multi-conta pelo arco nao conseguia expressar unidade organizacional
  * nenhuma — as duas bandeiras da skill nao se combinavam.
  *
- * `tests/check-paridade-tecnica.cjs` (#37) mede a paridade direto contra os
- * dois arquivos de esquema — para a proxima divergencia sair vermelha antes
- * de virar um campo que existe no esquema e nao chega no modelo@1 projetado,
- * que e exatamente o que faltava aqui para `camada` (#22) ate o #37.
+ * `tests/check-paridade-tecnica.cjs` (#37) mede duas paridades, nao uma:
+ * modelo@1.no contra sessao@1.casacoTecnico (os dois ESQUEMAS), e esta lista
+ * contra sessao@1.casacoTecnico (o esquema contra quem de fato PROJETA). A
+ * primeira sozinha nao pegaria a falha que faltou aqui para `camada` (#22)
+ * ate o #37: o campo podia estar nos dois esquemas e ainda assim nunca
+ * chegar ao modelo@1 projetado, se esta lista esquecesse dele. Exportada por
+ * isso — a checagem le a lista de verdade, nao uma copia dela.
  */
 const CAMPOS_TECNICOS = ['servico', 'az', 'acesso', 'cidr', 'conta', 'nota',
                          'qualificador', 'ou', 'habilita', 'camada'];
@@ -261,4 +264,4 @@ function recorteDoAcordo(modeloLogico) {
   };
 }
 
-module.exports = { projetar, recorteDoAcordo, VISTAS };
+module.exports = { projetar, recorteDoAcordo, VISTAS, CAMPOS_TECNICOS, CAMPOS_LOGICOS };

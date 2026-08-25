@@ -22,8 +22,11 @@ dívida que ela declara, está no `CLAUDE.md` § O código é em inglês. É por
 | 4 | **estrutura** | um lado move um caminho; o outro continua apontando para ele | mergeia limpo |
 
 A colisão 1 é a barata, e não precisa de doutrina — o git já a resolve. **As três
-que sobram passam verdes**, e é para elas que este arquivo existe. Cada uma está
-acontecendo agora, medida nesta árvore:
+que sobram passam verdes**, e é para elas que este arquivo existe.
+
+As três medições abaixo são o que esta árvore mostrava no dia em que a doutrina foi
+escrita, e ficam como registro: não são hipótese, foram o estado real do repo. Os
+tickets citados já aterrissaram — pela régua, e um de cada vez.
 
 **Interseção.** As branches `issue-36-registro-fora-da-skill` e
 `issue-37-quatro-contratos` saem da mesma base (`c70ec0e`) e cruzam em exatamente
@@ -63,12 +66,12 @@ aterrissar.
 
 `scripts/check-union.sh` é isso. Ele não descobre nada que um humano não pudesse
 ver — descobre **antes do merge**, que é a única diferença que importa depois que
-ele aconteceu. Rodado agora, nesta branch:
+ele aconteceu.
 
 Ele aceita **duas** refs — `check-union.sh [DELES] [MEU]`, com `MEU` valendo `HEAD`
 — e é isso que deixa a pergunta *estas duas branches abertas colidem?* ser feita de
-uma terceira branch, que é de onde ela normalmente se faz. Rodado assim contra os
-dois PRs abertos hoje, #48 e #52:
+uma terceira branch, que é de onde ela normalmente se faz. Foi assim que os PRs #48
+e #52 foram medidos antes de entrarem, e a saída é esta:
 
 ```
 $ scripts/check-union.sh origin/issue-36-registro-fora-da-skill origin/issue-37-quatro-contratos
@@ -111,9 +114,11 @@ deixou este passar. O check 3 era cego a isso por construção — ele procura o
 
 O número no nome não é enfeite: é o que liga a branch ao ticket em qualquer
 consulta, e a consulta de fronteira do [`issue-tracker.md`](issue-tracker.md)
-depende dessa ligação. Hoje há seis worktrees em quatro esquemas de nome
-(`issue-36-…`, `prototipos/q14`, `skill/q25`, `worktree-catalogo-shapes-aws`) —
-os herdados ficam; os novos são `issue-<n>-<slug>`.
+depende dessa ligação. Quando esta regra foi escrita havia **cinco esquemas de nome
+convivendo** — `issue-36-…`, `prototipos/q14`, `skill/q25`,
+`worktree-catalogo-shapes-aws` e `feat/33-…` —, e o custo não era estético: nenhuma
+consulta encontrava a branch a partir do ticket. Os herdados que ainda existem
+ficam; **tudo que nasce é `issue-<n>-<slug>`**.
 
 ## Território declarado antes da primeira escrita
 
@@ -141,7 +146,8 @@ gh issue list --state open --label ready-for-agent --json number,title,assignees
 scripts/check-union.sh <branch-da-outra-sessão>    # se a outra já tem branch
 ```
 
-Achou cruzamento? **Não negocie o diff — pegue outro ticket.** A fila tem treze.
+Achou cruzamento? **Não negocie o diff — pegue outro ticket.** O comando acima diz
+quantos há; um número escrito aqui já teria envelhecido.
 
 ## Registro é append-only, e a regra troca uma colisão por outra de propósito
 
@@ -261,16 +267,17 @@ Treze minutos de 2026-08-25, e os quatro PRs da manhã:
 | 11:38 | #51 | `issue-50-doutrina-trabalho-paralelo` | este documento, aberto |
 | 11:41 | #52 | `issue-37-quatro-contratos` | aberto como draft |
 
-**Não seguiram, e não tinham como.** #48 e #49 são anteriores a este arquivo; o #52
-veio quatro minutos depois dele — mas o #51 ainda está aberto. **Doutrina que não
-está na `main` não está em vigor**, e a regra que este documento grava sobre si
-mesmo é a que ele grava sobre todo mundo: terminar é estar na `main`.
+**Não seguiram, e não tinham como.** #48 e #49 eram anteriores a este arquivo; o #52
+veio quatro minutos depois dele — e o #51, que era este arquivo, ainda estava
+aberto. **Doutrina que não está na `main` não está em vigor**, e a regra que este
+documento grava sobre si mesmo é a que ele grava sobre todo mundo: terminar é estar
+na `main`.
 
 Território declarado: **nenhum**. As issues #36 e #37 não têm um comentário sequer.
 O #49 estreou um quinto esquema de nome de branch (`feat/33-…`) e foi mergeado 32
 segundos depois de aberto — menos tempo do que a suíte da skill leva para rodar.
 
-E o que a régua mede nos três, agora:
+E o que a régua mediu nos três:
 
 | par | interseção | o git | a regra que ela toca |
 | --- | --- | --- | --- |
@@ -302,6 +309,34 @@ ticket edita, e **nada o verifica**.
 responde *o motor ainda funciona?*; a união responde *duas edições que ninguém leu
 juntas viraram um documento coerente?*. Rodar só a primeira e concluir que está
 tudo bem é a lição do #23 acontecendo de novo, um andar acima.
+
+### E foi assim que a fila drenou
+
+A doutrina entrou primeiro (`da90a13`) porque nada abaixo dela valia enquanto ela
+estivesse num PR aberto. Depois, um de cada vez, na ordem que ela mesma manda:
+
+| | | |
+| --- | --- | --- |
+| `29307b4` | #36 | `movimento-de-terra` — **sozinho e primeiro**; união medida, suíte verde contra a árvore mergeada |
+| `59826ba` | #54 | o commit que só existia na `main` local, com derivado **regenerado**, não mergeado |
+| `a3daa63` | #37 | `SKILL.md` e `rodar.sh` materializados e **lidos**; os três ponteiros novos resolvem |
+| `00da483` | #56 | o `self-dangling`, e o link morto que a revisão humana deixou passar |
+| `1eb76aa` | #34 | conserto pronto que dormia numa branch sem PR desde 2026-08-24 |
+
+**O que a execução ensinou, e virou regra acima:** duas das cinco entradas eram
+trabalho **já pronto e não aterrissado** — uma na `main` local, outra numa branch
+esquecida. Nenhuma das duas apareceria numa lista de PRs abertos. A auditoria que as
+achou é barata e cabe em duas linhas:
+
+```bash
+git branch -vv | grep -v '\[origin/'        # commit local sem remoto nenhum
+git branch -r --merged origin/main          # o complemento: branch que já pode sair
+```
+
+E a colisão do derivado apareceu **três vezes** nas cinco — sempre no
+`motor.manifesto.json`, sempre resolvida por `--gravar`. Na terceira, a regeneração
+saiu **no-op**: prova de que o merge produzia o mesmo que o gerador, e de que a
+regra é barata mesmo quando não muda nada.
 
 ## Duas armadilhas de worktree
 

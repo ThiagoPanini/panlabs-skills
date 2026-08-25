@@ -722,6 +722,15 @@ function planoDeContas(modelo, d, res, g, opts = {}) {
   }
 
   // 3. rótulos de OU — ANTES das contas, porque a ordem do documento é a ordem z
+  //
+  // A segunda cláusula não é defesa contra `col.ou` vazio — em integração ele
+  // já é sempre `null` (`porContas` ordena a fileira para MINIMIZAR CRUZAMENTO
+  // de travessia, #12, não para agrupar por OU, e a mesma OU pode terminar
+  // espalhada em posições não-contíguas). A cláusula está aqui para NOMEAR a
+  // decisão: a faixa de OU é dimensão de CONTRASTE entre colunas (S3), e a
+  // vista de integração não tem coluna por OU — tem uma fileira só, ordenada
+  // pela travessia, que é o assunto dela. `gerar.cjs` sabe da mesma regra e
+  // ajusta o aviso para não anunciar uma faixa que este bloco não emite.
   if (d.ou.desenhar && g.modo !== 'integracao') {
     for (const col of g.colunas) {
       if (!col.ou) continue;

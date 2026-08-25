@@ -233,6 +233,22 @@ async function main() {
     }
   }
 
+  // ---------------------------------------------------------------- #34
+  console.log('\n6. #34 — o relatório não pode anunciar faixa de OU que o desenho não tem');
+  // `plataforma-3-contas` é o mesmo modelo da seção 5: 3 contas, `Workloads`
+  // com DUAS (c-workload e c-dados) e `c-rede` fora dela — o contraste que
+  // dispara `gatilhoOu` — e modo integração, onde `planejar.cjs` suprime a
+  // faixa. É o caso do corpus com OU em integração que o #34 pediu.
+  ok('o gatilho de OU disparou (contraste real: Workloads×2 fora de Infrastructure)',
+    rInt.derivado.ou.desenhar, rInt.derivado.ou.porque);
+  const ouNoXml = (rInt.xml.match(/OU – /g) || []).length;
+  ok('a faixa de OU não está no .drawio (modo integração suprime)', ouNoXml === 0,
+    `${ouNoXml} ocorrência(s) de "OU – " na saída`);
+  const avisoOu = rInt.relatorio.avisos.find(a => a.startsWith('faixas de OU'));
+  ok('existe aviso sobre a faixa de OU', Boolean(avisoOu), avisoOu);
+  ok('o aviso DIZ que o modo integração não desenha — não afirma o que o XML nega',
+    Boolean(avisoOu) && /não desenha faixa de OU/.test(avisoOu), avisoOu);
+
   console.log();
   if (falhas) { console.log(`${falhas} checagem(ns) falharam`); process.exit(1); }
   console.log('as decisões do #12 estão no arquivo, não só no README.');

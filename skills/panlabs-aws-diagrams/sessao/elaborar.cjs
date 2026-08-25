@@ -9,6 +9,12 @@
  * confere que nenhum foi tocado. Mesma jogada do #11: a regra vira gramatica em
  * vez de disciplina.
  *
+ * Ate o #37, `elaboracao@1` nao tinha arquivo de esquema: o unico jeito de errar
+ * a FORMA do delta (campo com typo, `esquema` errado, no novo sem `camada`) era
+ * cair direto nos erros de dominio abaixo, ou nem isso. Agora a forma e
+ * conferida primeiro, contra o mesmo esquema que `tests/check-esquema-unico.cjs`
+ * passou a varrer.
+ *
  * O que o delta pode fazer:
  *   nos            acrescentar infraestrutura (camada "tecnica" obrigatoria)
  *   casacos        vestir um no aprovado de servico AWS
@@ -26,9 +32,18 @@
  * logico dela intacto, e a contracao da projecao reconstroi o par original.
  */
 
+const fs = require('fs');
+const path = require('path');
+const { contraEsquema } = require(path.join(__dirname, '..', 'motor', 'validar.cjs'));
+
+const ESQUEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'esquema-elaboracao.json'), 'utf8'));
+
 const clonar = o => JSON.parse(JSON.stringify(o));
 
 function elaborar(base, el) {
+  const deForma = contraEsquema(el, ESQUEMA, ESQUEMA);
+  if (deForma.length) { const e = new Error('elaboracao fora do esquema'); e.erros = deForma; throw e; }
+
   if (el.sobre && el.sobre !== base.id)
     throw new Error(`elaboracao e sobre "${el.sobre}", o modelo e "${base.id}"`);
 
@@ -141,4 +156,4 @@ function elaborar(base, el) {
   return m;
 }
 
-module.exports = { elaborar };
+module.exports = { elaborar, ESQUEMA };

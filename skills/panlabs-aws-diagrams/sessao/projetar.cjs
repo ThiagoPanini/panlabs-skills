@@ -47,11 +47,13 @@ const VISTAS = ['logica', 'tecnica'];
  * ele, multi-conta pelo arco nao conseguia expressar unidade organizacional
  * nenhuma — as duas bandeiras da skill nao se combinavam.
  *
- * `tests/check-projecao.cjs` passou a medir a paridade, para a proxima
- * divergencia sair vermelha em vez de calada.
+ * `tests/check-paridade-tecnica.cjs` (#37) mede a paridade direto contra os
+ * dois arquivos de esquema — para a proxima divergencia sair vermelha antes
+ * de virar um campo que existe no esquema e nao chega no modelo@1 projetado,
+ * que e exatamente o que faltava aqui para `camada` (#22) ate o #37.
  */
 const CAMPOS_TECNICOS = ['servico', 'az', 'acesso', 'cidr', 'conta', 'nota',
-                         'qualificador', 'ou', 'habilita'];
+                         'qualificador', 'ou', 'habilita', 'camada'];
 
 /** O mesmo, do lado logico. `nota` ja vinha; `qualificador` entrou no #29. */
 const CAMPOS_LOGICOS = ['nota', 'qualificador'];

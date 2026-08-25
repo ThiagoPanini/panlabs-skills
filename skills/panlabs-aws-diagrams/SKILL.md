@@ -224,7 +224,8 @@ estáticas verdes com o ícone errado no desenho.
 Os contratos são a fonte da verdade e estão versionados — leia o arquivo, não uma
 cópia dele: [`esquema.json`](esquema.json) (`modelo@1`, o que o agente escreve),
 [`sessao/esquema.json`](sessao/esquema.json) (`sessao@1`, o que persiste entre
-conversas) e [`tema/esquema.json`](tema/esquema.json) (`tema@1`, o vocabulário
-fechado de estilo). O quarto — `elaboracao@1`, o delta da fase técnica — **não tem
-arquivo de esquema**, e a única descrição da forma dele está em
-[`guia/modelo.md`](guia/modelo.md).
+conversas), [`tema/esquema.json`](tema/esquema.json) (`tema@1`, o vocabulário
+fechado de estilo) e [`sessao/esquema-elaboracao.json`](sessao/esquema-elaboracao.json)
+(`elaboracao@1`, o delta da fase técnica). Os quatro são varridos por
+`tests/check-esquema-unico.cjs`, e `modelo@1` e o casaco técnico de `sessao@1` têm
+paridade de campo conferida por `tests/check-paridade-tecnica.cjs` (#37).

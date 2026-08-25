@@ -215,6 +215,14 @@
             "privada"
           ]
         },
+        "camada": {
+          "enum": [
+            "borda",
+            "aplicacao",
+            "dados"
+          ],
+          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `no` em `modelo@1`, e mesmo NOME que o `camada` do `no` que envolve este casaco (que aqui significa onde o elemento existe na sessao — ambas|tecnica). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com tipo=subnet. Ausente ate o #37 — era o mesmo defeito que `qualificador`, `ou` e `habilita` tiveram ate o #29 (tests/check-paridade-tecnica.cjs mede isto agora)."
+        },
         "cidr": {
           "type": "string"
         },

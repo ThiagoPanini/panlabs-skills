@@ -30,7 +30,7 @@ falta) ou o **tema** (a métrica), nunca a geometria.
 | `modelo@1` | [`../esquema.json`](../esquema.json) | você tem **uma** vista e quer o `.drawio` — é o que o motor come |
 | `sessao@1` | [`../sessao/esquema.json`](../sessao/esquema.json) | a conversa tem as **duas** vistas, um acordo e um dossiê para atravessar sessões |
 | `tema@1` | [`../tema/esquema.json`](../tema/esquema.json) | você está configurando identidade visual — ver [`visual.md`](visual.md) |
-| `elaboracao@1` | **nenhum** — ver abaixo | você está na fase técnica e vai aplicar um delta sobre o modelo aprovado |
+| `elaboracao@1` | [`../sessao/esquema-elaboracao.json`](../sessao/esquema-elaboracao.json) | você está na fase técnica e vai aplicar um delta sobre o modelo aprovado |
 
 `sessao@1` **não** é o que o motor come: ele projeta para `modelo@1`. A diferença
 entre a vista lógica e a técnica não é outro modelo, é outro **casaco** sobre os
@@ -38,11 +38,14 @@ mesmos nós, mais os nós que só a camada técnica tem.
 
 ### O delta de elaboração
 
-> ⚠️ **`elaboracao@1` não tem arquivo de esquema**, e portanto nada valida o que
-> você escreve — `elaborar.cjs` valida só o que ele sabe recusar, e
-> `tests/check-esquema-unico.cjs` não o alcança porque só varre os três esquemas
-> que existem. Enquanto isso, esta seção e
-> `modelo/sessao/varejo-elaboracao.json` são a única descrição da forma.
+`elaboracao@1` tem esquema próprio —
+[`../sessao/esquema-elaboracao.json`](../sessao/esquema-elaboracao.json) — desde o
+#37. `elaborar()` valida a FORMA do delta contra ele antes de aplicar qualquer
+regra de domínio, e `tests/check-esquema-unico.cjs` o varre junto dos outros três.
+Os mapas (`casacos`, `dentro`, `refina`, `arestasCasaco`) ficam com valor solto no
+esquema — as chaves são ids imprevisíveis aqui, e a forma de cada valor (em
+particular a de um casaco técnico) é conferida de novo, já fundida no modelo
+inteiro, por `sessao/validar.cjs` contra `sessao@1`.
 
 Ele não é um segundo modelo — é o que a fase técnica **acrescenta** ao que a
 sessão anterior aprovou. Campos, todos opcionais além de `esquema` e `sobre`:

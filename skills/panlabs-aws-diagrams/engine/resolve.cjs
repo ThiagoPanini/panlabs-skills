@@ -1,24 +1,24 @@
 'use strict';
 /**
- * Resolução: nó do modelo -> forma desenhável.
+ * Resolution: model node -> drawable shape.
  *
- * É aqui que a semântica encosta no catálogo (#17) e sai do outro lado como
- * style string do mxGraph. O motor não conhece nenhum hex, nenhum stencil,
- * nenhum `container=1` — tudo isso vem do catálogo já corrigido.
+ * This is where semantics touches the catalog (#17) and comes out the other side
+ * as an mxGraph style string. The engine knows no hex, no stencil, no
+ * `container=1` — all of that comes from the catalog, already corrected.
  *
- * A única coisa que este módulo decide sozinho é TAMANHO, e por um motivo
- * concreto: no mxGraph o rótulo de um service icon é desenhado FORA dos bounds
- * (`verticalLabelPosition=bottom`). A geometria diz 78×78 e o desenho ocupa
- * 78×(78+rótulo). Quem passar 78×78 ao layout entrega colisão rótulo–rótulo,
- * que é `A3.2` da rubrica (#8). O motor reserva a faixa do rótulo porque o
- * mxGraph não reserva.
+ * The only thing this module decides on its own is SIZE, and for a concrete
+ * reason: in mxGraph the label of a service icon is drawn OUTSIDE the bounds
+ * (`verticalLabelPosition=bottom`). The geometry says 78×78 and the drawing
+ * occupies 78×(78+label). Anyone passing 78×78 to the layout hands over a
+ * label–label collision, which is `A3.2` of the rubric (#8). The engine reserves
+ * the label band because mxGraph does not.
  */
 
 const path = require('path');
 
 const CATALOG_PATH = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
 
-// Tipo do modelo -> nome do grupo no catálogo. A subnet depende de `acesso`.
+// Model kind -> group name in the catalog. The subnet depends on `access`.
 const GROUP_OF = {
   cloud: 'AWS Cloud',
   account: 'AWS Account',
@@ -28,154 +28,156 @@ const GROUP_OF = {
   group: 'Generic group',
 };
 
-// Métrica de texto. Não há como medir fonte sem renderizar, então isto é
-// estimativa calibrada — e é por isso que o validador geométrico (#18) existe.
-// As styles do catálogo desenham rótulo de folha com `fontSize=12`, não 10 —
-// a primeira versão estimou por 10 e subdimensionou a faixa do rótulo em ~25%.
-// Foi assim que o "VPC endpoint" encostou no rótulo "Catálogo" do RDS.
+// Text metrics. There is no way to measure a font without rendering, so this is a
+// calibrated estimate — and that is why the geometry validator (#18) exists.
+// The catalog styles draw a leaf label at `fontSize=12`, not 10 — the first
+// version estimated at 10 and undersized the label band by ~25%. That is how the
+// "VPC endpoint" ended up touching the RDS "Catálogo" label.
 const MIN_LABEL = 23;
 /**
- * ⚠️ NÃO HÁ MÉTRICA DE TEXTO AQUI — ela vem do tema.
+ * ⚠️ THERE IS NO TEXT METRIC HERE — it comes from the theme.
  *
- * A largura por caractere e a altura de linha do #11 estavam calibradas contra
- * `fontSize=12`, o corpo que as styles do catálogo desenham e que o `N11` do #5
- * prescreve. Mudar o corpo muda a caixa reservada, que muda o vão, que muda a
- * geometria — então essa conta é do tema, e o tema entra no pipeline ANTES do
- * layout. Ver `tools/check-partition.cjs`.
+ * The per-character width and line height of #11 were calibrated against
+ * `fontSize=12`, the body the catalog styles draw and that `N11` of #5
+ * prescribes. Changing the body changes the reserved box, which changes the gap,
+ * which changes the geometry — so that sum belongs to the theme, and the theme
+ * enters the pipeline BEFORE the layout. See `tools/check-partition.cjs`.
  */
 
-/** Quantas linhas o rótulo ocupa se quebrado numa caixa de `larg` px. */
-function labelLines(text, larg, largCar) {
+/** How many lines the label takes if wrapped in a box `larg` px wide. */
+function labelLines(text, larg, charWidth) {
   if (!text) return 0;
-  // um rótulo com qualificador (O21) já traz a quebra dentro dele
-  const forcadas = String(text).split(/<br\s*\/?>/i);
-  if (forcadas.length > 1)
-    return forcadas.reduce((n, p) => n + labelLines(p.replace(/<[^>]+>/g, ''), larg, largCar), 0);
-  const porLinha = Math.max(1, Math.floor(larg / largCar));
-  let linhas = 1, atual = 0;
-  for (const palavra of String(text).split(/\s+/)) {
-    const custo = palavra.length + (atual ? 1 : 0);
-    if (atual + custo > porLinha && atual > 0) { linhas++; atual = palavra.length; }
-    else atual += custo;
+  // a label with a qualifier (O21) already carries the break inside it
+  const forced = String(text).split(/<br\s*\/?>/i);
+  if (forced.length > 1)
+    return forced.reduce((n, p) => n + labelLines(p.replace(/<[^>]+>/g, ''), larg, charWidth), 0);
+  const perLine = Math.max(1, Math.floor(larg / charWidth));
+  let lines = 1, current = 0;
+  for (const word of String(text).split(/\s+/)) {
+    const cost = word.length + (current ? 1 : 0);
+    if (current + cost > perLine && current > 0) { lines++; current = word.length; }
+    else current += cost;
   }
-  return linhas;
+  return lines;
 }
 
-function textWidth(text, largCar) {
-  return Math.ceil(String(text || '').length * largCar);
+function textWidth(text, charWidth) {
+  return Math.ceil(String(text || '').length * charWidth);
 }
 
-function create(tema, dirCatalogo) {
-  if (!tema) throw new Error('resolver.criar exige um tema — não existe caminho sem tema');
-  const cat = require(dirCatalogo || CATALOG_PATH).load();
+function create(theme, catalogDir) {
+  if (!theme) throw new Error('resolve.create requires a theme — there is no path without one');
+  const cat = require(catalogDir || CATALOG_PATH).load();
 
-  const usados = [];   // trilha de auditoria: como cada nome foi resolvido
-  const M = tema.metrica;
+  const used = [];   // audit trail: how each name was resolved
+  const M = theme.metrica;
 
-  function grupoDoNo(no) {
-    if (no.kind === 'subnet') return no.access === 'public' ? 'Public subnet' : 'Private subnet';
-    return GROUP_OF[no.kind] || 'Generic group';
+  function groupOfNode(node) {
+    if (node.kind === 'subnet') return node.access === 'public' ? 'Public subnet' : 'Private subnet';
+    return GROUP_OF[node.kind] || 'Generic group';
   }
 
-  /** Container: style + faixa de título reservada. */
-  function container(no) {
-    const name = grupoDoNo(no);
+  /** Container: style + reserved title band. */
+  function container(node) {
+    const name = groupOfNode(node);
     const g = cat.group(name);
-    if (!g) throw new Error(`grupo "${name}" ausente do catálogo`);
-    usados.push({ id: no.id, pediu: no.kind, virou: g.title, via: 'group', corrections: g.corrections });
-    const style = tema.group(g.style, g.title);
-    // `spacingLeft=30` no style do grupo é a janela do ícone: o rótulo começa
-    // depois dele. A faixa de título é área do filho (#2 §3.2), então quem
-    // reserva é o motor.
-    const temIcone = /grIcon=/.test(g.style);
+    if (!g) throw new Error(`group "${name}" missing from the catalog`);
+    used.push({ id: node.id, pediu: node.kind, virou: g.title, via: 'group', corrections: g.corrections });
+    const style = theme.group(g.style, g.title);
+    // `spacingLeft=30` in the group style is the icon window: the label starts
+    // after it. The title band is the child's area (#2 §3.2), so the one who
+    // reserves it is the engine.
+    const hasIcon = /grIcon=/.test(g.style);
     return {
       style,
-      // A faixa de título é CALHA: reserva de rótulo, e portanto derivada do corpo
-      // do texto do grupo — não da densidade. `check-partition.cjs` pegou isto: com
-      // a faixa fixa em 4 degraus, subir `texto.grupo` para 16 pt não movia uma
-      // coordenada e o rótulo passava a raspar a borda de cima.
-      tituloH: Math.max(tema.lane(4), Math.round(tema.tokens.text.group * 2.2)),
-      recuoTitulo: temIcone ? 30 : 8,
+      // The title band is a LANE: label reserve, and therefore derived from the
+      // group's text body — not from the density. `check-partition.cjs` caught
+      // this: with the band fixed at 4 steps, raising `text.group` to 16 pt moved
+      // not one coordinate and the label began to graze the top border.
+      tituloH: Math.max(theme.lane(4), Math.round(theme.tokens.text.group * 2.2)),
+      recuoTitulo: hasIcon ? 30 : 8,
       color: (style.match(/strokeColor=(#[0-9A-Fa-f]{6})/) || [])[1] || '#5A6C86',
       corrections: g.corrections,
     };
   }
 
-  /** Folha: style + caixa que já inclui a faixa do rótulo. */
-  function leaf(no) {
-    if (no.kind === 'block') {
+  /** Leaf: style + a box that already includes the label band. */
+  function leaf(node) {
+    if (node.kind === 'block') {
       const larg = 170;
-      const linhas = labelLines(no.label || no.id, larg - 16, M.largCar);
-      usados.push({ id: no.id, pediu: 'block', virou: '(bloco lógico)', via: 'block' });
+      const lines = labelLines(node.label || node.id, larg - 16, M.largCar);
+      used.push({ id: node.id, pediu: 'block', virou: '(logical block)', via: 'block' });
       return {
-        // vista lógica: pré-serviços, portanto fora do alcance da convenção AWS.
-        // É o único lugar onde a casa escolhe cor de caixa sem contrariar ninguém.
-        style: tema.block(),
-        label: no.label || no.id,
-        formaW: larg, formaH: Math.max(56, 20 + linhas * M.altLinha),
-        rotuloH: 0,                       // rótulo é interno — não há faixa a reservar
+        // logical view: pre-services, therefore out of reach of the AWS
+        // convention. It is the only place where the house picks a box colour
+        // without contradicting anyone.
+        style: theme.block(),
+        label: node.label || node.id,
+        formaW: larg, formaH: Math.max(56, 20 + lines * M.altLinha),
+        rotuloH: 0,                       // the label is internal — no band to reserve
       };
     }
 
-    const key = no.service || (no.kind === 'actor' ? 'users' : null);
-    if (!key) throw new Error(`nó "${no.id}" do tipo "${no.kind}" sem chave de serviço`);
+    const key = node.service || (node.kind === 'actor' ? 'users' : null);
+    if (!key) throw new Error(`node "${node.id}" of kind "${node.kind}" has no service key`);
     const s = cat.service(key);
-    if (!s) throw new Error(`serviço "${key}" não resolveu nem para o genérico`);
-    usados.push({
-      id: no.id, pediu: key, virou: s.title, via: s.via,
+    if (!s) throw new Error(`service "${key}" did not resolve, not even to the generic one`);
+    used.push({
+      id: node.id, pediu: key, virou: s.title, via: s.via,
       fallback: s.via === 'generic' || String(s.via).includes(':'),
     });
 
-    const name = no.label || s.rotuloSugerido || s.title;
-    // O21 do #5: o nome diz o que É, o itálico diz o que faz AQUI. Quem decide
-    // se mostra é o tema; o texto em si é fato do modelo — o único token de
-    // estilo deste protótipo que precisou de um campo novo no IR.
-    const label = tema.rotuloDeFolha(name, no.qualifier);
+    const name = node.label || s.rotuloSugerido || s.title;
+    // O21 of #5: the name says what it IS, the italic says what it does HERE.
+    // Whether it shows is the theme's call; the text itself is a fact of the
+    // model — the only style token of this prototype that needed a new field in
+    // the IR.
+    const label = theme.rotuloDeFolha(name, node.qualifier);
     const formaW = s.w || 78, formaH = s.h || 78;
-    // #33/#35: a caixa é a largura MEDIDA do rótulo, não uma quebra assumida —
-    // o mxGraph não quebra a linha do jeito que `linhasDoRotulo` supunha (ela
-    // sai inteira, e o "quebrado" vinha só do `<br>` explícito de
-    // `rotuloDeFolha`). Medir cada linha explícita e alargar até a mais larga
-    // é o que faz o transbordo deixar de existir como conceito: o ícone fica
-    // centrado dentro da caixa porque o style do catálogo já traz
-    // `aspect=fixed` — não há offset para calcular aqui.
+    // #33/#35: the box is the MEASURED width of the label, not an assumed wrap —
+    // mxGraph does not break the line the way `labelLines` supposed (it comes out
+    // whole, and the "wrapped" one came only from the explicit `<br>` of
+    // `rotuloDeFolha`). Measuring each explicit line and widening to the widest is
+    // what makes overflow stop existing as a concept: the icon stays centred
+    // inside the box because the catalog style already carries `aspect=fixed` —
+    // there is no offset to compute here.
     const rotuloW = Math.max(0, ...label.split(/<br\s*\/?>/i)
       .map(row => textWidth(row.replace(/<[^>]+>/g, ''), M.largCar)));
-    const caixaW = Math.max(formaW, rotuloW);
-    const linhas = labelLines(label, caixaW, M.largCar);
+    const boxW = Math.max(formaW, rotuloW);
+    const lines = labelLines(label, boxW, M.largCar);
     return {
-      style: tema.service(s.style, s),
+      style: theme.service(s.style, s),
       label,
       formaW, formaH,
-      rotuloH: Math.max(MIN_LABEL, linhas * M.altLinha),
+      rotuloH: Math.max(MIN_LABEL, lines * M.altLinha),
       rotuloW,
-      caixaW,
+      caixaW: boxW,
     };
   }
 
   function band(f) {
     const name = f.kind === 'auto-scaling' ? 'Auto Scaling group' : 'Generic group';
     const g = cat.group(name);
-    usados.push({ id: f.id, pediu: f.kind || 'generic', virou: g.title, via: 'band', corrections: g.corrections });
-    // Uma faixa existe para CRUZAR outras caixas, então o rótulo dela nasce por
-    // cima de bordas alheias — com 2 colunas de AZ o centro da faixa cai
-    // exatamente na divisa entre as zonas, e a linha tracejada risca o texto.
-    // O halo resolve sem tocar em cor nem em traço: a paleta continua sendo do
-    // catálogo, a legibilidade é do motor.
-    const style = tema.band(g.style);
+    used.push({ id: f.id, pediu: f.kind || 'generic', virou: g.title, via: 'band', corrections: g.corrections });
+    // A band exists to CROSS other boxes, so its label is born on top of somebody
+    // else's borders — with 2 AZ columns the centre of the band falls exactly on
+    // the divide between the zones, and the dashed line strikes through the text.
+    // The halo solves it without touching colour or stroke: the palette stays the
+    // catalog's, the legibility is the engine's.
+    const style = theme.band(g.style);
     return {
       style,
       color: (style.match(/strokeColor=(#[0-9A-Fa-f]{6})/) || [])[1],
     };
   }
 
-  function faixaAz() {
+  function azBand() {
     const g = cat.group('Availability Zone');
-    return { style: tema.group(g.style, g.title), corrections: g.corrections };
+    return { style: theme.group(g.style, g.title), corrections: g.corrections };
   }
 
   return {
-    container, leaf, band, faixaAz, cat, usados, tema,
+    container, leaf, band, faixaAz: azBand, cat, usados: used, tema: theme,
     labelLines: (t, l) => labelLines(t, l, M.largCar),
     textWidth: t => textWidth(t, M.largCar),
     larguraDaAresta: t => textWidth(t, M.largCarAresta),

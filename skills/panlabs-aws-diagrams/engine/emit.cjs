@@ -1,20 +1,20 @@
 'use strict';
 /**
- * Emissão — plano -> mxGraph XML.
+ * Emission — plan -> mxGraph XML.
  *
- * Este módulo não conhece ELK, não conhece grade, não conhece AWS. Recebe um
- * PLANO (lista ordenada de células com geometria já resolvida) e escreve o
- * arquivo seguindo a receita do #2 §8. A ordem do documento é a ordem z: quem
- * vem antes fica atrás.
+ * This module knows nothing of ELK, nothing of the grid, nothing of AWS. It
+ * receives a PLAN (an ordered list of cells with geometry already resolved) and
+ * writes the file following the recipe of #2 §8. Document order is z order:
+ * whatever comes first sits behind.
  *
- * A checagem final não é zelo: o #19 descobriu que XML inválido faz o draw.io
- * renderizar TRUNCADO com código de saída 0. O renderizador não reclama, então
- * quem tem de reclamar é o gerador.
+ * The final check is not diligence: #19 found that invalid XML makes draw.io
+ * render TRUNCATED with exit code 0. The renderer does not complain, so the one
+ * who has to complain is the generator.
  */
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
-/** htmlEntities do mxUtils, mesmo conjunto (#2 §7.3): & < > " ' \n \t \r */
+/** mxUtils' htmlEntities, the same set (#2 §7.3): & < > " ' \n \t \r */
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/[&<>"']/g, c => ESC[c])
@@ -23,7 +23,7 @@ function esc(s) {
     .replace(/\r/g, '&#xd;');
 }
 
-/** zapGremlins: caracteres de controle ilegais em XML e surrogates órfãos. */
+/** zapGremlins: control characters illegal in XML, and orphan surrogates. */
 function stripGremlins(s) {
   let out = '';
   for (const ch of String(s)) {
@@ -39,7 +39,7 @@ function geometry(g, extra = '') {
   return `<mxGeometry x="${r(g.x)}" y="${r(g.y)}" width="${r(g.w)}" height="${r(g.h)}" as="geometry"${extra ? '>' + extra + '</mxGeometry>' : '/>'}`;
 }
 
-function vertice(c, ind) {
+function vertex(c, ind) {
   const p = ' '.repeat(ind);
   const attrs = `id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" vertex="1" parent="${esc(c.parent)}"` +
     (c.visivel === false ? ' visible="0"' : '');
@@ -47,10 +47,11 @@ function vertice(c, ind) {
 }
 
 /**
- * Célula com metadados. O `<mxCell>` interno NÃO leva id — o wrapper carrega
- * (#2 §7.2). Nome de atributo tem de ser NCName: sem `:`, que viraria namespace.
+ * A cell with metadata. The inner `<mxCell>` carries NO id — the wrapper does
+ * (#2 §7.2). An attribute name has to be an NCName: no `:`, which would become a
+ * namespace.
  */
-function verticeComDados(c, ind) {
+function vertexWithData(c, ind) {
   const p = ' '.repeat(ind);
   const data = Object.entries(c.data)
     .map(([k, v]) => `${k}="${esc(stripGremlins(v))}"`).join(' ');
@@ -61,29 +62,29 @@ function verticeComDados(c, ind) {
 }
 
 /**
- * Aresta. Uma ponta pode ser SOLTA — sem nó do outro lado.
+ * An edge. One end may be LOOSE — with no node on the other side.
  *
- * O barramento do `E4` (#6) é literalmente isso: um segmento paralelo à fileira
- * de contas que não sai de lugar nenhum nem chega em lugar nenhum; quem entra
- * nas contas são os stubs perpendiculares. No mxGraph uma ponta sem `source`/
- * `target` só fica onde foi posta se a geometria trouxer `sourcePoint`/
- * `targetPoint` — sem isso a aresta colapsa na origem, e o draw.io não reclama.
+ * The `E4` bus (#6) is literally that: a segment parallel to the row of accounts
+ * that leaves nowhere and arrives nowhere; what enters the accounts are the
+ * perpendicular stubs. In mxGraph an end with no `source`/`target` only stays
+ * where it was put if the geometry carries `sourcePoint`/`targetPoint` — without
+ * that the edge collapses to the origin, and draw.io does not complain.
  */
 function edge(c, ind) {
   const p = ' '.repeat(ind);
-  const pontos = (c.pontos || []).map(pt => `\n${p}      <mxPoint x="${r(pt.x)}" y="${r(pt.y)}"/>`).join('');
-  const arr = pontos ? `\n${p}    <Array as="points">${pontos}\n${p}    </Array>` : '';
+  const points = (c.pontos || []).map(pt => `\n${p}      <mxPoint x="${r(pt.x)}" y="${r(pt.y)}"/>`).join('');
+  const arr = points ? `\n${p}    <Array as="points">${points}\n${p}    </Array>` : '';
 
-  const solta = c.solta || {};
+  const loose = c.solta || {};
   const tip = (name, x, y) =>
     `\n${p}    <mxPoint x="${r(x)}" y="${r(y)}" as="${name}"/>`;
-  const soltas =
-    (c.from ? '' : (solta.x1 !== undefined ? tip('sourcePoint', solta.x1, solta.y1) : '')) +
-    (c.to ? '' : (solta.x2 !== undefined ? tip('targetPoint', solta.x2, solta.y2) : ''));
+  const looseEnds =
+    (c.from ? '' : (loose.x1 !== undefined ? tip('sourcePoint', loose.x1, loose.y1) : '')) +
+    (c.to ? '' : (loose.x2 !== undefined ? tip('targetPoint', loose.x2, loose.y2) : ''));
 
-  const corpo = arr + soltas;
-  const geo = corpo
-    ? `<mxGeometry relative="1" as="geometry">${corpo}\n${p}  </mxGeometry>`
+  const body = arr + looseEnds;
+  const geo = body
+    ? `<mxGeometry relative="1" as="geometry">${body}\n${p}  </mxGeometry>`
     : `<mxGeometry relative="1" as="geometry"/>`;
 
   return `${p}<mxCell id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" edge="1" ` +
@@ -92,10 +93,10 @@ function edge(c, ind) {
 }
 
 function page(layoutPlan) {
-  const corpo = layoutPlan.celulas.map(c =>
+  const body = layoutPlan.celulas.map(c =>
     c.kind === 'edge' ? edge(c, 8)
-      : c.data ? verticeComDados(c, 8)
-      : vertice(c, 8)).join('\n');
+      : c.data ? vertexWithData(c, 8)
+      : vertex(c, 8)).join('\n');
 
   return `  <diagram id="${esc(layoutPlan.id)}" name="${esc(layoutPlan.name || layoutPlan.title)}">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
@@ -104,68 +105,69 @@ function page(layoutPlan) {
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-${corpo}
+${body}
       </root>
     </mxGraphModel>
   </diagram>`;
 }
 
 /**
- * Um `<mxfile>` com N páginas.
+ * An `<mxfile>` with N pages.
  *
- * A decomposição do #6 `D2` não é fallback de saturação: "emita SEMPRE uma
- * vista de detalhe por conta, em paralelo à consolidada". A estrutura do PPTX
- * oficial do SRA é exatamente essa — slide 3 consolidado (0 conectores) e
- * slides 7–12 uma conta cada (2 a 7 conectores intra-conta). E o `.drawio`
- * suporta isso nativamente: `<diagram>` repetido é aba de página no app.
+ * The `D2` decomposition of #6 is not a saturation fallback: "ALWAYS emit one
+ * detail view per account, alongside the consolidated one". The structure of the
+ * official SRA PPTX is exactly that — slide 3 consolidated (0 connectors) and
+ * slides 7–12 one account each (2 to 7 intra-account connectors). And `.drawio`
+ * supports it natively: a repeated `<diagram>` is a page tab in the app.
  *
- * O id de cada página é derivado do domínio, nunca sorteado — é o que faz o
- * arquivo versionar com diff limpo (#11).
+ * The id of each page is derived from the domain, never drawn at random — it is
+ * what makes the file version with a clean diff (#11).
  */
-function emit(planos) {
-  const list = Array.isArray(planos) ? planos : [planos];
+function emit(plans) {
+  const list = Array.isArray(plans) ? plans : [plans];
   return `<mxfile host="panlabs-aws-diagrams" compressed="false">
 ${list.map(page).join('\n')}
 </mxfile>
 `;
 }
 
-// ------------------------------------------------------- checagem do XML
+// ------------------------------------------------------------ the XML check
 
 /**
- * Parser mínimo de boa-formação. Não valida contra o XSD — valida que o
- * arquivo é XML, que é a falha que o draw.io engole em silêncio.
+ * A minimal well-formedness parser. It does not validate against the XSD — it
+ * validates that the file is XML, which is the failure draw.io swallows in
+ * silence.
  */
 function checkXml(xml) {
-  const erros = [];
-  const pilha = [];
+  const errors = [];
+  const stack = [];
   const re = /<\/?([A-Za-z_][\w.-]*)((?:\s+[\w.:-]+\s*=\s*"[^"]*")*)\s*(\/?)>/g;
   let m, pos = 0;
 
   while ((m = re.exec(xml))) {
-    const entre = xml.slice(pos, m.index);
-    if (entre.includes('<')) erros.push(`'<' solto fora de tag perto do offset ${pos + entre.indexOf('<')}`);
-    // uma entidade mal formada (`&nbsp` sem `;`, `&` cru) é XML inválido
-    for (const bruto of entre.matchAll(/&(?!#\d+;|#x[0-9A-Fa-f]+;|amp;|lt;|gt;|quot;|apos;)/g))
-      erros.push(`'&' não escapado no texto, offset ${pos + bruto.index}`);
+    const between = xml.slice(pos, m.index);
+    if (between.includes('<')) errors.push(`stray '<' outside a tag near offset ${pos + between.indexOf('<')}`);
+    // a malformed entity (`&nbsp` with no `;`, a raw `&`) is invalid XML
+    for (const raw of between.matchAll(/&(?!#\d+;|#x[0-9A-Fa-f]+;|amp;|lt;|gt;|quot;|apos;)/g))
+      errors.push(`unescaped '&' in text, offset ${pos + raw.index}`);
     pos = m.index + m[0].length;
 
-    const [, name, attrs, fechaSozinha] = m;
+    const [, name, attrs, selfClosing] = m;
     if (m[0].startsWith('</')) {
-      const topo = pilha.pop();
-      if (topo !== name) erros.push(`</${name}> fecha <${topo || 'nada'}>`);
-    } else if (!fechaSozinha) {
-      pilha.push(name);
+      const top = stack.pop();
+      if (top !== name) errors.push(`</${name}> closes <${top || 'nothing'}>`);
+    } else if (!selfClosing) {
+      stack.push(name);
     }
-    // valor de atributo com '<' cru ou '&' solto
+    // an attribute value with a raw '<' or a stray '&'
     for (const a of attrs.matchAll(/([\w.:-]+)\s*=\s*"([^"]*)"/g)) {
-      if (a[2].includes('<')) erros.push(`atributo ${a[1]} contém '<' cru`);
-      for (const bruto of a[2].matchAll(/&(?!#\d+;|#x[0-9A-Fa-f]+;|amp;|lt;|gt;|quot;|apos;)/g))
-        erros.push(`atributo ${a[1]} tem '&' não escapado`);
+      if (a[2].includes('<')) errors.push(`attribute ${a[1]} contains a raw '<'`);
+      for (const raw of a[2].matchAll(/&(?!#\d+;|#x[0-9A-Fa-f]+;|amp;|lt;|gt;|quot;|apos;)/g))
+        errors.push(`attribute ${a[1]} has an unescaped '&'`);
     }
   }
-  if (pilha.length) erros.push(`tags abertas e nunca fechadas: ${pilha.join(', ')}`);
-  return erros;
+  if (stack.length) errors.push(`tags opened and never closed: ${stack.join(', ')}`);
+  return errors;
 }
 
 module.exports = { emit, esc, checkXml, stripGremlins };

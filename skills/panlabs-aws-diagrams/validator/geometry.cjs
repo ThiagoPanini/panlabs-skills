@@ -1,56 +1,58 @@
 'use strict';
 /**
- * Primitivas geométricas do validador. Sem dependência, por premissa 7 do mapa.
+ * The validator's geometric primitives. No dependency, per premise 7 of the map.
  *
- * Três decisões de fronteira valem por todo o módulo, porque são a diferença
- * entre um validador que acusa o que importa e um que grita o tempo todo:
+ * Three boundary decisions hold across the whole module, because they are the
+ * difference between a validator that flags what matters and one that shouts
+ * all the time:
  *
- *   ENCOSTAR NÃO É SOBREPOR. Dois grupos irmãos que compartilham a borda têm
- *   interseção de área zero. O layout coloca caixas adjacentes de propósito, e
- *   um validador que chamasse adjacência de sobreposição reprovaria todo
- *   diagrama bem apertado. A área é a medida; o contato não tem área.
+ *   TOUCHING IS NOT OVERLAPPING. Two sibling groups that share an edge have
+ *   zero intersection area. The layout places adjacent boxes on purpose, and a
+ *   validator that called adjacency overlap would fail every tightly packed
+ *   diagram. Area is the measure; contact has no area.
  *
- *   TANGENCIAR NÃO É ATRAVESSAR. Toda aresta bem ancorada (A3.6) encosta no
- *   perímetro do próprio nó. Se tocar a borda contasse como travessia, A3.5
- *   acusaria exatamente o comportamento que A3.6 exige. Por isso a travessia
- *   pede interior, não borda.
+ *   TANGENT IS NOT CROSSING. Every well-anchored edge (A3.6) touches the
+ *   perimeter of its own node. If touching the border counted as crossing,
+ *   A3.5 would flag exactly the behavior A3.6 requires. That's why crossing
+ *   requires the interior, not the border.
  *
- *   INCIDIR NÃO É CRUZAR. Duas arestas que saem do mesmo nó compartilham um
- *   ponto. Isso é o grafo, não um defeito do desenho — e é por isso que o
- *   c_max de A5.1 desconta C(deg(v),2). Cruzamento aqui exige interseção no
- *   interior dos dois segmentos.
+ *   INCIDENT IS NOT CROSSING. Two edges leaving the same node share a point.
+ *   That's the graph, not a drawing defect — and that's why A5.1's c_max
+ *   discounts C(deg(v),2). Crossing here requires an intersection in the
+ *   interior of both segments.
  *
- * Todo ângulo entra e sai em GRAUS. A rubrica é escrita em graus, os limiares
- * são em graus, e converter no meio do caminho é como se erra o sinal.
+ * Every angle goes in and out in DEGREES. The rubric is written in degrees,
+ * the thresholds are in degrees, and converting midway is exactly where the
+ * sign gets lost.
  */
 
 const EPS = 1e-9;
 
-// ------------------------------------------------------------------ retângulo
+// -------------------------------------------------------------------- rectangle
 
 const direita = r => r.x + r.w;
 const baixo = r => r.y + r.h;
 const centro = r => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 
-/** Área da interseção. Zero quando as caixas só se encostam. */
+/** Intersection area. Zero when the boxes only touch. */
 function intersectionArea(a, b) {
-  const larg = Math.min(direita(a), direita(b)) - Math.max(a.x, b.x);
-  const alt = Math.min(baixo(a), baixo(b)) - Math.max(a.y, b.y);
-  return larg > 0 && alt > 0 ? larg * alt : 0;
+  const width = Math.min(direita(a), direita(b)) - Math.max(a.x, b.x);
+  const height = Math.min(baixo(a), baixo(b)) - Math.max(a.y, b.y);
+  return width > 0 && height > 0 ? width * height : 0;
 }
 
-/** `filho` cabe inteiro em `pai`, com folga opcional em todos os lados. */
-function contem(parent, filho, padding = 0) {
-  return filho.x >= parent.x + padding - EPS
-    && filho.y >= parent.y + padding - EPS
-    && direita(filho) <= direita(parent) - padding + EPS
-    && baixo(filho) <= baixo(parent) - padding + EPS;
+/** `child` fits entirely inside `parent`, with optional slack on every side. */
+function contem(parent, child, padding = 0) {
+  return child.x >= parent.x + padding - EPS
+    && child.y >= parent.y + padding - EPS
+    && direita(child) <= direita(parent) - padding + EPS
+    && baixo(child) <= baixo(parent) - padding + EPS;
 }
 
 /**
- * Distância entre duas caixas. Positiva quando separadas, zero quando encostam,
- * NEGATIVA quando se sobrepõem — e o valor negativo é a profundidade da
- * sobreposição no eixo em que ela é menor, que é o quanto A3.1 teria de afastar.
+ * Distance between two boxes. Positive when apart, zero when touching,
+ * NEGATIVE when overlapping — and the negative value is the overlap depth on
+ * whichever axis is smaller, which is how far A3.1 would need to push them apart.
  */
 function gap(a, b) {
   const dx = Math.max(a.x - direita(b), b.x - direita(a));
@@ -61,17 +63,17 @@ function gap(a, b) {
   return Math.max(dx, dy);
 }
 
-/** Os quatro paddings internos entre o retângulo e a caixa dos filhos. */
-function paddings(parent, filhos) {
-  if (!filhos.length) return null;
-  const cx1 = Math.min(...filhos.map(f => f.x));
-  const cy1 = Math.min(...filhos.map(f => f.y));
-  const cx2 = Math.max(...filhos.map(direita));
-  const cy2 = Math.max(...filhos.map(baixo));
-  return { esquerda: cx1 - parent.x, topo: cy1 - parent.y, direita: direita(parent) - cx2, baixo: baixo(parent) - cy2 };
+/** The four inner paddings between the rectangle and the box of its children. */
+function paddings(parent, children) {
+  if (!children.length) return null;
+  const cx1 = Math.min(...children.map(f => f.x));
+  const cy1 = Math.min(...children.map(f => f.y));
+  const cx2 = Math.max(...children.map(direita));
+  const cy2 = Math.max(...children.map(baixo));
+  return { left: cx1 - parent.x, top: cy1 - parent.y, right: direita(parent) - cx2, bottom: baixo(parent) - cy2 };
 }
 
-/** A caixa que envolve todas as caixas. */
+/** The box that encloses every box. */
 function envolvente(boxes) {
   if (!boxes.length) return null;
   const x = Math.min(...boxes.map(c => c.x));
@@ -79,27 +81,27 @@ function envolvente(boxes) {
   return { x, y, w: Math.max(...boxes.map(direita)) - x, h: Math.max(...boxes.map(baixo)) - y };
 }
 
-// -------------------------------------------------------- segmento e retângulo
+// ---------------------------------------------------------------- segment × rect
 
 /**
- * O segmento passa pelo INTERIOR do retângulo.
+ * The segment passes through the INTERIOR of the rectangle.
  *
- * Recorta o segmento contra a caixa (Liang–Barsky) e confere que o pedaço que
- * sobrou tem comprimento e cai dentro, não em cima da borda. É o que separa
- * "a aresta corta a VPC" de "a aresta sai do nó que encosta na VPC".
+ * Clips the segment against the box (Liang-Barsky) and checks that what's left
+ * has length and falls inside, not on the border. This is what separates "the
+ * edge cuts through the VPC" from "the edge leaves a node that touches the VPC".
  */
 function segmentCrossesRect(p, q, r) {
   const dx = q.x - p.x;
   const dy = q.y - p.y;
   let t0 = 0;
   let t1 = 1;
-  const bordas = [
+  const edges = [
     [-dx, p.x - r.x],
     [dx, direita(r) - p.x],
     [-dy, p.y - r.y],
     [dy, baixo(r) - p.y],
   ];
-  for (const [pk, qk] of bordas) {
+  for (const [pk, qk] of edges) {
     if (Math.abs(pk) < EPS) { if (qk < 0) return false; continue; }
     const t = qk / pk;
     if (pk < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
@@ -112,31 +114,31 @@ function segmentCrossesRect(p, q, r) {
   return mx > r.x + EPS && mx < direita(r) - EPS && my > r.y + EPS && my < baixo(r) - EPS;
 }
 
-/** Qualquer segmento da polilinha passa pelo interior do retângulo. */
-function polilinhaCruzaRetangulo(pontos, r) {
-  for (let i = 0; i + 1 < pontos.length; i++)
-    if (segmentCrossesRect(pontos[i], pontos[i + 1], r)) return true;
+/** Any segment of the polyline passes through the interior of the rectangle. */
+function polilinhaCruzaRetangulo(points, r) {
+  for (let i = 0; i + 1 < points.length; i++)
+    if (segmentCrossesRect(points[i], points[i + 1], r)) return true;
   return false;
 }
 
-// ---------------------------------------------------------- segmento e segmento
+// ---------------------------------------------------------------- segment × segment
 
 /**
- * Ponto de cruzamento no interior dos dois segmentos, ou `null`.
- * Extremo compartilhado devolve `null` — incidência não é cruzamento.
+ * Crossing point in the interior of both segments, or `null`.
+ * A shared endpoint returns `null` — incidence is not crossing.
  */
 function crossing(p1, p2, p3, p4) {
   const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
   const d2x = p4.x - p3.x, d2y = p4.y - p3.y;
   const den = d1x * d2y - d1y * d2x;
-  if (Math.abs(den) < EPS) return null;            // paralelos ou colineares
+  if (Math.abs(den) < EPS) return null;            // parallel or collinear
   const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / den;
   const u = ((p3.x - p1.x) * d1y - (p3.y - p1.y) * d1x) / den;
   if (t <= EPS || t >= 1 - EPS || u <= EPS || u >= 1 - EPS) return null;
   return { x: p1.x + t * d1x, y: p1.y + t * d1y };
 }
 
-/** Ângulo agudo entre duas retas, em graus, em [0, 90]. */
+/** Acute angle between two lines, in degrees, in [0, 90]. */
 function anguloEntre(p1, p2, p3, p4) {
   const a = Math.atan2(p2.y - p1.y, p2.x - p1.x);
   const b = Math.atan2(p4.y - p3.y, p4.x - p3.x);
@@ -145,18 +147,18 @@ function anguloEntre(p1, p2, p3, p4) {
   return d;
 }
 
-/** Ângulo interno no vértice `b`, em graus, em [0, 180]. 180 é reta. */
+/** Interior angle at vertex `b`, in degrees, in [0, 180]. 180 is straight. */
 function anguloInterno(a, b, c) {
   const ux = a.x - b.x, uy = a.y - b.y;
   const vx = c.x - b.x, vy = c.y - b.y;
   const nu = Math.hypot(ux, uy);
   const nv = Math.hypot(vx, vy);
-  if (nu < EPS || nv < EPS) return 180;            // ponto repetido: não é dobra
+  if (nu < EPS || nv < EPS) return 180;            // repeated point: not a bend
   const cos = Math.max(-1, Math.min(1, (ux * vx + uy * vy) / (nu * nv)));
   return Math.acos(cos) * 180 / Math.PI;
 }
 
-// ------------------------------------------------------------------- polilinha
+// ------------------------------------------------------------------------ polyline
 
 function pointSegmentDistance(p, a, b) {
   const dx = b.x - a.x, dy = b.y - a.y;
@@ -174,10 +176,10 @@ function pointPolylineDistance(p, row) {
 }
 
 /**
- * Hausdorff entre duas polilinhas, amostrando os vértices de cada uma contra os
- * segmentos da outra. É a medida de A5.8: duas arestas com o mesmo par
- * origem→destino que correm juntas demais dão dois rótulos ilegíveis por cima
- * de um traço só.
+ * Hausdorff distance between two polylines, sampling each one's vertices
+ * against the other's segments. This is A5.8's measure: two edges sharing the
+ * same origin→destination pair that run too close together produce two
+ * illegible labels stacked on a single stroke.
  */
 function hausdorff(a, b) {
   if (!a.length || !b.length) return Infinity;
@@ -186,13 +188,13 @@ function hausdorff(a, b) {
   return Math.max(out, back);
 }
 
-function polylineLength(pontos) {
+function polylineLength(points) {
   let t = 0;
-  for (let i = 0; i + 1 < pontos.length; i++) t += Math.hypot(pontos[i + 1].x - pontos[i].x, pontos[i + 1].y - pontos[i].y);
+  for (let i = 0; i + 1 < points.length; i++) t += Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
   return t;
 }
 
-/** Está sobre o perímetro do retângulo, dentro da tolerância. */
+/** Sits on the rectangle's perimeter, within tolerance. */
 function noPerimetro(p, r, tol) {
   const inside = p.x >= r.x - tol && p.x <= direita(r) + tol && p.y >= r.y - tol && p.y <= baixo(r) + tol;
   if (!inside) return false;

@@ -1,33 +1,34 @@
 'use strict';
 /**
- * O contrato de resultado, compartilhado pelas oito famílias.
+ * The result contract, shared by the eight families.
  *
- * Toda checagem devolve o mesmo objeto, e o objeto tem cinco estados possíveis.
- * Os dois últimos existem porque o silêncio é o modo de falhar de um validador:
- * uma checagem que não roda e não diz nada é indistinguível de uma que rodou e
- * aprovou, e o relatório fica verde por não ter olhado.
+ * Every check returns the same object, and the object has five possible
+ * states. The last two exist because silence is how a validator fails: a
+ * check that doesn't run and says nothing is indistinguishable from one that
+ * ran and passed, and the report turns green for having never looked.
  *
- *   ok           mediu e passou
- *   aviso        mediu e passou do limiar, sem bloquear
- *   falha        mediu e reprovou
- *   inaplicavel  não havia o que medir NESTE diagrama (zero arestas, zero
- *                grupos). É informação: A5.1 "inaplicável" num desenho sem
- *                aresta é diferente de A5.1 "ok"
- *   pulada       não é do validador. É do render, e o índice diz por quê
+ *   ok            measured and passed
+ *   warning       measured and went past the threshold, without blocking
+ *   failure       measured and failed
+ *   notApplicable there was nothing to measure in THIS diagram (zero edges,
+ *                 zero groups). This is information: A5.1 "not applicable" on
+ *                 a drawing with no edges is different from A5.1 "ok"
+ *   skipped       not the validator's job. It's render's, and the index says why
  *
- * `medida` carrega o número, sempre — inclusive quando passa. A rubrica pede
- * métrica reportada em doze checagens (B9 é explícito: "não construa um score
- * único, reporte cada métrica separadamente"), e um validador que só fala quando
- * reprova não tem o que reportar no dia em que alguém perguntar se melhorou.
+ * `measured` always carries the number, even when it passes. The rubric asks
+ * for a reported metric on twelve checks (B9 is explicit: "don't build a
+ * single score, report each metric separately"), and a validator that only
+ * speaks when it fails has nothing to report on the day someone asks whether
+ * things got better.
  */
 
 const path = require('path');
 const { byId } = require(path.join(__dirname, '..', 'index.cjs'));
 
-/** Monta o resultado, herdando do índice o que já está declarado lá. */
+/** Builds the result, inheriting from the index what is already declared there. */
 function outcome(id, state, extra = {}) {
   const c = byId(id);
-  if (!c) throw new Error(`checagem "${id}" não está no índice`);
+  if (!c) throw new Error(`check "${id}" is not in the index`);
   return {
     id, name: c.name, family: c.family, input: c.input,
     severidadeMaxima: c.severity, semantica: !!c.semantica, calibravel: !!c.calibravel,
@@ -41,24 +42,24 @@ function outcome(id, state, extra = {}) {
 const ok = (id, extra) => outcome(id, 'ok', extra);
 const warning = (id, extra) => outcome(id, 'warning', extra);
 const failure = (id, extra) => outcome(id, 'failure', extra);
-const notApplicable = (id, motivo) => outcome(id, 'notApplicable', { mensagem: motivo });
+const notApplicable = (id, reason) => outcome(id, 'notApplicable', { mensagem: reason });
 
-/** Puladas herdam do índice o motivo — não há dois lugares onde ele possa divergir. */
+/** Skipped checks inherit their reason from the index — there is no second place where it could diverge. */
 function skipped(id) {
   const c = byId(id);
-  return outcome(id, 'skipped', { mensagem: c.porqueRender || 'não é do validador' });
+  return outcome(id, 'skipped', { mensagem: c.porqueRender || 'not the validator\'s job' });
 }
 
 /**
- * Fecha a checagem pelo que foi achado: nada → ok, achados → a severidade que o
- * índice declarou. Escalona quando a checagem tem os dois níveis.
+ * Closes the check based on what was found: nothing → ok, findings → the
+ * severity the index declared. Scales when the check has both levels.
  */
 function matches(id, occurrences, extra = {}) {
   if (!occurrences.length) return ok(id, extra);
   return outcome(id, byId(id).severity === 'fail' ? 'failure' : 'warning', { ...extra, occurrences });
 }
 
-/** Pares não ordenados de uma lista, sem repetir e sem parear consigo mesmo. */
+/** Unordered pairs from a list, with no repeats and never paired with itself. */
 function* pairs(list) {
   for (let i = 0; i < list.length; i++)
     for (let j = i + 1; j < list.length; j++) yield [list[i], list[j]];
@@ -68,15 +69,15 @@ const mean = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const deviation = xs => (xs.length ? Math.sqrt(mean(xs.map(x => (x - mean(xs)) ** 2))) : 0);
 const roundTo = (x, n = 3) => Number(Number(x).toFixed(n));
 
-/** Texto do rótulo sem a marcação HTML que o motor injeta (`<b>1.</b> ...`). */
+/** Label text without the HTML markup the engine injects (`<b>1.</b> ...`). */
 const withoutTags = s => String(s || '').replace(/<[^>]+>/g, '').trim();
 
 /**
- * Como um elemento é citado numa mensagem: o id, mais o rótulo quando existe.
+ * How an element is cited in a message: the id, plus the label when it exists.
  *
- * Mora aqui porque mensagem de erro é produto, e seis cópias da mesma linha é
- * onde uma delas passa a citar só o id — e aí a ocorrência de A4.2 diz
- * "srv está dentro de vpc-b" em vez de dizer de que serviço se trata.
+ * Lives here because an error message is a product, and six copies of the
+ * same line is where one of them ends up citing only the id — and then A4.2's
+ * occurrence says "srv is inside vpc-b" instead of saying which service it is.
  */
 const name = e => `${e.id}${withoutTags(e.label) ? ` ("${withoutTags(e.label)}")` : ''}`;
 

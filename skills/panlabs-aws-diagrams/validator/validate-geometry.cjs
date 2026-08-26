@@ -60,7 +60,7 @@ const extras = require(path.join(__dirname, 'families', 'extras.cjs'));
 
 /**
  * @param {object} layoutPlan   the engine plan (post-`plan`, pre-`emit`)
- * @param {object} [opts]       `{ modelo }` when the plan does not carry the embedded one
+ * @param {object} [opts]       `{ model }` when the plan does not carry the embedded one
  * @returns {{ok, falhas, avisos, resultados, extras, resumo, scene, cobertura}}
  */
 function validateGeometry(layoutPlan, opts = {}) {

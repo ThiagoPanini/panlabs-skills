@@ -1,11 +1,11 @@
 'use strict';
 /**
- * A2 · Notação, consistência e vocabulário.
+ * A2 · Notation, consistency and vocabulary.
  *
- * A rubrica coloca esta família em 5º na ordem de implementação, mas anota que
- * é onde os cinco guias — C4, AWS deck, Azure WAF, Azure Icons, IBM — concordam
- * sem exceção. É a família mais barata de satisfazer e a mais fácil de quebrar
- * sem perceber, porque cada violação isolada parece inofensiva.
+ * The rubric places this family 5th in implementation order, but notes it's
+ * where all five guides — C4, AWS deck, Azure WAF, Azure Icons, IBM — agree
+ * without exception. It's the cheapest family to satisfy and the easiest to
+ * break without noticing, because each isolated violation looks harmless.
  */
 
 const path = require('path');
@@ -14,218 +14,222 @@ const { ok, warning, failure, notApplicable, skipped, matches, roundTo, withoutT
 const { catalog, fillOf, stencilOf } = require(path.join(__dirname, 'catalog.cjs'));
 
 
-/** Pontas de seta que os presets do deck AWS cobrem. */
+/** Arrowheads the AWS deck's presets cover. */
 const PRESET_ARROWS = new Set(['none', 'block', 'blockThin', 'open', 'openThin', 'classic', 'classicThin', 'oval', 'diamond', 'diamondThin', 'halfCircle', 'baseDash', 'ERone', 'ERmandOne']);
 
-/** Marcas de chartjunk: efeito que não carrega dado. */
+/** Chartjunk marks: effects that carry no data. */
 const CHARTJUNK = [
-  ['shadow', e => e.style.shadow === '1', 'sombra'],
-  ['glass', e => e.style.glass === '1', 'brilho de vidro'],
-  ['sketch', e => e.style.sketch === '1', 'traço rascunhado'],
-  ['gradiente', e => e.style.gradientColor && e.style.gradientColor !== 'none', 'gradiente'],
-  ['perspectiva', e => e.style.shape === 'cube' || e.style.isometric === '1', 'perspectiva/isometria'],
+  ['shadow', e => e.style.shadow === '1', 'shadow'],
+  ['glass', e => e.style.glass === '1', 'glassy glow'],
+  ['sketch', e => e.style.sketch === '1', 'sketchy stroke'],
+  ['gradient', e => e.style.gradientColor && e.style.gradientColor !== 'none', 'gradient'],
+  ['perspective', e => e.style.shape === 'cube' || e.style.isometric === '1', 'perspective/isometry'],
 ];
 
 module.exports = function a2(scene) {
   const output = [];
   const cat = catalog();
-  const { nodes, grupos, bands, edges } = scene;
-  const desenhaveis = [...nodes, ...grupos, ...bands];
+  const { nodes, groups, bands, edges } = scene;
+  const drawable = [...nodes, ...groups, ...bands];
 
   // ---------------------------------------------------------------- A2.1
-  // Conta TIPOS de símbolo, não instâncias — "vinte Lambdas = 1 entrada".
+  // Counts symbol TYPES, not instances — "twenty Lambdas = 1 entry".
   {
-    const simbolos = new Set(desenhaveis.map(e =>
-      [e.preenchimento, e.traco, e.style.dashed === '1' ? 'dashed' : 'solid', e.style.shape || (e.style.container === '1' ? 'container' : 'cellBox')].join('|')));
-    for (const a of edges) simbolos.add(['edge', a.style.strokeColor, a.style.dashed === '1' ? 'dashed' : 'solid', a.style.endArrow].join('|'));
-    const n = simbolos.size;
-    const target = lim('complexidadeGraficaAlvo');
-    const ceiling = lim('complexidadeGraficaFalha');
-    const measured = { entradas_necessarias: n, target, ceiling };
-    output.push(n <= target ? ok('A2.1', { measured, mensagem: `${n} tipo(s) de símbolo (alvo ≤ ${target})` })
-      : n <= ceiling ? warning('A2.1', { measured, mensagem: `${n} tipos de símbolo — acima do alvo de ${target}, ainda dentro de ${ceiling}`, occurrences: [{ o_que: `a legenda precisaria de ${n} entradas`, ids: [] }] })
-        : failure('A2.1', { measured, mensagem: `${n} tipos de símbolo — acima do limite de ${ceiling} (span of absolute judgement)`, occurrences: [{ o_que: `a legenda precisaria de ${n} entradas; Moody põe o teto efetivo em ${target}`, ids: [] }] }));
+    const symbols = new Set(drawable.map(e =>
+      [e.fill, e.stroke, e.style.dashed === '1' ? 'dashed' : 'solid', e.style.shape || (e.style.container === '1' ? 'container' : 'cellBox')].join('|')));
+    for (const a of edges) symbols.add(['edge', a.style.strokeColor, a.style.dashed === '1' ? 'dashed' : 'solid', a.style.endArrow].join('|'));
+    const n = symbols.size;
+    const target = lim('graphicComplexityTarget');
+    const ceiling = lim('graphicComplexityFail');
+    const measured = { entriesNeeded: n, target, ceiling };
+    output.push(n <= target ? ok('A2.1', { measured, mensagem: `${n} symbol type(s) (target ≤ ${target})` })
+      : n <= ceiling ? warning('A2.1', { measured, mensagem: `${n} symbol types — above the target of ${target}, still within ${ceiling}`, occurrences: [{ o_que: `the legend would need ${n} entries`, ids: [] }] })
+        : failure('A2.1', { measured, mensagem: `${n} symbol types — above the limit of ${ceiling} (span of absolute judgement)`, occurrences: [{ o_que: `the legend would need ${n} entries; Moody puts the effective ceiling at ${target}`, ids: [] }] }));
   }
 
   // ---------------------------------------------------------------- A2.2
   {
-    const casos = [];
-    for (const e of desenhaveis) {
+    const cases = [];
+    for (const e of drawable) {
       const s = e.style;
       const deformations = [];
-      if (s.flipH === '1') deformations.push('espelhado na horizontal');
-      if (s.flipV === '1') deformations.push('espelhado na vertical');
-      if (s.rotation && parseFloat(s.rotation) !== 0) deformations.push(`girado ${s.rotation}°`);
-      if (s.direction && s.direction !== 'east') deformations.push(`direção "${s.direction}"`);
-      if (deformations.length) casos.push({ o_que: `${name(e)} está ${deformations.join(' e ')}`, ids: [e.id] });
+      if (s.flipH === '1') deformations.push('mirrored horizontally');
+      if (s.flipV === '1') deformations.push('mirrored vertically');
+      if (s.rotation && parseFloat(s.rotation) !== 0) deformations.push(`rotated ${s.rotation}°`);
+      if (s.direction && s.direction !== 'east') deformations.push(`direction "${s.direction}"`);
+      if (deformations.length) cases.push({ o_que: `${name(e)} is ${deformations.join(' and ')}`, ids: [e.id] });
     }
-    output.push(matches('A2.2', casos, { measured: { objetos: desenhaveis.length, deformados: casos.length } }));
+    output.push(matches('A2.2', cases, { measured: { objects: drawable.length, deformed: cases.length } }));
   }
 
   // ---------------------------------------------------------------- A2.3
   {
-    if (!cat) output.push(notApplicable('A2.3', 'o catálogo de shapes não está disponível'));
-    else if (!scene.model) output.push(notApplicable('A2.3', 'o plano não carrega o modelo, então não há como saber que serviço cada nó pediu'));
+    if (!cat) output.push(notApplicable('A2.3', 'the shape catalog is not available'));
+    else if (!scene.model) output.push(notApplicable('A2.3', 'the plan does not carry the model, so there is no way to know which service each node asked for'));
     else {
-      const porIdModelo = new Map((scene.model.nodes || []).map(n => [n.id, n]));
-      const casos = [];
-      let conferidos = 0;
+      const byModelId = new Map((scene.model.nodes || []).map(n => [n.id, n]));
+      const cases = [];
+      let checked = 0;
       for (const e of nodes) {
-        const m = porIdModelo.get(e.id);
+        const m = byModelId.get(e.id);
         const key = m && (m.service || (m.kind === 'actor' ? 'users' : null));
         if (!key) continue;
-        const oficial = cat.service(key);
-        if (!oficial) continue;
-        conferidos++;
-        const expected = fillOf(oficial.style);
-        if (expected && e.preenchimento && expected.toLowerCase() !== e.preenchimento.toLowerCase())
-          casos.push({ o_que: `${name(e)} pinta ${e.preenchimento} e o catálogo prescreve ${expected} para "${oficial.title}"`, ids: [e.id] });
+        const official = cat.service(key);
+        if (!official) continue;
+        checked++;
+        const expected = fillOf(official.style);
+        if (expected && e.fill && expected.toLowerCase() !== e.fill.toLowerCase())
+          cases.push({ o_que: `${name(e)} paints ${e.fill} and the catalog prescribes ${expected} for "${official.title}"`, ids: [e.id] });
       }
-      output.push(matches('A2.3', casos, {
-        measured: { conferidos, divergentes: casos.length },
-        mensagem: `${conferidos} ícone(s) conferido(s) contra a cor declarada no catálogo — o hash de pixel é do render`,
+      output.push(matches('A2.3', cases, {
+        measured: { checked, diverging: cases.length },
+        mensagem: `${checked} icon(s) checked against the catalog's declared color — the pixel hash belongs to render`,
       }));
     }
   }
 
   // ---------------------------------------------------------------- A2.4
   {
-    if (!cat) output.push(notApplicable('A2.4', 'o catálogo de shapes não está disponível'));
+    if (!cat) output.push(notApplicable('A2.4', 'the shape catalog is not available'));
     else {
-      const casos = [];
-      let comStencil = 0;
+      const cases = [];
+      let withStencil = 0;
       for (const e of nodes) {
-        const id = stencilOf(e.estiloBruto);
+        const id = stencilOf(e.rawStyle);
         if (!id) continue;
-        comStencil++;
-        if (!cat.ids.has(id)) casos.push({ o_que: `${name(e)} usa o stencil "${id}", que não está no catálogo vigente`, ids: [e.id] });
+        withStencil++;
+        if (!cat.ids.has(id)) cases.push({ o_que: `${name(e)} uses stencil "${id}", which is not in the current catalog`, ids: [e.id] });
       }
-      output.push(matches('A2.4', casos, {
-        measured: { com_stencil: comStencil, fora_do_catalogo: casos.length, vigencia: cat.vigencia },
-        mensagem: `catálogo de ${cat.vigencia || 'data desconhecida'}; ${comStencil} ícone(s) com stencil declarado`,
+      output.push(matches('A2.4', cases, {
+        measured: { withStencil, outsideCatalog: cases.length, asOf: cat.asOf },
+        mensagem: `catalog as of ${cat.asOf || 'unknown date'}; ${withStencil} icon(s) with a declared stencil`,
       }));
     }
   }
 
   // ---------------------------------------------------------------- A2.5
   {
-    const porClasse = new Map();
+    const byClass = new Map();
     for (const e of nodes) {
-      const classe = e.tipoSemantico || 'desconhecido';
-      if (!porClasse.has(classe)) porClasse.set(classe, []);
-      porClasse.get(classe).push(e);
+      const cls = e.semanticKind || 'unknown';
+      if (!byClass.has(cls)) byClass.set(cls, []);
+      byClass.get(cls).push(e);
     }
-    const casos = [];
-    for (const [classe, list] of porClasse) {
+    const cases = [];
+    for (const [cls, list] of byClass) {
       if (list.length < 2) continue;
-      const larguras = list.map(e => e.cellBox.w);
-      const ratio = Math.max(...larguras) / Math.min(...larguras);
+      const widths = list.map(e => e.cellBox.w);
+      const ratio = Math.max(...widths) / Math.min(...widths);
       if (ratio !== 1)
-        casos.push({ o_que: `a classe "${classe}" usa larguras de ${Math.min(...larguras)} a ${Math.max(...larguras)} px (razão ${roundTo(ratio, 2)})`, ids: list.map(e => e.id) });
+        cases.push({ o_que: `class "${cls}" uses widths from ${Math.min(...widths)} to ${Math.max(...widths)} px (ratio ${roundTo(ratio, 2)})`, ids: list.map(e => e.id) });
     }
-    output.push(porClasse.size ? matches('A2.5', casos, { measured: { classes: porClasse.size, irregulares: casos.length } })
-      : notApplicable('A2.5', 'o diagrama não tem nós'));
+    output.push(byClass.size ? matches('A2.5', cases, { measured: { classes: byClass.size, irregular: cases.length } })
+      : notApplicable('A2.5', 'the diagram has no nodes'));
   }
 
   // ---------------------------------------------------------------- A2.6
   {
-    const canais = ['fillColor', 'strokeColor', 'strokeWidth', 'dashed', 'shape'];
-    // "Para cada `type`" é o tipo do ELEMENTO — Lambda, RDS, subnet pública —,
-    // não o tipo grosso do modelo. Errar a granularidade quebra A2.6 nos dois
-    // sentidos, e as duas versões erradas já apareceram medindo:
+    const channels = ['fillColor', 'strokeColor', 'strokeWidth', 'dashed', 'shape'];
+    // "For each `type`" means the ELEMENT's type — Lambda, RDS, public subnet
+    // — not the model's coarse type. Getting the granularity wrong breaks
+    // A2.6 in both directions, and both wrong versions have already shown up
+    // in a measurement:
     //
-    //   grosso demais (`tipo` do modelo): todo `servico` num balde só, e a
-    //   checagem reprova a paleta oficial da AWS, em que cada serviço TEM a sua
-    //   cor. Ela existe para pegar dois Lambdas de cores diferentes.
+    //   too coarse (the model's `type`): every `service` in one bucket, and
+    //   the check fails AWS's own official palette, where each service HAS
+    //   its own color. It exists to catch two Lambdas in different colors.
     //
-    //   fino demais mas pelo lugar errado (o stencil): subnet pública e privada
-    //   compartilham o stencil `group_security_group` e são tipos DIFERENTES,
-    //   com cores diferentes de propósito — e a checagem acusa a convenção.
+    //   too fine but at the wrong layer (the stencil): a public and a private
+    //   subnet share the `group_security_group` stencil and are DIFFERENT
+    //   types, with different colors on purpose — and the check flags the
+    //   convention.
     //
-    // A chave certa está no modelo, que é quem sabe o que discrimina o tipo:
-    // o `tipo` mais os campos que o especializam (`servico`, `acesso`).
-    const tipoDe = (e) => {
-      const m = e.noModelo;
+    // The right key lives in the model, which is what actually knows what
+    // discriminates the type: the `kind` plus whatever fields specialize it
+    // (`service`, `access`).
+    const kindOf = (e) => {
+      const m = e.modelNode;
       if (m && m.kind) return [m.kind, m.service, m.access].filter(Boolean).join('/');
-      return stencilOf(e.estiloBruto) || e.tipoSemantico || 'desconhecido';
+      return stencilOf(e.rawStyle) || e.semanticKind || 'unknown';
     };
-    const porTipo = new Map();
-    for (const e of [...nodes, ...grupos]) {
-      const t = tipoDe(e);
-      if (!porTipo.has(t)) porTipo.set(t, []);
-      porTipo.get(t).push(e);
+    const byKind = new Map();
+    for (const e of [...nodes, ...groups]) {
+      const t = kindOf(e);
+      if (!byKind.has(t)) byKind.set(t, []);
+      byKind.get(t).push(e);
     }
-    const casos = [];
-    for (const [kind, list] of porTipo) {
+    const cases = [];
+    for (const [kind, list] of byKind) {
       if (list.length < 2) continue;
-      for (const canal of canais) {
-        const valores = new Set(list.map(e => e.style[canal] === undefined ? '(ausente)' : e.style[canal]));
-        if (valores.size > 1)
-          casos.push({ o_que: `o tipo "${kind}" usa ${valores.size} valores de ${canal}: ${[...valores].join(', ')}`, ids: list.map(e => e.id) });
+      for (const channel of channels) {
+        const values = new Set(list.map(e => e.style[channel] === undefined ? '(absent)' : e.style[channel]));
+        if (values.size > 1)
+          cases.push({ o_que: `type "${kind}" uses ${values.size} values of ${channel}: ${[...values].join(', ')}`, ids: list.map(e => e.id) });
       }
     }
-    output.push(porTipo.size ? matches('A2.6', casos, { measured: { tipos: porTipo.size, inconsistencias: casos.length } })
-      : notApplicable('A2.6', 'o diagrama não tem elementos tipados'));
+    output.push(byKind.size ? matches('A2.6', cases, { measured: { types: byKind.size, inconsistencies: cases.length } })
+      : notApplicable('A2.6', 'the diagram has no typed elements'));
   }
 
   // ---------------------------------------------------------------- A2.7
   {
-    if (!edges.length) output.push(notApplicable('A2.7', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A2.7', 'the diagram has no edges'));
     else {
-      // O significado de uma relação é o TIPO DE RELAÇÃO que o modelo declara —
-      // aqui, `protocolo`. Derivar significado do par de tipos das pontas seria
-      // inventar taxonomia: "ator→servico" e "servico→servico" não são dois
-      // sentidos de linha, são duas posições no grafo, e reprovar por isso
-      // acusaria de ambíguo todo diagrama com mais de um formato de nó.
-      // Arestas que não declaram tipo ficam de fora: ausência não é ambiguidade.
+      // The meaning of a relationship is the RELATIONSHIP TYPE the model
+      // declares — here, `protocol`. Deriving meaning from the pair of
+      // endpoint types would be inventing a taxonomy: "actor→service" and
+      // "service→service" are not two line meanings, they are two positions
+      // in the graph, and failing on that would accuse every diagram with
+      // more than one node shape of being ambiguous. Edges that declare no
+      // type are left out: absence is not ambiguity.
       const model = scene.model || {};
       const declaredKind = new Map((model.edges || [])
         .map(a => [`${a.from}→${a.to}`, a.protocol || a.kind || null]));
-      const comTipo = edges.filter(a => declaredKind.get(`${a.from}→${a.to}`));
-      const porEstilo = new Map();
+      const withKind = edges.filter(a => declaredKind.get(`${a.from}→${a.to}`));
+      const byStyle = new Map();
       const byMeaning = new Map();
-      for (const a of comTipo) {
-        const style = a.style.dashed === '1' ? `tracejado(${a.style.dashPattern || 'padrão'})` : 'solid';
+      for (const a of withKind) {
+        const style = a.style.dashed === '1' ? `dashed(${a.style.dashPattern || 'default'})` : 'solid';
         const meaning = declaredKind.get(`${a.from}→${a.to}`);
-        if (!porEstilo.has(style)) porEstilo.set(style, new Set());
-        porEstilo.get(style).add(meaning);
+        if (!byStyle.has(style)) byStyle.set(style, new Set());
+        byStyle.get(style).add(meaning);
         if (!byMeaning.has(meaning)) byMeaning.set(meaning, new Set());
         byMeaning.get(meaning).add(style);
       }
       if (byMeaning.size < 2) {
-        output.push(notApplicable('A2.7', comTipo.length
-          ? 'só há um tipo de relação declarado — não há bijeção a conferir'
-          : 'nenhuma aresta declara tipo de relação (protocolo); sem taxonomia não há o que mapear'));
+        output.push(notApplicable('A2.7', withKind.length
+          ? 'only one relationship type is declared — there is no bijection to check'
+          : 'no edge declares a relationship type (protocol); with no taxonomy there is nothing to map'));
       } else {
-        const casos = [];
-        for (const [style, significados] of porEstilo)
-          if (significados.size > 1) casos.push({ o_que: `o traço "${style}" carrega ${significados.size} significados: ${[...significados].join(', ')}`, ids: comTipo.map(a => a.id) });
-        for (const [meaning, estilos] of byMeaning)
-          if (estilos.size > 1) casos.push({ o_que: `a relação "${meaning}" é desenhada de ${estilos.size} jeitos: ${[...estilos].join(', ')}`, ids: [] });
-        output.push(matches('A2.7', casos, { measured: { estilos: porEstilo.size, significados: [...byMeaning.keys()], quebras_de_bijecao: casos.length } }));
+        const cases = [];
+        for (const [style, meanings] of byStyle)
+          if (meanings.size > 1) cases.push({ o_que: `stroke "${style}" carries ${meanings.size} meanings: ${[...meanings].join(', ')}`, ids: withKind.map(a => a.id) });
+        for (const [meaning, styles] of byMeaning)
+          if (styles.size > 1) cases.push({ o_que: `relationship "${meaning}" is drawn ${styles.size} different ways: ${[...styles].join(', ')}`, ids: [] });
+        output.push(matches('A2.7', cases, { measured: { styles: byStyle.size, meanings: [...byMeaning.keys()], bijectionBreaks: cases.length } }));
       }
     }
   }
 
   // ---------------------------------------------------------------- A2.8
   {
-    // Containment (nuvem, região, VPC, subnet) desenha sólido; zona lógica
-    // (AZ, Auto Scaling) desenha tracejado. É o mapa do IBM, e a rubrica avisa
-    // que a AWS não publica o dela como norma — daí ser `warn`.
-    // `regiao` fica de fora de propósito: a AWS desenha Region com borda
-    // TRACEJADA no próprio deck, e o catálogo reproduz isso. Ela é fronteira
-    // geográfica, não fronteira de rede — mesma família das zonas.
+    // Containment (cloud, region, VPC, subnet) draws solid; logical zone (AZ,
+    // Auto Scaling) draws dashed. That's IBM's mapping, and the rubric warns
+    // AWS does not publish its own as a norm — hence `warn`.
+    // `region` is left out on purpose: AWS draws the Region border DASHED in
+    // its own deck, and the catalog reproduces that. It is a geographic
+    // boundary, not a network boundary — same family as the zones.
     const containment = new Set(['cloud', 'account', 'vpc', 'subnet', 'security-group']);
-    const casos = [];
-    for (const e of grupos) {
-      const t = e.tipoSemantico;
+    const cases = [];
+    for (const e of groups) {
+      const t = e.semanticKind;
       if (!t || !containment.has(t)) continue;
-      if (e.style.dashed === '1') casos.push({ o_que: `o grupo de contenção "${e.id}" (${t}) desenha tracejado, e tracejado é convenção de zona`, ids: [e.id] });
+      if (e.style.dashed === '1') cases.push({ o_que: `containment group "${e.id}" (${t}) draws dashed, and dashed is the zone convention`, ids: [e.id] });
     }
     for (const f of bands)
-      if (f.style.dashed !== '1') casos.push({ o_que: `a faixa "${f.id}" desenha sólido, e sólido é convenção de contenção`, ids: [f.id] });
-    output.push((grupos.length + bands.length) ? matches('A2.8', casos, { measured: { grupos: grupos.length, bands: bands.length, fora_da_convencao: casos.length } })
-      : notApplicable('A2.8', 'o diagrama não tem grupos nem faixas'));
+      if (f.style.dashed !== '1') cases.push({ o_que: `band "${f.id}" draws solid, and solid is the containment convention`, ids: [f.id] });
+    output.push((groups.length + bands.length) ? matches('A2.8', cases, { measured: { groups: groups.length, bands: bands.length, outsideConvention: cases.length } })
+      : notApplicable('A2.8', 'the diagram has no groups or bands'));
   }
 
   // ---------------------------------------------------------------- A2.9
@@ -233,26 +237,26 @@ module.exports = function a2(scene) {
 
   // ---------------------------------------------------------------- A2.10
   {
-    if (!edges.length) output.push(notApplicable('A2.10', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A2.10', 'the diagram has no edges'));
     else {
-      const casos = [];
+      const cases = [];
       for (const a of edges)
         for (const tip of ['startArrow', 'endArrow']) {
           const v = a.style[tip];
           if (v === undefined) continue;
-          if (!PRESET_ARROWS.has(v)) casos.push({ o_que: `a aresta "${a.id}" usa ${tip}="${v}", fora dos presets`, ids: [a.id] });
+          if (!PRESET_ARROWS.has(v)) cases.push({ o_que: `edge "${a.id}" uses ${tip}="${v}", outside the presets`, ids: [a.id] });
         }
-      output.push(matches('A2.10', casos, { measured: { edges: edges.length, fora_dos_presets: casos.length } }));
+      output.push(matches('A2.10', cases, { measured: { edges: edges.length, outsidePresets: cases.length } }));
     }
   }
 
   // ---------------------------------------------------------------- A2.11
   {
-    const casos = [];
-    for (const e of [...desenhaveis, ...edges])
-      for (const [, testa, comoSeChama] of CHARTJUNK)
-        if (testa(e)) casos.push({ o_que: `${e.id} usa ${comoSeChama} — tinta que não carrega dado`, ids: [e.id] });
-    output.push(matches('A2.11', casos, { measured: { objetos: desenhaveis.length + edges.length, com_chartjunk: casos.length } }));
+    const cases = [];
+    for (const e of [...drawable, ...edges])
+      for (const [, test, label] of CHARTJUNK)
+        if (test(e)) cases.push({ o_que: `${e.id} uses ${label} — ink that carries no data`, ids: [e.id] });
+    output.push(matches('A2.11', cases, { measured: { objects: drawable.length + edges.length, withChartjunk: cases.length } }));
   }
 
   return output;

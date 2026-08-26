@@ -1,16 +1,17 @@
 'use strict';
 /**
- * A ponte para o catálogo de shapes (#17), e a decisão de não depender dele.
+ * The bridge to the shape catalog (#17), and the decision not to depend on it.
  *
- * Cinco checagens querem saber o que é OFICIAL — o nome do serviço (A1.9), a
- * cor do ícone (A2.3), a vigência do id (A2.4). Esse conhecimento não é do
- * validador: é do catálogo, que é extraído do draw.io e datado.
+ * Five checks want to know what is OFFICIAL — the service name (A1.9), the
+ * icon's color (A2.3), the id's currency (A2.4). That knowledge isn't the
+ * validator's: it belongs to the catalog, which is extracted from draw.io and
+ * dated.
  *
- * O acoplamento é opcional de propósito. O validador tem de rodar sobre um
- * plano que veio de qualquer lugar, e um `require` que estoura porque o
- * catálogo mudou de pasta transformaria as 60 checagens em zero. Sem catálogo,
- * as cinco viram `inaplicavel` — que é diferente de `ok`, e aparece no
- * relatório dizendo o que não foi conferido.
+ * The coupling is optional on purpose. The validator has to run over a plan
+ * that came from anywhere, and a `require` that blows up because the catalog
+ * moved folders would turn 60 checks into zero. Without a catalog, the five
+ * become `notApplicable` — which is different from `ok`, and shows up in the
+ * report saying what wasn't checked.
  */
 
 const path = require('path');
@@ -19,29 +20,29 @@ const PATH = path.join(__dirname, '..', '..', 'catalog', 'aws-shapes.cjs');
 
 let cache;
 
-/** `{ servico, grupo, titulos, vigencia, ids }`, ou `null` se o catálogo não carregar. */
+/** `{ service, group, titles, asOf, ids }`, or `null` if the catalog fails to load. */
 function catalog() {
   if (cache !== undefined) return cache;
   try {
     const cat = require(PATH).load();
-    const cru = cat.catalog || {};
-    const titulos = [];
+    const raw = cat.catalog || {};
+    const titles = [];
     const ids = new Set();
     for (const group of ['services', 'resources', 'groups', 'other']) {
-      const entradas = cru[group];
-      if (!entradas) continue;
-      for (const rec of Array.isArray(entradas) ? entradas : Object.values(entradas)) {
+      const entries = raw[group];
+      if (!entries) continue;
+      for (const rec of Array.isArray(entries) ? entries : Object.values(entries)) {
         if (!rec || typeof rec !== 'object') continue;
-        if (rec.title) titulos.push(rec.title);
+        if (rec.title) titles.push(rec.title);
         if (rec.stencil) ids.add(String(rec.stencil));
       }
     }
     cache = {
       service: name => { try { return cat.service(name); } catch { return null; } },
       group: name => { try { return cat.group(name); } catch { return null; } },
-      titulos,
+      titles,
       ids,
-      vigencia: (cat.meta && cat.meta.drawio && cat.meta.drawio.date) || null,
+      asOf: (cat.meta && cat.meta.drawio && cat.meta.drawio.date) || null,
       meta: cat.meta || null,
     };
   } catch {
@@ -50,17 +51,17 @@ function catalog() {
   return cache;
 }
 
-/** O `fillColor` que o catálogo prescreve para um estilo, se houver. */
+/** The `fillColor` the catalog prescribes for a style, if any. */
 const fillOf = style => (String(style || '').match(/fillColor=(#[0-9A-Fa-f]{3,6})/) || [])[1] || null;
 
 /**
- * O id de stencil de verdade.
+ * The real stencil id.
  *
- * `shape=mxgraph.aws4.resourceIcon` é o INVÓLUCRO — o quadrado colorido que
- * todo service icon usa. Quem diz que serviço é aquilo é `resIcon`, e para
- * grupo é `grIcon`. Ler o `shape` e parar ali faz A2.4 reprovar todo ícone do
- * catálogo por não achar "resourceIcon" na lista de stencils, que é o oposto
- * do que a checagem quer dizer.
+ * `shape=mxgraph.aws4.resourceIcon` is the WRAPPER — the colored square every
+ * service icon uses. What says which service it is is `resIcon`, and for a
+ * group it's `grIcon`. Reading `shape` and stopping there makes A2.4 fail
+ * every catalog icon for not finding "resourceIcon" in the stencil list,
+ * which is the opposite of what the check means to say.
  */
 function stencilOf(style) {
   const s = String(style || '');

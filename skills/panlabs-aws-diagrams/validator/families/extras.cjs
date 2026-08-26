@@ -1,61 +1,63 @@
 'use strict';
 /**
- * O que a rubrica não previu — e por que fica fora das 62.
+ * What the rubric didn't anticipate — and why it stays out of the 62.
  *
- * A rubrica (#8) modela UMA árvore de contenção. Este motor desenha duas
- * coisas: grupos, que contêm, e faixas, que cruzam. As checagens daqui são as
- * que nascem dessa segunda categoria, e elas NÃO entram no índice das 62 por
- * uma razão de higiene: o índice é o contrato com a rubrica, e `check-indice`
- * existe para garantir que ele não deriva. Inflar as 62 com achados nossos
- * apagaria a fronteira entre "o que a pesquisa mandou medir" e "o que a gente
- * descobriu medindo" — e é essa fronteira que faz o índice valer alguma coisa.
+ * The rubric (#8) models ONE containment tree. This engine draws two things:
+ * groups, which contain, and bands, which cross. The checks here are the ones
+ * born from that second category, and they do NOT enter the index of 62 for a
+ * hygiene reason: the index is the contract with the rubric, and
+ * `check-index` exists to guarantee it never drifts. Inflating the 62 with
+ * our own findings would erase the line between "what the research told us to
+ * measure" and "what we found out by measuring" — and that line is what makes
+ * the index worth anything.
  *
- * Ficam com prefixo `F` (de faixa), com a mesma severidade e a mesma tolerância
- * de A4.2, porque é a mesma pergunta semântica: a caixa está afirmando de um nó
- * um fato que ele não tem?
+ * They carry the prefix `F` (for "faixa", band), with the same severity and
+ * the same tolerance as A4.2, because it's the same semantic question: is the
+ * box asserting a fact about a node that it doesn't have?
  *
- *   A4.2  o nó caiu dentro de um GRUPO do qual não é filho
- *         → o desenho mente sobre a fronteira de rede
+ *   A4.2  the node fell inside a GROUP it isn't a child of
+ *         → the drawing lies about the network boundary
  *
- *   F1    a FAIXA não abraça exatamente os membros que declara
- *         → o desenho mente sobre o atributo compartilhado ("este EC2 está na
- *           AZ-b", "este banco escala com o grupo") — e mente de um jeito que
- *           A4.2 nunca pegaria, porque faixa não é pai de ninguém
+ *   F1    the BAND doesn't embrace exactly the members it declares
+ *         → the drawing lies about the shared attribute ("this EC2 is in
+ *           AZ-b", "this database scales with the group") — and it lies in a
+ *           way A4.2 would never catch, because a band is nobody's parent
  *
- *   F2    a ARESTA atravessa a caixa de uma faixa que não é dela
- *         → o mesmo par, uma linha abaixo: `A5.5` é `A4.2` aplicado à aresta, e
- *           F2 é F1 aplicado à aresta. O predicado é literalmente o de A5.5 —
- *           polilinha cruzando uma caixa com a qual a aresta não tem relação —,
- *           trocada a classe `grupo` pela classe `faixa`
+ *   F2    the EDGE crosses the box of a band it doesn't belong to
+ *         → the same pair, one line down: `A5.5` is `A4.2` applied to the
+ *           edge, and F2 is F1 applied to the edge. The predicate is
+ *           literally A5.5's — a polyline crossing a box the edge has no
+ *           relationship with —, swapping the `group` class for the `band` class
  *
- * Se o #18 virar produção, o caminho é levar F1 e F2 de volta à rubrica como
- * A4.8 e A5.10, não deixá-los aqui para sempre.
+ * If #18 ever ships to production, the path is to bring F1 and F2 back into
+ * the rubric as A4.8 and A5.10, not leave them here forever.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POR QUE F2 NASCEU NO #26, e o que a medição dele disse
+ * WHY F2 WAS BORN IN #26, AND WHAT ITS MEASUREMENT SAID
  *
- * O #21 decidiu que apagar a aresta que cruza zona (a saída do #6 aplicada à
- * zona) é FALLBACK e não default, e que "o disparo tem de vir do validador, não
- * de constante mágica". Ficou pendente *qual checagem*.
+ * #21 decided that deleting an edge that crosses a zone (the #6 exit applied
+ * to the zone) is a FALLBACK, not a default, and that "the trigger has to come
+ * from the validator, not a magic constant." What was left pending was
+ * *which check*.
  *
- * A resposta é que ela NÃO EXISTIA. `A5.5` varre `cena.grupos`; a faixa é outra
- * classe, e ficou fora das 62 por decisão explícita do #18 — mas só F1 chegou a
- * ser escrito. O resultado é que o motor era ESTRUTURALMENTE cego ao defeito que
- * o fallback do #21 existe para evitar: nenhuma checagem media a aresta cortando
- * a faixa alheia, então nenhuma podia disparar o fallback e nenhuma pegaria a
- * regressão.
+ * The answer is that it DIDN'T EXIST. `A5.5` sweeps `scene.groups`; a band is
+ * a different class, and it was left out of the 62 by #18's explicit
+ * decision — but only F1 ever got written. The result is that the engine was
+ * STRUCTURALLY blind to the very defect #21's fallback exists to prevent: no
+ * check measured an edge cutting through someone else's band, so none could
+ * trigger the fallback and none would catch a regression.
  *
- * ⚠️ E a medição do #26 diz que o defeito NÃO ACONTECE neste motor. Varrendo
- * malha completa de 3, 4, 5 e 6 zonas (`tools/measure-fan.cjs`), com piso de
- * varredura previsto de 2, 8, 20 e 40, o F2 medido é ZERO nas quatro. O
- * roteamento do #24 leva a aresta longa para a borda externa das faixas em vez
- * de reto entre colunas; o piso continua contando um cruzamento que o desenho
- * não faz mais. O que cresce com a densidade é `A3.2` — colisão de rótulo,
- * 2 → 5 → 12 → 25 —, que é LEGIBILIDADE, não veracidade.
+ * ⚠️ And #26's measurement says the defect does NOT happen in this engine.
+ * Sweeping a complete mesh of 3, 4, 5 and 6 zones (`tools/measure-fan.cjs`),
+ * with a predicted sweep floor of 2, 8, 20 and 40, the measured F2 is ZERO on
+ * all four. #24's routing takes the long edge to the bands' outer border
+ * instead of straight across columns; the floor keeps counting a crossing the
+ * drawing no longer makes. What grows with density is `A3.2` — label
+ * collision, 2 → 5 → 12 → 25 —, which is LEGIBILITY, not truthfulness.
  *
- * Então F2 entra armado e calado, e é isso que ele compra: no dia em que uma
- * mudança de roteamento reintroduzir o cruzamento, o portão `veracidade` barra
- * em vez de o desenho sair mentindo. O fallback em si continua névoa nomeada.
+ * So F2 goes in armed and quiet, and that's what it buys: the day a routing
+ * change reintroduces the crossing, the `truthfulness` gate blocks it instead
+ * of letting the drawing lie. The fallback itself remains named fog.
  */
 
 const path = require('path');
@@ -63,117 +65,120 @@ const g = require(path.join(__dirname, '..', 'geometry.cjs'));
 const { withoutTags, roundTo, name } = require(path.join(__dirname, 'common.cjs'));
 
 /**
- * O descritor de um achado da família `F`, num lugar só.
+ * The descriptor for an `F`-family finding, in one place.
  *
- * ⚠️ `conforme()` de `common.cjs` faria isto para as 62 — e NÃO serve aqui, por
- * construção: ele decide a severidade lendo `porId(id).severidade` do índice, e
- * `porId('F1')` e `porId('F2')` são `undefined` justamente porque a família `F`
- * fica **fora** do índice de propósito. Usar `conforme` aqui quebraria no acesso,
- * ou obrigaria a inflar o índice — que é o que a decisão do #18 recusa.
+ * ⚠️ `common.cjs`'s `matches()` would do this for the 62 — and does NOT work
+ * here, by construction: it decides severity by reading `byId(id).severity`
+ * from the index, and `byId('F1')` and `byId('F2')` are `undefined` precisely
+ * because family `F` stays **outside** the index on purpose. Using `matches`
+ * here would break on that lookup, or force inflating the index — which is
+ * exactly what #18's decision refuses.
  *
- * Então o descritor é escrito à mão, mas **uma vez** por checagem em vez de duas
- * (o ramo `inaplicavel` e o ramo com veredito repetiam os sete campos).
+ * So the descriptor is hand-written, but **once** per check instead of twice
+ * (the `notApplicable` branch and the verdict branch used to repeat the same
+ * seven fields).
  */
-const achadoDeFaixa = (id, nomeDaChecagem) => (state, mensagem, measured, occurrences = []) => ({
-  id, name: nomeDaChecagem, family: 'F', input: 'geometry',
+const bandFinding = (id, checkName) => (state, message, measured, occurrences = []) => ({
+  id, name: checkName, family: 'F', input: 'geometry',
   severidadeMaxima: 'fail', semantica: true, calibravel: false,
-  state, mensagem, measured, occurrences,
+  state, mensagem: message, measured, occurrences,
 });
 
 
 /**
- * F2 — a aresta corta a caixa de uma faixa que não é dela.
+ * F2 — the edge cuts through the box of a band it doesn't belong to.
  *
- * Espelho de `A5.5`, e de propósito linha a linha: a faixa entra na conta quando
- * NENHUMA das duas pontas é membro dela. Membro inclui descendente de membro —
- * uma faixa de AZ declara a subnet e os filhos diretos dela, e um serviço mais
- * fundo (dentro de um security group, por exemplo) continua sendo daquela zona.
- * Sem isso a checagem acusaria a própria aresta interna da zona.
+ * A mirror of `A5.5`, line for line on purpose: the band enters the count
+ * when NEITHER endpoint is a member of it. Membership includes a member's
+ * descendants — an AZ band declares the subnet and its direct children, and a
+ * service nested deeper (inside a security group, say) still belongs to that
+ * zone. Without that the check would flag the zone's own internal edge.
  *
- * Faixa sem membros declarados não entra: é o caso da faixa de OU, que o #12
- * desenha como `render: rotulo` e cuja "caixa" é âncora de rótulo, não região.
+ * A band with no declared members is left out: that's the case of the OR
+ * band, which #12 draws as `render: label` and whose "box" is a label anchor,
+ * not a region.
  */
 function f2(scene) {
-  const finding = achadoDeFaixa('F2', 'Aresta atravessando faixa alheia');
-  const comMembros = scene.bands.filter(f => Array.isArray(f.members) && f.members.length);
-  const edges = scene.edges.filter(a => a.completa);
+  const finding = bandFinding('F2', 'Edge crossing someone else\'s band');
+  const withMembers = scene.bands.filter(f => Array.isArray(f.members) && f.members.length);
+  const edges = scene.edges.filter(a => a.complete);
 
-  if (!comMembros.length || !edges.length)
+  if (!withMembers.length || !edges.length)
     return finding('notApplicable',
-      !edges.length ? 'o diagrama não tem arestas' : 'o diagrama não tem faixa com membros declarados',
-      { bands: comMembros.length, edges: edges.length });
+      !edges.length ? 'the diagram has no edges' : 'the diagram has no band with declared members',
+      { bands: withMembers.length, edges: edges.length });
 
-  const dela = (tip, f) => f.members.some(m => m === tip || scene.ehDescendente(tip, m));
+  const belongsTo = (endpoint, f) => f.members.some(m => m === endpoint || scene.isDescendant(endpoint, m));
 
-  const casos = [];
+  const cases = [];
   for (const a of edges)
-    for (const f of comMembros) {
-      if (dela(a.from, f) || dela(a.to, f)) continue;
-      if (!g.polilinhaCruzaRetangulo(a.pontos, f.cellBox)) continue;
-      casos.push({
-        o_que: `a aresta "${a.id}" (${a.from}→${a.to}) atravessa a faixa "${f.id}"` +
-          `${withoutTags(f.label) ? ` (${withoutTags(f.label)})` : ''}, de onde não sai nem para onde vai — ` +
-          `o desenho põe o caminho dentro de uma zona que ele não toca`,
+    for (const f of withMembers) {
+      if (belongsTo(a.from, f) || belongsTo(a.to, f)) continue;
+      if (!g.polilinhaCruzaRetangulo(a.points, f.cellBox)) continue;
+      cases.push({
+        o_que: `edge "${a.id}" (${a.from}→${a.to}) crosses band "${f.id}"` +
+          `${withoutTags(f.label) ? ` (${withoutTags(f.label)})` : ''}, which it neither leaves from nor heads to — ` +
+          `the drawing routes the path through a zone it never touches`,
         ids: [a.id, f.id],
       });
     }
 
-  return finding(casos.length ? 'failure' : 'ok',
-    casos.length
-      ? `${casos.length} travessia(s) de faixa alheia — tolerância é zero, como em A5.5`
-      : `${edges.length} aresta(s) contra ${comMembros.length} faixa(s): nenhuma corta faixa que não é dela`,
-    { bands: comMembros.length, edges: edges.length, travessias_de_faixa: casos.length },
-    casos);
+  return finding(cases.length ? 'failure' : 'ok',
+    cases.length
+      ? `${cases.length} crossing(s) of someone else's band — tolerance is zero, as in A5.5`
+      : `${edges.length} edge(s) against ${withMembers.length} band(s): none cuts through a band it doesn't belong to`,
+    { bands: withMembers.length, edges: edges.length, bandCrossings: cases.length },
+    cases);
 }
 
 module.exports = function extras(scene) {
   const output = [];
   const { bands, nodes } = scene;
-  const finding = achadoDeFaixa('F1', 'Faixa abraça exatamente seus membros');
+  const finding = bandFinding('F1', 'Band embraces exactly its members');
 
   // ---------------------------------------------------------------- F1
-  const conferiveis = bands.filter(f => Array.isArray(f.members));
-  if (!conferiveis.length) {
+  const checkable = bands.filter(f => Array.isArray(f.members));
+  if (!checkable.length) {
     output.push(finding('notApplicable',
-      bands.length ? 'as faixas do plano não declaram membros' : 'o diagrama não tem faixas',
+      bands.length ? 'the plan\'s bands declare no members' : 'the diagram has no bands',
       { bands: bands.length }));
     output.push(f2(scene));
     return output;
   }
 
-  const casos = [];
-  for (const f of conferiveis) {
-    const declarados = new Set(f.members);
-    for (const id of declarados) {
-      const membro = scene.byElement.get(id);
-      if (!membro || !membro.cellBox) continue;
-      if (!g.contem(f.cellBox, membro.cellBox))
-        casos.push({
-          o_que: `a faixa "${f.id}" declara "${id}" como membro e não o abraça — ` +
-            `quem lê o desenho não vê o atributo que o modelo afirma`,
+  const cases = [];
+  for (const f of checkable) {
+    const declared = new Set(f.members);
+    for (const id of declared) {
+      const member = scene.byElement.get(id);
+      if (!member || !member.cellBox) continue;
+      if (!g.contem(f.cellBox, member.cellBox))
+        cases.push({
+          o_que: `band "${f.id}" declares "${id}" as a member and does not embrace it — ` +
+            `whoever reads the drawing does not see the attribute the model asserts`,
           ids: [f.id, id],
         });
     }
     for (const n of nodes) {
-      if (declarados.has(n.id)) continue;
+      if (declared.has(n.id)) continue;
       const area = g.intersectionArea(f.cellBox, n.cellBox);
       if (area <= 0) continue;
       const inside = g.contem(f.cellBox, n.cellBox);
-      casos.push({
-        o_que: `a faixa "${f.id}" ${inside ? 'contém' : 'encosta em'} ${name(n)}, que não é membro dela — ` +
-          `o desenho afirma dele um atributo (${withoutTags(f.label) || f.id}) que o modelo não declara`,
+      cases.push({
+        o_que: `band "${f.id}" ${inside ? 'contains' : 'touches'} ${name(n)}, which is not a member of it — ` +
+          `the drawing asserts an attribute about it (${withoutTags(f.label) || f.id}) that the model does not declare`,
         ids: [f.id, n.id],
         area: roundTo(area, 0),
       });
     }
   }
 
-  output.push(finding(casos.length ? 'failure' : 'ok',
-    casos.length
-      ? `${casos.length} divergência(s) entre o que a faixa desenha e o que ela declara`
-      : `${conferiveis.length} faixa(s) abraçam exatamente seus membros`,
-    { bands: conferiveis.length, divergences: casos.length },
-    casos));
+  output.push(finding(cases.length ? 'failure' : 'ok',
+    cases.length
+      ? `${cases.length} divergence(s) between what the band draws and what it declares`
+      : `${checkable.length} band(s) embrace exactly their members`,
+    { bands: checkable.length, divergences: cases.length },
+    cases));
 
   // ---------------------------------------------------------------- F2
   output.push(f2(scene));

@@ -1,21 +1,21 @@
 'use strict';
 /**
- * A4 · Agrupamento e região comum (Gestalt).
+ * A4 · Grouping and common region (Gestalt).
  *
- * A rubrica: "em diagrama AWS esta família carrega a semântica mais forte do
- * desenho: a caixa de VPC É a fronteira de rede. Erro aqui não é feio, é
- * factualmente errado."
+ * The rubric: "in an AWS diagram this family carries the drawing's strongest
+ * semantics: the VPC box IS the network boundary. An error here isn't ugly,
+ * it's factually wrong."
  *
- * Duas das sete são marcadas `semantica` no índice — A4.2 e A4.4. Nelas o
- * validador deixa de ser linter e passa a ser guarda de veracidade: o que se
- * mede não é se o desenho está bonito, é se ele está AFIRMANDO uma topologia
- * que o modelo nega.
+ * Two of the seven are marked `semantica` in the index — A4.2 and A4.4. In
+ * those the validator stops being a linter and becomes a truthfulness guard:
+ * what's measured isn't whether the drawing looks good, it's whether it's
+ * ASSERTING a topology the model denies.
  *
- * Toda esta família roda sobre GRUPOS. As faixas saem, e a razão está escrita
- * em `scene.cjs`: uma faixa afirma atributo compartilhado, não contenção, e o
- * próprio motor a desenha para cruzar caixas. O que lhes cabe — que a faixa
- * abrace exatamente os membros que declara — está em `extras.cjs`, com a mesma
- * tolerância zero.
+ * This whole family runs over GROUPS. Bands are excluded, and the reason is
+ * written in `scene.cjs`: a band asserts a shared attribute, not containment,
+ * and the engine itself draws it to cross boxes. What applies to bands —
+ * that a band embraces exactly the members it declares — lives in
+ * `extras.cjs`, at the same zero tolerance.
  */
 
 const path = require('path');
@@ -26,158 +26,160 @@ const { ok, notApplicable, matches, pairs, mean, deviation, roundTo, withoutTags
 
 module.exports = function a4(scene) {
   const output = [];
-  const { nodes, grupos } = scene;
-  const solidos = [...nodes, ...grupos];
+  const { nodes, groups } = scene;
+  const solid = [...nodes, ...groups];
 
   // ---------------------------------------------------------------- A4.1
   {
-    const padding = lim('paddingDeGrupo');
-    const casos = [];
-    for (const e of solidos) {
+    const padding = lim('groupPadding');
+    const cases = [];
+    for (const e of solid) {
       const parent = scene.byElement.get(e.parent);
       if (!parent || !parent.cellBox) continue;
       if (!g.contem(parent.cellBox, e.cellBox, padding)) {
         const p = g.paddings(parent.cellBox, [e.cellBox]);
         const tight = Object.entries(p).filter(([, d]) => d < padding)
-          .map(([lado, d]) => `${lado}=${roundTo(d, 1)}`).join(', ');
-        casos.push({ o_que: `${name(e)} não respeita ${padding} px dentro de "${parent.id}" (${tight})`, ids: [e.id, parent.id] });
+          .map(([side, d]) => `${side}=${roundTo(d, 1)}`).join(', ');
+        cases.push({ o_que: `${name(e)} does not respect ${padding} px inside "${parent.id}" (${tight})`, ids: [e.id, parent.id] });
       }
     }
-    output.push(matches('A4.1', casos, { measured: { filhos: solidos.filter(e => scene.byElement.get(e.parent)).length, violations: casos.length } }));
+    output.push(matches('A4.1', cases, { measured: { children: solid.filter(e => scene.byElement.get(e.parent)).length, violations: cases.length } }));
   }
 
   // ---------------------------------------------------------------- A4.2
-  // A falha de maior gravidade semântica do validador inteiro.
+  // The most semantically severe failure in the whole validator.
   {
-    const casos = [];
-    for (const n of solidos) {
-      for (const group of grupos) {
+    const cases = [];
+    for (const n of solid) {
+      for (const group of groups) {
         if (group.id === n.id) continue;
-        if (scene.ehDescendente(n.id, group.id)) continue;      // é membro: pode estar dentro
-        if (scene.ehDescendente(group.id, n.id)) continue;      // é o contrário: o grupo é filho
+        if (scene.isDescendant(n.id, group.id)) continue;      // it's a member: allowed to be inside
+        if (scene.isDescendant(group.id, n.id)) continue;      // the reverse: the group is the child
         const area = g.intersectionArea(n.cellBox, group.cellBox);
         if (area > 0) {
           const inside = g.contem(group.cellBox, n.cellBox);
-          casos.push({
-            o_que: `${name(n)} ${inside ? 'está dentro' : 'invade'} de "${group.id}" sem ser membro — ` +
-              `o desenho afirma um pertencimento de fronteira que o modelo não tem`,
+          cases.push({
+            o_que: `${name(n)} ${inside ? 'sits inside' : 'invades'} "${group.id}" without being a member — ` +
+              `the drawing asserts a boundary membership the model does not have`,
             ids: [n.id, group.id],
           });
         }
       }
     }
-    output.push(matches('A4.2', casos, {
-      measured: { violations: casos.length },
-      mensagem: casos.length
-        ? `${casos.length} pertencimento(s) falso(s) — tolerância é zero`
-        : 'nenhum não-membro dentro de grupo alheio',
+    output.push(matches('A4.2', cases, {
+      measured: { violations: cases.length },
+      mensagem: cases.length
+        ? `${cases.length} false membership(s) — tolerance is zero`
+        : 'no non-member inside someone else\'s group',
     }));
   }
 
   // ---------------------------------------------------------------- A4.3
   {
-    const casos = [];
-    const candidatos = [...pairs(grupos)].filter(([a, b]) =>
-      a.parent === b.parent && !scene.ehDescendente(a.id, b.id) && !scene.ehDescendente(b.id, a.id));
-    for (const [a, b] of candidatos) {
+    const cases = [];
+    const candidates = [...pairs(groups)].filter(([a, b]) =>
+      a.parent === b.parent && !scene.isDescendant(a.id, b.id) && !scene.isDescendant(b.id, a.id));
+    for (const [a, b] of candidates) {
       const area = g.intersectionArea(a.cellBox, b.cellBox);
-      if (area > 0) casos.push({ o_que: `os grupos irmãos "${a.id}" e "${b.id}" se sobrepõem em ${roundTo(area, 0)} px²`, ids: [a.id, b.id] });
+      if (area > 0) cases.push({ o_que: `sibling groups "${a.id}" and "${b.id}" overlap by ${roundTo(area, 0)} px²`, ids: [a.id, b.id] });
     }
-    output.push(candidatos.length ? matches('A4.3', casos, { measured: { pairs: candidatos.length, sobrepostos: casos.length } })
-      : notApplicable('A4.3', 'não há dois grupos irmãos para comparar'));
+    output.push(candidates.length ? matches('A4.3', cases, { measured: { pairs: candidates.length, overlapping: cases.length } })
+      : notApplicable('A4.3', 'there are no two sibling groups to compare'));
   }
 
   // ---------------------------------------------------------------- A4.4
-  // A árvore derivada da geometria contra a árvore declarada. O pai geométrico
-  // é o menor grupo que contém a caixa inteira — que é como o olho lê.
+  // The tree derived from the geometry against the declared tree. The
+  // geometric parent is the smallest group that contains the whole box —
+  // which is how the eye reads it.
   {
-    const casos = [];
-    for (const e of solidos) {
-      const contendo = grupos.filter(gr => gr.id !== e.id && !scene.ehDescendente(gr.id, e.id) && g.contem(gr.cellBox, e.cellBox));
-      const geometrico = contendo.sort((a, b) => (a.cellBox.w * a.cellBox.h) - (b.cellBox.w * b.cellBox.h))[0];
+    const cases = [];
+    for (const e of solid) {
+      const containing = groups.filter(gr => gr.id !== e.id && !scene.isDescendant(gr.id, e.id) && g.contem(gr.cellBox, e.cellBox));
+      const geometric = containing.sort((a, b) => (a.cellBox.w * a.cellBox.h) - (b.cellBox.w * b.cellBox.h))[0];
       const declaredValue = scene.byElement.get(e.parent);
-      const idGeo = geometrico ? geometrico.id : '(raiz)';
-      const idDec = declaredValue ? declaredValue.id : '(raiz)';
-      if (idGeo !== idDec)
-        casos.push({ o_que: `${name(e)} é desenhado dentro de "${idGeo}" e declarado dentro de "${idDec}"`, ids: [e.id] });
+      const geoId = geometric ? geometric.id : '(root)';
+      const declaredId = declaredValue ? declaredValue.id : '(root)';
+      if (geoId !== declaredId)
+        cases.push({ o_que: `${name(e)} is drawn inside "${geoId}" and declared inside "${declaredId}"`, ids: [e.id] });
     }
-    output.push(matches('A4.4', casos, {
-      measured: { elements: solidos.length, divergences: casos.length },
-      mensagem: casos.length
-        ? `${casos.length} elemento(s) onde o desenho e o modelo contam topologias diferentes`
-        : 'a árvore desenhada é a árvore declarada',
+    output.push(matches('A4.4', cases, {
+      measured: { elements: solid.length, divergences: cases.length },
+      mensagem: cases.length
+        ? `${cases.length} element(s) where the drawing and the model tell different topologies`
+        : 'the drawn tree is the declared tree',
     }));
   }
 
   // ---------------------------------------------------------------- A4.5
   {
-    const sigmaMax = lim('desvioDePaddingMaximo');
-    const casos = [];
-    const porTipo = new Map();
-    for (const group of grupos) {
-      const filhos = (scene.filhosDe.get(group.id) || []).map(f => f.cellBox);
-      if (!filhos.length) continue;
-      const p = g.paddings(group.cellBox, filhos);
-      // O topo carrega a faixa de título, que é reserva deliberada e não desvio.
-      const laterais = [p.esquerda, p.direita, p.baixo];
-      const s = deviation(laterais);
+    const sigmaMax = lim('maxPaddingDeviation');
+    const cases = [];
+    const byKind = new Map();
+    for (const group of groups) {
+      const children = (scene.childrenOf.get(group.id) || []).map(f => f.cellBox);
+      if (!children.length) continue;
+      const p = g.paddings(group.cellBox, children);
+      // The top carries the title band, which is a deliberate reservation,
+      // not a deviation.
+      const sides = [p.left, p.right, p.bottom];
+      const s = deviation(sides);
       if (s > sigmaMax)
-        casos.push({ o_que: `"${group.id}" tem paddings ${laterais.map(x => roundTo(x, 1)).join('/')} (σ = ${roundTo(s, 2)} > ${sigmaMax})`, ids: [group.id] });
-      const kind = group.tipoSemantico || 'desconhecido';
-      if (!porTipo.has(kind)) porTipo.set(kind, []);
-      porTipo.get(kind).push({ id: group.id, p: mean(laterais) });
+        cases.push({ o_que: `"${group.id}" has paddings ${sides.map(x => roundTo(x, 1)).join('/')} (σ = ${roundTo(s, 2)} > ${sigmaMax})`, ids: [group.id] });
+      const kind = group.semanticKind || 'unknown';
+      if (!byKind.has(kind)) byKind.set(kind, []);
+      byKind.get(kind).push({ id: group.id, p: mean(sides) });
     }
-    for (const [kind, list] of porTipo) {
+    for (const [kind, list] of byKind) {
       if (list.length < 2) continue;
       const s = deviation(list.map(x => x.p));
       if (s > sigmaMax)
-        casos.push({ o_que: `grupos do tipo "${kind}" usam paddings diferentes entre si (σ = ${roundTo(s, 2)})`, ids: list.map(x => x.id) });
+        cases.push({ o_que: `groups of type "${kind}" use different paddings from one another (σ = ${roundTo(s, 2)})`, ids: list.map(x => x.id) });
     }
-    output.push(grupos.length ? matches('A4.5', casos, { measured: { grupos: grupos.length, irregulares: casos.length } })
-      : notApplicable('A4.5', 'o diagrama não tem grupos'));
+    output.push(groups.length ? matches('A4.5', cases, { measured: { groups: groups.length, irregular: cases.length } })
+      : notApplicable('A4.5', 'the diagram has no groups'));
   }
 
   // ---------------------------------------------------------------- A4.6
   {
-    const casos = [];
-    let comRotulo = 0;
-    for (const group of grupos) {
-      const r = group.rotuloCaixa;
+    const cases = [];
+    let withLabel = 0;
+    for (const group of groups) {
+      const r = group.labelRect;
       if (!r || !withoutTags(group.label)) continue;
-      comRotulo++;
-      const noTopo = Math.abs(r.y - group.cellBox.y) <= lim('alturaDaFaixaDeTitulo');
-      const naEsquerda = r.x - group.cellBox.x <= group.cellBox.w / 2;
-      if (!noTopo || !naEsquerda)
-        casos.push({ o_que: `o rótulo de "${group.id}" não está no canto superior esquerdo`, ids: [group.id] });
-      for (const filho of scene.filhosDe.get(group.id) || [])
-        if (g.intersectionArea(r, filho.cellBox) > 0) {
-          casos.push({ o_que: `o rótulo de "${group.id}" colide com o filho "${filho.id}"`, ids: [group.id, filho.id] });
+      withLabel++;
+      const atTop = Math.abs(r.y - group.cellBox.y) <= lim('titleBandHeight');
+      const atLeft = r.x - group.cellBox.x <= group.cellBox.w / 2;
+      if (!atTop || !atLeft)
+        cases.push({ o_que: `"${group.id}"'s label is not in the top-left corner`, ids: [group.id] });
+      for (const child of scene.childrenOf.get(group.id) || [])
+        if (g.intersectionArea(r, child.cellBox) > 0) {
+          cases.push({ o_que: `"${group.id}"'s label collides with child "${child.id}"`, ids: [group.id, child.id] });
           break;
         }
     }
-    output.push(comRotulo ? matches('A4.6', casos, { measured: { grupos_rotulados: comRotulo, fora_do_canone: casos.length } })
-      : notApplicable('A4.6', 'nenhum grupo tem rótulo'));
+    output.push(withLabel ? matches('A4.6', cases, { measured: { labeledGroups: withLabel, outsideCanon: cases.length } })
+      : notApplicable('A4.6', 'no group has a label'));
   }
 
   // ---------------------------------------------------------------- A4.7
   {
-    const ceiling = lim('proximidadeMaxima');
-    const grupoDe = n => {
-      const a = scene.ancestrais(n.id);
-      return a.length ? a[0].id : '(raiz)';
+    const ceiling = lim('maxProximity');
+    const groupOf = n => {
+      const a = scene.ancestors(n.id);
+      return a.length ? a[0].id : '(root)';
     };
     const intra = [];
     const inter = [];
     for (const [a, b] of pairs(nodes)) {
       const d = Math.hypot(...['x', 'y'].map(k => g.centro(a.cellBox)[k] - g.centro(b.cellBox)[k]));
-      (grupoDe(a) === grupoDe(b) ? intra : inter).push(d);
+      (groupOf(a) === groupOf(b) ? intra : inter).push(d);
     }
-    if (!intra.length || !inter.length) output.push(notApplicable('A4.7', 'não há pares intra e inter grupo para comparar'));
+    if (!intra.length || !inter.length) output.push(notApplicable('A4.7', 'there are no intra- and inter-group pairs to compare'));
     else {
       const rho = mean(intra) / mean(inter);
       output.push(rho <= ceiling
         ? ok('A4.7', { measured: { rho: roundTo(rho), intra: roundTo(mean(intra), 1), inter: roundTo(mean(inter), 1) }, mensagem: `ρ = ${roundTo(rho)} ≤ ${ceiling}` })
-        : matches('A4.7', [{ o_que: `ρ = ${roundTo(rho)} > ${ceiling}: nós do mesmo grupo não estão mais próximos entre si do que de nós de fora`, ids: [] }],
+        : matches('A4.7', [{ o_que: `ρ = ${roundTo(rho)} > ${ceiling}: nodes in the same group are not closer to each other than to outside nodes`, ids: [] }],
           { measured: { rho: roundTo(rho), intra: roundTo(mean(intra), 1), inter: roundTo(mean(inter), 1) } }));
     }
   }

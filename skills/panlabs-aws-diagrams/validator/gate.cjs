@@ -62,14 +62,14 @@ const LEVELS = {
  * @param {object} layoutPlan           the engine plan, post-`plan`
  * @param {object} [opts]
  * @param {string} [opts.level]         `none` | `truthfulness` | `failure` | `strict`
- * @param {boolean} [opts.bloquear]     shortcut: `true` means level `failure`
- * @param {object} [opts.modelo]        when the plan does not carry the embedded one
+ * @param {boolean} [opts.block]        shortcut: `true` means level `failure`
+ * @param {object} [opts.model]         when the plan does not carry the embedded one
  * @returns {object} the report, when it passes
  * @throws {Error} with `.erros` (readable lines) and `.report`, when it blocks
  */
 function gate(layoutPlan, opts = {}) {
   const report = validateGeometry(layoutPlan, opts);
-  const level = opts.level || (opts.bloquear ? 'failure' : 'none');
+  const level = opts.level || (opts.block ? 'failure' : 'none');
   const blocks = LEVELS[level];
   if (!blocks) throw new Error(`unknown gate level: "${level}" (use ${Object.keys(LEVELS).join(', ')})`);
 

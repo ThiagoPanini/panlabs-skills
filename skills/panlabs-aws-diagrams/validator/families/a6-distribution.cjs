@@ -1,17 +1,17 @@
 'use strict';
 /**
- * A6 · Distribuição e forma global.
+ * A6 · Distribution and overall shape.
  *
- * Última na ordem de prioridade da rubrica, junto com A8, e ela diz por quê:
- * "ajuste fino; limiares menos firmes". Três das cinco reportam métrica de
- * Mooney et al. (GD 2025) contra o Q1 de desenhos de especialista — são régua
- * de comparação, não reprovação.
+ * Last in the rubric's priority order, together with A8, and it says why:
+ * "fine tuning; softer thresholds". Three of the five report a Mooney et al.
+ * (GD 2025) metric against the expert-drawing Q1 — a comparison ruler, not a
+ * failure.
  *
- * A6.5 é a mais fraca de todas, e a própria rubrica avisa: "em diagrama de
- * arquitetura, posição é ditada por grupos (VPC/AZ), não por distância de
- * grafo. Baixa prioridade; provavelmente ruído." Fica implementada e medida,
- * com o aviso ao lado do número — o custo de calcular é baixo e o de esconder
- * uma métrica que a rubrica listou é ficar sem saber que ela era ruído mesmo.
+ * A6.5 is the weakest of all, and the rubric itself warns: "in an
+ * architecture diagram, position is dictated by groups (VPC/AZ), not by graph
+ * distance. Low priority; probably noise." It stays implemented and measured,
+ * with the warning next to the number — computing it is cheap, and hiding a
+ * metric the rubric listed just means never finding out it really was noise.
  */
 
 const path = require('path');
@@ -19,14 +19,14 @@ const g = require(path.join(__dirname, '..', 'geometry.cjs'));
 const { lim } = require(path.join(__dirname, '..', 'index.cjs'));
 const { ok, warning, failure, notApplicable, pairs, mean, roundTo } = require(path.join(__dirname, 'common.cjs'));
 
-/** Distâncias de grafo por BFS, a partir de um nó. */
-function bfs(inicio, vizinhos) {
-  const d = new Map([[inicio, 0]]);
-  const fila = [inicio];
-  while (fila.length) {
-    const atual = fila.shift();
-    for (const v of vizinhos.get(atual) || [])
-      if (!d.has(v)) { d.set(v, d.get(atual) + 1); fila.push(v); }
+/** Graph distances via BFS, starting from one node. */
+function bfs(start, neighbors) {
+  const d = new Map([[start, 0]]);
+  const queue = [start];
+  while (queue.length) {
+    const current = queue.shift();
+    for (const v of neighbors.get(current) || [])
+      if (!d.has(v)) { d.set(v, d.get(current) + 1); queue.push(v); }
   }
   return d;
 }
@@ -34,101 +34,102 @@ function bfs(inicio, vizinhos) {
 module.exports = function a6(scene) {
   const output = [];
   const { nodes, edges, canvas } = scene;
-  const centros = new Map(nodes.map(n => [n.id, g.centro(n.cellBox)]));
+  const centers = new Map(nodes.map(n => [n.id, g.centro(n.cellBox)]));
 
   // ---------------------------------------------------------------- A6.1
   {
-    // O ângulo com que uma aresta SAI de um nó só é um fato do desenho quando a
-    // âncora foi declarada. Sem âncora, a cena projeta a ponta no perímetro em
-    // direção ao alvo, e duas arestas que vão para o mesmo lado saem do mesmo
-    // ponto no mesmo ângulo — artefato da reconstrução, não do diagrama. O
-    // mxGraph desencosta as duas em tempo de render (`jettySize=auto`).
-    // Então: `fail` só onde há âncora declarada; sem ela, `aviso` com a ressalva.
-    const incidentes = new Map();
-    let algumSemAncora = false;
-    for (const a of edges.filter(x => x.completa)) {
-      if (!a.ancorada) algumSemAncora = true;
-      const registra = (quem, p1, p2) => {
-        if (!centros.has(quem)) return;
-        if (!incidentes.has(quem)) incidentes.set(quem, []);
-        incidentes.get(quem).push({ angulo: Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI, ancorada: !!a.ancorada });
+    // The angle an edge LEAVES a node at is only a fact about the drawing
+    // when the anchor was declared. Without an anchor, the scene projects the
+    // end onto the perimeter toward the target, and two edges heading the
+    // same way leave from the same point at the same angle — a reconstruction
+    // artifact, not a diagram fact. mxGraph pulls the two apart at render
+    // time (`jettySize=auto`). So: `fail` only where an anchor is declared;
+    // without one, `warning` with the caveat.
+    const incident = new Map();
+    let someUnanchored = false;
+    for (const a of edges.filter(x => x.complete)) {
+      if (!a.anchored) someUnanchored = true;
+      const record = (who, p1, p2) => {
+        if (!centers.has(who)) return;
+        if (!incident.has(who)) incident.set(who, []);
+        incident.get(who).push({ angle: Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI, anchored: !!a.anchored });
       };
-      registra(a.from, a.pontos[0], a.pontos[1] || a.pontos[0]);
-      registra(a.to, a.pontos[a.pontos.length - 1], a.pontos[a.pontos.length - 2] || a.pontos[0]);
+      record(a.from, a.points[0], a.points[1] || a.points[0]);
+      record(a.to, a.points[a.points.length - 1], a.points[a.points.length - 2] || a.points[0]);
     }
-    const comGrau = [...incidentes.entries()].filter(([, angs]) => angs.length > 1);
-    if (!comGrau.length) output.push(notApplicable('A6.1', 'nenhum nó tem duas ou mais arestas incidentes'));
+    const withDegree = [...incident.entries()].filter(([, angs]) => angs.length > 1);
+    if (!withDegree.length) output.push(notApplicable('A6.1', 'no node has two or more incident edges'));
     else {
-      const q1 = lim('resolucaoAngularQ1');
-      const pisoAbsoluto = lim('anguloIncidenteMinimo');
-      const termos = [];
-      const apertados = [];       // âncora declarada: o ângulo é fato do plano
-      const reconstruidos = [];   // sem âncora: o ângulo é palpite da cena
-      for (const [id, registros] of comGrau) {
-        const angs = registros.map(r => r.angulo);
-        const todasAncoradas = registros.every(r => r.ancorada);
-        const ordenados = [...angs].sort((a, b) => a - b);
-        let menor = 360;
-        for (let i = 0; i < ordenados.length; i++) {
-          const prox = ordenados[(i + 1) % ordenados.length];
-          let d = prox - ordenados[i];
-          if (i === ordenados.length - 1) d += 360;
-          menor = Math.min(menor, Math.abs(d));
+      const q1 = lim('angularResolutionQ1');
+      const absoluteFloor = lim('minIncidentAngle');
+      const terms = [];
+      const tight = [];          // declared anchor: the angle is a fact of the plan
+      const reconstructed = [];  // no anchor: the angle is the scene's guess
+      for (const [id, records] of withDegree) {
+        const angles = records.map(r => r.angle);
+        const allAnchored = records.every(r => r.anchored);
+        const sorted = [...angles].sort((a, b) => a - b);
+        let smallest = 360;
+        for (let i = 0; i < sorted.length; i++) {
+          const next = sorted[(i + 1) % sorted.length];
+          let d = next - sorted[i];
+          if (i === sorted.length - 1) d += 360;
+          smallest = Math.min(smallest, Math.abs(d));
         }
-        const ideal = 360 / angs.length;
-        termos.push(Math.abs((ideal - menor) / ideal));
-        if (menor < pisoAbsoluto)
-          (todasAncoradas ? apertados : reconstruidos).push({
-            o_que: `duas arestas saem de "${id}" a ${roundTo(menor, 1)}° uma da outra (piso ${pisoAbsoluto}°)` +
-              (todasAncoradas ? '' : ' — ângulo reconstruído, sem âncora declarada'),
+        const ideal = 360 / angles.length;
+        terms.push(Math.abs((ideal - smallest) / ideal));
+        if (smallest < absoluteFloor)
+          (allAnchored ? tight : reconstructed).push({
+            o_que: `two edges leave "${id}" ${roundTo(smallest, 1)}° apart (floor ${absoluteFloor}°)` +
+              (allAnchored ? '' : ' — reconstructed angle, no declared anchor'),
             ids: [id],
           });
       }
-      const AR = roundTo(1 - mean(termos));
+      const AR = roundTo(1 - mean(terms));
       const measured = {
-        AR, nos_com_grau_maior_que_um: comGrau.length, piso_absoluto: pisoAbsoluto,
-        angulos_reconstruidos: algumSemAncora,
+        AR, nodesWithDegreeAboveOne: withDegree.length, absoluteFloor,
+        reconstructedAngles: someUnanchored,
       };
-      output.push(apertados.length
-        ? failure('A6.1', { measured, mensagem: `${apertados.length} par(es) de arestas incidentes indistinguíveis`, occurrences: apertados })
-        : reconstruidos.length
+      output.push(tight.length
+        ? failure('A6.1', { measured, mensagem: `${tight.length} pair(s) of incident edges are indistinguishable`, occurrences: tight })
+        : reconstructed.length
           ? warning('A6.1', {
             measured,
-            mensagem: `${reconstruidos.length} par(es) de arestas parecem sair juntas, mas as pontas foram reconstruídas — ` +
-              'o renderizador desencosta as duas (jettySize=auto). Declare a âncora para que isto vire medição',
-            occurrences: reconstruidos,
+            mensagem: `${reconstructed.length} pair(s) of edges look like they leave together, but the ends were reconstructed — ` +
+              'the renderer pulls the two apart (jettySize=auto). Declare the anchor to turn this into a measurement',
+            occurrences: reconstructed,
           })
-          : AR < q1 ? warning('A6.1', { measured, mensagem: `AR = ${AR} < ${q1} (Q1)`, occurrences: [{ o_que: 'arestas saem em leque desigual dos nós', ids: [] }] })
+          : AR < q1 ? warning('A6.1', { measured, mensagem: `AR = ${AR} < ${q1} (Q1)`, occurrences: [{ o_que: 'edges fan out unevenly from the nodes', ids: [] }] })
             : ok('A6.1', { measured, mensagem: `AR = ${AR}` }));
     }
   }
 
   // ---------------------------------------------------------------- A6.2
   {
-    if (nodes.length < 2) output.push(notApplicable('A6.2', 'menos de dois nós'));
+    if (nodes.length < 2) output.push(notApplicable('A6.2', 'fewer than two nodes'));
     else {
       const V = nodes.length;
       const env = g.envolvente(nodes.map(n => n.cellBox));
-      const colunas = Math.floor(Math.sqrt(V)) || 1;
-      const linhas = Math.ceil(V / colunas);
-      const T = colunas * linhas;
-      const celula = new Map();
+      const columns = Math.floor(Math.sqrt(V)) || 1;
+      const rows = Math.ceil(V / columns);
+      const T = columns * rows;
+      const bucket = new Map();
       for (const n of nodes) {
         const c = g.centro(n.cellBox);
-        const i = Math.min(colunas - 1, Math.floor(((c.x - env.x) / (env.w || 1)) * colunas));
-        const j = Math.min(linhas - 1, Math.floor(((c.y - env.y) / (env.h || 1)) * linhas));
+        const i = Math.min(columns - 1, Math.floor(((c.x - env.x) / (env.w || 1)) * columns));
+        const j = Math.min(rows - 1, Math.floor(((c.y - env.y) / (env.h || 1)) * rows));
         const key = `${i},${j}`;
-        celula.set(key, (celula.get(key) || 0) + 1);
+        bucket.set(key, (bucket.get(key) || 0) + 1);
       }
       const mu = V / T;
       const dMax = (2 * V * (T - 1)) / T;
-      let soma = 0;
-      for (let i = 0; i < colunas; i++) for (let j = 0; j < linhas; j++) soma += Math.abs((celula.get(`${i},${j}`) || 0) - mu);
-      const NU = roundTo(dMax > 0 ? 1 - soma / dMax : 1);
-      const q1 = lim('uniformidadeDeNosQ1');
-      const measured = { NU, grade: `${colunas}×${linhas}`, nodes: V };
+      let sum = 0;
+      for (let i = 0; i < columns; i++) for (let j = 0; j < rows; j++) sum += Math.abs((bucket.get(`${i},${j}`) || 0) - mu);
+      const NU = roundTo(dMax > 0 ? 1 - sum / dMax : 1);
+      const q1 = lim('nodeUniformityQ1');
+      const measured = { NU, grid: `${columns}×${rows}`, nodes: V };
       output.push(NU < q1
-        ? warning('A6.2', { measured, mensagem: `NU = ${NU} < ${q1} (Q1) — há aglomerado e vazio`, occurrences: [{ o_que: `${[...celula.values()].filter(v => v === 0).length || T - celula.size} célula(s) da grade estão vazias`, ids: [] }] })
+        ? warning('A6.2', { measured, mensagem: `NU = ${NU} < ${q1} (Q1) — there's clumping and empty space`, occurrences: [{ o_que: `${[...bucket.values()].filter(v => v === 0).length || T - bucket.size} grid cell(s) are empty`, ids: [] }] })
         : ok('A6.2', { measured, mensagem: `NU = ${NU}` }));
     }
   }
@@ -136,104 +137,104 @@ module.exports = function a6(scene) {
   // ---------------------------------------------------------------- A6.3
   {
     const env = g.envolvente(scene.boxes.map(e => e.cellBox));
-    if (!env || !env.w || !env.h) output.push(notApplicable('A6.3', 'o desenho não tem área'));
+    if (!env || !env.w || !env.h) output.push(notApplicable('A6.3', 'the drawing has no area'));
     else {
-      // `Asp` é a métrica de Mooney e é `min/max` por definição — ela mede
-      // alongamento, não orientação. Mas a SEGUNDA metade de A6.3, que compara
-      // o desenho com o canvas, não pode usar min/max: um desenho deitado numa
-      // página em pé, com a mesma razão, daria diferença ZERO e passaria — e é
-      // exatamente o caso das "faixas vazias grandes" que o limiar persegue.
-      // Ali a razão tem de ser orientada.
+      // `Asp` is Mooney's metric and is `min/max` by definition — it measures
+      // elongation, not orientation. But the SECOND half of A6.3, which
+      // compares the drawing to the canvas, cannot use min/max: a drawing
+      // lying sideways on a portrait page, with the same ratio, would give
+      // ZERO difference and pass — which is exactly the "big empty band"
+      // case this threshold is chasing. There the ratio has to be oriented.
       const asp = roundTo(Math.min(env.h, env.w) / Math.max(env.h, env.w));
-      const razaoDesenho = env.w / env.h;
-      const razaoCanvas = canvas.w / canvas.h;
-      const diferenca = roundTo(Math.abs(razaoDesenho - razaoCanvas) / (razaoCanvas || 1));
-      const q1 = lim('razaoDeAspectoQ1');
-      const tol = lim('toleranciaDeRazaoDeAspecto');
+      const drawingRatio = env.w / env.h;
+      const canvasRatio = canvas.w / canvas.h;
+      const difference = roundTo(Math.abs(drawingRatio - canvasRatio) / (canvasRatio || 1));
+      const q1 = lim('aspectRatioQ1');
+      const tol = lim('aspectRatioTolerance');
       const measured = {
-        Asp: asp, razao_desenho: roundTo(razaoDesenho, 2), razao_canvas: roundTo(razaoCanvas, 2),
-        diferenca_relativa: diferenca, Q1: q1, tolerancia: tol,
+        Asp: asp, drawingRatio: roundTo(drawingRatio, 2), canvasRatio: roundTo(canvasRatio, 2),
+        relativeDifference: difference, Q1: q1, tolerance: tol,
       };
-      const motivos = [];
-      if (asp < q1) motivos.push({ o_que: `Asp = ${asp} < ${q1} (Q1): o desenho é uma faixa muito alongada`, ids: [] });
-      if (diferenca > tol) motivos.push({ o_que: `a razão do desenho difere da do canvas em ${roundTo(diferenca * 100, 0)}% (tolerância ${roundTo(tol * 100, 0)}%): sobram faixas vazias`, ids: [] });
-      output.push(motivos.length ? warning('A6.3', { measured, mensagem: motivos.map(m => m.o_que).join('; '), occurrences: motivos })
+      const reasons = [];
+      if (asp < q1) reasons.push({ o_que: `Asp = ${asp} < ${q1} (Q1): the drawing is a very elongated strip`, ids: [] });
+      if (difference > tol) reasons.push({ o_que: `the drawing's ratio differs from the canvas's by ${roundTo(difference * 100, 0)}% (tolerance ${roundTo(tol * 100, 0)}%): there's empty space left over`, ids: [] });
+      output.push(reasons.length ? warning('A6.3', { measured, mensagem: reasons.map(m => m.o_que).join('; '), occurrences: reasons })
         : ok('A6.3', { measured, mensagem: `Asp = ${asp}` }));
     }
   }
 
   // ---------------------------------------------------------------- A6.4
   {
-    if (nodes.length < 2) output.push(notApplicable('A6.4', 'menos de dois nós'));
+    if (nodes.length < 2) output.push(notApplicable('A6.4', 'fewer than two nodes'));
     else {
-      const step = lim('passoDaGrade');
-      const minimo = lim('alinhamentoMinimo');
-      const naGrade = v => Math.round(v / step);
-      const alinhados = nodes.filter(n => {
+      const step = lim('gridStep');
+      const minimum = lim('minAlignment');
+      const onGrid = v => Math.round(v / step);
+      const aligned = nodes.filter(n => {
         const c = g.centro(n.cellBox);
-        return nodes.some(o => o.id !== n.id && (naGrade(g.centro(o.cellBox).x) === naGrade(c.x) || naGrade(g.centro(o.cellBox).y) === naGrade(c.y)));
+        return nodes.some(o => o.id !== n.id && (onGrid(g.centro(o.cellBox).x) === onGrid(c.x) || onGrid(g.centro(o.cellBox).y) === onGrid(c.y)));
       });
-      const fraction = roundTo(alinhados.length / nodes.length);
-      const measured = { fracao_alinhada: fraction, minimo, step, nodes: nodes.length };
-      const soltos = nodes.filter(n => !alinhados.includes(n)).map(n => ({ o_que: `${n.id} não compartilha eixo com nenhum outro nó`, ids: [n.id] }));
-      output.push(fraction >= minimo
-        ? ok('A6.4', { measured, mensagem: `${roundTo(fraction * 100, 0)}% dos nós alinhados a pelo menos um outro` })
-        : warning('A6.4', { measured, mensagem: `só ${roundTo(fraction * 100, 0)}% alinhados (mínimo ${roundTo(minimo * 100, 0)}%)`, occurrences: soltos }));
+      const fraction = roundTo(aligned.length / nodes.length);
+      const measured = { alignedFraction: fraction, minimum, step, nodes: nodes.length };
+      const loose = nodes.filter(n => !aligned.includes(n)).map(n => ({ o_que: `${n.id} shares no axis with any other node`, ids: [n.id] }));
+      output.push(fraction >= minimum
+        ? ok('A6.4', { measured, mensagem: `${roundTo(fraction * 100, 0)}% of nodes aligned with at least one other` })
+        : warning('A6.4', { measured, mensagem: `only ${roundTo(fraction * 100, 0)}% aligned (minimum ${roundTo(minimum * 100, 0)}%)`, occurrences: loose }));
     }
   }
 
   // ---------------------------------------------------------------- A6.5
   {
-    const comAresta = edges.filter(a => a.completa && centros.has(a.from) && centros.has(a.to));
-    if (comAresta.length < 2 || nodes.length < 3) output.push(notApplicable('A6.5', 'grafo pequeno demais para stress ou preservação de vizinhança'));
+    const withEdge = edges.filter(a => a.complete && centers.has(a.from) && centers.has(a.to));
+    if (withEdge.length < 2 || nodes.length < 3) output.push(notApplicable('A6.5', 'the graph is too small for stress or neighborhood preservation'));
     else {
-      const vizinhos = new Map(nodes.map(n => [n.id, []]));
-      for (const a of comAresta) { vizinhos.get(a.from).push(a.to); vizinhos.get(a.to).push(a.from); }
+      const neighbors = new Map(nodes.map(n => [n.id, []]));
+      for (const a of withEdge) { neighbors.get(a.from).push(a.to); neighbors.get(a.to).push(a.from); }
 
-      // distâncias de grafo, só entre pares conectados
-      const dGrafo = new Map();
-      for (const n of nodes) dGrafo.set(n.id, bfs(n.id, vizinhos));
+      // graph distances, only between connected pairs
+      const graphDist = new Map();
+      for (const n of nodes) graphDist.set(n.id, bfs(n.id, neighbors));
 
-      const paresConectados = [];
+      const connectedPairs = [];
       for (const [a, b] of pairs(nodes)) {
-        const d = dGrafo.get(a.id).get(b.id);
+        const d = graphDist.get(a.id).get(b.id);
         if (d === undefined) continue;
-        paresConectados.push({ a, b, d, euclidiana: Math.hypot(centros.get(a.id).x - centros.get(b.id).x, centros.get(a.id).y - centros.get(b.id).y) });
+        connectedPairs.push({ a, b, d, euclidean: Math.hypot(centers.get(a.id).x - centers.get(b.id).x, centers.get(a.id).y - centers.get(b.id).y) });
       }
-      if (!paresConectados.length) output.push(notApplicable('A6.5', 'o grafo é totalmente desconexo'));
+      if (!connectedPairs.length) output.push(notApplicable('A6.5', 'the graph is fully disconnected'));
       else {
-        // escala ótima: minimiza Σ (α·euclidiana − d)²/d²  →  α = Σ(e/d) / Σ(e²/d²)
-        const num = paresConectados.reduce((s, p) => s + p.euclidiana / p.d, 0);
-        const den = paresConectados.reduce((s, p) => s + (p.euclidiana ** 2) / (p.d ** 2), 0);
-        const alfa = den > 0 ? num / den : 1;
-        const stress = mean(paresConectados.map(p => ((alfa * p.euclidiana - p.d) ** 2) / (p.d ** 2)));
+        // optimal scale: minimizes Σ (α·euclidean − d)²/d²  →  α = Σ(e/d) / Σ(e²/d²)
+        const num = connectedPairs.reduce((s, p) => s + p.euclidean / p.d, 0);
+        const den = connectedPairs.reduce((s, p) => s + (p.euclidean ** 2) / (p.d ** 2), 0);
+        const alpha = den > 0 ? num / den : 1;
+        const stress = mean(connectedPairs.map(p => ((alpha * p.euclidean - p.d) ** 2) / (p.d ** 2)));
         const KSM = roundTo(1 / (1 + stress));
 
-        // preservação de vizinhança: os k mais próximos no desenho contra os k vizinhos de grafo
+        // neighborhood preservation: the k nearest in the drawing against the k graph neighbors
         const NPs = [];
         for (const n of nodes) {
-          const k = (vizinhos.get(n.id) || []).length;
+          const k = (neighbors.get(n.id) || []).length;
           if (!k) continue;
-          const proximos = nodes.filter(o => o.id !== n.id)
-            .sort((x, y) => Math.hypot(centros.get(x.id).x - centros.get(n.id).x, centros.get(x.id).y - centros.get(n.id).y)
-              - Math.hypot(centros.get(y.id).x - centros.get(n.id).x, centros.get(y.id).y - centros.get(n.id).y))
+          const nearest = nodes.filter(o => o.id !== n.id)
+            .sort((x, y) => Math.hypot(centers.get(x.id).x - centers.get(n.id).x, centers.get(x.id).y - centers.get(n.id).y)
+              - Math.hypot(centers.get(y.id).x - centers.get(n.id).x, centers.get(y.id).y - centers.get(n.id).y))
             .slice(0, k).map(o => o.id);
-          const reais = new Set(vizinhos.get(n.id));
-          NPs.push(proximos.filter(id => reais.has(id)).length / k);
+          const actual = new Set(neighbors.get(n.id));
+          NPs.push(nearest.filter(id => actual.has(id)).length / k);
         }
         const NP = roundTo(mean(NPs));
-        const q1NP = lim('preservacaoDeVizinhancaQ1');
+        const q1NP = lim('neighborhoodPreservationQ1');
         const q1KSM = lim('stressQ1');
         const measured = {
           NP, KSM, Q1_NP: q1NP, Q1_KSM: q1KSM,
-          formula_KSM: '1/(1+stress) com escala ótima — a normalização exata da eq. (8) de Mooney não foi acessada; ver U10 da rubrica',
-          ressalva: 'a rubrica classifica A6.5 como provavelmente ruído em diagrama de arquitetura, onde a posição é ditada pelos grupos',
+          formula_KSM: '1/(1+stress) with optimal scaling — the exact normalization from Mooney\'s eq. (8) was not accessed; see U10 of the rubric',
+          caveat: 'the rubric itself classifies A6.5 as probably noise in an architecture diagram, where position is dictated by the groups',
         };
-        const motivos = [];
-        if (NP < q1NP) motivos.push({ o_que: `NP = ${NP} < ${q1NP} (Q1)`, ids: [] });
-        if (KSM < q1KSM) motivos.push({ o_que: `KSM = ${KSM} < ${q1KSM} (Q1)`, ids: [] });
-        output.push(motivos.length
-          ? warning('A6.5', { measured, mensagem: `${motivos.map(m => m.o_que).join('; ')} — mas ver a ressalva: aqui a posição vem dos grupos, não do grafo`, occurrences: motivos })
+        const reasons = [];
+        if (NP < q1NP) reasons.push({ o_que: `NP = ${NP} < ${q1NP} (Q1)`, ids: [] });
+        if (KSM < q1KSM) reasons.push({ o_que: `KSM = ${KSM} < ${q1KSM} (Q1)`, ids: [] });
+        output.push(reasons.length
+          ? warning('A6.5', { measured, mensagem: `${reasons.map(m => m.o_que).join('; ')} — but see the caveat: here position comes from the groups, not the graph`, occurrences: reasons })
           : ok('A6.5', { measured, mensagem: `NP = ${NP}, KSM = ${KSM}` }));
       }
     }

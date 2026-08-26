@@ -1,313 +1,313 @@
 {
-  "_leia": [
-    "Os limiares do validador geométrico, separados pela única coisa que muda o que",
-    "se pode fazer com eles: se existe medição por trás.",
+  "_readme": [
+    "The validator's geometric thresholds, split by the one thing that changes what",
+    "can be done with them: whether there is a measurement behind them.",
     "",
-    "`normativos` saem de norma ou de experimento publicado — WCAG 2.2, os percentis",
-    "de especialista da Tabela 2 de Mooney et al. (GD 2025), o checklist do C4. Mexer",
-    "num deles não é configurar, é discordar da fonte; então a fonte vai escrita ao",
-    "lado, e quem mexer tem de trocar a citação junto.",
+    "`normative` come from a norm or a published experiment — WCAG 2.2, the expert",
+    "percentiles from Table 2 of Mooney et al. (GD 2025), the C4 checklist. Changing",
+    "one of these isn't configuring, it's disagreeing with the source; so the source",
+    "is written alongside, and whoever changes it has to swap the citation too.",
     "",
-    "`calibraveis` são os que a rubrica (#8) marcou in loco como 'default de",
-    "engenharia': números plausíveis que ninguém mediu. O #18 decide que estes viram",
-    "config — não porque configurar seja bom, mas porque um número sem medição",
-    "hard-coded no meio de um `if` é indistinguível de um número medido, e a diferença",
-    "é justamente o que a rubrica se deu ao trabalho de registrar. Ao virar chave",
-    "nomeada, o número passa a carregar `porque: null` — o campo vazio é o pedido de",
-    "medição, visível para quem for calibrar."
+    "`calibratable` are the ones the rubric (#8) flagged in place as an 'engineering",
+    "default': plausible numbers nobody measured. #18 decides these become",
+    "config — not because configuring is good, but because an unmeasured number",
+    "hard-coded inside an `if` is indistinguishable from a measured one, and the",
+    "difference is exactly what the rubric bothered to record. Once it becomes a",
+    "named key, the number carries `because: null` — the empty field is the request",
+    "for measurement, visible to whoever calibrates it."
   ],
-  "normativos": {
-    "contrasteTextoPequeno": {
-      "valor": 4.5,
-      "unidade": "razão",
-      "fonte": "WCAG 2.2 SC 1.4.3 (AA), fórmula em G18"
+  "normative": {
+    "smallTextContrast": {
+      "value": 4.5,
+      "unit": "ratio",
+      "source": "WCAG 2.2 SC 1.4.3 (AA), formula in G18"
     },
-    "contrasteTextoGrande": {
-      "valor": 3.0,
-      "unidade": "razão",
-      "fonte": "WCAG 2.2 SC 1.4.3 — ≥18pt (24px) ou ≥14pt bold (18,5px)"
+    "largeTextContrast": {
+      "value": 3.0,
+      "unit": "ratio",
+      "source": "WCAG 2.2 SC 1.4.3 — ≥18pt (24px) or ≥14pt bold (18.5px)"
     },
-    "contrasteNaoTextual": {
-      "valor": 3.0,
-      "unidade": "razão",
-      "fonte": "WCAG 2.2 SC 1.4.11"
+    "nonTextContrast": {
+      "value": 3.0,
+      "unit": "ratio",
+      "source": "WCAG 2.2 SC 1.4.11"
     },
-    "textoGrandePx": {
-      "valor": 24,
-      "unidade": "px",
-      "fonte": "WCAG 2.2 SC 1.4.3 — fronteira de 18pt"
+    "largeTextPx": {
+      "value": 24,
+      "unit": "px",
+      "source": "WCAG 2.2 SC 1.4.3 — 18pt threshold"
     },
-    "textoGrandeNegritoPx": {
-      "valor": 18.5,
-      "unidade": "px",
-      "fonte": "WCAG 2.2 SC 1.4.3 — fronteira de 14pt bold"
+    "largeBoldTextPx": {
+      "value": 18.5,
+      "unit": "px",
+      "source": "WCAG 2.2 SC 1.4.3 — 14pt bold threshold"
     },
-    "resolucaoDeNoQ1": {
-      "valor": 0.067,
-      "unidade": "NR",
-      "fonte": "Mooney et al., GD 2025, eq. (9) + Tabela 2 (Q1 de especialistas)"
+    "nodeResolutionQ1": {
+      "value": 0.067,
+      "unit": "NR",
+      "source": "Mooney et al., GD 2025, eq. (9) + Table 2 (expert Q1)"
     },
-    "resolucaoDeNoMediana": {
-      "valor": 0.127,
-      "unidade": "NR",
-      "fonte": "Mooney et al., GD 2025, Tabela 2 (mediana)"
+    "nodeResolutionMedian": {
+      "value": 0.127,
+      "unit": "NR",
+      "source": "Mooney et al., GD 2025, Table 2 (median)"
     },
-    "cruzamentosQ1": {
-      "valor": 0.966,
-      "unidade": "EC",
-      "fonte": "Mooney et al., GD 2025, eq. (3) + Tabela 2"
+    "crossingsQ1": {
+      "value": 0.966,
+      "unit": "EC",
+      "source": "Mooney et al., GD 2025, eq. (3) + Table 2"
     },
-    "anguloDeCruzamentoQ1": {
-      "valor": 0.762,
-      "unidade": "CA",
-      "fonte": "Mooney et al., GD 2025, eq. (2) + Tabela 2"
+    "crossingAngleQ1": {
+      "value": 0.762,
+      "unit": "CA",
+      "source": "Mooney et al., GD 2025, eq. (2) + Table 2"
     },
-    "anguloDeCruzamentoIdeal": {
-      "valor": 70,
-      "unidade": "graus",
-      "fonte": "Huang, Eades, Hong & Lin (JVLC 2014); adotado por Dunne et al. 2015 e greadability.js"
+    "idealCrossingAngle": {
+      "value": 70,
+      "unit": "degrees",
+      "source": "Huang, Eades, Hong & Lin (JVLC 2014); adopted by Dunne et al. 2015 and greadability.js"
     },
-    "anguloDeCruzamentoMinimo": {
-      "valor": 30,
-      "unidade": "graus",
-      "fonte": "Mooney et al., GD 2025 — abaixo disso o cruzamento deixa de ser legível"
+    "minCrossingAngle": {
+      "value": 30,
+      "unit": "degrees",
+      "source": "Mooney et al., GD 2025 — below this the crossing stops being legible"
     },
-    "anguloIncidenteMinimo": {
-      "valor": 15,
-      "unidade": "graus",
-      "fonte": "A6.1 da rubrica — abaixo disso duas arestas incidentes são indistinguíveis a olho"
+    "minIncidentAngle": {
+      "value": 15,
+      "unit": "degrees",
+      "source": "rubric A6.1 — below this two incident edges are indistinguishable to the eye"
     },
-    "resolucaoAngularQ1": {
-      "valor": 0.352,
-      "unidade": "AR",
-      "fonte": "Mooney et al., GD 2025, eq. (1) + Tabela 2"
+    "angularResolutionQ1": {
+      "value": 0.352,
+      "unit": "AR",
+      "source": "Mooney et al., GD 2025, eq. (1) + Table 2"
     },
-    "uniformidadeDeNosQ1": {
-      "valor": 0.5,
-      "unidade": "NU",
-      "fonte": "Mooney et al., GD 2025, eq. (10) + Tabela 2"
+    "nodeUniformityQ1": {
+      "value": 0.5,
+      "unit": "NU",
+      "source": "Mooney et al., GD 2025, eq. (10) + Table 2"
     },
-    "razaoDeAspectoQ1": {
-      "valor": 0.499,
-      "unidade": "Asp",
-      "fonte": "Mooney et al., GD 2025 + Tabela 2"
+    "aspectRatioQ1": {
+      "value": 0.499,
+      "unit": "Asp",
+      "source": "Mooney et al., GD 2025 + Table 2"
     },
-    "uniformidadeDeComprimentoQ1": {
-      "valor": 0.647,
-      "unidade": "ELD",
-      "fonte": "Mooney et al., GD 2025, eq. (4) + Tabela 2"
+    "edgeLengthUniformityQ1": {
+      "value": 0.647,
+      "unit": "ELD",
+      "source": "Mooney et al., GD 2025, eq. (4) + Table 2"
     },
-    "ortogonalidadeAlvo": {
-      "valor": 0.9,
-      "unidade": "EO",
-      "fonte": "Mooney et al., GD 2025, eqs. (5)–(6)"
+    "orthogonalityTarget": {
+      "value": 0.9,
+      "unit": "EO",
+      "source": "Mooney et al., GD 2025, eqs. (5)-(6)"
     },
-    "ortogonalidadeQ1": {
-      "valor": 0.486,
-      "unidade": "EO",
-      "fonte": "Mooney et al., GD 2025, Tabela 2 — abaixo disso é mistura desordenada de ângulos"
+    "orthogonalityQ1": {
+      "value": 0.486,
+      "unit": "EO",
+      "source": "Mooney et al., GD 2025, Table 2 — below this it's a disordered mix of angles"
     },
-    "preservacaoDeVizinhancaQ1": {
-      "valor": 0.341,
-      "unidade": "NP",
-      "fonte": "Mooney et al., GD 2025, eq. (7)"
+    "neighborhoodPreservationQ1": {
+      "value": 0.341,
+      "unit": "NP",
+      "source": "Mooney et al., GD 2025, eq. (7)"
     },
     "stressQ1": {
-      "valor": 0.618,
-      "unidade": "KSM",
-      "fonte": "Mooney et al., GD 2025, eq. (8)"
+      "value": 0.618,
+      "unit": "KSM",
+      "source": "Mooney et al., GD 2025, eq. (8)"
     },
-    "complexidadeGraficaAlvo": {
-      "valor": 6,
-      "unidade": "entradas de legenda",
-      "fonte": "Moody, Physics of Notations — span of absolute judgement ≈ 6 categorias"
+    "graphicComplexityTarget": {
+      "value": 6,
+      "unit": "legend entries",
+      "source": "Moody, Physics of Notations — span of absolute judgement ≈ 6 categories"
     },
-    "complexidadeGraficaFalha": {
-      "valor": 8,
-      "unidade": "entradas de legenda",
-      "fonte": "Moody, Physics of Notations — 7–8 é warn, acima é fail"
+    "graphicComplexityFail": {
+      "value": 8,
+      "unit": "legend entries",
+      "source": "Moody, Physics of Notations — 7-8 is warn, above is fail"
     },
-    "elementosAlvo": {
-      "valor": 20,
-      "unidade": "nós",
-      "fonte": "Ghoniem/Fekete/Castagliola; Yoghourdjian et al. (arXiv:1809.00270) — corte em 20"
+    "elementsTarget": {
+      "value": 20,
+      "unit": "nodes",
+      "source": "Ghoniem/Fekete/Castagliola; Yoghourdjian et al. (arXiv:1809.00270) — cutoff at 20"
     },
-    "elementosFalha": {
-      "valor": 50,
-      "unidade": "nós",
-      "fonte": "Yoghourdjian et al. — corte em 50"
+    "elementsFail": {
+      "value": 50,
+      "unit": "nodes",
+      "source": "Yoghourdjian et al. — cutoff at 50"
     },
-    "densidadeMaxima": {
-      "valor": 0.1,
-      "unidade": "|E|/C(|V|,2)",
-      "fonte": "Yoghourdjian et al. — 78% dos estudos usam densidade <10%"
+    "maxDensity": {
+      "value": 0.1,
+      "unit": "|E|/C(|V|,2)",
+      "source": "Yoghourdjian et al. — 78% of studies use density <10%"
     }
   },
-  "calibraveis": {
-    "fonteMinimaRotuloDeAresta": {
-      "valor": 12,
-      "unidade": "px",
+  "calibratable": {
+    "minEdgeLabelFontSize": {
+      "value": 12,
+      "unit": "px",
       "because": null,
-      "rubrica": "A3.9 — 'piso prático abaixo do qual o texto deixa de ser legível em impressão/slide'; a rubrica avisa que NÃO é regra WCAG (WCAG normatiza contraste, não tamanho)"
+      "rubric": "A3.9 — 'practical floor below which text stops being legible in print/slide'; the rubric warns this is NOT a WCAG rule (WCAG governs contrast, not size)"
     },
-    "fonteMinimaNomeDeElemento": {
-      "valor": 14,
-      "unidade": "px",
+    "minElementNameFontSize": {
+      "value": 14,
+      "unit": "px",
       "because": null,
-      "rubrica": "A3.9 — mesma origem"
+      "rubric": "A3.9 — same origin"
     },
-    "proximidadeMaxima": {
-      "valor": 0.6,
-      "unidade": "ρ",
+    "maxProximity": {
+      "value": 0.6,
+      "unit": "ρ",
       "because": null,
-      "rubrica": "A4.7 — 'Valor do limiar é default de engenharia, não medido'"
+      "rubric": "A4.7 — 'Threshold value is an engineering default, not measured'"
     },
-    "dobrasAlvo": {
-      "valor": 1,
-      "unidade": "dobras por aresta",
+    "bendsTarget": {
+      "value": 1,
+      "unit": "bends per edge",
       "because": null,
-      "rubrica": "A5.3 — 'O valor 2 é default de engenharia'; 1 é o alvo declarado"
+      "rubric": "A5.3 — 'The value 2 is an engineering default'; 1 is the declared target"
     },
-    "dobrasAviso": {
-      "valor": 2,
-      "unidade": "dobras por aresta",
+    "bendsWarn": {
+      "value": 2,
+      "unit": "bends per edge",
       "because": null,
-      "rubrica": "A5.3 — o número que a rubrica marcou"
+      "rubric": "A5.3 — the number the rubric flagged"
     },
-    "dobrasFalha": {
-      "valor": 4,
-      "unidade": "dobras por aresta",
+    "bendsFail": {
+      "value": 4,
+      "unit": "bends per edge",
       "because": null,
-      "rubrica": "A5.3 — 'fail em > 4'"
+      "rubric": "A5.3 — 'fail above 4'"
     },
-    "anguloDeDobraAlvo": {
-      "valor": 90,
-      "unidade": "graus",
+    "bendAngleTarget": {
+      "value": 90,
+      "unit": "degrees",
       "because": null,
-      "rubrica": "A5.4 — derivado de Gestalt/continuação, sem experimento próprio"
+      "rubric": "A5.4 — derived from Gestalt/continuity, with no experiment of its own"
     },
-    "anguloDeDobraFalha": {
-      "valor": 60,
-      "unidade": "graus",
+    "bendAngleFail": {
+      "value": 60,
+      "unit": "degrees",
       "because": null,
-      "rubrica": "A5.4 — 'fail abaixo de 60°'"
+      "rubric": "A5.4 — 'fail below 60°'"
     },
-    "fluxoConsistenteMinimo": {
-      "valor": 0.9,
-      "unidade": "fração de arestas",
+    "minConsistentFlow": {
+      "value": 0.9,
+      "unit": "fraction of edges",
       "because": null,
-      "rubrica": "A5.7 — 'O valor 0,90 é default de engenharia'"
+      "rubric": "A5.7 — 'The value 0.90 is an engineering default'"
     },
-    "alinhamentoMinimo": {
-      "valor": 0.7,
-      "unidade": "fração de nós",
+    "minAlignment": {
+      "value": 0.7,
+      "unit": "fraction of nodes",
       "because": null,
-      "rubrica": "A6.4 — 'O valor 70% é default de engenharia'"
+      "rubric": "A6.4 — 'The value 70% is an engineering default'"
     },
-    "passoDaGrade": {
-      "valor": 8,
-      "unidade": "px",
+    "gridStep": {
+      "value": 8,
+      "unit": "px",
       "because": null,
-      "rubrica": "A6.4 — o passo de grade é exemplo na rubrica ('ex.: 8 px')"
+      "rubric": "A6.4 — the grid step is an example in the rubric ('e.g.: 8 px')"
     },
-    "deltaE00Minimo": {
-      "valor": 10,
-      "unidade": "ΔE00",
+    "minDeltaE00": {
+      "value": 10,
+      "unit": "ΔE00",
       "because": null,
-      "rubrica": "A7.4 — 'operacionalização de engenharia (o W3C não prescreve ΔE). Marque como default calibrável'"
+      "rubric": "A7.4 — 'engineering operationalization (the W3C does not prescribe ΔE). Mark as a calibratable default'"
     },
-    "folgaEntreCaixas": {
-      "valor": 8,
-      "unidade": "px",
+    "gapBetweenBoxes": {
+      "value": 8,
+      "unit": "px",
       "because": null,
-      "rubrica": "A3.1 — 'gap ≥ 8 px (ou ≥ 0.25 × altura do ícone)'; a rubrica dá duas formas do mesmo número e não escolhe"
+      "rubric": "A3.1 — 'gap ≥ 8 px (or ≥ 0.25 × icon height)'; the rubric gives two forms of the same number and does not pick one"
     },
-    "paddingDeGrupo": {
-      "valor": 8,
-      "unidade": "px",
-      "because": "CALIBRADO NA RECERTIFICAÇÃO DO #23, e o 12 era um espelho. O #18 herdou o número do `PAD = 12` que o motor do #11 usava, e nesse regime a checagem media o motor contra ele mesmo. Com a camada de tema (#13) o motor passou a derivar a folga de uma grade base 8 — e a medição fica sem margem para interpretação: com limiar 12, A4.1 acusa 77 ocorrências em 14 dos 15 modelos do corpus, e TODAS reportam exatamente 8 px; com limiar 8, acusa zero. Nenhuma delas é contenção defeituosa, todas são a escala nova. E 8 não é um número escolhido para o teste passar: `passoDaGrade` e `folgaEntreCaixas` já valiam 8 nesta mesma tabela, e a base 8 do tema sai dos ícones normativos da AWS (48 e 40 px, A9/A6 do #5) e do piso N7 de 0,05\" ≈ 4,8 px, cujo degrau seguinte é 8. Os três números passam a concordar em vez de um contradizer os outros dois. O que A4.1 protege — filho DENTRO do pai, sem encostar — continua protegido; quem guarda pertencimento é o A4.2, intocado.",
-      "rubrica": "A4.1 — padding interno mínimo em todos os quatro lados"
+    "groupPadding": {
+      "value": 8,
+      "unit": "px",
+      "because": "CALIBRATED AT THE #23 RECERTIFICATION, and the 12 was a mirror. #18 inherited the number from the `PAD = 12` that #11's engine used, and under that regime the check measured the engine against itself. With the theme layer (#13) the engine started deriving the gap from a base-8 grid — and the measurement leaves no room for interpretation: with threshold 12, A4.1 flags 77 occurrences across 14 of the 15 models in the corpus, and ALL of them report exactly 8 px; with threshold 8, it flags zero. None of them is defective containment, all of them are the new scale. And 8 isn't a number picked to make the test pass: `gridStep` and `gapBetweenBoxes` already held 8 in this same table, and the theme's base 8 comes from the AWS normative icons (48 and 40 px, A9/A6 of #5) and the N7 floor of 0.05\" ≈ 4.8 px, whose next step is 8. The three numbers now agree instead of one contradicting the other two. What A4.1 protects — child INSIDE parent, without touching — stays protected; A4.2, untouched, is what guards membership.",
+      "rubric": "A4.1 — minimum inner padding on all four sides"
     },
-    "desvioDePaddingMaximo": {
-      "valor": 4,
-      "unidade": "px (σ)",
+    "maxPaddingDeviation": {
+      "value": 4,
+      "unit": "px (σ)",
       "because": null,
-      "rubrica": "A4.5 — 'σ ≤ 4 px intra-grupo'"
+      "rubric": "A4.5 — 'σ ≤ 4 px intra-group'"
     },
-    "margemDoCanvas": {
-      "valor": 16,
-      "unidade": "px",
+    "canvasMargin": {
+      "value": 16,
+      "unit": "px",
       "because": null,
-      "rubrica": "A3.7 — 'margem ≥ 16 px'"
+      "rubric": "A3.7 — 'margin ≥ 16 px'"
     },
-    "separacaoDeArestasParalelas": {
-      "valor": 6,
-      "unidade": "px (Hausdorff)",
+    "parallelEdgeSeparation": {
+      "value": 6,
+      "unit": "px (Hausdorff)",
       "because": null,
-      "rubrica": "A5.8 — 'distância de Hausdorff < 6 px'"
+      "rubric": "A5.8 — 'Hausdorff distance < 6 px'"
     },
-    "toleranciaDeAncoragem": {
-      "valor": 2,
-      "unidade": "px",
+    "anchorTolerance": {
+      "value": 2,
+      "unit": "px",
       "because": null,
-      "rubrica": "A3.6 — '±2 px' sobre o perímetro"
+      "rubric": "A3.6 — '±2 px' over the perimeter"
     },
-    "paddingDeRotulo": {
-      "valor": 2,
-      "unidade": "px",
+    "labelPadding": {
+      "value": 2,
+      "unit": "px",
       "because": null,
-      "rubrica": "A3.2 — 'padding de 2 px' na interseção de bounding boxes de texto"
+      "rubric": "A3.2 — 'padding of 2 px' on the intersection of text bounding boxes"
     },
-    "toleranciaDeRazaoDeAspecto": {
-      "valor": 0.2,
-      "unidade": "fração",
+    "aspectRatioTolerance": {
+      "value": 0.2,
+      "unit": "fraction",
       "because": null,
-      "rubrica": "A6.3 — 'difere da razão do canvas em mais de 20%'"
+      "rubric": "A6.3 — 'differs from the canvas ratio by more than 20%'"
     },
-    "fanOutMaximo": {
-      "valor": 8,
-      "unidade": "grau",
+    "maxFanOut": {
+      "value": 8,
+      "unit": "degree",
       "because": null,
-      "rubrica": "A8.3 — o U8 da rubrica lista deg ≤ 8 entre os \"default de engenharia\"; a derivação de A6.1 é raciocínio, não medição"
+      "rubric": "A8.3 — the rubric's U8 lists deg ≤ 8 among the \"engineering defaults\"; the derivation from A6.1 is reasoning, not measurement"
     },
-    "coberturaDeTinta": {
-      "valor": [
+    "inkCoverage": {
+      "value": [
         0.15,
         0.6
       ],
-      "unidade": "fração do canvas",
+      "unit": "fraction of canvas",
       "because": null,
-      "rubrica": "A8.4 — o U8 lista a faixa de cobertura entre os \"default de engenharia\"; a própria rubrica a chama de sinal diagnóstico, não reprovação"
+      "rubric": "A8.4 — the rubric's U8 lists the coverage range among the \"engineering defaults\"; the rubric itself calls it a diagnostic signal, not a failure"
     },
-    "larguraMediaDeCaractere": {
-      "valor": 6.6,
-      "unidade": "px por caractere a 12px",
+    "avgCharWidth": {
+      "value": 6.6,
+      "unit": "px per character at 12px",
       "because": null,
-      "rubrica": "nenhuma — é do validador. Avanco medio de glifo em Helvetica 12px (~0,55em). O motor calibrou 6,7 por conta propria (resolve.cjs); a concordancia e esperada, e o valor da checagem nao esta na constante e sim em compor as caixas de rotulo e cruza-las, que o motor nunca faz"
+      "rubric": "none — it's the validator's own. Average glyph advance in Helvetica 12px (~0.55em). The engine calibrated 6.7 independently (resolve.cjs); the agreement is expected, and the check's value isn't in the constant but in composing label boxes and intersecting them, which the engine never does"
     },
-    "alturaDeLinha": {
-      "valor": 17,
-      "unidade": "px",
+    "lineHeight": {
+      "value": 17,
+      "unit": "px",
       "because": null,
-      "rubrica": "nenhuma — e do validador. Entrelinha do rotulo de folha a 12px"
+      "rubric": "none — it's the validator's own. Line height for a leaf label at 12px"
     },
-    "alturaMinimaDeRotulo": {
-      "valor": 23,
-      "unidade": "px",
+    "minLabelHeight": {
+      "value": 23,
+      "unit": "px",
       "because": null,
-      "rubrica": "nenhuma — e do validador. Piso da faixa de rotulo de uma linha"
+      "rubric": "none — it's the validator's own. Floor for a single-line label band"
     },
-    "larguraMaximaDeRotulo": {
-      "valor": 120,
-      "unidade": "px",
+    "maxLabelWidth": {
+      "value": 120,
+      "unit": "px",
       "because": null,
-      "rubrica": "nenhuma — e do validador. Largura em que o rotulo do service icon quebra"
+      "rubric": "none — it's the validator's own. Width at which the service icon's label wraps"
     },
-    "alturaDaFaixaDeTitulo": {
-      "valor": 34,
-      "unidade": "px",
+    "titleBandHeight": {
+      "value": 34,
+      "unit": "px",
       "because": null,
-      "rubrica": "nenhuma — e do validador. Faixa de titulo reservada no topo de um container"
+      "rubric": "none — it's the validator's own. Title band reserved at the top of a container"
     }
   }
 }

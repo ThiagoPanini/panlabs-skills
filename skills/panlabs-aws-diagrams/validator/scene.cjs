@@ -1,47 +1,49 @@
 'use strict';
 /**
- * Cena — o plano do motor virado no que as checagens sabem ler.
+ * Scene — the engine's plan turned into what the checks know how to read.
  *
- * O plano é feito para o EMISSOR: geometria relativa ao pai, estilo como string,
- * z implícito na ordem da lista. As checagens precisam do contrário: coordenada
- * absoluta, estilo como campo, e as três classes de objeto separadas. Traduzir
- * uma vez aqui é o que impede oito famílias de reimplementarem a mesma travessia
- * de árvore com oito bugs diferentes.
+ * The plan is built for the EMITTER: geometry relative to the parent, style as
+ * a string, z implicit in list order. The checks need the opposite: absolute
+ * coordinates, style as fields, and the three object classes kept apart.
+ * Translating once here is what stops eight families from reimplementing the
+ * same tree traversal with eight different bugs.
  *
  * ------------------------------------------------------------------------
- * A distinção que a rubrica não tem: GRUPO e FAIXA
+ * The distinction the rubric doesn't have: GROUP and BAND
  * ------------------------------------------------------------------------
  *
- * A rubrica (#8) supõe uma árvore de contenção só. A4.2 diz "nenhum nó cai
- * dentro de um grupo do qual não é filho" e A4.3 diz "grupos irmãos são
- * disjuntos" — as duas com tolerância zero, e A4.2 chamada de "a falha de maior
- * gravidade semântica de todo o validador".
+ * The rubric (#8) assumes a single containment tree. A4.2 says "no node falls
+ * inside a group it is not a child of" and A4.3 says "sibling groups are
+ * disjoint" — both at zero tolerance, and A4.2 is called "the most
+ * semantically severe failure in the whole validator".
  *
- * Só que este motor desenha dois tipos de caixa, e o `resolve.cjs` é explícito
- * sobre o segundo: **"Uma faixa existe para CRUZAR outras caixas."** Uma faixa
- * de AZ atravessa as subnets; um Auto Scaling group abraça EC2 de duas AZs
- * distintas. Aplicar A4.2 e A4.3 sobre elas reprova o desenho correto, e reprova
- * justamente pelo motivo de maior gravidade — o validador acusaria de mentira a
- * decisão central do gerador.
+ * Except this engine draws two kinds of box, and `resolve.cjs` is explicit
+ * about the second: **"A band exists to CROSS other boxes."** An AZ band runs
+ * across subnets; an Auto Scaling group wraps EC2 instances from two different
+ * AZs. Applying A4.2 and A4.3 to them fails the correct drawing, and fails it
+ * for exactly the highest-severity reason — the validator would accuse the
+ * generator's central decision of lying.
  *
- * A saída não é abrir exceção, é reconhecer que as duas caixas afirmam coisas
- * diferentes:
+ * The way out isn't to carve an exception, it's to recognize the two boxes
+ * assert different things:
  *
- *   GRUPO afirma CONTENÇÃO. "este nó está dentro desta VPC" é um fato de
- *   topologia de rede, e a caixa É a fronteira. Sobreposição aqui é mentira.
+ *   A GROUP asserts CONTAINMENT. "this node is inside this VPC" is a network
+ *   topology fact, and the box IS the boundary. Overlap here is a lie.
  *
- *   FAIXA afirma ATRIBUTO COMPARTILHADO. "estes dois nós estão nesta AZ", "estes
- *   dois escalam juntos". Não é fronteira de rede, é uma classe — e uma classe
- *   corta a árvore de contenção por definição, senão não precisaria existir.
+ *   A BAND asserts a SHARED ATTRIBUTE. "these two nodes are in this AZ",
+ *   "these two scale together". It isn't a network boundary, it's a class —
+ *   and a class cuts across the containment tree by definition, or it
+ *   wouldn't need to exist.
  *
- * Então A4.2/A4.3/A5.5 valem sobre GRUPOS, e as faixas ganham a checagem que de
- * fato lhes cabe: **a faixa contém exatamente os seus membros declarados** — nem
- * um a menos (o membro ficou de fora do abraço) nem um a mais (um não-membro caiu
- * dentro e a faixa afirma dele um atributo que ele não tem). É a mesma pergunta
- * semântica de A4.2, feita contra a lista de membros em vez da relação de pai.
+ * So A4.2/A4.3/A5.5 apply to GROUPS, and bands get the check that actually
+ * fits them: **the band contains exactly the members it declares** — not one
+ * fewer (the member got left out of the embrace) and not one more (a
+ * non-member fell inside and the band asserts an attribute about it that it
+ * doesn't have). It's the same semantic question as A4.2, asked against the
+ * member list instead of the parent relation.
  *
- * Isto é um achado do #18 contra a rubrica, não uma licença: a tolerância zero
- * continua zero, só que medida contra o que a caixa afirma.
+ * This is a finding #18 made against the rubric, not a loophole: the zero
+ * tolerance stays zero, just measured against what the box actually asserts.
  */
 
 const path = require('path');
@@ -49,119 +51,121 @@ const { THRESHOLDS } = require(path.join(__dirname, 'index.cjs'));
 const color = require(path.join(__dirname, 'color.cjs'));
 const geo = require(path.join(__dirname, 'geometry.cjs'));
 
-const v = key => THRESHOLDS[key].valor;
+const v = key => THRESHOLDS[key].value;
 
-/** Células que são moldura do documento, não conteúdo do diagrama. */
+/** Cells that are document chrome, not diagram content. */
 const CHROME = new Set(['title', 'subtitle', 'notes', 'panlabs-modelo']);
 
-// -------------------------------------------------------------------- estilo
+// ---------------------------------------------------------------------- style
 
 /**
- * A style string do mxGraph vira objeto.
+ * The mxGraph style string turned into an object.
  *
- * O formato é `chave=valor;chave=valor;` com dois detalhes que quebram um
- * `split('=')` ingênuo: o primeiro token pode ser um nome de forma sem valor
- * (`text;html=1`), e valores como `points=[[0,0],[1,0]]` e `dashPattern=8 5`
- * carregam vírgula, colchete e espaço dentro do valor.
+ * The format is `key=value;key=value;` with two details that break a naive
+ * `split('=')`: the first token can be a shape name with no value
+ * (`text;html=1`), and values like `points=[[0,0],[1,0]]` and
+ * `dashPattern=8 5` carry commas, brackets and spaces inside the value.
  */
 function readStyle(s) {
-  const fora = { _flags: [] };
-  for (const parte of String(s || '').split(';')) {
-    const t = parte.trim();
+  const out = { _flags: [] };
+  for (const part of String(s || '').split(';')) {
+    const t = part.trim();
     if (!t) continue;
     const i = t.indexOf('=');
-    if (i < 0) { fora._flags.push(t); continue; }
-    fora[t.slice(0, i)] = t.slice(i + 1);
+    if (i < 0) { out._flags.push(t); continue; }
+    out[t.slice(0, i)] = t.slice(i + 1);
   }
-  return fora;
+  return out;
 }
 
-const num = (e, key, padrao) => {
+const num = (e, key, fallback) => {
   const x = parseFloat(e[key]);
-  return Number.isFinite(x) ? x : padrao;
+  return Number.isFinite(x) ? x : fallback;
 };
-/** `none` e ausente são coisas diferentes de uma cor, e as duas viram `null`. */
-const corDe = (e, key) => (color.ehCor(e[key]) ? e[key] : null);
+/** `none` and absent are different things from a color, and both become `null`. */
+const colorOf = (e, key) => (color.ehCor(e[key]) ? e[key] : null);
 
-// -------------------------------------------------------------------- rótulo
+// ---------------------------------------------------------------------- label
 
 /**
- * A caixa que o rótulo ocupa. É estimativa, e o módulo diz isso em voz alta.
+ * The box a label occupies. It's an estimate, and the module says so out loud.
  *
- * O motor reserva a faixa do rótulo por ESPAÇAMENTO (`elk.spacing.nodeNode` e o
- * padding inferior do grupo), não por geometria de célula: no plano, uma folha
- * é 78×78, que é a caixa do ícone, e o rótulo é desenhado por fora dela. Quem
- * quiser saber se dois rótulos se encostam tem de reconstruir as duas caixas.
+ * The engine reserves the label band by SPACING (`elk.spacing.nodeNode` and
+ * the group's bottom padding), not by cell geometry: in the plan, a leaf is
+ * 78×78, which is the icon's box, and the label is drawn outside it. Anyone
+ * who wants to know whether two labels touch has to reconstruct both boxes.
  *
- * A constante de largura de caractere daqui é do validador, não importada do
- * motor — mas as duas caem no mesmo lugar, porque medem a mesma fonte no mesmo
- * tamanho. A independência que interessa não está na constante: está em que o
- * motor RESERVA espaço e nunca CONFERE se a reserva bastou, e é a conferência
- * que A3.2, A3.3 e A3.4 fazem. A palavra final continua sendo do render (B7).
+ * The character-width constant here belongs to the validator, not imported
+ * from the engine — but the two land in the same place, because they measure
+ * the same font at the same size. The independence that matters isn't in the
+ * constant: it's in the fact that the engine RESERVES space and never CHECKS
+ * whether the reservation was enough, and that check is what A3.2, A3.3 and
+ * A3.4 do. The final word still belongs to render (B7).
  */
 function labelBox(cellBox, label, style) {
   const text = String(label || '').replace(/<[^>]+>/g, '').trim();
   if (!text) return null;
 
-  const fonte = num(style, 'fontSize', 12);
-  const escala = fonte / 12;
-  const largMax = v('larguraMaximaDeRotulo');
-  const porCaractere = v('larguraMediaDeCaractere') * escala;
-  const alturaLinha = v('alturaDeLinha') * escala;
+  const fontSize = num(style, 'fontSize', 12);
+  const scale = fontSize / 12;
+  const maxWidth = v('maxLabelWidth');
+  const perChar = v('avgCharWidth') * scale;
+  const lineHeight = v('lineHeight') * scale;
 
-  const quebra = (larg) => {
-    const porLinha = Math.max(1, Math.floor(larg / porCaractere));
-    let linhas = 1;
-    let atual = 0;
-    for (const palavra of text.split(/\s+/)) {
-      const custo = palavra.length + (atual ? 1 : 0);
-      if (atual + custo > porLinha && atual > 0) { linhas++; atual = palavra.length; }
-      else atual += custo;
+  const wrap = (width) => {
+    const perLine = Math.max(1, Math.floor(width / perChar));
+    let lines = 1;
+    let current = 0;
+    for (const word of text.split(/\s+/)) {
+      const cost = word.length + (current ? 1 : 0);
+      if (current + cost > perLine && current > 0) { lines++; current = word.length; }
+      else current += cost;
     }
-    return linhas;
+    return lines;
   };
 
-  // Container: o rótulo mora na faixa de título, no canto superior esquerdo.
+  // Container: the label lives in the title band, top-left corner.
   if (style.container === '1') {
-    // `estilo` já vem parseado: procurar "grIcon=" no JSON dele nunca casa,
-    // porque serializado o par vira `"grIcon":"..."`. A chave é que se testa.
-    const recuo = 'grIcon' in style || style.spacingLeft ? num(style, 'spacingLeft', 30) : 8;
+    // `style` is already parsed: looking for "grIcon=" in its JSON never
+    // matches, because serialized the pair becomes `"grIcon":"..."`. The key
+    // itself is what gets tested.
+    const indent = 'grIcon' in style || style.spacingLeft ? num(style, 'spacingLeft', 30) : 8;
     return {
-      x: cellBox.x + recuo, y: cellBox.y,
-      w: Math.min(cellBox.w - recuo, text.length * porCaractere),
-      h: v('alturaDaFaixaDeTitulo'),
-      onde: 'title',
+      x: cellBox.x + indent, y: cellBox.y,
+      w: Math.min(cellBox.w - indent, text.length * perChar),
+      h: v('titleBandHeight'),
+      placement: 'title',
     };
   }
 
-  // Folha com rótulo por fora: faixa centrada logo abaixo do ícone.
+  // Leaf with an outside label: band centered right below the icon.
   if (style.verticalLabelPosition === 'bottom') {
-    const larg = Math.min(largMax, text.length * porCaractere);
+    const width = Math.min(maxWidth, text.length * perChar);
     return {
-      x: cellBox.x + (cellBox.w - larg) / 2, y: cellBox.y + cellBox.h,
-      w: larg, h: Math.max(v('alturaMinimaDeRotulo'), quebra(largMax) * alturaLinha),
-      onde: 'abaixo',
+      x: cellBox.x + (cellBox.w - width) / 2, y: cellBox.y + cellBox.h,
+      w: width, h: Math.max(v('minLabelHeight'), wrap(maxWidth) * lineHeight),
+      placement: 'below',
     };
   }
 
-  // Rótulo interno: a caixa é a própria caixa do objeto.
-  return { x: cellBox.x, y: cellBox.y, w: cellBox.w, h: cellBox.h, onde: 'inside' };
+  // Inline label: the box is the object's own box.
+  return { x: cellBox.x, y: cellBox.y, w: cellBox.w, h: cellBox.h, placement: 'inside' };
 }
 
-// -------------------------------------------------------------------- aresta
+// ---------------------------------------------------------------------- edge
 
 /**
- * O plano guarda só as DOBRAS da aresta — as pontas o mxGraph projeta no
- * perímetro em tempo de render. Para checar A3.5 e A5.5 a polilinha precisa
- * estar inteira, então as pontas são reconstruídas do mesmo jeito que o
- * renderizador as calcularia: âncora declarada quando existe (`exitX`/`entryX`),
- * projeção no perímetro na direção do próximo ponto quando não.
+ * The plan only stores the edge's BENDS — mxGraph projects the ends onto the
+ * perimeter at render time. To check A3.5 and A5.5 the polyline needs to be
+ * whole, so the ends are reconstructed the same way the renderer would compute
+ * them: the declared anchor when one exists (`exitX`/`entryX`), a projection
+ * onto the perimeter toward the next point when it doesn't.
  *
- * A consequência tem de ficar escrita, porque muda o que A3.6 pode afirmar: se
- * a ponta é reconstruída por projeção, ela está no perímetro POR CONSTRUÇÃO, e
- * A3.6 só tem o que medir onde a âncora foi declarada. Ver `a3` para o que a
- * checagem reporta nesse caso — o que ela não faz é passar calada fingindo ter
- * conferido.
+ * The consequence has to be written down, because it changes what A3.6 can
+ * assert: if the end is reconstructed by projection, it sits on the perimeter
+ * BY CONSTRUCTION, and A3.6 only has something to measure where the anchor was
+ * declared. See `a3` for what the check reports in that case — what it does
+ * not do is stay quiet and pretend it checked.
  */
 function tipOnPerimeter(cellBox, target) {
   const c = geo.centro(cellBox);
@@ -174,239 +178,243 @@ function tipOnPerimeter(cellBox, target) {
   return { x: c.x + dx * t, y: c.y + dy * t };
 }
 
-function declaredAnchor(cellBox, style, prefixo) {
-  const ax = parseFloat(style[`${prefixo}X`]);
-  const ay = parseFloat(style[`${prefixo}Y`]);
+function declaredAnchor(cellBox, style, prefix) {
+  const ax = parseFloat(style[`${prefix}X`]);
+  const ay = parseFloat(style[`${prefix}Y`]);
   if (!Number.isFinite(ax) || !Number.isFinite(ay)) return null;
   return { x: cellBox.x + ax * cellBox.w, y: cellBox.y + ay * cellBox.h, declared: true };
 }
 
-// --------------------------------------------------------------------- cena
+// ---------------------------------------------------------------------- scene
 
 function createScene(layoutPlan, opts = {}) {
-  const celulas = layoutPlan.celulas || [];
+  const cells = layoutPlan.cells || [];
 
-  // 1. o modelo semântico, que viaja dentro do próprio plano (#2 §round-trip)
+  // 1. the semantic model, which travels inside the plan itself (#2 §round-trip)
   let model = opts.model || null;
   if (!model) {
-    const embedded = celulas.find(c => c.id === 'panlabs-modelo');
+    const embedded = cells.find(c => c.id === 'panlabs-modelo');
     if (embedded && embedded.data && embedded.data.panlabsModelo) {
       try { model = JSON.parse(embedded.data.panlabsModelo); } catch { model = null; }
     }
   }
 
-  const idsDeFaixa = new Set((model && model.bands || []).map(f => f.id));
-  const membrosDaFaixa = new Map((model && model.bands || []).map(f => [f.id, f.members || []]));
-  const noDoModelo = new Map((model && model.nodes || []).map(n => [n.id, n]));
+  const bandIds = new Set((model && model.bands || []).map(f => f.id));
+  const bandMembers = new Map((model && model.bands || []).map(f => [f.id, f.members || []]));
+  const modelNodeById = new Map((model && model.nodes || []).map(n => [n.id, n]));
 
-  // 2. coordenada absoluta, resolvendo a cadeia de pais
-  const byId = new Map();
-  const absoluto = new Map();
-  for (const c of celulas) if (c.geo) byId.set(c.id, c);
+  // 2. absolute coordinates, resolving the parent chain
+  const cellById = new Map();
+  const absoluteBox = new Map();
+  for (const c of cells) if (c.geo) cellById.set(c.id, c);
 
   function abs(c) {
-    if (absoluto.has(c.id)) return absoluto.get(c.id);
+    if (absoluteBox.has(c.id)) return absoluteBox.get(c.id);
     let x = c.geo.x;
     let y = c.geo.y;
-    const parent = byId.get(c.parent);
+    const parent = cellById.get(c.parent);
     if (parent) { const a = abs(parent); x += a.x; y += a.y; }
     const r = { x, y, w: c.geo.w, h: c.geo.h };
-    absoluto.set(c.id, r);
+    absoluteBox.set(c.id, r);
     return r;
   }
 
-  // 3. classificar. A ordem do laço é a ordem z (quem vem antes fica atrás).
+  // 3. classify. The loop order is z-order (whoever comes first sits behind).
   const elements = [];
-  celulas.forEach((c, z) => {
+  cells.forEach((c, z) => {
     const style = readStyle(c.style);
     if (c.kind === 'edge') {
       elements.push({
-        id: c.id, classe: 'edge', parent: c.parent, z, style, estiloBruto: c.style || '',
-        label: c.label || '', from: c.from, to: c.to, dobras: c.pontos || [],
-        // os mesmos campos que as caixas ganham: sem isto cada família reparseia
-        // a style à mão, e A3.9 e A7.1 já divergiram no default de `fontSize`
-        traco: corDe(style, 'strokeColor'),
-        corDaFonte: corDe(style, 'fontColor') || '#000000',
-        tamanhoDaFonte: num(style, 'fontSize', 12),
-        negrito: style.fontStyle === '1' || style.fontStyle === '3',
-        halo: corDe(style, 'labelBackgroundColor'),
+        id: c.id, kind: 'edge', parent: c.parent, z, style, rawStyle: c.style || '',
+        label: c.label || '', from: c.from, to: c.to, bends: c.points || [],
+        // the same fields the boxes get: without this every family re-parses
+        // the style by hand, and A3.9 and A7.1 already disagreed on the
+        // default for `fontSize`
+        stroke: colorOf(style, 'strokeColor'),
+        fontColor: colorOf(style, 'fontColor') || '#000000',
+        fontSize: num(style, 'fontSize', 12),
+        bold: style.fontStyle === '1' || style.fontStyle === '3',
+        halo: colorOf(style, 'labelBackgroundColor'),
       });
       return;
     }
     if (!c.geo) return;
     const cellBox = abs(c);
-    const oculto = c.visivel === false;
-    let classe;
-    if (oculto || CHROME.has(c.id)) classe = c.id === 'panlabs-modelo' || oculto ? 'oculto' : 'frame';
-    else if (idsDeFaixa.has(c.id) || /^az-/.test(c.id)) classe = 'band';
-    else if (style.container === '1') classe = 'group';
-    else if (style._flags.includes('text')) classe = 'frame';
-    else classe = 'no';
+    const hidden = c.visible === false;
+    let kind;
+    if (hidden || CHROME.has(c.id)) kind = c.id === 'panlabs-modelo' || hidden ? 'hidden' : 'frame';
+    else if (bandIds.has(c.id) || /^az-/.test(c.id)) kind = 'band';
+    else if (style.container === '1') kind = 'group';
+    else if (style._flags.includes('text')) kind = 'frame';
+    else kind = 'node';
 
     elements.push({
-      id: c.id, classe, parent: c.parent, z, cellBox, style, estiloBruto: c.style || '',
+      id: c.id, kind, parent: c.parent, z, cellBox, style, rawStyle: c.style || '',
       label: c.label || '',
-      tipoSemantico: (noDoModelo.get(c.id) || {}).kind || null,
-      noModelo: noDoModelo.get(c.id) || null,
-      members: membrosDaFaixa.get(c.id) || null,
-      rotuloCaixa: cellBox && !oculto ? labelBox(cellBox, c.label, style) : null,
-      preenchimento: corDe(style, 'fillColor'),
-      traco: corDe(style, 'strokeColor'),
-      corDaFonte: corDe(style, 'fontColor') || '#000000',
-      tamanhoDaFonte: num(style, 'fontSize', 12),
-      negrito: style.fontStyle === '1' || style.fontStyle === '3',
-      opacidade: num(style, 'opacity', 100) / 100,
+      semanticKind: (modelNodeById.get(c.id) || {}).kind || null,
+      modelNode: modelNodeById.get(c.id) || null,
+      members: bandMembers.get(c.id) || null,
+      labelRect: cellBox && !hidden ? labelBox(cellBox, c.label, style) : null,
+      fill: colorOf(style, 'fillColor'),
+      stroke: colorOf(style, 'strokeColor'),
+      fontColor: colorOf(style, 'fontColor') || '#000000',
+      fontSize: num(style, 'fontSize', 12),
+      bold: style.fontStyle === '1' || style.fontStyle === '3',
+      opacity: num(style, 'opacity', 100) / 100,
     });
   });
 
-  const from = classe => elements.filter(e => e.classe === classe);
-  const nodes = from('no');
-  const grupos = from('group');
+  const from = kind => elements.filter(e => e.kind === kind);
+  const nodes = from('node');
+  const groups = from('group');
   const bands = from('band');
-  const molduras = from('frame');
+  const frames = from('frame');
   const edges = from('edge');
-  const boxes = [...nodes, ...grupos, ...bands];
+  const boxes = [...nodes, ...groups, ...bands];
   const byElement = new Map(elements.map(e => [e.id, e]));
 
-  // 4. as faixas de AZ nascem do caminho da grade e não estão no modelo; os
-  //    membros delas são os nós cuja subnet declara aquela zona.
+  // 4. AZ bands come from the grid path and are not in the model; their
+  //    members are the nodes whose subnet declares that zone.
   for (const f of bands) {
     if (f.members) continue;
-    const zona = /^az-(.+)$/.exec(f.id);
-    if (!zona || !model) { f.members = null; continue; }
-    const subnets = new Set((model.nodes || []).filter(n => n.az === zona[1]).map(n => n.id));
+    const zone = /^az-(.+)$/.exec(f.id);
+    if (!zone || !model) { f.members = null; continue; }
+    const subnets = new Set((model.nodes || []).filter(n => n.az === zone[1]).map(n => n.id));
     f.members = (model.nodes || [])
       .filter(n => subnets.has(n.id) || subnets.has(n.inside))
       .map(n => n.id)
-      .filter(id => byElement.has(id) && byElement.get(id).classe === 'no');
+      .filter(id => byElement.has(id) && byElement.get(id).kind === 'node');
   }
 
-  // 5. a árvore de contenção DECLARADA — só grupos e nós; faixa não é pai de ninguém
-  const filhosDe = new Map();
-  for (const e of [...nodes, ...grupos]) {
+  // 5. the DECLARED containment tree — groups and nodes only; a band is nobody's parent
+  const childrenOf = new Map();
+  for (const e of [...nodes, ...groups]) {
     const parent = e.parent === '1' ? null : e.parent;
-    if (!filhosDe.has(parent)) filhosDe.set(parent, []);
-    filhosDe.get(parent).push(e);
+    if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+    childrenOf.get(parent).push(e);
   }
-  function ancestrais(id) {
+  function ancestors(id) {
     const output = [];
-    let atual = byElement.get(id);
-    while (atual && atual.parent && atual.parent !== '1') {
-      const parent = byElement.get(atual.parent);
+    let current = byElement.get(id);
+    while (current && current.parent && current.parent !== '1') {
+      const parent = byElement.get(current.parent);
       if (!parent || output.includes(parent)) break;
       output.push(parent);
-      atual = parent;
+      current = parent;
     }
     return output;
   }
-  const ehDescendente = (id, ancestralId) => ancestrais(id).some(a => a.id === ancestralId);
+  const isDescendant = (id, ancestorId) => ancestors(id).some(a => a.id === ancestorId);
 
-  // 6. as pontas das arestas, e a polilinha completa
+  // 6. edge ends, and the complete polyline
   for (const a of edges) {
     const origin = byElement.get(a.from);
-    const destino = byElement.get(a.to);
-    if (!origin || !destino) { a.pontos = a.dobras.slice(); a.completa = false; continue; }
-    const rumoInicio = a.dobras[0] || geo.centro(destino.cellBox);
-    const rumoFim = a.dobras[a.dobras.length - 1] || geo.centro(origin.cellBox);
-    const inicio = declaredAnchor(origin.cellBox, a.style, 'exit') || tipOnPerimeter(origin.cellBox, rumoInicio);
-    const fim = declaredAnchor(destino.cellBox, a.style, 'entry') || tipOnPerimeter(destino.cellBox, rumoFim);
-    a.pontos = [inicio, ...a.dobras, fim];
-    a.completa = true;
-    a.ancorada = !!(inicio.declared && fim.declared);
-    a.polylineLength = geo.polylineLength(a.pontos);
-    a.rotuloCaixa = a.label ? caixaDeRotuloDeAresta(a) : null;
+    const dest = byElement.get(a.to);
+    if (!origin || !dest) { a.points = a.bends.slice(); a.complete = false; continue; }
+    const aimStart = a.bends[0] || geo.centro(dest.cellBox);
+    const aimEnd = a.bends[a.bends.length - 1] || geo.centro(origin.cellBox);
+    const start = declaredAnchor(origin.cellBox, a.style, 'exit') || tipOnPerimeter(origin.cellBox, aimStart);
+    const end = declaredAnchor(dest.cellBox, a.style, 'entry') || tipOnPerimeter(dest.cellBox, aimEnd);
+    a.points = [start, ...a.bends, end];
+    a.complete = true;
+    a.anchored = !!(start.declared && end.declared);
+    a.polylineLength = geo.polylineLength(a.points);
+    a.labelRect = a.label ? edgeLabelRect(a) : null;
   }
 
-  function caixaDeRotuloDeAresta(a) {
+  function edgeLabelRect(a) {
     const text = String(a.label).replace(/<[^>]+>/g, '').trim();
     if (!text) return null;
-    const fonte = num(a.style, 'fontSize', 12);
-    const larg = text.length * v('larguraMediaDeCaractere') * (fonte / 12);
-    const alt = v('alturaDeLinha') * (fonte / 12);
-    const meio = pontoNoMeio(a.pontos);
-    return { x: meio.x - larg / 2, y: meio.y - alt / 2, w: larg, h: alt, onde: 'edge' };
+    const fontSize = num(a.style, 'fontSize', 12);
+    const width = text.length * v('avgCharWidth') * (fontSize / 12);
+    const height = v('lineHeight') * (fontSize / 12);
+    const mid = midpoint(a.points);
+    return { x: mid.x - width / 2, y: mid.y - height / 2, w: width, h: height, placement: 'edge' };
   }
 
-  function pontoNoMeio(pontos) {
-    const total = geo.polylineLength(pontos);
+  function midpoint(points) {
+    const total = geo.polylineLength(points);
     let walked = 0;
-    for (let i = 0; i + 1 < pontos.length; i++) {
-      const d = Math.hypot(pontos[i + 1].x - pontos[i].x, pontos[i + 1].y - pontos[i].y);
+    for (let i = 0; i + 1 < points.length; i++) {
+      const d = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
       if (walked + d >= total / 2) {
         const t = d < geo.EPS ? 0 : (total / 2 - walked) / d;
-        return { x: pontos[i].x + t * (pontos[i + 1].x - pontos[i].x), y: pontos[i].y + t * (pontos[i + 1].y - pontos[i].y) };
+        return { x: points[i].x + t * (points[i + 1].x - points[i].x), y: points[i].y + t * (points[i + 1].y - points[i].y) };
       }
       walked += d;
     }
-    return pontos[0] || { x: 0, y: 0 };
+    return points[0] || { x: 0, y: 0 };
   }
 
   /**
-   * O fundo efetivo de um ponto — a decisão 4 do #18.
+   * The effective background at a point — decision 4 of #18.
    *
-   * Não é `plano.fundo`. Um rótulo dentro de uma subnet dentro de uma VPC dentro
-   * da nuvem tem por trás a pilha inteira, e os grupos AWS desenham com
-   * preenchimento próprio. A conta é: varrer as caixas em ordem z, ficar com as
-   * que contêm o ponto e têm preenchimento, e compor de trás para frente com a
-   * opacidade de cada uma. Medir contra o branco da página daria um contraste
-   * que ninguém vê.
+   * Not `plan.background`. A label inside a subnet inside a VPC inside the
+   * cloud has the whole stack behind it, and AWS groups draw with their own
+   * fill. The computation is: sweep the boxes in z-order, keep the ones that
+   * contain the point and have a fill, and composite them back-to-front with
+   * each one's opacity. Measuring against the page's white would give a
+   * contrast nobody sees.
    *
-   * `fillColor=none` — que é como as faixas e a AZ se desenham — não pinta, e
-   * por isso não entra na pilha: a faixa cruza sem trocar o fundo de quem está
-   * embaixo, que é exatamente o que ela promete visualmente.
+   * `fillColor=none` — which is how bands and the AZ draw — doesn't paint,
+   * and so it doesn't enter the stack: the band crosses without changing the
+   * background of whatever is underneath, which is exactly what it visually
+   * promises.
    */
-  function fundoEfetivoEm(ponto, ateZ = Infinity) {
+  function effectiveBackgroundAt(point, beforeZ = Infinity) {
     let background = layoutPlan.background || '#FFFFFF';
     for (const e of boxes) {
-      if (e.z >= ateZ) continue;
-      if (!e.preenchimento) continue;
+      if (e.z >= beforeZ) continue;
+      if (!e.fill) continue;
       const c = e.cellBox;
-      if (ponto.x < c.x || ponto.x > geo.direita(c) || ponto.y < c.y || ponto.y > geo.baixo(c)) continue;
-      background = color.compor(e.preenchimento, background, e.opacidade);
+      if (point.x < c.x || point.x > geo.direita(c) || point.y < c.y || point.y > geo.baixo(c)) continue;
+      background = color.compor(e.fill, background, e.opacity);
     }
     return background;
   }
 
   /**
-   * O fundo efetivo sob o rótulo de um elemento, respeitando o halo se houver.
+   * The effective background under an element's label, honoring the halo if there is one.
    *
-   * O `+ 1` no corte de z não é detalhe: o rótulo de um grupo é desenhado DENTRO
-   * da caixa dele, na faixa de título, então o preenchimento do próprio grupo é
-   * o fundo daquele texto. Cortar em `e.z` exclui justamente a cor de trás e
-   * mede contra a página.
+   * The `+ 1` in the z-cutoff isn't a detail: a group's label is drawn INSIDE
+   * its own box, in the title band, so the group's own fill is that text's
+   * background. Cutting at `e.z` excludes exactly the color behind it and
+   * measures against the page instead.
    *
-   * O erro tem direção perigosa. Um título `#00A4A6` sobre uma subnet `#E6F6F7`
-   * dá 2,75:1, e medido contra o branco dá 3,06:1 — otimista, mas ainda reprova.
-   * Já texto escuro sobre grupo escuro (`#232F3E` sobre `#232F3D`) é 1,00:1 na
-   * tela e vira 13,57:1 medido contra a página: PASSA. Falso negativo na única
-   * família normativa do validador.
+   * The error has a dangerous direction. A `#00A4A6` title over an `#E6F6F7`
+   * subnet gives 2.75:1, and measured against white gives 3.06:1 — optimistic,
+   * but still a fail. But dark text over a dark group (`#232F3E` over
+   * `#232F3D`) is 1.00:1 on screen and becomes 13.57:1 measured against the
+   * page: PASSES. A false negative in the validator's one normative family.
    *
-   * Para rótulo desenhado fora da caixa (folha com `verticalLabelPosition=bottom`)
-   * incluir o próprio elemento não muda nada: o ponto do rótulo cai fora da
-   * caixa dele, e quem decide é o teste de contenção, não o corte de z.
+   * For a label drawn outside its box (a leaf with
+   * `verticalLabelPosition=bottom`) including the element itself changes
+   * nothing: its label's point falls outside its own box, and the containment
+   * test decides it, not the z-cutoff.
    */
-  function fundoDoRotulo(e) {
-    const halo = corDe(e.style, 'labelBackgroundColor');
+  function labelBackground(e) {
+    const halo = colorOf(e.style, 'labelBackgroundColor');
     if (halo) return halo;
-    const cellBox = e.rotuloCaixa;
+    const cellBox = e.labelRect;
     if (!cellBox) return layoutPlan.background || '#FFFFFF';
-    return fundoEfetivoEm({ x: cellBox.x + cellBox.w / 2, y: cellBox.y + cellBox.h / 2 }, e.z + 1);
+    return effectiveBackgroundAt({ x: cellBox.x + cellBox.w / 2, y: cellBox.y + cellBox.h / 2 }, e.z + 1);
   }
 
-  // Grau de cada nó. Mora aqui porque A5.1 (c_max), A6.1 e A8.3 querem o mesmo
-  // mapa, e três cópias é onde uma delas passa a contar aresta incompleta.
-  const grau = new Map();
-  for (const a of edges) if (a.completa) for (const id of [a.from, a.to]) grau.set(id, (grau.get(id) || 0) + 1);
+  // Each node's degree. Lives here because A5.1 (c_max), A6.1 and A8.3 all
+  // want the same map, and three copies is where one of them stops counting
+  // an incomplete edge.
+  const degree = new Map();
+  for (const a of edges) if (a.complete) for (const id of [a.from, a.to]) degree.set(id, (degree.get(id) || 0) + 1);
 
   return {
-    layoutPlan, model, grau,
-    canvas: { x: 0, y: 0, w: layoutPlan.larg, h: layoutPlan.alt },
+    layoutPlan, model, degree,
+    canvas: { x: 0, y: 0, w: layoutPlan.width, h: layoutPlan.height },
     background: layoutPlan.background || '#FFFFFF',
-    elements, nodes, grupos, bands, molduras, edges, boxes,
-    byElement, filhosDe, ancestrais, ehDescendente,
-    fundoEfetivoEm, fundoDoRotulo, pontoNoMeio,
-    // a legenda ainda não existe neste motor; a cena expõe o campo para que a
-    // família A1 possa dizer "ausente" em vez de estourar
+    elements, nodes, groups, bands, frames, edges, boxes,
+    byElement, childrenOf, ancestors, isDescendant,
+    effectiveBackgroundAt, labelBackground, midpoint,
+    // the legend doesn't exist in this engine yet; the scene exposes the field
+    // so family A1 can say "absent" instead of blowing up
     legend: layoutPlan.legend || [],
   };
 }

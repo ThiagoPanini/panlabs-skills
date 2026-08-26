@@ -1,36 +1,37 @@
 'use strict';
 /**
- * Cor: contraste WCAG, distância perceptual e simulação de deficiência de cor.
- * Sem dependência, por premissa 7 do mapa.
+ * Color: WCAG contrast, perceptual distance and color-deficiency simulation.
+ * No dependency, per premise 7 of the map.
  *
- * A família A7 é a única do validador que é NORMATIVA: os números vêm da WCAG
- * 2.2, não de um percentil de gosto. Isso muda o padrão de prova. Uma métrica
- * estética errada por 5% produz um aviso um pouco fora de lugar; um contraste
- * errado por 5% aprova um texto que a norma reprova, e o diagrama vai para o
- * slide com a etiqueta de acessível que ele não tem. Por isso as três contas
- * daqui são conferidas contra valor publicado em `tests/check-primitives.cjs`.
+ * Family A7 is the validator's only NORMATIVE family: the numbers come from
+ * WCAG 2.2, not from a taste percentile. That changes the standard of proof. An
+ * aesthetic metric that's off by 5% produces a slightly-out-of-place warning; a
+ * contrast that's off by 5% passes a text the norm fails, and the diagram goes
+ * to the slide wearing an "accessible" label it hasn't earned. That's why the
+ * three computations here are checked against a published value in
+ * `tests/check-primitives.cjs`.
  *
- * Duas armadilhas conhecidas, e por que este módulo as evita:
+ * Two known traps, and why this module avoids them:
  *
- *   LUMINÂNCIA NÃO É MÉDIA DE CANAL. `(R+G+B)/3` é a conta errada que passa
- *   despercebida porque devolve um número plausível. A WCAG lineariza o sRGB
- *   antes de ponderar (G18), e o degrau na linearização — 0,03928 — é onde as
- *   implementações caseiras divergem no cinza escuro.
+ *   LUMINANCE IS NOT A CHANNEL AVERAGE. `(R+G+B)/3` is the wrong sum that goes
+ *   unnoticed because it returns a plausible number. WCAG linearizes sRGB
+ *   before weighting it (G18), and the step in the linearization — 0.03928 —
+ *   is where homegrown implementations diverge in dark gray.
  *
- *   ΔE00 NÃO É DISTÂNCIA EUCLIDIANA EM Lab. A CIEDE2000 tem um termo de
- *   rotação na região azul e uma média de matiz que atravessa 0°/360°. Quem
- *   implementa direto da fórmula erra o caso do azul e o do croma quase nulo —
- *   que são exatamente os dois casos que aparecem numa paleta AWS, cheia de
- *   azul-marinho e de cinza. O conjunto de teste de Sharma, Wu & Dalal (2005)
- *   existe por isso, e é contra ele que a implementação é conferida.
+ *   ΔE00 IS NOT EUCLIDEAN DISTANCE IN Lab. CIEDE2000 has a rotation term in the
+ *   blue region and a hue mean that crosses 0°/360°. Anyone implementing it
+ *   straight from the formula gets the blue case and the near-zero-chroma case
+ *   wrong — which happen to be exactly the two cases that show up in an AWS
+ *   palette, full of navy blue and gray. Sharma, Wu & Dalal's (2005) test set
+ *   exists for this, and the implementation is checked against it.
  */
 
-// ------------------------------------------------------------------ hexadecimal
+// ---------------------------------------------------------------------- hex
 
 const clampa = v => Math.max(0, Math.min(255, Math.round(v)));
-const doisDigitos = v => clampa(v).toString(16).padStart(2, '0');
+const twoDigits = v => clampa(v).toString(16).padStart(2, '0');
 
-/** `#abc`, `#aabbcc`, com ou sem cerquilha, para `[r, g, b]` em 0–255. */
+/** `#abc`, `#aabbcc`, with or without the hash, to `[r, g, b]` in 0-255. */
 function paraRgb(hex) {
   let s = String(hex || '').trim().replace(/^#/, '');
   if (s.length === 3) s = s.split('').map(ch => ch + ch).join('');
@@ -38,20 +39,20 @@ function paraRgb(hex) {
   return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)];
 }
 
-const paraHex = ([r, g, b]) => `#${doisDigitos(r)}${doisDigitos(g)}${doisDigitos(b)}`;
+const paraHex = ([r, g, b]) => `#${twoDigits(r)}${twoDigits(g)}${twoDigits(b)}`;
 
-/** A cor é utilizável? `none`, `transparent` e lixo devolvem `null` em `paraRgb`. */
+/** Is the color usable? `none`, `transparent` and garbage return `null` from `paraRgb`. */
 const ehCor = hex => paraRgb(hex) !== null;
 
-// ------------------------------------------------------------- contraste WCAG
+// --------------------------------------------------------------- WCAG contrast
 
-/** sRGB 0–255 para o canal linearizado. O degrau é o da WCAG G18. */
-function linearize(canal) {
-  const v = canal / 255;
+/** sRGB 0-255 to the linearized channel. The step is WCAG G18's. */
+function linearize(channel) {
+  const v = channel / 255;
   return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
 }
 
-/** Luminância relativa, WCAG G18: L = 0,2126R + 0,7152G + 0,0722B. */
+/** Relative luminance, WCAG G18: L = 0.2126R + 0.7152G + 0.0722B. */
 function luminance(hex) {
   const rgb = paraRgb(hex);
   if (!rgb) return null;
@@ -59,7 +60,7 @@ function luminance(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** Razão de contraste (L1+0,05)/(L2+0,05). Simétrica, em [1, 21]. */
+/** Contrast ratio (L1+0.05)/(L2+0.05). Symmetric, in [1, 21]. */
 function contraste(a, b) {
   const la = luminance(a);
   const lb = luminance(b);
@@ -68,24 +69,25 @@ function contraste(a, b) {
 }
 
 /**
- * Compõe `cima` sobre `baixo` com opacidade `alfa`.
+ * Composites `top` over `bottom` with opacity `alpha`.
  *
- * É o que resolve o "fundo efetivo" da decisão 4 do #18: um rótulo dentro de
- * uma AZ dentro de uma VPC dentro da nuvem não tem por fundo a cor da página —
- * tem a pilha inteira composta, e cada grupo AWS desenha com preenchimento
- * translúcido. Compor na ordem de z é a diferença entre medir o contraste que
- * o leitor vê e medir um contraste que não existe em lugar nenhum.
+ * This is what resolves the "effective background" from decision 4 of #18: a
+ * label inside an AZ inside a VPC inside the cloud does not have the page
+ * color as its background — it has the whole stack composited, and every AWS
+ * group draws with translucent fill. Compositing in z-order is the difference
+ * between measuring the contrast the reader sees and measuring a contrast that
+ * exists nowhere.
  */
-function compor(cima, baixo, alfa) {
-  const c = paraRgb(cima);
-  const b = paraRgb(baixo);
+function compor(top, bottom, alpha) {
+  const c = paraRgb(top);
+  const b = paraRgb(bottom);
   if (!c) return paraHex(b || [255, 255, 255]);
   if (!b) return paraHex(c);
-  const a = Math.max(0, Math.min(1, alfa === undefined ? 1 : alfa));
+  const a = Math.max(0, Math.min(1, alpha === undefined ? 1 : alpha));
   return paraHex([0, 1, 2].map(i => c[i] * a + b[i] * (1 - a)));
 }
 
-// ------------------------------------------------------------------ CIE L*a*b*
+// ------------------------------------------------------------------- CIE L*a*b*
 
 // sRGB D65 → XYZ (IEC 61966-2-1).
 const M_XYZ = [
@@ -98,7 +100,7 @@ const WHITE_D65 = [0.95047, 1.0, 1.08883];
 const DELTA = 6 / 29;
 const f = t => (t > DELTA ** 3 ? Math.cbrt(t) : t / (3 * DELTA * DELTA) + 4 / 29);
 
-/** `#rrggbb` para `[L*, a*, b*]`. */
+/** `#rrggbb` to `[L*, a*, b*]`. */
 function paraLab(hex) {
   const rgb = paraRgb(hex);
   if (!rgb) return null;
@@ -108,95 +110,95 @@ function paraLab(hex) {
   return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 }
 
-const grau = rad => rad * 180 / Math.PI;
+const deg = rad => rad * 180 / Math.PI;
 const rad = g => g * Math.PI / 180;
 
 /**
- * ΔE00 — CIEDE2000, na formulação de Sharma, Wu & Dalal (2005).
+ * ΔE00 — CIEDE2000, following Sharma, Wu & Dalal's (2005) formulation.
  *
- * Os dois pontos onde a implementação ingênua erra estão marcados abaixo: a
- * média de matiz quando os matizes estão em lados opostos de 0°, e o caso de
- * croma nulo, em que o matiz é indefinido e somar os dois é o convencionado.
+ * The two spots where a naive implementation gets it wrong are marked below:
+ * the hue mean when the two hues sit on opposite sides of 0°, and the
+ * zero-chroma case, where hue is undefined and adding the two is the convention.
  */
-function deltaE00(lab1, lab2, pesos = {}) {
-  const kL = pesos.kL === undefined ? 1 : pesos.kL;
-  const kC = pesos.kC === undefined ? 1 : pesos.kC;
-  const kH = pesos.kH === undefined ? 1 : pesos.kH;
+function deltaE00(lab1, lab2, weights = {}) {
+  const kL = weights.kL === undefined ? 1 : weights.kL;
+  const kC = weights.kC === undefined ? 1 : weights.kC;
+  const kH = weights.kH === undefined ? 1 : weights.kH;
 
   const [L1, a1, b1] = lab1;
   const [L2, a2, b2] = lab2;
 
   const C1 = Math.hypot(a1, b1);
   const C2 = Math.hypot(a2, b2);
-  const Cmedio = (C1 + C2) / 2;
-  const C7 = Cmedio ** 7;
+  const Cbar = (C1 + C2) / 2;
+  const C7 = Cbar ** 7;
   const G = 0.5 * (1 - Math.sqrt(C7 / (C7 + 25 ** 7)));
 
-  const a1l = (1 + G) * a1;
-  const a2l = (1 + G) * a2;
-  const C1l = Math.hypot(a1l, b1);
-  const C2l = Math.hypot(a2l, b2);
+  const a1p = (1 + G) * a1;
+  const a2p = (1 + G) * a2;
+  const C1p = Math.hypot(a1p, b1);
+  const C2p = Math.hypot(a2p, b2);
 
-  const matiz = (b, a) => {
+  const hueOf = (b, a) => {
     if (Math.abs(a) < 1e-12 && Math.abs(b) < 1e-12) return 0;
-    const h = grau(Math.atan2(b, a));
+    const h = deg(Math.atan2(b, a));
     return h < 0 ? h + 360 : h;
   };
-  const h1l = matiz(b1, a1l);
-  const h2l = matiz(b2, a2l);
+  const h1p = hueOf(b1, a1p);
+  const h2p = hueOf(b2, a2p);
 
-  const dLl = L2 - L1;
-  const dCl = C2l - C1l;
+  const dLp = L2 - L1;
+  const dCp = C2p - C1p;
 
-  let dhl;
-  if (C1l * C2l === 0) dhl = 0;                       // croma nulo: matiz indefinido
-  else if (Math.abs(h2l - h1l) <= 180) dhl = h2l - h1l;
-  else if (h2l - h1l > 180) dhl = h2l - h1l - 360;    // atravessa 0° por baixo
-  else dhl = h2l - h1l + 360;                         // atravessa 0° por cima
-  const dHl = 2 * Math.sqrt(C1l * C2l) * Math.sin(rad(dhl) / 2);
+  let dhp;
+  if (C1p * C2p === 0) dhp = 0;                       // zero chroma: hue undefined
+  else if (Math.abs(h2p - h1p) <= 180) dhp = h2p - h1p;
+  else if (h2p - h1p > 180) dhp = h2p - h1p - 360;    // crosses 0° from below
+  else dhp = h2p - h1p + 360;                         // crosses 0° from above
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(rad(dhp) / 2);
 
-  const Lmedio = (L1 + L2) / 2;
-  const Cmediol = (C1l + C2l) / 2;
+  const Lbar = (L1 + L2) / 2;
+  const Cbarp = (C1p + C2p) / 2;
 
-  let hMedio;
-  if (C1l * C2l === 0) hMedio = h1l + h2l;            // idem: um dos dois é 0 por convenção
-  else if (Math.abs(h1l - h2l) <= 180) hMedio = (h1l + h2l) / 2;
-  else if (h1l + h2l < 360) hMedio = (h1l + h2l + 360) / 2;
-  else hMedio = (h1l + h2l - 360) / 2;
+  let hBarp;
+  if (C1p * C2p === 0) hBarp = h1p + h2p;            // same: one of the two is 0 by convention
+  else if (Math.abs(h1p - h2p) <= 180) hBarp = (h1p + h2p) / 2;
+  else if (h1p + h2p < 360) hBarp = (h1p + h2p + 360) / 2;
+  else hBarp = (h1p + h2p - 360) / 2;
 
   const T = 1
-    - 0.17 * Math.cos(rad(hMedio - 30))
-    + 0.24 * Math.cos(rad(2 * hMedio))
-    + 0.32 * Math.cos(rad(3 * hMedio + 6))
-    - 0.20 * Math.cos(rad(4 * hMedio - 63));
+    - 0.17 * Math.cos(rad(hBarp - 30))
+    + 0.24 * Math.cos(rad(2 * hBarp))
+    + 0.32 * Math.cos(rad(3 * hBarp + 6))
+    - 0.20 * Math.cos(rad(4 * hBarp - 63));
 
-  const dTheta = 30 * Math.exp(-(((hMedio - 275) / 25) ** 2));
-  const Cml7 = Cmediol ** 7;
-  const Rc = 2 * Math.sqrt(Cml7 / (Cml7 + 25 ** 7));
-  const Sl = 1 + (0.015 * (Lmedio - 50) ** 2) / Math.sqrt(20 + (Lmedio - 50) ** 2);
-  const Sc = 1 + 0.045 * Cmediol;
-  const Sh = 1 + 0.015 * Cmediol * T;
-  const Rt = -Math.sin(rad(2 * dTheta)) * Rc;        // o termo de rotação da região azul
+  const dTheta = 30 * Math.exp(-(((hBarp - 275) / 25) ** 2));
+  const Cbarp7 = Cbarp ** 7;
+  const Rc = 2 * Math.sqrt(Cbarp7 / (Cbarp7 + 25 ** 7));
+  const Sl = 1 + (0.015 * (Lbar - 50) ** 2) / Math.sqrt(20 + (Lbar - 50) ** 2);
+  const Sc = 1 + 0.045 * Cbarp;
+  const Sh = 1 + 0.015 * Cbarp * T;
+  const Rt = -Math.sin(rad(2 * dTheta)) * Rc;        // the blue-region rotation term
 
-  const tl = dLl / (kL * Sl);
-  const tc = dCl / (kC * Sc);
-  const th = dHl / (kH * Sh);
+  const tl = dLp / (kL * Sl);
+  const tc = dCp / (kC * Sc);
+  const th = dHp / (kH * Sh);
   return Math.sqrt(tl * tl + tc * tc + th * th + Rt * tc * th);
 }
 
-/** ΔE00 direto entre duas cores hexadecimais. */
+/** Direct ΔE00 between two hex colors. */
 function distance(a, b) {
   const la = paraLab(a);
   const lb = paraLab(b);
   return la && lb ? deltaE00(la, lb) : null;
 }
 
-// -------------------------------------------------- deficiência de visão de cor
+// ------------------------------------------------------------- color-vision deficiency
 
-// Viénot, Brettel & Mollon (1999): RGB linear → LMS e a volta. As projeções
-// dicromatas abaixo têm o cinza como ponto fixo — é a propriedade que
-// `check-primitives.cjs` confere, porque uma matriz transposta por engano
-// continua devolvendo cor plausível e deixa de colapsar vermelho com verde.
+// Viénot, Brettel & Mollon (1999): linear RGB → LMS and back. The dichromat
+// projections below have gray as a fixed point — the property
+// `check-primitives.cjs` checks, because a matrix transposed by mistake still
+// returns a plausible color and fails to collapse red into green.
 const M_LMS = [
   [17.8824, 43.5161, 4.11935],
   [3.45565, 27.1554, 3.86714],
@@ -217,10 +219,10 @@ const PROJECTION = {
 const aplica = (m, v) => m.map(row => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]);
 const delinearize = v => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(Math.max(0, v), 1 / 2.4) - 0.055);
 
-/** A cor como um dicromata a vê. `tipo` ∈ protanopia | deuteranopia | tritanopia. */
+/** The color as a dichromat sees it. `kind` ∈ protanopia | deuteranopia | tritanopia. */
 function simulate(hex, kind) {
   const project = PROJECTION[kind];
-  if (!project) throw new Error(`tipo de deficiência desconhecido: "${kind}"`);
+  if (!project) throw new Error(`unknown deficiency kind: "${kind}"`);
   const rgb = paraRgb(hex);
   if (!rgb) return null;
   const lms = aplica(M_LMS, rgb.map(linearize));

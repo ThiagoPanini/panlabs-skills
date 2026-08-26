@@ -1,10 +1,10 @@
 'use strict';
 /**
- * A3 · Sobreposição e legibilidade espacial.
+ * A3 · Overlap and spatial legibility.
  *
- * A rubrica: "a de maior valor prático — falhas duras, tolerância zero,
- * trivialmente computáveis, e são exatamente o que um gerador automático erra".
- * Roda primeiro junto com A4 pela ordem de prioridade do §Resumo.
+ * The rubric: "the highest practical value — hard failures, zero tolerance,
+ * trivially computable, and exactly what an automatic generator gets wrong."
+ * Runs first, together with A4, per the §Summary priority order.
  */
 
 const path = require('path');
@@ -15,189 +15,190 @@ const { ok, warning, failure, notApplicable, matches, pairs, roundTo, withoutTag
 
 module.exports = function a3(scene) {
   const output = [];
-  const { nodes, grupos, edges, canvas } = scene;
-  // Faixas ficam de fora de toda A3: elas existem para cruzar, e o `scene.cjs`
-  // explica por quê. O que lhes cabe é a checagem de membros, em `extras`.
-  const solidos = [...nodes, ...grupos];
+  const { nodes, groups, edges, canvas } = scene;
+  // Bands are left out of all of A3: they exist to cross, and `scene.cjs`
+  // explains why. What applies to them is the membership check, in `extras`.
+  const solid = [...nodes, ...groups];
 
   // ---------------------------------------------------------------- A3.1
-  // "Irmãos" é o que a rubrica diz. Somo os pares folha–folha de qualquer lugar
-  // da árvore, porque folha nunca contém folha: dois ícones de subnets
-  // diferentes que se encostam são a mesma falha, e ninguém mais a pegaria.
+  // "Siblings" is the rubric's word. Every leaf-leaf pair anywhere in the tree
+  // is summed, because a leaf never contains a leaf: two icons for different
+  // subnets that touch are the same failure, and nothing else would catch it.
   {
-    const casos = [];
-    const gap = lim('folgaEntreCaixas');
-    const candidatos = [...pairs(solidos)].filter(([a, b]) =>
-      (a.parent === b.parent) || (a.classe === 'no' && b.classe === 'no'));
-    for (const [a, b] of candidatos) {
-      if (scene.ehDescendente(a.id, b.id) || scene.ehDescendente(b.id, a.id)) continue;
+    const cases = [];
+    const gap = lim('gapBetweenBoxes');
+    const candidates = [...pairs(solid)].filter(([a, b]) =>
+      (a.parent === b.parent) || (a.kind === 'node' && b.kind === 'node'));
+    for (const [a, b] of candidates) {
+      if (scene.isDescendant(a.id, b.id) || scene.isDescendant(b.id, a.id)) continue;
       const area = g.intersectionArea(a.cellBox, b.cellBox);
-      if (area > 0) casos.push({ o_que: `${name(a)} e ${name(b)} se sobrepõem em ${roundTo(area, 0)} px²`, ids: [a.id, b.id] });
+      if (area > 0) cases.push({ o_que: `${name(a)} and ${name(b)} overlap by ${roundTo(area, 0)} px²`, ids: [a.id, b.id] });
       else {
         const d = g.gap(a.cellBox, b.cellBox);
-        if (d < gap) casos.push({ o_que: `${name(a)} e ${name(b)} têm folga de ${roundTo(d, 1)} px (mínimo ${gap})`, ids: [a.id, b.id] });
+        if (d < gap) cases.push({ o_que: `${name(a)} and ${name(b)} have a ${roundTo(d, 1)} px gap (minimum ${gap})`, ids: [a.id, b.id] });
       }
     }
-    output.push(matches('A3.1', casos, {
-      measured: { pares_conferidos: candidatos.length, violations: casos.length },
-      mensagem: casos.length ? `${casos.length} par(es) sobrepostos ou apertados demais` : `${candidatos.length} pares conferidos, nenhum encostado`,
+    output.push(matches('A3.1', cases, {
+      measured: { pairsChecked: candidates.length, violations: cases.length },
+      mensagem: cases.length ? `${cases.length} pair(s) overlapping or too tight` : `${candidates.length} pairs checked, none touching`,
     }));
   }
 
   // ---------------------------------------------------------------- A3.2
   {
-    const comRotulo = [...solidos, ...edges].filter(e => e.rotuloCaixa);
-    const padding = lim('paddingDeRotulo');
-    const casos = [];
-    for (const [a, b] of pairs(comRotulo)) {
-      const ra = { ...a.rotuloCaixa, x: a.rotuloCaixa.x - padding, y: a.rotuloCaixa.y - padding, w: a.rotuloCaixa.w + 2 * padding, h: a.rotuloCaixa.h + 2 * padding };
-      const area = g.intersectionArea(ra, b.rotuloCaixa);
-      if (area > 0) casos.push({ o_que: `os rótulos de ${name(a)} e ${name(b)} se cruzam em ${roundTo(area, 0)} px²`, ids: [a.id, b.id] });
+    const withLabel = [...solid, ...edges].filter(e => e.labelRect);
+    const padding = lim('labelPadding');
+    const cases = [];
+    for (const [a, b] of pairs(withLabel)) {
+      const ra = { ...a.labelRect, x: a.labelRect.x - padding, y: a.labelRect.y - padding, w: a.labelRect.w + 2 * padding, h: a.labelRect.h + 2 * padding };
+      const area = g.intersectionArea(ra, b.labelRect);
+      if (area > 0) cases.push({ o_que: `the labels of ${name(a)} and ${name(b)} intersect by ${roundTo(area, 0)} px²`, ids: [a.id, b.id] });
     }
-    output.push(matches('A3.2', casos, {
-      measured: { rotulos: comRotulo.length, colisoes: casos.length },
-      mensagem: casos.length ? `${casos.length} colisão(ões) de rótulo` : `${comRotulo.length} rótulos, nenhum encosta em outro`,
+    output.push(matches('A3.2', cases, {
+      measured: { labels: withLabel.length, collisions: cases.length },
+      mensagem: cases.length ? `${cases.length} label collision(s)` : `${withLabel.length} labels, none touching another`,
     }));
   }
 
   // ---------------------------------------------------------------- A3.3
-  // Rótulo de folha é desenhado FORA da caixa por construção (o mxGraph põe
-  // embaixo). Transbordar, para ele, é sair do GRUPO — que é quando a etiqueta
-  // de um recurso aparece fora da VPC a que ele pertence.
+  // A leaf's label is drawn OUTSIDE its box by construction (mxGraph puts it
+  // below). Overflowing, for it, means leaving the GROUP — which is when a
+  // resource's tag appears outside the VPC it belongs to.
   {
-    const casos = [];
-    for (const e of solidos) {
-      const r = e.rotuloCaixa;
+    const cases = [];
+    for (const e of solid) {
+      const r = e.labelRect;
       if (!r) continue;
-      if (r.onde === 'inside') {
-        if (!g.contem(e.cellBox, r)) casos.push({ o_que: `o rótulo de ${name(e)} não cabe na própria caixa`, ids: [e.id] });
+      if (r.placement === 'inside') {
+        if (!g.contem(e.cellBox, r)) cases.push({ o_que: `${name(e)}'s label does not fit its own box`, ids: [e.id] });
         continue;
       }
       const parent = scene.byElement.get(e.parent);
-      const limite = parent && parent.cellBox ? parent.cellBox : canvas;
-      if (!g.contem(limite, r)) {
-        const onde = parent ? `do grupo "${parent.id}"` : 'do canvas';
-        casos.push({ o_que: `o rótulo de ${name(e)} transborda ${onde}`, ids: [e.id] });
+      const bound = parent && parent.cellBox ? parent.cellBox : canvas;
+      if (!g.contem(bound, r)) {
+        const where = parent ? `group "${parent.id}"` : 'the canvas';
+        cases.push({ o_que: `${name(e)}'s label overflows ${where}`, ids: [e.id] });
       }
     }
-    output.push(matches('A3.3', casos, { measured: { transbordos: casos.length } }));
+    output.push(matches('A3.3', cases, { measured: { overflows: cases.length } }));
   }
 
   // ---------------------------------------------------------------- A3.4
   {
-    const casos = [];
-    const comRotulo = solidos.filter(e => e.rotuloCaixa);
-    for (const e of comRotulo) {
+    const cases = [];
+    const withLabel = solid.filter(e => e.labelRect);
+    for (const e of withLabel) {
       for (const a of edges) {
-        if (!a.completa) continue;
-        if (a.from === e.id || a.to === e.id) continue;   // a aresta do próprio dono
-        for (let i = 0; i + 1 < a.pontos.length; i++) {
-          if (g.segmentCrossesRect(a.pontos[i], a.pontos[i + 1], e.rotuloCaixa)) {
-            casos.push({ o_que: `a aresta "${a.id}" passa por cima do rótulo de ${name(e)}`, ids: [a.id, e.id] });
+        if (!a.complete) continue;
+        if (a.from === e.id || a.to === e.id) continue;   // the owner's own edge
+        for (let i = 0; i + 1 < a.points.length; i++) {
+          if (g.segmentCrossesRect(a.points[i], a.points[i + 1], e.labelRect)) {
+            cases.push({ o_que: `edge "${a.id}" runs over ${name(e)}'s label`, ids: [a.id, e.id] });
             break;
           }
         }
       }
     }
-    output.push(edges.length ? matches('A3.4', casos, { measured: { cruzamentos: casos.length } })
-      : notApplicable('A3.4', 'o diagrama não tem arestas'));
+    output.push(edges.length ? matches('A3.4', cases, { measured: { crossings: cases.length } })
+      : notApplicable('A3.4', 'the diagram has no edges'));
   }
 
   // ---------------------------------------------------------------- A3.5
   {
-    if (!edges.length) output.push(notApplicable('A3.5', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A3.5', 'the diagram has no edges'));
     else {
-      const casos = [];
+      const cases = [];
       for (const a of edges) {
-        if (!a.completa) continue;
+        if (!a.complete) continue;
         for (const n of nodes) {
           if (n.id === a.from || n.id === a.to) continue;
-          if (g.polilinhaCruzaRetangulo(a.pontos, n.cellBox))
-            casos.push({ o_que: `a aresta "${a.id}" (${a.from}→${a.to}) atravessa ${name(n)}`, ids: [a.id, n.id] });
+          if (g.polilinhaCruzaRetangulo(a.points, n.cellBox))
+            cases.push({ o_que: `edge "${a.id}" (${a.from}→${a.to}) crosses ${name(n)}`, ids: [a.id, n.id] });
         }
       }
-      output.push(matches('A3.5', casos, { measured: { travessias: casos.length } }));
+      output.push(matches('A3.5', cases, { measured: { crossings: cases.length } }));
     }
   }
 
   // ---------------------------------------------------------------- A3.6
-  // Onde a âncora foi declarada, dá para medir. Onde não foi, a ponta é
-  // PROJETADA no perímetro pelo renderizador, e a cena reconstrói do mesmo
-  // jeito — medir aí seria conferir a própria reconstrução. A checagem diz
-  // quantas ficaram por construção em vez de fingir que conferiu as duas.
+  // Where the anchor was declared, it can be measured. Where it wasn't, the
+  // end is PROJECTED onto the perimeter by the renderer, and the scene
+  // reconstructs it the same way — measuring there would mean checking the
+  // reconstruction against itself. The check reports how many ends were left
+  // by construction instead of pretending it checked both.
   {
-    if (!edges.length) output.push(notApplicable('A3.6', 'o diagrama não tem arestas'));
+    if (!edges.length) output.push(notApplicable('A3.6', 'the diagram has no edges'));
     else {
-      const tol = lim('toleranciaDeAncoragem');
-      const casos = [];
-      let ancoradas = 0;
+      const tol = lim('anchorTolerance');
+      const cases = [];
+      let anchored = 0;
       for (const a of edges) {
-        if (!a.completa) { casos.push({ o_que: `a aresta "${a.id}" aponta para um id que não existe no plano`, ids: [a.id] }); continue; }
-        if (!a.ancorada) continue;
-        ancoradas++;
+        if (!a.complete) { cases.push({ o_que: `edge "${a.id}" points at an id that does not exist in the plan`, ids: [a.id] }); continue; }
+        if (!a.anchored) continue;
+        anchored++;
         const origin = scene.byElement.get(a.from);
-        const destino = scene.byElement.get(a.to);
-        if (!g.noPerimetro(a.pontos[0], origin.cellBox, tol))
-          casos.push({ o_que: `a aresta "${a.id}" começa fora do perímetro de ${name(origin)}`, ids: [a.id] });
-        if (!g.noPerimetro(a.pontos[a.pontos.length - 1], destino.cellBox, tol))
-          casos.push({ o_que: `a aresta "${a.id}" termina fora do perímetro de ${name(destino)}`, ids: [a.id] });
+        const dest = scene.byElement.get(a.to);
+        if (!g.noPerimetro(a.points[0], origin.cellBox, tol))
+          cases.push({ o_que: `edge "${a.id}" starts outside ${name(origin)}'s perimeter`, ids: [a.id] });
+        if (!g.noPerimetro(a.points[a.points.length - 1], dest.cellBox, tol))
+          cases.push({ o_que: `edge "${a.id}" ends outside ${name(dest)}'s perimeter`, ids: [a.id] });
       }
-      const byConstruction = edges.length - ancoradas;
-      output.push(matches('A3.6', casos, {
-        measured: { ancoras_declaradas: ancoradas, por_construcao: byConstruction },
+      const byConstruction = edges.length - anchored;
+      output.push(matches('A3.6', cases, {
+        measured: { anchorsDeclared: anchored, byConstruction },
         mensagem: byConstruction
-          ? `${ancoradas} âncora(s) conferida(s); ${byConstruction} ponta(s) sem âncora declarada — o renderizador projeta no perímetro, então ali A3.6 vale por construção e não por medição`
-          : `${ancoradas} âncoras conferidas`,
+          ? `${anchored} anchor(s) checked; ${byConstruction} end(s) with no declared anchor — the renderer projects onto the perimeter, so there A3.6 holds by construction, not by measurement`
+          : `${anchored} anchors checked`,
       }));
     }
   }
 
   // ---------------------------------------------------------------- A3.7
   {
-    const margin = lim('margemDoCanvas');
-    const all = [...scene.boxes, ...scene.molduras].map(e => e.cellBox).filter(Boolean);
-    for (const a of edges) if (a.completa) for (const p of a.pontos) all.push({ x: p.x, y: p.y, w: 0, h: 0 });
+    const margin = lim('canvasMargin');
+    const all = [...scene.boxes, ...scene.frames].map(e => e.cellBox).filter(Boolean);
+    for (const a of edges) if (a.complete) for (const p of a.points) all.push({ x: p.x, y: p.y, w: 0, h: 0 });
     const env = g.envolvente(all);
-    const cabe = env && g.contem(canvas, env, margin);
-    output.push(cabe
-      ? ok('A3.7', { measured: { envolvente: env, canvas, margin }, mensagem: `tudo cabe no canvas com ≥ ${margin} px de margem` })
+    const fits = env && g.contem(canvas, env, margin);
+    output.push(fits
+      ? ok('A3.7', { measured: { envelope: env, canvas, margin }, mensagem: `everything fits in the canvas with ≥ ${margin} px of margin` })
       : failure('A3.7', {
-        measured: { envolvente: env, canvas, margin },
-        mensagem: `o desenho ocupa ${env ? `${roundTo(env.w, 0)}×${roundTo(env.h, 0)} a partir de (${roundTo(env.x, 0)},${roundTo(env.y, 0)})` : '(vazio)'} e o canvas é ${canvas.w}×${canvas.h} com margem de ${margin} px`,
-        occurrences: [{ o_que: 'a união dos objetos não cabe no canvas com a margem exigida', ids: [] }],
+        measured: { envelope: env, canvas, margin },
+        mensagem: `the drawing occupies ${env ? `${roundTo(env.w, 0)}×${roundTo(env.h, 0)} from (${roundTo(env.x, 0)},${roundTo(env.y, 0)})` : '(empty)'} and the canvas is ${canvas.w}×${canvas.h} with a margin of ${margin} px`,
+        occurrences: [{ o_que: 'the union of the objects does not fit in the canvas with the required margin', ids: [] }],
       }));
   }
 
   // ---------------------------------------------------------------- A3.8
   {
-    const centros = nodes.map(n => g.centro(n.cellBox));
-    if (centros.length < 2) output.push(notApplicable('A3.8', 'menos de dois nós — não há par de distâncias'));
+    const centers = nodes.map(n => g.centro(n.cellBox));
+    if (centers.length < 2) output.push(notApplicable('A3.8', 'fewer than two nodes — no pair of distances'));
     else {
-      const ds = [...pairs(centros)].map(([a, b]) => Math.hypot(a.x - b.x, a.y - b.y));
+      const ds = [...pairs(centers)].map(([a, b]) => Math.hypot(a.x - b.x, a.y - b.y));
       const nr = Math.min(...ds) / Math.max(...ds);
-      const q1 = lim('resolucaoDeNoQ1');
+      const q1 = lim('nodeResolutionQ1');
       output.push(nr < q1
-        ? warning('A3.8', { measured: { NR: roundTo(nr) }, mensagem: `NR = ${roundTo(nr)} < ${q1} (Q1 de especialistas); alvo ${lim('resolucaoDeNoMediana')}` })
+        ? warning('A3.8', { measured: { NR: roundTo(nr) }, mensagem: `NR = ${roundTo(nr)} < ${q1} (expert Q1); target ${lim('nodeResolutionMedian')}` })
         : ok('A3.8', { measured: { NR: roundTo(nr) }, mensagem: `NR = ${roundTo(nr)}` }));
     }
   }
 
   // ---------------------------------------------------------------- A3.9
   {
-    const minAresta = lim('fonteMinimaRotuloDeAresta');
-    const minNome = lim('fonteMinimaNomeDeElemento');
-    const casos = [];
-    for (const e of solidos) {
+    const minEdge = lim('minEdgeLabelFontSize');
+    const minName = lim('minElementNameFontSize');
+    const cases = [];
+    for (const e of solid) {
       if (!withoutTags(e.label)) continue;
-      if (e.tamanhoDaFonte < minNome)
-        casos.push({ o_que: `${name(e)} rotula com ${e.tamanhoDaFonte} px (nome de elemento pede ${minNome})`, ids: [e.id] });
+      if (e.fontSize < minName)
+        cases.push({ o_que: `${name(e)} labels at ${e.fontSize} px (element name requires ${minName})`, ids: [e.id] });
     }
     for (const a of edges) {
       if (!withoutTags(a.label)) continue;
       const px = parseFloat(a.style.fontSize) || 12;
-      if (px < minAresta) casos.push({ o_que: `a aresta "${a.id}" rotula com ${px} px (rótulo de aresta pede ${minAresta})`, ids: [a.id] });
+      if (px < minEdge) cases.push({ o_que: `edge "${a.id}" labels at ${px} px (edge label requires ${minEdge})`, ids: [a.id] });
     }
-    output.push(matches('A3.9', casos, { measured: { abaixo_do_piso: casos.length } }));
+    output.push(matches('A3.9', cases, { measured: { belowFloor: cases.length } }));
   }
 
   return output;

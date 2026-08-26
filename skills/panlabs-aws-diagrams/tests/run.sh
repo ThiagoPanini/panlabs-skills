@@ -150,6 +150,7 @@ step "step 5 — the logical view, approved"        node "$ROOT/tools/approve.cj
 step "steps 1 and 6 — resume and technical view"   node "$ROOT/tools/resume.cjs" "$ROOT/output/retail.drawio" --delta "$ROOT/models/session/retail-elaboration.json"
 step "the arc end to end, on a new case (#26)"  node "$HERE/check-arc.cjs"
 step "the dossier's privacy"                    node "$HERE/check-dossier.cjs"
+step "the case verb writes at the caller's root (#41)"  node "$HERE/check-case.cjs"
 
 echo
 echo "════ layer 7 · the app (development dependency) ════"
@@ -206,6 +207,7 @@ else
   else
     echo "   Pillow missing — pixel verification skipped."
   fi
+  step "the case verb's image, with the binary (#41)"  node "$HERE/check-case.cjs" "$DRAWIO"
 fi
 
 echo

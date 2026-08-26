@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * As variantes de tema, num lugar só — `output/themes/`.
+ * The theme variants, in one place — `output/themes/`.
  *
  *   node tools/generate-themes.cjs
  *
- * Existem para duas checagens que precisam de arquivo e não de objeto: o
- * round-trip do tema pelo codec do app (`tests/check-roundtrip-theme.cjs`) e a
- * verificação no PIXEL (`tools/verify-theme.py`), que é a lição do #17 —
- * style string certa não é render certo.
+ * They exist for two checks that need a file and not an object: the theme's
+ * round trip through the app's own codec (`tests/check-roundtrip-theme.cjs`) and
+ * the PIXEL verification (`tools/verify-theme.py`), which is #17's lesson — a
+ * correct style string is not a correct render.
  *
- * A `d-armadilha` e a `e-indizivel` saem de `generate-trap.cjs`, que é quem
- * sabe construí-las; aqui ficam só as legítimas.
+ * `d-trap` and `e-unspeakable` come from `generate-trap.cjs`, which is the one
+ * that knows how to build them; only the legitimate ones stay here.
  */
 
 const fs = require('fs');
@@ -23,23 +23,23 @@ const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, 'output', 'themes');
 
 const VARIANTS = [
-  { name: 'a-light', model: 'orders-serverless.json', tema: 'light' },
-  { name: 'b-dark', model: 'orders-serverless.json', tema: 'dark' },
-  { name: 'c-corporate', model: 'orders-serverless.json', tema: 'corporate' },
-  { name: 'g-logical-view', model: 'logical-orders.json', tema: 'light' },
-  // o encontro do #12 com o #13: multi-conta no deck escuro
-  { name: 'h-accounts-dark', model: 'hub-tgw-3-accounts.json', tema: 'dark' },
-  // a variante animada só se vê em SVG (#4): PNG dela seria prova falsa
-  { name: 'f-animated-flow', model: 'orders-serverless.json', tema: 'light', flow: 'animated' },
+  { name: 'a-light', model: 'orders-serverless.json', theme: 'light' },
+  { name: 'b-dark', model: 'orders-serverless.json', theme: 'dark' },
+  { name: 'c-corporate', model: 'orders-serverless.json', theme: 'corporate' },
+  { name: 'g-logical-view', model: 'logical-orders.json', theme: 'light' },
+  // where #12 meets #13: multi-account on the dark deck
+  { name: 'h-accounts-dark', model: 'hub-tgw-3-accounts.json', theme: 'dark' },
+  // the animated variant is only visible in SVG (#4): a PNG of it would be false proof
+  { name: 'f-animated-flow', model: 'orders-serverless.json', theme: 'light', flow: 'animated' },
 ];
 
 async function main() {
   fs.mkdirSync(DIR, { recursive: true });
   for (const v of VARIANTS) {
     const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', v.model), 'utf8'));
-    const r = await generate(m, { tema: v.tema, flow: v.flow });
+    const r = await generate(m, { tema: v.theme, flow: v.flow });
     fs.writeFileSync(path.join(DIR, v.name + '.drawio'), r.xml);
-    console.log(`  ${v.name.padEnd(18)} tema=${v.tema}${v.flow ? ` fluxo=${v.flow}` : ''}  ${r.xml.length} bytes`);
+    console.log(`  ${v.name.padEnd(18)} theme=${v.theme}${v.flow ? ` flow=${v.flow}` : ''}  ${r.xml.length} bytes`);
   }
   execFileSync(process.execPath, [path.join(__dirname, 'generate-trap.cjs')], { stdio: 'inherit' });
 }

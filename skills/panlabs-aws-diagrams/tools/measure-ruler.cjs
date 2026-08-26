@@ -33,7 +33,7 @@ function borderColor(style) { return (/(?:^|;)strokeColor=(#[0-9A-Fa-f]{6})/.exe
 
 function main() {
   const borders = new Map();
-  for (const t of cat.grupos()) {
+  for (const t of cat.groups()) {
     const c = borderColor(cat.group(t).style);
     if (!c) continue;
     if (!borders.has(c)) borders.set(c, []);
@@ -80,7 +80,7 @@ function main() {
 
   console.log('\n=== 3. CATEGORY PALETTE (the service icon square) ===\n');
   const fills = new Map();
-  for (const [k, v] of Object.entries(cat.categorias())) {
+  for (const [k, v] of Object.entries(cat.categories())) {
     if (!v.fill) continue;
     if (!fills.has(v.fill)) fills.set(v.fill, []);
     fills.get(v.fill).push(k);
@@ -102,7 +102,7 @@ function main() {
   let rejected = 0, total = 0;
   const list = [];
   for (const [pal, n] of byCategory) {
-    const fill = (cat.categorias()[pal] || {}).fill;
+    const fill = (cat.categories()[pal] || {}).fill;
     total += n;
     if (!fill) continue;
     // the monochrome palettes are exactly the ones AWS ships in Light/Dark;

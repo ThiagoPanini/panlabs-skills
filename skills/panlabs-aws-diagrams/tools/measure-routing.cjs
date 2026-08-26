@@ -39,7 +39,7 @@ const { project } = require(path.join(ROOT, 'session', 'project.cjs'));
 /** The technical model of the #14 session, without going through any file. */
 function sessionModels() {
   const read = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', f), 'utf8'));
-  const approved = approve(read('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
+  const approved = approve(read('retail-logical.json'), { at: '2026-08-21', by: 'user', candidate: 'cand-a' });
   const technical = elaborate(approved, read('retail-elaboration.json'));
   return [
     { name: 'session:retail/logical', model: project(technical, 'logical').model },

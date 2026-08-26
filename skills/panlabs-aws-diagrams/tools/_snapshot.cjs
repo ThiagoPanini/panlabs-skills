@@ -1,13 +1,13 @@
 'use strict';
-/** Recorta cada `<diagram>` de output/retail.drawio para um arquivo de uma pagina. */
+/** Cuts each `<diagram>` out of output/retail.drawio into one file per page. */
 const fs = require('fs');
 const path = require('path');
 
-const arq = path.join(__dirname, '..', 'output', 'retail.drawio');
-const xml = fs.readFileSync(arq, 'utf8');
+const file = path.join(__dirname, '..', 'output', 'retail.drawio');
+const xml = fs.readFileSync(file, 'utf8');
 const pages = xml.match(/ *<diagram[\s\S]*?<\/diagram>/g) || [];
 if (pages.length !== 2) {
-  console.error(`  esperava 2 paginas em output/retail.drawio, achei ${pages.length} — rode tools/approve.cjs e tools/resume.cjs antes.`);
+  console.error(`  expected 2 pages in output/retail.drawio, found ${pages.length} — run tools/approve.cjs and tools/resume.cjs first.`);
   process.exit(1);
 }
 pages.forEach((p, i) => fs.writeFileSync(path.join(__dirname, '..', 'output', `_p${i}.drawio`),

@@ -1,31 +1,31 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * PASSO 5 DO ARCO — acorda a vista logica e grava o `.drawio` que retoma.
+ * STEP 5 OF THE ARC — wakes the logical view and writes the `.drawio` that resumes it.
  *
- *   node tools/approve.cjs <sessao-logica.json> --by <quem> --candidate <id> \
- *        [--at AAAA-MM-DD] [--output x.drawio]
+ *   node tools/approve.cjs <logical-session.json> --by <who> --candidate <id> \
+ *        [--at YYYY-MM-DD] [--output x.drawio]
  *
- * Come um `session@1` no estagio logico. Sai um `.drawio` de uma pagina que
- * carrega TUDO que a proxima sessao vai precisar — o modelo, o dossie, o acordo
- * e as duas impressoes do desenho. Nao ha um segundo arquivo, e nao ha nada que
- * so exista na memoria do agente.
+ * Takes a `session@1` in the logical stage. Outputs a one-page `.drawio` that
+ * carries EVERYTHING the next session will need — the model, the dossier, the
+ * agreement and the two drawing snapshots. There is no second file, and there
+ * is nothing that lives only in the agent's memory.
  *
- * ⚠️ ESTE ARQUIVO EXISTE PORQUE A ALTERNATIVA ERA PIOR.
+ * ⚠️ THIS FILE EXISTS BECAUSE THE ALTERNATIVE WAS WORSE.
  *
- * Ate o #29 o `SKILL.md` mandava o agente GRAVAR um driver de vinte linhas na
- * raiz da skill e rodar `node approve.cjs`. Tres coisas quebravam:
+ * Until #29, `SKILL.md` told the agent to WRITE a twenty-line driver at the
+ * skill's root and run `node approve.cjs`. Three things broke:
  *
- *   1. o diretorio da skill acumulava um `.cjs` por sessao, e quem instalasse a
- *      skill herdava o entulho de quem a usou antes;
- *   2. skill instalada e frequentemente SO-LEITURA — a doc oficial de autoria
- *      diz isso em voz alta —, e ali o arco simplesmente nao rodava;
- *   3. vinte linhas reescritas a cada sessao sao vinte linhas para errar. O
- *      motivo de existir um motor deterministico e nao reescrever o que ja
- *      esta certo.
+ *   1. the skill directory accumulated one `.cjs` per session, and whoever
+ *      installed the skill inherited the leftovers of whoever used it before;
+ *   2. an installed skill is frequently READ-ONLY — the official authoring doc
+ *      says so out loud —, and there the arc simply did not run;
+ *   3. twenty lines rewritten every session are twenty lines to get wrong. The
+ *      reason a deterministic engine exists is to not rewrite what is already
+ *      right.
  *
- * Sem argumento nenhum ele roda o caso do corpus (`retail`), que e o que a
- * camada 6 da suite exercita.
+ * With no argument at all it runs the corpus case (`retail`), which is what
+ * layer 6 of the suite exercises.
  */
 
 const fs = require('fs');
@@ -37,38 +37,39 @@ const { approve, check } = require(path.join(ROOT, 'session', 'agreement.cjs'));
 const { draw } = require(path.join(ROOT, 'session', 'draw.cjs'));
 
 const HELP = `
-  node tools/approve.cjs <sessao-logica.json> [opcoes]
+  node tools/approve.cjs <logical-session.json> [options]
 
-    --by <quem>          quem aprovou            (default: "usuario")
-    --candidate <id>      qual candidata venceu   (default: a de estado "escolhida",
-                          ou a unica do dossie)
-    --at <AAAA-MM-DD>     data do acordo          (default: hoje)
-    --output <x.drawio>    onde gravar             (default: output/<id-do-modelo>.drawio)
+    --by <who>             who approved            (default: "user")
+    --candidate <id>       which candidate won      (default: the one with state "chosen",
+                           or the dossier's only one)
+    --at <YYYY-MM-DD>      agreement date           (default: today)
+    --output <x.drawio>    where to write           (default: output/<model-id>.drawio)
 
-  Sem argumento nenhum, roda o caso do corpus (models/session/retail-logical.json).
+  With no argument at all, runs the corpus case (models/session/retail-logical.json).
 `;
 
-// Uma passada so, para o posicional nao poder ser confundido com o VALOR de uma
-// opcao — `--by Thiago x.json` tem de deixar `x.json` como posicional e nao
-// como um segundo `--by`.
+// One single pass, so the positional cannot be confused with the VALUE of an
+// option — `--by Thiago x.json` has to leave `x.json` as positional and not
+// as a second `--by`.
 const WITH_VALUE = ['by', 'candidate', 'at', 'output'];
 
 function parse(args) {
-  const opts = {}; const soltos = [];
+  const opts = {}; const positional = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (!a.startsWith('--')) { soltos.push(a); continue; }
+    if (!a.startsWith('--')) { positional.push(a); continue; }
     const name = a.slice(2);
     if (WITH_VALUE.includes(name)) { opts[name] = args[++i]; continue; }
     opts[name] = true;
   }
-  return { opts, soltos };
+  return { opts, positional };
 }
 
-// Sem --candidate o agente teria de repetir uma informacao que o proprio dossie
-// ja carrega. A sabatina marca a escolhida com `estado: "escolhida"` no passo 3;
-// ler dali e o unico jeito de o comando nao pedir de volta o que ele recebeu.
-function candidataDoDossie(session) {
+// Without --candidate the agent would have to repeat information the dossier
+// already carries. The interrogation marks the chosen one with `state: "chosen"`
+// at step 3; reading it from there is the only way for the command to not ask
+// back for what it already received.
+function candidateFromDossier(session) {
   const cs = (session.dossier && session.dossier.candidates) || [];
   const chosen = cs.find(c => c.state === 'chosen');
   if (chosen) return chosen.id;
@@ -76,68 +77,69 @@ function candidataDoDossie(session) {
   return null;
 }
 
-function hoje() {
+function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
 async function main() {
-  const { opts, soltos } = parse(process.argv.slice(2));
+  const { opts, positional } = parse(process.argv.slice(2));
   if (opts.help || opts.h) { console.log(HELP); return; }
 
-  const input = soltos[0] || path.join(ROOT, 'models', 'session', 'retail-logical.json');
+  const input = positional[0] || path.join(ROOT, 'models', 'session', 'retail-logical.json');
 
   if (!fs.existsSync(input)) {
-    console.error(`\n  ✗ nao achei ${input}`);
+    console.error(`\n  ✗ could not find ${input}`);
     console.error(HELP);
     process.exit(1);
   }
 
   const session = JSON.parse(fs.readFileSync(input, 'utf8'));
-  console.log(`\n  APROVAR · ${session.title}\n`);
+  console.log(`\n  APPROVE · ${session.title}\n`);
 
   const v = validate(session);
   for (const a of v.avisos) console.log(`  ⚠ ${a}`);
   if (!v.ok) {
-    console.error(`\n  ✗ modelo invalido (${v.fase})`);
+    console.error(`\n  ✗ invalid model (${v.fase})`);
     for (const e of v.erros) console.error(`      · ${e}`);
     process.exit(1);
   }
-  console.log(`  validar     ok · estagio=${session.stage} · ${session.nodes.length} nos · ${session.edges.length} arestas`);
+  console.log(`  validate    ok · stage=${session.stage} · ${session.nodes.length} nodes · ${session.edges.length} edges`);
 
-  const candidate = opts.candidate || candidataDoDossie(session);
+  const candidate = opts.candidate || candidateFromDossier(session);
   if (!candidate) {
-    console.error('\n  ✗ nao sei qual candidata foi aprovada.');
-    console.error('    Nenhuma tem `estado: "escolhida"` no dossie e ha mais de uma.');
-    console.error('    Passe --candidate <id>, ou marque a escolhida no dossie (passo 3 do arco).\n');
+    console.error('\n  ✗ do not know which candidate was approved.');
+    console.error('    None has `state: "chosen"` in the dossier and there is more than one.');
+    console.error('    Pass --candidate <id>, or mark the chosen one in the dossier (step 3 of the arc).\n');
     process.exit(1);
   }
 
-  // A aprovacao nao muda um no nem uma aresta — o que muda e o dossie ganhando
-  // o RECORTE da projecao logica. `conferir()` reprojeta e compara depois.
+  // Approval changes neither a node nor an edge — what changes is the dossier
+  // gaining the SNAPSHOT of the logical projection. `check()` reprojects and
+  // compares afterwards.
   const approved = approve(session, {
-    at: opts.at || hoje(),
-    by: opts.by || 'usuario',
+    at: opts.at || today(),
+    by: opts.by || 'user',
     candidate,
   });
   const ac = approved.dossier.agreement;
-  console.log(`  aprovar     candidata="${candidate}" por="${ac.by}" em=${ac.at}`);
-  console.log(`              impressao ${ac.fingerprint.slice(0, 23)}…  ` +
-    `(${ac.snapshot.nodes.length} capacidades, ${ac.snapshot.edges.length} fluxos)`);
+  console.log(`  approve     candidate="${candidate}" by="${ac.by}" at=${ac.at}`);
+  console.log(`              fingerprint ${ac.fingerprint.slice(0, 23)}…  ` +
+    `(${ac.snapshot.nodes.length} capabilities, ${ac.snapshot.edges.length} flows)`);
 
   const d = check(approved);
-  console.log(`  conferir    ${d.ok ? '✓ o acordo confere' : '✗ ' + d.motivo}`);
+  console.log(`  check       ${d.ok ? '✓ the agreement holds' : '✗ ' + d.motivo}`);
   if (!d.ok) { for (const x of d.diferencas) console.error(`      · ${x.text}`); process.exit(2); }
 
   const r = await draw(approved, 'logical');
   for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  console.log(`  desenhar    caminho="${r.caminho}" · ${r.model.nodes.length} nos projetados`);
+  console.log(`  draw        path="${r.caminho}" · ${r.model.nodes.length} nodes projected`);
 
   const output = opts.output || path.join(ROOT, 'output', `${session.id}.drawio`);
   fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
   fs.writeFileSync(output, r.xml);
-  console.log(`\n  → ${path.relative(process.cwd(), output)}  (${r.xml.length} bytes, 1 pagina)`);
-  console.log('    dentro dele: o modelo de sessao, o dossie, o acordo e as duas impressoes do desenho.');
-  console.log('    A conversa pode acabar aqui. Nada do que foi decidido depende de eu lembrar.\n');
+  console.log(`\n  → ${path.relative(process.cwd(), output)}  (${r.xml.length} bytes, 1 page)`);
+  console.log('    inside it: the session model, the dossier, the agreement and the two drawing snapshots.');
+  console.log('    The conversation can end here. Nothing that was decided depends on me remembering.\n');
 }
 
 main().catch(e => {

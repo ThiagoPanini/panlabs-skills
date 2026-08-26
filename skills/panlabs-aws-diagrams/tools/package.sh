@@ -1,114 +1,116 @@
 #!/usr/bin/env bash
-# O pacote que sai de casa, e a única medida do teto que importa.
+# The package that ships, and the only measurement of the ceiling that matters.
 #
-#   tools/package.sh              mede e empacota em ../<nome>.skill
-#   tools/package.sh --check   só mede, não escreve nada
+#   tools/package.sh              measures and packages into ../<name>.skill
+#   tools/package.sh --check   only measures, writes nothing
 #
-# ⚠️ `.gitignore` NÃO PROTEGE O PACOTE, e essa é a razão de este arquivo existir.
+# ⚠️ `.gitignore` DOES NOT PROTECT THE PACKAGE, and that is the reason this file
+# exists.
 #
-# O empacotador oficial (`skill-creator/scripts/package_skill.py`) varre o
-# diretório inteiro com `rglob('*')` e exclui exatamente cinco coisas:
+# The official packager (`skill-creator/scripts/package_skill.py`) sweeps the
+# whole directory with `rglob('*')` and excludes exactly five things:
 #
 #     EXCLUDE_DIRS       = {"__pycache__", "node_modules"}
 #     EXCLUDE_GLOBS      = {"*.pyc"}
 #     EXCLUDE_FILES      = {".DS_Store"}
-#     ROOT_EXCLUDE_DIRS  = {"evals"}     # só na raiz da skill
+#     ROOT_EXCLUDE_DIRS  = {"evals"}     # only at the skill root
 #
-# Nada de `.gitignore` nessa lista. Um `output/` cheio de render — que o git
-# ignora — vai para dentro do `.skill` do mesmo jeito. E o teto é DURO: 30 MB
-# descomprimidos, recusa na hora do upload.
+# No `.gitignore` in that list. An `output/` full of renders — which git ignores
+# — goes into the `.skill` all the same. And the ceiling is HARD: 30 MB
+# uncompressed, rejected at upload time.
 #
-# Esta árvore já chegou a 29 MB sem ninguém medir. A lição não foi "limpe": foi
-# que um limite que ninguém mede é um limite que se descobre no dia do upload.
+# This tree already reached 29 MB with nobody measuring it. The lesson was not
+# "clean up": it was that a limit nobody measures is a limit discovered on
+# upload day.
 set -uo pipefail
 
-AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RAIZ="$(dirname "$AQUI")"
-NOME="$(basename "$RAIZ")"
-TETO=$((30 * 1024 * 1024))
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$HERE")"
+NAME="$(basename "$ROOT")"
+CEILING=$((30 * 1024 * 1024))
 
-CONFERIR=0
+CHECK=0
 for a in "$@"; do
   case "$a" in
-    --check) CONFERIR=1 ;;
-    *) echo "argumento desconhecido: $a"; exit 2 ;;
+    --check) CHECK=1 ;;
+    *) echo "unknown argument: $a"; exit 2 ;;
   esac
 done
 
-[ -f "$RAIZ/SKILL.md" ] || { echo "  ✗ $RAIZ não parece a raiz da skill (sem SKILL.md)"; exit 1; }
+[ -f "$ROOT/SKILL.md" ] || { echo "  ✗ $ROOT does not look like the skill root (no SKILL.md)"; exit 1; }
 
-# ------------------------------------------------------- o que entra no pacote
-# A mesma lista do empacotador oficial, na mesma ordem de precedência.
-listar() {
-  find "$RAIZ" \
+# ------------------------------------------------------- what goes into the package
+# The same list as the official packager, in the same precedence order.
+list_files() {
+  find "$ROOT" \
     \( -type d \( -name __pycache__ -o -name node_modules \) -prune \) -o \
-    \( -type d -path "$RAIZ/evals" -prune \) -o \
+    \( -type d -path "$ROOT/evals" -prune \) -o \
     \( -type f ! -name '*.pyc' ! -name '.DS_Store' -print \)
 }
 
-mapfile -t ARQUIVOS < <(listar)
-N=${#ARQUIVOS[@]}
+mapfile -t FILES < <(list_files)
+N=${#FILES[@]}
 BYTES=0
-for f in "${ARQUIVOS[@]}"; do BYTES=$((BYTES + $(stat -c%s "$f"))); done
+for f in "${FILES[@]}"; do BYTES=$((BYTES + $(stat -c%s "$f"))); done
 
-pct=$((BYTES * 100 / TETO))
-hum() { numfmt --to=iec --suffix=B --format='%.1f' "$1" 2>/dev/null || echo "$1 B"; }
+pct=$((BYTES * 100 / CEILING))
+human() { numfmt --to=iec --suffix=B --format='%.1f' "$1" 2>/dev/null || echo "$1 B"; }
 
 echo
-echo "  $NOME"
+echo "  $NAME"
 echo "  ────────────────────────────────────────────"
-printf '  %-22s %s\n' "arquivos" "$N"
-printf '  %-22s %s  (%d%% do teto de 30 MB)\n' "descomprimido" "$(hum $BYTES)" "$pct"
+printf '  %-22s %s\n' "files" "$N"
+printf '  %-22s %s  (%d%% of the 30 MB ceiling)\n' "uncompressed" "$(human $BYTES)" "$pct"
 
-# ------------------------------------------------------- os cinco maiores dirs
+# ------------------------------------------------------- the five biggest dirs
 echo
-echo "  onde o peso está:"
-for d in "$RAIZ"/*/; do
+echo "  where the weight is:"
+for d in "$ROOT"/*/; do
   [ -d "$d" ] || continue
-  nome="$(basename "$d")"
-  case "$nome" in evals|__pycache__|node_modules) continue ;; esac
+  name="$(basename "$d")"
+  case "$name" in evals|__pycache__|node_modules) continue ;; esac
   b=$(du -sb "$d" 2>/dev/null | cut -f1)
-  echo "$b $nome"
-done | sort -rn | head -5 | while read -r b nome; do
-  printf '    %-14s %s\n' "$nome/" "$(hum "$b")"
+  echo "$b $name"
+done | sort -rn | head -5 | while read -r b name; do
+  printf '    %-14s %s\n' "$name/" "$(human "$b")"
 done
 
-# ------------------------------------------------- o que o git ignora e mesmo assim viaja
-CLANDESTINO=0
-if git -C "$RAIZ" rev-parse --git-dir > /dev/null 2>&1; then
-  mapfile -t IGNORADOS < <(git -C "$RAIZ" ls-files --others --ignored --exclude-standard 2>/dev/null)
-  if [ ${#IGNORADOS[@]} -gt 0 ]; then
-    cb=0
-    for f in "${IGNORADOS[@]}"; do
-      [ -f "$RAIZ/$f" ] && cb=$((cb + $(stat -c%s "$RAIZ/$f")))
+# ------------------------------------------------- what git ignores and still ships
+SNEAKY=0
+if git -C "$ROOT" rev-parse --git-dir > /dev/null 2>&1; then
+  mapfile -t IGNORED < <(git -C "$ROOT" ls-files --others --ignored --exclude-standard 2>/dev/null)
+  if [ ${#IGNORED[@]} -gt 0 ]; then
+    ib=0
+    for f in "${IGNORED[@]}"; do
+      [ -f "$ROOT/$f" ] && ib=$((ib + $(stat -c%s "$ROOT/$f")))
     done
-    if [ "$cb" -gt 0 ]; then
-      CLANDESTINO=1
+    if [ "$ib" -gt 0 ]; then
+      SNEAKY=1
       echo
-      echo "  ⚠ ${#IGNORADOS[@]} arquivo(s) que o GIT IGNORA e o pacote LEVA — $(hum $cb)"
-      echo "    O empacotador não lê .gitignore. Rode a limpeza antes de publicar:"
+      echo "  ⚠ ${#IGNORED[@]} file(s) that GIT IGNORES and the package SHIPS — $(human $ib)"
+      echo "    The packager does not read .gitignore. Run the cleanup before publishing:"
       echo "      rm -rf output/* && mkdir -p output/themes"
     fi
   fi
 fi
 
-# ------------------------------------------------------------------ o veredito
+# ------------------------------------------------------------------ the verdict
 echo
-if [ "$BYTES" -gt "$TETO" ]; then
-  echo "  ✗ ESTOURA o teto de 30 MB — o upload vai recusar."
+if [ "$BYTES" -gt "$CEILING" ]; then
+  echo "  ✗ BLOWS PAST the 30 MB ceiling — the upload will be rejected."
   exit 1
 fi
 if [ "$pct" -ge 70 ]; then
-  echo "  ⚠ $pct% do teto. Acima de 70% vale saber o que está subindo junto."
+  echo "  ⚠ $pct% of the ceiling. Above 70% it is worth knowing what is riding along."
 else
-  echo "  ✓ $pct% do teto de 30 MB."
+  echo "  ✓ $pct% of the 30 MB ceiling."
 fi
 
-[ "$CONFERIR" -eq 1 ] && exit 0
+[ "$CHECK" -eq 1 ] && exit 0
 
-# ------------------------------------------------------------------ o zip
-command -v zip > /dev/null || { echo "  ✗ zip não encontrado — instale, ou use --check"; exit 1; }
-ALVO="$(dirname "$RAIZ")/$NOME.skill"
-rm -f "$ALVO"
-( cd "$(dirname "$RAIZ")" && printf '%s\n' "${ARQUIVOS[@]#$(dirname "$RAIZ")/}" | zip -q -@ "$ALVO" )
-echo "  → $ALVO  ($(hum "$(stat -c%s "$ALVO")") comprimido)"
+# ------------------------------------------------------------------ the zip
+command -v zip > /dev/null || { echo "  ✗ zip not found — install it, or use --check"; exit 1; }
+TARGET="$(dirname "$ROOT")/$NAME.skill"
+rm -f "$TARGET"
+( cd "$(dirname "$ROOT")" && printf '%s\n' "${FILES[@]#$(dirname "$ROOT")/}" | zip -q -@ "$TARGET" )
+echo "  → $TARGET  ($(human "$(stat -c%s "$TARGET")") compressed)"

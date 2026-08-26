@@ -52,10 +52,10 @@ function mesh(nZones) {
   for (let i = 0; i < nZones; i++)
     for (let j = 0; j < nZones; j++)
       if (i !== j) edges.push({ from: `broker-${LETTERS[i]}`, to: `broker-${LETTERS[j]}`,
-        label: 'busca réplica', protocol: 'kafka', data: 'back' });
+        label: 'replica fetch', protocol: 'kafka', data: 'back' });
   return {
     schema: 'panlabs-aws-diagrams/model@1',
-    id: `mesh-${nZones}-az`, title: `Malha de ${nZones} zonas`,
+    id: `mesh-${nZones}-az`, title: `Mesh of ${nZones} zones`,
     view: 'technical', genre: 'T1', nodes, edges,
   };
 }

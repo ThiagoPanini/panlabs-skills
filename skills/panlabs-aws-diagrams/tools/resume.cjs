@@ -1,38 +1,39 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * PASSOS 1 E 6 DO ARCO — retoma um `.drawio` gravado e, se voce mandar um delta,
- * elabora a vista tecnica por cima do que foi aprovado.
+ * STEPS 1 AND 6 OF THE ARC — resumes a saved `.drawio` and, if you pass a delta,
+ * elaborates the technical view on top of what was approved.
  *
- *   node tools/resume.cjs <arq.drawio>                          so o briefing
- *   node tools/resume.cjs <arq.drawio> --delta <elaboracao.json> [--output y.drawio]
+ *   node tools/resume.cjs <file.drawio>                          briefing only
+ *   node tools/resume.cjs <file.drawio> --delta <elaboration.json> [--output y.drawio]
  *
- * Sao os dois passos no mesmo comando porque sao a mesma leitura: reconhecer o
- * arquivo, classificar as paginas e devolver o briefing e o passo 1; aplicar o
- * delta por cima do resultado e o passo 6. Separa-los obrigaria a ler e
- * classificar duas vezes, e a segunda leitura poderia discordar da primeira.
+ * They are two steps in the same command because they are the same read:
+ * recognizing the file, classifying the pages and returning the briefing is step
+ * 1; applying the delta on top of the result is step 6. Splitting them would force
+ * reading and classifying twice, and the second read could disagree with the
+ * first.
  *
- * Daqui sai, nesta ordem:
+ * This is what comes out of here, in this order:
  *
- *   1. reconhecimento    — este arquivo e meu?
- *   2. estado do desenho — o humano mexeu nele desde que eu gravei?
- *   3. briefing          — o que ficou decidido, recusado, estacionado
- *   4. elaboracao        — o delta tecnico sobre o modelo aprovado   (so com --delta)
- *   5. conferencia       — a projecao logica de hoje ainda e a aprovada?
- *   6. as duas vistas    — no MESMO arquivo. Duas VISTAS; desde o #12 a tecnica
- *                          multi-conta ja e 1+N paginas (D2 do #6), entao o
- *                          arquivo tem 1 + 1 + N.
+ *   1. recognition       — is this file mine?
+ *   2. drawing state     — did the human touch it since I saved it?
+ *   3. briefing          — what was decided, rejected, parked
+ *   4. elaboration       — the technical delta over the approved model  (only with --delta)
+ *   5. check             — does today's logical projection still match the approved one?
+ *   6. both views        — in the SAME file. Two VIEWS; since #12 the multi-account
+ *                          technical view is already 1+N pages (D2 of #6), so the
+ *                          file has 1 + 1 + N.
  *
- * O passo 5 e o que o ticket compra ao usar um IR so: ele nao existiria com dois
- * modelos ligados por mapeamento, porque nao haveria como saber se o mapeamento
- * esta certo.
+ * Step 5 is what the ticket buys by using a single IR: it would not exist with two
+ * models linked by a mapping, because there would be no way to know whether the
+ * mapping is correct.
  *
- * ⚠️ ATE O #29 O PASSO 6 NAO TINHA COMANDO. O `SKILL.md` mandava o agente gravar
- * um driver de vinte linhas na raiz da skill — ver o cabecalho de `approve.cjs`
- * para os tres motivos de isso ter sido desfeito.
+ * WARNING: UNTIL #29 STEP 6 HAD NO COMMAND. `SKILL.md` told the agent to write a
+ * twenty-line driver at the skill's root — see the header of `approve.cjs` for the
+ * three reasons that was undone.
  *
- * Sem argumento nenhum ele roda o caso do corpus (`retail`), que e o que a
- * camada 6 da suite exercita.
+ * With no argument at all it runs the corpus case (`retail`), which is what layer
+ * 6 of the suite exercises.
  */
 
 const fs = require('fs');
@@ -49,137 +50,139 @@ const { stitch } = require(path.join(ROOT, 'session', 'save.cjs'));
 const { readPages } = require(path.join(ROOT, 'session', 'fingerprint.cjs'));
 
 const HELP = `
-  node tools/resume.cjs <arq.drawio> [opcoes]
+  node tools/resume.cjs <file.drawio> [options]
 
-    --delta <elaboracao.json>  aplica o delta da fase tecnica (passo 6 do arco).
-                               Sem ele, o comando so imprime o briefing (passo 1).
-    --output <y.drawio>         onde gravar as duas vistas   (default: o proprio arquivo)
+    --delta <elaboration.json>  applies the technical phase's delta (step 6 of the arc).
+                                 Without it, the command only prints the briefing (step 1).
+    --output <y.drawio>         where to save both views   (default: the file itself)
 
-  Sem argumento nenhum, roda o caso do corpus (output/retail.drawio com
+  With no argument at all, runs the corpus case (output/retail.drawio with
   models/session/retail-elaboration.json).
 
-  Codigos de saida:
-    0  tudo certo
-    1  o arquivo nao e meu, ou o modelo elaborado nao valida
-    2  uma pagina divergiu, ou a elaboracao mudou o que foi aprovado
+  Exit codes:
+    0  all good
+    1  the file is not mine, or the elaborated model does not validate
+    2  a page diverged, or the elaboration changed what was approved
 `;
 
 const WITH_VALUE = ['delta', 'output'];
 
 function parse(args) {
-  const opts = {}; const soltos = [];
+  const opts = {}; const positional = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (!a.startsWith('--')) { soltos.push(a); continue; }
+    if (!a.startsWith('--')) { positional.push(a); continue; }
     const name = a.slice(2);
     if (WITH_VALUE.includes(name)) { opts[name] = args[++i]; continue; }
     opts[name] = true;
   }
-  return { opts, soltos };
+  return { opts, positional };
 }
 
 async function main() {
-  const { opts, soltos } = parse(process.argv.slice(2));
+  const { opts, positional } = parse(process.argv.slice(2));
   if (opts.help || opts.h) { console.log(HELP); return; }
 
-  const input = soltos[0] || path.join(ROOT, 'output', 'retail.drawio');
-  // O default do delta so vale quando a ENTRADA tambem e a do corpus. Herdar o
-  // delta do retail num arquivo qualquer aplicaria o casaco tecnico errado — e
-  // `elaborar` recusaria pelo `sobre`, mas com uma mensagem que nao explica a
-  // causa. Melhor nao chegar la.
+  const input = positional[0] || path.join(ROOT, 'output', 'retail.drawio');
+  // The delta default only holds when the INPUT is also the corpus one. Inheriting
+  // retail's delta on an arbitrary file would apply the wrong technical facet —
+  // and `elaborate` would refuse it via `about`, but with a message that does not
+  // explain the cause. Better not to get there.
   const delta = opts.delta
-    || (soltos.length === 0 ? path.join(ROOT, 'models', 'session', 'retail-elaboration.json') : null);
+    || (positional.length === 0 ? path.join(ROOT, 'models', 'session', 'retail-elaboration.json') : null);
 
   if (!fs.existsSync(input)) {
-    console.error(`\n  ✗ nao achei ${input}`);
+    console.error(`\n  ✗ could not find ${input}`);
     console.error(HELP);
     process.exit(1);
   }
 
   const xml = fs.readFileSync(input, 'utf8');
-  console.log(`\n  RETOMAR · ${path.relative(process.cwd(), input)}`);
+  console.log(`\n  RESUME · ${path.relative(process.cwd(), input)}`);
 
-  // 1 e 2 -------------------------------------------------------------------
-  const aberto = open(xml);
-  if (!aberto.ours) { console.error(`\n  ✗ ${aberto.because}`); process.exit(1); }
+  // 1 and 2 -------------------------------------------------------------------
+  const opened = open(xml);
+  if (!opened.ours) { console.error(`\n  ✗ ${opened.because}`); process.exit(1); }
 
-  const problema = aberto.pages.filter(p => policy(p.state).bloqueia);
-  const remanejadas = aberto.pages.filter(p => p.state === 'remanejado');
+  const blocking = opened.pages.filter(p => policy(p.state).blocks);
+  const moved = opened.pages.filter(p => p.state === 'moved');
 
   // 3 -----------------------------------------------------------------------
-  const acordoAntes = check(aberto.session);
-  for (const l of briefing(aberto, { agreement: acordoAntes })) console.log(l);
+  const agreementBefore = check(opened.session);
+  for (const l of briefing(opened, { agreement: agreementBefore })) console.log(l);
 
-  // O bloqueio vem DEPOIS do briefing de proposito: mesmo quando nao da para
-  // seguir, o usuario recebe o contexto de volta. Bloquear antes de contar o que
-  // se sabe transforma um problema pequeno numa sessao perdida.
-  if (problema.length) {
-    console.log('\n  ┌─ DIVERGENCIA ' + '─'.repeat(49));
-    for (const p of problema) {
-      console.log(`  │ pagina "${p.name || p.id}": ${policy(p.state).diga}`);
-      if (p.state !== 'divergente') continue;
-      const pode = canRegenerate(aberto.session, p.view);
-      if (!pode.pode) { console.log(`  │   ${pode.because}`); continue; }
-      const ref = await draw(aberto.session, p.view);
-      // A referencia e a pagina de MESMO id — com 1+N paginas por vista, pegar
-      // sempre a primeira compararia a vista consolidada contra uma de detalhe
-      // e chamaria de "divergencia" a diferenca entre duas paginas distintas.
-      const paginasRef = readPages(ref.xml).pages;
-      const ref1 = paginasRef.find(x => x.id === p.id) || paginasRef[0];
-      const d = differ(p, ref1.celulas);
-      console.log(`  │ ${d.findings.length} diferenca(s): ${d.absorviveis} que o modelo sabe expressar, ${d.opacas} que nao.`);
+  // The block comes AFTER the briefing on purpose: even when it is not possible to
+  // proceed, the user gets the context back. Blocking before recounting what is
+  // known turns a small problem into a lost session.
+  if (blocking.length) {
+    console.log('\n  ┌─ DIVERGENCE ' + '─'.repeat(50));
+    for (const p of blocking) {
+      console.log(`  │ page "${p.name || p.id}": ${policy(p.state).say}`);
+      if (p.state !== 'divergent') continue;
+      const canRegen = canRegenerate(opened.session, p.view);
+      if (!canRegen.can) { console.log(`  │   ${canRegen.because}`); continue; }
+      const ref = await draw(opened.session, p.view);
+      // The reference is the page with the SAME id — with 1+N pages per view,
+      // always taking the first would compare the consolidated view against a
+      // detail one and call the difference between two distinct pages
+      // "divergence".
+      const refPages = readPages(ref.xml).pages;
+      const ref1 = refPages.find(x => x.id === p.id) || refPages[0];
+      const d = differ(p, ref1.cells);
+      console.log(`  │ ${d.findings.length} difference(s): ${d.absorbable} the model can express, ${d.opaque} it cannot.`);
       for (const a of d.findings) {
-        const onde = a.classe === 'absorvivel' ? `absorvivel → ${a.onde}` : 'opaca';
-        console.log(`  │   · ${String(a.kind).padEnd(14)} ${String(a.id).padEnd(24)} ${a.era !== undefined && a.virou !== undefined ? `"${a.era}" -> "${a.virou}"` : a.era !== undefined ? `era "${a.era}"` : `veio "${a.virou}"`}  [${onde}]`);
+        const where = a.category === 'absorbable' ? `absorbable → ${a.where}` : 'opaque';
+        console.log(`  │   · ${String(a.kind).padEnd(14)} ${String(a.id).padEnd(24)} ${a.was !== undefined && a.became !== undefined ? `"${a.was}" -> "${a.became}"` : a.was !== undefined ? `was "${a.was}"` : `came "${a.became}"`}  [${where}]`);
       }
     }
     console.log('  └' + '─'.repeat(63));
-    console.log('\n  Nao regero por cima. Ou voce me diz o que mudou e eu absorvo no modelo,');
-    console.log('  ou o desenho passa a ser a verdade e o modelo foi abandonado. Nao adivinho qual.\n');
+    console.log('\n  I will not regenerate over this. Either you tell me what changed and I absorb it into the model,');
+    console.log('  or the drawing becomes the truth and the model was abandoned. I do not guess which.\n');
     process.exit(2);
   }
-  for (const p of remanejadas)
-    console.log(`\n  ⚠ pagina "${p.name || p.id}": ${policy(p.state).diga}`);
+  for (const p of moved)
+    console.log(`\n  ⚠ page "${p.name || p.id}": ${policy(p.state).say}`);
 
-  if (!acordoAntes.ok) { console.error(`\n  ✗ acordo: ${acordoAntes.motivo}`); process.exit(2); }
+  if (!agreementBefore.ok) { console.error(`\n  ✗ agreement: ${agreementBefore.motivo}`); process.exit(2); }
 
-  // Retomar um arquivo JA elaborado nao e erro, e o caso comum a partir da
-  // terceira sessao. O que ele nao e e motivo para reaplicar o delta: a
-  // elaboracao ja aconteceu, e reaplicar so produziria "ja tinha casaco
-  // tecnico" dez vezes.
-  if (aberto.session.stage === 'technical') {
-    console.log('\n  Este arquivo ja foi elaborado — as duas vistas estao aqui dentro.');
-    console.log('  Nada a fazer: o briefing acima e o estado das paginas ja e a retomada.\n');
+  // Resuming a file that has ALREADY been elaborated is not an error, and is the
+  // common case from the third session on. What it is not is a reason to reapply
+  // the delta: the elaboration already happened, and reapplying it would only
+  // produce "already had a technical facet" ten times over.
+  if (opened.session.stage === 'technical') {
+    console.log('\n  This file has already been elaborated — both views are in here.');
+    console.log('  Nothing to do: the briefing above and the pages\' state already are the resumption.\n');
     return;
   }
 
-  // Sem delta o comando para aqui, e isso e o passo 1 do arco cumprido: o agente
-  // recebeu de volta o acordo, as candidatas descartadas com o motivo, os
-  // achados recusados e o estacionamento. Nada disso se pergunta de novo.
+  // With no delta the command stops here, and that is step 1 of the arc
+  // fulfilled: the agent got back the agreement, the discarded candidates with
+  // their reason, the rejected findings and the parking lot. None of that gets
+  // asked again.
   if (!delta) {
-    console.log('\n  Briefing entregue. Este arquivo esta no estagio LOGICO.');
-    console.log('  Para elaborar a vista tecnica, passe --delta <elaboracao.json>');
-    console.log('  (a forma do delta esta em guide/model.md).\n');
+    console.log('\n  Briefing delivered. This file is at the LOGICAL stage.');
+    console.log('  To elaborate the technical view, pass --delta <elaboration.json>');
+    console.log('  (the delta\'s shape is in guide/model.md).\n');
     return;
   }
 
-  if (!fs.existsSync(delta)) { console.error(`\n  ✗ nao achei o delta ${delta}\n`); process.exit(1); }
+  if (!fs.existsSync(delta)) { console.error(`\n  ✗ could not find the delta ${delta}\n`); process.exit(1); }
 
-  // 4 e 5 -------------------------------------------------------------------
+  // 4 and 5 -------------------------------------------------------------------
   const elaboration = JSON.parse(fs.readFileSync(delta, 'utf8'));
-  const technical = elaborate(aberto.session, elaboration);
-  console.log(`\n  elaborar    ${aberto.session.nodes.length} → ${technical.nodes.length} nos, ` +
-    `${aberto.session.edges.length} → ${technical.edges.length} arestas  (estagio=${technical.stage})`);
+  const technical = elaborate(opened.session, elaboration);
+  console.log(`\n  elaborate   ${opened.session.nodes.length} → ${technical.nodes.length} nodes, ` +
+    `${opened.session.edges.length} → ${technical.edges.length} edges  (stage=${technical.stage})`);
 
   const v = validate(technical);
   for (const a of v.avisos) console.log(`  ⚠ ${a}`);
-  if (!v.ok) { console.error(`\n  ✗ modelo invalido (${v.fase})`); for (const e of v.erros) console.error(`      · ${e}`); process.exit(1); }
+  if (!v.ok) { console.error(`\n  ✗ invalid model (${v.fase})`); for (const e of v.erros) console.error(`      · ${e}`); process.exit(1); }
 
-  const depois = check(technical);
-  console.log(`  conferir    ${depois.ok ? '✓ a projecao logica do modelo TECNICO e byte a byte a que foi aprovada' : '✗ ' + depois.motivo}`);
-  for (const d of depois.diferencas) console.log(`      · ${d.text}`);
-  if (!depois.ok) {
-    console.error('\n  A elaboracao tecnica mudou o que foi aprovado. Isso exige aprovacao nova, nao um desenho novo.\n');
+  const agreementAfter = check(technical);
+  console.log(`  check       ${agreementAfter.ok ? '✓ the TECHNICAL model\'s logical projection is byte for byte the one that was approved' : '✗ ' + agreementAfter.motivo}`);
+  for (const d of agreementAfter.diferencas) console.log(`      · ${d.text}`);
+  if (!agreementAfter.ok) {
+    console.error('\n  The technical elaboration changed what was approved. That calls for a fresh approval, not a new drawing.\n');
     process.exit(2);
   }
 
@@ -187,28 +190,28 @@ async function main() {
   const rl = await draw(technical, 'logical');
   const rt = await draw(technical, 'technical');
   for (const a of rt.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  console.log(`  desenhar    logica: ${rl.model.nodes.length} nos, ${rl.model.edges.length} arestas  ·  ` +
-    `tecnica: ${rt.model.nodes.length} nos, ${rt.model.edges.length} arestas (caminho "${rt.caminho}")`);
-  if (rt.trilha.colapsados.length)
-    console.log(`              colapso: ${rt.trilha.colapsados.length} no(s) da vista tecnica reancoram na logica`);
-  for (const c of rl.trilha.contraidas)
-    console.log(`              contraiu ${c.from} → ${c.to} atraves de [${c.by.join(', ')}]  ("${c.label}")`);
+  console.log(`  draw        logical: ${rl.model.nodes.length} nodes, ${rl.model.edges.length} edges  ·  ` +
+    `technical: ${rt.model.nodes.length} nodes, ${rt.model.edges.length} edges (path "${rt.caminho}")`);
+  if (rt.trail.collapsed.length)
+    console.log(`              collapse: ${rt.trail.collapsed.length} node(s) from the technical view re-anchor onto the logical one`);
+  for (const c of rl.trail.contracted)
+    console.log(`              contracted ${c.from} → ${c.to} through [${c.by.join(', ')}]  ("${c.label}")`);
 
-  // A prova de que elaborar tecnicamente nao mexeu no desenho aprovado.
-  const antiga = aberto.pages.find(p => p.view === 'logical');
-  const nova = readPages(rl.xml).pages.find(x => x.id === (antiga && antiga.id)) || readPages(rl.xml).pages[0];
-  const igual = antiga && antiga.seal.panlabsSemantica === nova.seal.panlabsSemantica
-    && antiga.seal.panlabsAparencia === nova.seal.panlabsAparencia;
-  console.log(`  conferir    ${igual ? '✓' : '✗'} a pagina logica saiu identica a da aprovacao — nem um pixel do que foi aprovado mudou`);
-  if (!igual) process.exitCode = 1;
+  // The proof that elaborating technically did not touch the approved drawing.
+  const previousPage = opened.pages.find(p => p.view === 'logical');
+  const newPage = readPages(rl.xml).pages.find(x => x.id === (previousPage && previousPage.id)) || readPages(rl.xml).pages[0];
+  const identical = previousPage && previousPage.seal.panlabsSemantica === newPage.seal.panlabsSemantica
+    && previousPage.seal.panlabsAparencia === newPage.seal.panlabsAparencia;
+  console.log(`  check       ${identical ? '✓' : '✗'} the logical page came out identical to the approved one — not a pixel of what was approved changed`);
+  if (!identical) process.exitCode = 1;
 
-  const juntos = stitch([rl.xml, rt.xml]);
+  const combined = stitch([rl.xml, rt.xml]);
   const output = opts.output || input;
-  fs.writeFileSync(output, juntos);
-  const nPag = readPages(juntos).pages.length;
-  console.log(`\n  → ${path.relative(process.cwd(), output)}  (${juntos.length} bytes, ${nPag} paginas: ` +
-    `1 logica + ${nPag - 1} da vista tecnica)`);
-  console.log('    A vista aprovada e a tecnica no mesmo arquivo. Nao ha um segundo lugar para dessincronizar.\n');
+  fs.writeFileSync(output, combined);
+  const pageCount = readPages(combined).pages.length;
+  console.log(`\n  → ${path.relative(process.cwd(), output)}  (${combined.length} bytes, ${pageCount} page(s): ` +
+    `1 logical + ${pageCount - 1} from the technical view)`);
+  console.log('    The approved view and the technical one are in the same file. There is no second place to drift apart.\n');
 }
 
 main().catch(e => {

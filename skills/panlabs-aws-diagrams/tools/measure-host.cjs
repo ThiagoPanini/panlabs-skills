@@ -24,7 +24,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { sweep, acharTodos } = require('../session/fingerprint.cjs');
+const { sweep, findAll } = require('../session/fingerprint.cjs');
 
 const { binary } = require(path.join(__dirname, 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
@@ -35,12 +35,12 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'host-'));
 const LOAD = 'linha1\nlinha2\ttab "aspas" & <tag> ç ã 100%';
 
 const FILE_PATH = `<mxfile host="panlabs-aws-diagrams" compressed="false" mxfileAttr="${escape(LOAD)}">
-  <diagram id="p1" name="Pagina 1" diagramAttr="${escape(LOAD)}">
+  <diagram id="p1" name="Page 1" diagramAttr="${escape(LOAD)}">
     <mxGraphModel dx="0" dy="0" grid="0" pageWidth="400" pageHeight="300" modelAttr="${escape(LOAD)}">
       <root>
         <mxCell id="0"/>
-        <object id="1" label="" camadaAttr="${escape(LOAD)}"><mxCell parent="0"/></object>
-        <object id="oculto" label="" objectAttr="${escape(LOAD)}">
+        <object id="1" label="" layerAttr="${escape(LOAD)}"><mxCell parent="0"/></object>
+        <object id="hidden" label="" objectAttr="${escape(LOAD)}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
             <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
           </mxCell>
@@ -50,18 +50,18 @@ const FILE_PATH = `<mxfile host="panlabs-aws-diagrams" compressed="false" mxfile
             <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
           </mxCell>
         </UserObject>
-        <mxCell id="visivel" value="uma caixa" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="visible" value="a box" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="40" y="40" width="160" height="60" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="p2" name="Pagina 2">
+  <diagram id="p2" name="Page 2">
     <mxGraphModel dx="0" dy="0" grid="0" pageWidth="400" pageHeight="300">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <object id="oculto2" label="" segundaPaginaAttr="${escape(LOAD)}">
+        <object id="hidden2" label="" secondPageAttr="${escape(LOAD)}">
           <mxCell style="text;html=1;" vertex="1" parent="1" visible="0">
             <mxGeometry x="0" y="0" width="1" height="1" as="geometry"/>
           </mxCell>
@@ -82,7 +82,7 @@ function locate(root, attr) {
   const stack = [root];
   while (stack.length) {
     const n = stack.pop();
-    if (n.attrs && n.attrs[attr] !== undefined) return { valor: n.attrs[attr], at: n.name };
+    if (n.attrs && n.attrs[attr] !== undefined) return { value: n.attrs[attr], at: n.name };
     for (const f of n.filhos || []) stack.push(f);
   }
   return null;
@@ -92,10 +92,10 @@ const HOSTS = [
   ['mxfileAttr', 'attribute on <mxfile>'],
   ['diagramAttr', 'attribute on <diagram>'],
   ['modelAttr', 'attribute on <mxGraphModel>'],
-  ['camadaAttr', '<object> wrapping the LAYER (id=1)'],
+  ['layerAttr', '<object> wrapping the LAYER (id=1)'],
   ['objectAttr', '<object> on a hidden cell'],
   ['userObjectAttr', '<UserObject> on a hidden cell'],
-  ['segundaPaginaAttr', 'hidden <object> on the SECOND page'],
+  ['secondPageAttr', 'hidden <object> on the SECOND page'],
 ];
 
 function main() {
@@ -138,13 +138,13 @@ function main() {
   const outcome = [];
   for (const [attr, name] of HOSTS) {
     const finding = locate(after, attr);
-    const intact = finding ? finding.valor === LOAD : false;
+    const intact = finding ? finding.value === LOAD : false;
     outcome.push({ attr, name, survived: !!finding, intact });
     console.log(`    ${name.padEnd(40)} ${(finding ? 'yes' : 'NO').padEnd(11)} ${finding ? (intact ? 'yes' : 'ALTERED') : '—'}`);
   }
 
-  const mx = acharTodos(after, 'mxfile')[0];
-  const pages = acharTodos(after, 'diagram');
+  const mx = findAll(after, 'mxfile')[0];
+  const pages = findAll(after, 'diagram');
   console.log('');
   console.log(`    host= came back as ................ ${JSON.stringify(mx && mx.attrs.host)}`);
   console.log(`    pages after the round-trip ........ ${pages.length}`);
@@ -156,7 +156,7 @@ function main() {
 
   // The seal has to live in a host that survived; that is what the decision uses.
   const chosen = outcome.find(r => r.attr === 'objectAttr');
-  const second = outcome.find(r => r.attr === 'segundaPaginaAttr');
+  const second = outcome.find(r => r.attr === 'secondPageAttr');
   console.log('');
   console.log(`  Decision: the seal lives in ${chosen.survived && chosen.intact ? 'a hidden <object> — CONFIRMED' : '??? — the chosen host did NOT survive'}.`);
   console.log(`  Copy per page: ${second.survived && second.intact ? 'viable — the second page preserves it the same' : 'NOT VIABLE — only the first page preserves it'}.`);

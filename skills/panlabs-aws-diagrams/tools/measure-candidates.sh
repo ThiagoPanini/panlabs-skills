@@ -1,153 +1,155 @@
 #!/usr/bin/env bash
-# A MEDIÇÃO QUE ESCOLHEU O MOTOR DE PRODUÇÃO — reprodutível, não afirmada.
+# THE MEASUREMENT THAT CHOSE THE PRODUCTION ENGINE — reproducible, not asserted.
 #
 #   tools/measure-candidates.sh [ref]        # default: HEAD
 #
-# O #23 pede o motor escolhido "por medição, não por data", e uma medição que só
-# existe em prosa é exatamente o tipo de afirmação que este ticket nasceu para
-# acabar. Então ela roda: este script materializa os DOIS candidatos a partir do
-# git, põe cada um no lugar do outro, e roda a UNIÃO dos checks dos quatro
-# protótipos contra os dois.
+# #23 asks for the engine to be chosen "by measurement, not by date", and a
+# measurement that exists only in prose is exactly the kind of claim this
+# ticket was born to end. So it runs: this script materializes the TWO
+# candidates from git, puts each one in the other's place, and runs the UNION
+# of the four prototypes' checks against both.
 #
-# ⚠️ ISTO É ARQUEOLOGIA, e por isso é ferramenta e não checagem da suíte. Depende
-# de `prototypes/` existir no ref pedido. Quando os protótipos saírem da árvore, o
-# script avisa e sai limpo — a pergunta que ele responde já terá sido respondida.
+# ⚠️ THIS IS ARCHAEOLOGY, and that is why it is a tool and not a suite check. It
+# depends on `prototypes/` existing at the requested ref. Once the prototypes
+# leave the tree, the script says so and exits clean — the question it answers
+# will already have been answered.
 #
-# O ANCESTRAL COMUM é `daf4bc4` e o número não foi escolhido: é o commit em que o
-# #13 forkou o motor. Achado assim, e conferível:
+# THE COMMON ANCESTOR is `daf4bc4` and the number was not chosen: it is the
+# commit where #13 forked the engine. Found like this, and verifiable:
 #
 #     git log --oneline -- skills/.../prototypes/q13/engine/derive.cjs
-#     # -> daf4bc4, único commit; e naquele commit
+#     # -> daf4bc4, single commit; and at that commit
 #     git show daf4bc4:.../q11/engine/derive.cjs | sha256sum
-#     git show daf4bc4:.../q13/engine/derive.cjs | sha256sum   # o MESMO hash
+#     git show daf4bc4:.../q13/engine/derive.cjs | sha256sum   # the SAME hash
 set -uo pipefail
 
 REF="${1:-HEAD}"
-AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RAIZ="$(dirname "$AQUI")"
-REPO="$(cd "$RAIZ/../.." && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$HERE")"
+REPO="$(cd "$ROOT/../.." && pwd)"
 P="skills/panlabs-aws-diagrams/prototypes"
 BASE="daf4bc4"
 
 if ! git -C "$REPO" cat-file -e "$REF:$P/q13/engine/layout.cjs" 2>/dev/null; then
-  echo "  os protótipos não existem em '$REF' — não há o que medir."
-  echo "  (é o estado esperado depois que eles saírem da árvore; a medição já"
-  echo "   foi feita e registrada)"
+  echo "  the prototypes do not exist at '$REF' — there is nothing to measure."
+  echo "  (this is the expected state once they leave the tree; the measurement"
+  echo "   has already been made and recorded)"
   exit 0
 fi
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-# ⚠️ O `package.json` ESQUECIDO EM /tmp — o achado de brinde do #22, e ele mata
-# este script em silêncio se ninguém guardar contra.
+# ⚠️ THE `package.json` LEFT BEHIND IN /tmp — #22's bonus finding, and it kills
+# this script silently if nobody guards against it.
 #
-# A extração do AppImage do draw.io deixa `/tmp/package.json` com
-# `"type": "module"`. O `elk.bundled.js` é `.js`, então o Node procura o
-# `package.json` mais próximo subindo do diretório dele — e num sandbox criado
-# por `mktemp -d` esse arquivo é o do draw.io. O UMD do elk passa a ser lido
-# como ESM e o erro que sai é `ELK is not a constructor`, que não fala de nada
-# disso. Um `package.json` nosso na raiz do sandbox encerra a busca antes.
+# Extracting draw.io's AppImage leaves `/tmp/package.json` with
+# `"type": "module"`. `elk.bundled.js` is `.js`, so Node looks for the nearest
+# `package.json` walking up from its directory — and in a sandbox created by
+# `mktemp -d` that file is draw.io's. elk's UMD then gets read as ESM and the
+# error that comes out is `ELK is not a constructor`, which says nothing about
+# any of this. A `package.json` of our own at the sandbox root ends the search
+# first.
 printf '{ "type": "commonjs" }\n' > "$TMP/package.json"
 
-extrair() {  # extrair <ref> <caminho-no-repo> <destino>
+extract() {  # extract <ref> <path-in-repo> <destination>
   mkdir -p "$3"
   git -C "$REPO" archive "$1" "$2" | tar -x -C "$TMP/_x" 2>/dev/null || return 1
   cp -r "$TMP/_x/$2/." "$3"
 }
 
-# ── as duas variantes ────────────────────────────────────────────────────────
-# A: o motor do #11 no lugar dele.  B: o motor do #13 no lugar do #11, com o
-# tema ao lado (é de lá que o `resolve.cjs` dele carrega o tema).
+# ── the two variants ─────────────────────────────────────────────────────────
+# A: #11's engine in its own place.  B: #13's engine in #11's place, with the
+# theme alongside it (that is where its `resolve.cjs` loads the theme from).
 for V in A B; do
   rm -rf "$TMP/_x"; mkdir -p "$TMP/_x" "$TMP/$V"
-  extrair "$REF" "skills/panlabs-aws-diagrams/catalog" "$TMP/$V/catalog"
+  extract "$REF" "skills/panlabs-aws-diagrams/catalog" "$TMP/$V/catalog"
   rm -rf "$TMP/_x"; mkdir -p "$TMP/_x"
-  extrair "$REF" "$P" "$TMP/$V/prototypes"
+  extract "$REF" "$P" "$TMP/$V/prototypes"
 done
 rm -rf "$TMP/B/prototypes/q11/motor"
 cp -r "$TMP/B/prototypes/q13/motor" "$TMP/B/prototypes/q11/motor"
 cp -r "$TMP/B/prototypes/q13/tema"  "$TMP/B/prototypes/q11/tema"
 
-# ── a união dos checks ───────────────────────────────────────────────────────
-medir() {
-  local R="$1" ROT="$2"
+# ── the union of the checks ─────────────────────────────────────────────────
+measure_variant() {
+  local R="$1" LABEL="$2"
   local Q11="$R/prototypes/q11" Q12="$R/prototypes/q12"
   local Q14="$R/prototypes/q14" Q18="$R/prototypes/q18"
-  local falhas=0 total=0
-  linha() {
-    local nome="$1"; shift
-    local saida rc
+  local red=0 total=0
+  row() {
+    local label="$1"; shift
+    local output rc
     total=$((total+1))
-    saida="$("$@" 2>&1)"; rc=$?
-    if [ $rc -eq 0 ]; then printf '    %-38s verde\n' "$nome"
+    output="$("$@" 2>&1)"; rc=$?
+    if [ $rc -eq 0 ]; then printf '    %-38s green\n' "$label"
     else
-      printf '    %-38s VERMELHO  %s\n' "$nome" \
-        "$(echo "$saida" | grep -iE '✗|error|inválido|falh' | head -1 | cut -c1-96)"
-      falhas=$((falhas+1))
+      printf '    %-38s RED  %s\n' "$label" \
+        "$(echo "$output" | grep -iE '✗|error|inválido|falh' | head -1 | cut -c1-96)"
+      red=$((red+1))
     fi
   }
   echo
-  echo "  ── $ROT"
-  linha "#11 fronteira"        node "$Q11/tools/check-fronteira.cjs"
-  linha "#11 validacao"        node "$Q11/tools/check-validation.cjs"
+  echo "  ── $LABEL"
+  row "#11 boundary"        node "$Q11/tools/check-fronteira.cjs"
+  row "#11 validation"      node "$Q11/tools/check-validation.cjs"
   for m in "$Q11"/models/*.json; do
-    linha "#11 gerar $(basename "$m" .json)" \
+    row "#11 generate $(basename "$m" .json)" \
       node "$Q11/engine/generate.cjs" "$m" --output "$Q11/output/$(basename "$m" .json).drawio"
   done
-  linha "#11 determinismo"     node "$Q11/tools/check-determinism.cjs"
-  linha "#12 gatilhos"         node "$Q12/tools/check-triggers.cjs"
+  row "#11 determinism"     node "$Q11/tools/check-determinism.cjs"
+  row "#12 triggers"        node "$Q12/tools/check-triggers.cjs"
   for m in "$Q12"/models/*.json; do
-    nome="$(basename "$m" .json)"
-    linha "#12 gerar $nome" node "$Q11/engine/generate.cjs" "$m" \
-      --output "$Q12/output/$(echo "$nome" | sed 's/-[0-9]*-contas$//;s/-3-az$//').drawio"
+    name="$(basename "$m" .json)"
+    row "#12 generate $name" node "$Q11/engine/generate.cjs" "$m" \
+      --output "$Q12/output/$(echo "$name" | sed 's/-[0-9]*-contas$//;s/-3-az$//').drawio"
   done
-  linha "#12 travessia"        node "$Q12/tools/check-traversal.cjs"
-  linha "#12 determinismo"     node "$Q11/tools/check-determinism.cjs" "$Q12/modelo"
-  linha "#12 bissecao"         node "$Q12/tools/bisect-model.cjs" "$Q12/models/hub-tgw-3-accounts.json"
-  linha "#14 fronteira"        node "$Q14/tools/check-fronteira.cjs"
-  linha "#14 motor-intocado"   node "$Q14/tools/check-engine-untouched.cjs"
-  linha "#14 sessao1"          node "$Q14/sessao1.cjs"
-  linha "#14 sessao2"          node "$Q14/sessao2.cjs"
-  linha "#14 projecao"         node "$Q14/tools/check-projection.cjs"
-  linha "#14 impressao"        node "$Q14/tools/medir-fingerprint.cjs"
-  linha "#18 indice"           node "$Q18/tests/check-index.cjs"
-  linha "#18 primitivas"       node "$Q18/tests/check-primitives.cjs"
-  linha "#18 quebrados"        node "$Q18/tests/check-broken.cjs"
-  linha "#18 portao"           node "$Q18/tests/check-gate.cjs"
-  linha "#18 bons"             node "$Q18/tests/check-good.cjs"
-  printf '\n    ==> %s: %s VERMELHO(S) de %s\n' "$ROT" "$falhas" "$total"
+  row "#12 traversal"       node "$Q12/tools/check-traversal.cjs"
+  row "#12 determinism"     node "$Q11/tools/check-determinism.cjs" "$Q12/modelo"
+  row "#12 bisection"       node "$Q12/tools/bisect-model.cjs" "$Q12/models/hub-tgw-3-accounts.json"
+  row "#14 boundary"        node "$Q14/tools/check-fronteira.cjs"
+  row "#14 engine-untouched" node "$Q14/tools/check-engine-untouched.cjs"
+  row "#14 session1"        node "$Q14/sessao1.cjs"
+  row "#14 session2"        node "$Q14/sessao2.cjs"
+  row "#14 projection"      node "$Q14/tools/check-projection.cjs"
+  row "#14 fingerprint"     node "$Q14/tools/medir-fingerprint.cjs"
+  row "#18 index"           node "$Q18/tests/check-index.cjs"
+  row "#18 primitives"      node "$Q18/tests/check-primitives.cjs"
+  row "#18 broken"          node "$Q18/tests/check-broken.cjs"
+  row "#18 gate"            node "$Q18/tests/check-gate.cjs"
+  row "#18 good"            node "$Q18/tests/check-good.cjs"
+  printf '\n    ==> %s: %s RED(S) out of %s\n' "$LABEL" "$red" "$total"
 }
 
-echo "  a união dos checks dos quatro protótipos, contra os dois candidatos"
-echo "  ref: $REF · ancestral comum: $BASE"
-medir "$TMP/A" "A — motor do #11 (com o #12 e o #22 dentro)"
-medir "$TMP/B" "B — motor do #13 (com a camada de tema dentro)"
+echo "  the union of the four prototypes' checks, against the two candidates"
+echo "  ref: $REF · common ancestor: $BASE"
+measure_variant "$TMP/A" "A — #11's engine (with #12 and #22 inside)"
+measure_variant "$TMP/B" "B — #13's engine (with the theme layer inside)"
 
-# ── o tamanho dos dois deltas ────────────────────────────────────────────────
+# ── the size of the two deltas ──────────────────────────────────────────────
 echo
-echo "  o delta de cada lado a partir do ancestral comum ($BASE)"
-echo "  tema = q13/motor@$REF  ·  tronco = q11/motor@$REF (o #12 mais o #22)"
+echo "  the delta of each side from the common ancestor ($BASE)"
+echo "  theme = q13/motor@$REF  ·  trunk = q11/motor@$REF (#12 plus #22)"
 echo
-printf '  %-16s %10s %10s\n' arquivo 'tema #13' 'tronco'
+printf '  %-16s %10s %10s\n' file 'theme #13' trunk
 printf '  %s\n' "----------------------------------------"
-soma_t=0; soma_m=0
+sum_theme=0; sum_trunk=0
 for f in align.cjs derive.cjs layout.cjs emit.cjs generate.cjs plan.cjs resolve.cjs validate.cjs schema.json; do
-  conta() {  # conta <ref-a>:<caminho-a> <ref-b>:<caminho-b>
+  count_diff() {  # count_diff <ref-a>:<path-a> <ref-b>:<path-b>
     local a b
     a="$TMP/_a"; b="$TMP/_b"
     git -C "$REPO" show "$1" > "$a" 2>/dev/null || : > "$a"
     git -C "$REPO" show "$2" > "$b" 2>/dev/null || : > "$b"
     diff -u "$a" "$b" | grep -c '^[+-][^+-]' || true
   }
-  t="$(conta "$BASE:$P/q11/engine/$f" "$REF:$P/q13/engine/$f")"
-  m="$(conta "$BASE:$P/q11/engine/$f" "$REF:$P/q11/engine/$f")"
-  soma_t=$((soma_t + t)); soma_m=$((soma_m + m))
+  t="$(count_diff "$BASE:$P/q11/engine/$f" "$REF:$P/q13/engine/$f")"
+  m="$(count_diff "$BASE:$P/q11/engine/$f" "$REF:$P/q11/engine/$f")"
+  sum_theme=$((sum_theme + t)); sum_trunk=$((sum_trunk + m))
   printf '  %-16s %10s %10s\n' "$f" "$t" "$m"
 done
 printf '  %s\n' "----------------------------------------"
-printf '  %-16s %10s %10s\n' TOTAL "$soma_t" "$soma_m"
+printf '  %-16s %10s %10s\n' TOTAL "$sum_theme" "$sum_trunk"
 echo
-echo "  Leitura: o candidato com MENOS vermelhos é o tronco; o delta MENOR é o que"
-echo "  se enxerta. As duas colunas apontam para o mesmo lado, e é isso que faz a"
-echo "  decisão ser medida em vez de argumentada."
+echo "  Reading: the candidate with FEWER reds is the trunk; the SMALLER delta is"
+echo "  the one that gets grafted in. Both columns point the same way, and that is"
+echo "  what makes the decision measured instead of argued."

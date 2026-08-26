@@ -53,14 +53,14 @@ const ONLY_DRAGGED = xml =>
 
 const TOUCHED_CONTENT = xml => {
   let x = ONLY_DRAGGED(xml);
-  x = inLastCell(x, 'tratar-falha', c => c.replace('value="SQS · fila de falha"', 'value="SQS · quarentena"'));
+  x = inLastCell(x, 'tratar-falha', c => c.replace('value="SQS · fila de falha"', 'value="SQS · quarantine"'));
   // deleted the read role and the edge that went into it
   x = x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '');
   x = x.replace(/ *<mxCell id="a-confia"[\s\S]*?<\/mxCell>\n/, '');
   // drew a box nobody asked for, on the technical page (the last one)
   const last = x.lastIndexOf('        <object id="panlabs-modelo"');
   return x.slice(0, last) + (
-    '        <mxCell id="waf-do-arquiteto" value="WAF" ' +
+    '        <mxCell id="architect-waf" value="WAF" ' +
     'style="sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;' +
     'verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;aspect=fixed;' +
     'shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.waf;" vertex="1" parent="1">\n' +
@@ -75,20 +75,20 @@ async function describe(label, file) {
   for (const p of opened.pages) {
     const pol = policy(p.state);
     console.log(`     page view=${p.view}  →  ${p.state.toUpperCase()}`);
-    console.log(`       ${pol.diga}`);
-    if (p.state !== 'divergente') continue;
+    console.log(`       ${pol.say}`);
+    if (p.state !== 'divergent') continue;
     const can = canRegenerate(opened.session, p.view);
-    if (!can.pode) { console.log(`       ${can.because}`); continue; }
+    if (!can.can) { console.log(`       ${can.because}`); continue; }
     const ref = await draw(opened.session, p.view);
-    const d = differ(p, readPages(ref.xml).pages[0].celulas);
-    console.log(`       ${d.findings.length} difference(s) — ${d.absorviveis} absorbable, ${d.opacas} opaque:`);
+    const d = differ(p, readPages(ref.xml).pages[0].cells);
+    console.log(`       ${d.findings.length} difference(s) — ${d.absorbable} absorbable, ${d.opaque} opaque:`);
     for (const a of d.findings)
       console.log(`         · ${String(a.kind).padEnd(14)} ${String(a.id).padEnd(20)} ` +
-        `${a.era !== undefined && a.virou !== undefined
-            ? `"${String(a.era).slice(0, 24)}" → "${String(a.virou).slice(0, 24)}"`
-            : a.era !== undefined ? `was "${String(a.era).slice(0, 32)}"`
-            : `came "${String(a.virou).slice(0, 32)}"`}` +
-        `  [${a.classe}${a.onde ? ': ' + a.onde : ''}]`);
+        `${a.was !== undefined && a.became !== undefined
+            ? `"${String(a.was).slice(0, 24)}" → "${String(a.became).slice(0, 24)}"`
+            : a.was !== undefined ? `was "${String(a.was).slice(0, 32)}"`
+            : `came "${String(a.became).slice(0, 32)}"`}` +
+        `  [${a.category}${a.where ? ': ' + a.where : ''}]`);
   }
 }
 

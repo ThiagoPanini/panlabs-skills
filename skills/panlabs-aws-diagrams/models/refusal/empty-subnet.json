@@ -1,0 +1,22 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "empty-subnet",
+  "title": "A subnet vazia — o caso que o #22 mandou mostrar",
+  "subtitle": "Este modelo NÃO gera. Ele existe para provar o que o motor faz quando o fato que ordena não está em lugar nenhum.",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC reservada · 10.60.0.0/16", "cidr": "10.60.0.0/16", "inside": "cloud" },
+
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "eu-west-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "eu-west-1b", "inside": "vpc" },
+
+    { "id": "res-a", "kind": "subnet", "label": "Reserved subnet", "access": "private", "az": "eu-west-1a", "cidr": "10.60.20.0/24", "inside": "vpc" },
+    { "id": "res-b", "kind": "subnet", "label": "Reserved subnet", "access": "private", "az": "eu-west-1b", "cidr": "10.60.21.0/24", "inside": "vpc" },
+
+    { "id": "ecs-a", "kind": "service", "service": "ecs", "label": "API", "inside": "app-a" },
+    { "id": "ecs-b", "kind": "service", "service": "ecs", "label": "API", "inside": "app-b" }
+  ]
+}

@@ -7,26 +7,26 @@ Resolve o ticket
 [Extrair o catálogo de shapes AWS com as correções de cor e container](https://github.com/ThiagoPanini/panlabs-skills/issues/17).
 A matéria-prima foi a pesquisa de shapes do #17. Ela está cristalizada aqui:
 [`aws4.catalog.json`](aws4.catalog.json) é o extrato do `Sidebar-AWS4.js`, e
-[`correcoes.json`](correcoes.json) é o que a pesquisa corrigiu nele.
+[`corrections.json`](corrections.json) é o que a pesquisa corrigiu nele.
 
 > **Decidido: ele mora aqui.** A estrutura da skill deixou de ser névoa — o
 > documento que o agente lê é [`../SKILL.md`](../SKILL.md), com a prosa de
-> operação em [`../guia/`](../guia/), e `catalog/` continua sendo um diretório de
-> código irmão de `motor/`. Quem quiser saber como o motor resolve um nome por
-> aqui: [`../guia/modelo.md`](../guia/modelo.md).
+> operação em [`../guide/`](../guide/), e `catalog/` continua sendo um diretório de
+> código irmão de `engine/`. Quem quiser saber como o motor resolve um nome por
+> aqui: [`../guide/model.md`](../guide/model.md).
 
 ## Os arquivos
 
 | Arquivo | O que é | Gerado? |
 |---|---|---|
 | `aws4.catalog.json` | Espelho **fiel** do que o draw.io entrega: 403 service icons, 606 resource icons, 20 grupos, 30 categorias. | **sim** — não edite |
-| `correcoes.json` | O delta para o que a **AWS prescreve**: cores de paleta legada, `container=1`, renomes, desambiguação. Cada entrada carrega a evidência. | não — escrito à mão |
+| `corrections.json` | O delta para o que a **AWS prescreve**: cores de paleta legada, `container=1`, renomes, desambiguação. Cada entrada carrega a evidência. | não — escrito à mão |
 | `aws-shapes.cjs` | Resolve nome → shape e monta a style. Aplica as correções. Também é CLI. | não |
 | `tools/extract-aws4-catalog.cjs` | Regenera o catálogo a partir de um clone do `jgraph/drawio`. | — |
 | `tools/check-catalog.cjs` | 24 checagens estáticas, incluindo o round-trip. | — |
 | `tools/render-sample.cjs` | Monta a amostra e o manifesto de posições. | — |
-| `tools/verificar-render.py` | Verificação por pixel: cada shape mostra glifo, não caixa vazia. | — |
-| `tests/amostra.drawio` · `.png` · `.manifesto.json` | A amostra renderizada e conferida. | **sim** |
+| `tools/verify-render.py` | Verificação por pixel: cada shape mostra glifo, não caixa vazia. | — |
+| `tests/sample.drawio` · `.png` · `.manifest.json` | A amostra renderizada e conferida. | **sim** |
 
 A separação entre as duas primeiras linhas é o ponto do desenho: **reextrair não
 apaga correção**, e dá para responder "isto é assim porque o draw.io é assim" ou
@@ -35,15 +35,15 @@ apaga correção**, e dá para responder "isto é assim porque o draw.io é assi
 ## Usar
 
 ```js
-const cat = require('./aws-shapes.cjs').carregar();
+const cat = require('./aws-shapes.cjs').load();
 
-cat.servico('lambda');
+cat.service('lambda');
 // { style: 'sketch=0;points=[...];fillColor=#ED7100;...resIcon=mxgraph.aws4.lambda;',
-//   via: 'servico', title: 'Lambda', stencil: 'lambda', fill: '#ED7100', w: 78, h: 78 }
+//   via: 'service', title: 'Lambda', stencil: 'lambda', fill: '#ED7100', w: 78, h: 78 }
 
-cat.servico('opensearch').stencil;   // 'elasticsearch_service'  (nome congelado)
-cat.servico('s3 tables').via;        // 'recurso'                (ícone plano, sem quadrado)
-cat.grupo('Availability Zone').correcoes;
+cat.service('opensearch').stencil;   // 'elasticsearch_service'  (nome congelado)
+cat.service('s3 tables').via;        // 'resource'               (ícone plano, sem quadrado)
+cat.group('Availability Zone').corrections;
 // [ '#147EBA->#00A4A6', 'container=1' ]
 ```
 
@@ -77,12 +77,12 @@ venceria o nome atual. Há checagem para isso.
 | **`container=1` ausente** | 4 grupos saem da sidebar como retângulo puro e **não aninham**: Availability Zone, Security group e os dois Generic group. O ticket nomeia os dois primeiros; os Generic entraram porque é o mesmo defeito. |
 | **Os dois caminhos de ícone** | `resourceIcon` (Service Icon, quadrado colorido) **e** `shape=mxgraph.aws4.<nome>` (Resource Icon plano). Buscar só o primeiro faz o gerador concluir que S3 Tables, EventBridge Pipes/Scheduler e Trainium não existem. |
 | **Renomes congelados** | 24 entradas. O título da paleta acompanha o rename de marketing; o nome do stencil nunca. |
-| **Títulos ambíguos** | 22 títulos existem em mais de uma paleta com cor divergente — e às vezes com **stencil** divergente, ou seja, ícone diferente. 17 resolvidos pelo deck oficial, 1 por coincidência stencil/título, 4 por desempate arbitrário marcado `revisar`. |
+| **Títulos ambíguos** | 22 títulos existem em mais de uma paleta com cor divergente — e às vezes com **stencil** divergente, ou seja, ícone diferente. 17 resolvidos pelo deck oficial, 1 por coincidência stencil/título, 4 por desempate arbitrário marcado `review`. |
 
 O que **não** foi corrigido, de propósito: cinco divergências de `fontColor` que
 são escolha de rótulo do draw.io, não paleta velha. Corrigi-las é decidir a
-camada de estilo — outro ticket. Estão listadas em `correcoes.json`
-sob `divergenciasNaoCorrigidas`, para a decisão ser tomada com a lista na mão.
+camada de estilo — outro ticket. Estão listadas em `corrections.json`
+sob `uncorrectedDivergences`, para a decisão ser tomada com a lista na mão.
 
 ## Compacto, e sem perder nada
 
@@ -98,8 +98,8 @@ produz: **0 divergentes**. Compactar aqui é compressão, não aproximação.
 ## Rodar a suite
 
 ```bash
-./tests/rodar.sh                      # usa /tmp/drawio e ~/.local/opt/drawio/
-./tests/rodar.sh /caminho/do/repo /caminho/do/binario
+./tests/run.sh                      # usa /tmp/drawio e ~/.local/opt/drawio/
+./tests/run.sh /caminho/do/repo /caminho/do/binario
 ```
 
 Três camadas:
@@ -110,7 +110,7 @@ Três camadas:
    coberta. Não precisa renderizar.
 2. **`render-sample.cjs`** — monta uma amostra de 23 service icons, 6 resource
    icons e 12 tipos de grupo, cada grupo com um ícone aninhado dentro.
-3. **`verificar-render.py`** — renderiza e checa **shape a shape**, por pixel.
+3. **`verify-render.py`** — renderiza e checa **shape a shape**, por pixel.
 
 ### "Caixa vazia" tem definição mecânica
 
@@ -154,16 +154,16 @@ git clone --depth 1 --filter=blob:none --sparse https://github.com/jgraph/drawio
 cd /tmp/drawio && git sparse-checkout set src/main/webapp/js/diagramly \
     src/main/webapp/stencils src/main/webapp/shapes src/main/webapp/js/grapheditor
 node tools/extract-aws4-catalog.cjs /tmp/drawio
-./tests/rodar.sh
+./tests/run.sh
 ```
 
-Ao dar bump no deck da AWS, reconferir `paletaLegada` e
-`divergenciasNaoCorrigidas` contra os SVGs novos de `Architecture-Group-Icons`.
+Ao dar bump no deck da AWS, reconferir `legacyPalette` e
+`uncorrectedDivergences` contra os SVGs novos de `Architecture-Group-Icons`.
 
 ## Bugs do upstream registrados
 
 Não são corrigidos aqui — o catálogo espelha o draw.io — mas quem consome
-precisa saber. Estão em `correcoes.json` sob `bugsUpstream`:
+precisa saber. Estão em `corrections.json` sob `bugsUpstream`:
 
 - **`points=` duplicado** em 39 entradas de Management Governance. Cosmético; o
   mxGraph usa a última ocorrência. Normalizado na extração.
@@ -176,7 +176,7 @@ precisa saber. Estão em `correcoes.json` sob `bugsUpstream`:
 - **4 desempates arbitrários** entre paletas: Compute Optimizer, Kinesis Video
   Streams, Quantum Ledger Database, Snowmobile. Nos dois primeiros a própria AWS
   lista o serviço em duas categorias; os dois últimos sumiram do deck por
-  descontinuação. Hoje vale a ordem da paleta, marcada `revisar: true`. Efeito
+  descontinuação. Hoje vale a ordem da paleta, marcada `review: true`. Efeito
   colateral visível: `snowmobile` cai em Migration enquanto Snowball e Snowball
   Edge caem em Storage pelo deck — os irmãos ficam inconsistentes.
 - **5 divergências de `fontColor`** não corrigidas (acima). A mais visível é o

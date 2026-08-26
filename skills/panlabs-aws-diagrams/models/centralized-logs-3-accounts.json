@@ -1,0 +1,32 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "logs-centralizados",
+  "title": "Logs centralizados · fan-in de duas contas",
+  "subtitle": "Vista técnica T5 · o caso que dispara o nível 3 — uma aresta agregada, o texto carregando a cardinalidade",
+  "view": "technical",
+  "genre": "T5",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+
+    { "id": "c-a", "kind": "account", "account": "300000000001", "ou": "Workloads", "label": "Workload A", "inside": "cloud" },
+    { "id": "ecs-a", "kind": "service", "service": "ecs", "label": "ECS A", "inside": "c-a" },
+
+    { "id": "c-b", "kind": "account", "account": "300000000002", "ou": "Workloads", "label": "Workload B", "inside": "cloud" },
+    { "id": "ecs-b", "kind": "service", "service": "ecs", "label": "ECS B", "inside": "c-b" },
+
+    { "id": "c-log", "kind": "account", "account": "300000000003", "ou": "Security", "label": "Log Archive", "inside": "cloud" },
+    { "id": "balde", "kind": "service", "service": "s3", "label": "Log bucket", "inside": "c-log" },
+    { "id": "politica", "kind": "service", "service": "iam", "label": "Bucket policy", "inside": "c-log", "enables": "balde" }
+  ],
+
+  "edges": [
+    { "from": "ecs-a", "to": "balde", "label": "logs de acesso" },
+    { "from": "ecs-b", "to": "balde", "label": "logs de acesso" }
+  ],
+
+  "notes": [
+    { "text": "Duas contas gravando a MESMA coisa no mesmo destino: o motor colapsa em uma aresta entrando de fora, com o texto carregando a cardinalidade — é o que a SRA faz na Log Archive (\"From CloudTrail organization trail\"). Se as duas gravassem coisas diferentes, o rótulo único mentiria e o motor cai no nível 6.", "origin": "legend" },
+    { "text": "A bucket policy é NÓ ANEXADO com seta curta apontando para dentro do bucket, nunca rótulo de aresta (E9). O que marca a travessia de fronteira é onde o habilitador está, não a linha.", "origin": "legend" }
+  ]
+}

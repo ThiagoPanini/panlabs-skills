@@ -1,0 +1,29 @@
+{
+  "schema": "panlabs-aws-diagrams/theme@1",
+  "id": "corporate",
+  "label": "Corporativo sóbrio",
+  "because": "O terceiro tema que o ticket pediu — e o que a régua obrigou a repensar. A ideia natural (fundo off-white institucional) é proibida pela medição: a partir de `#FEFEFE` a paleta AWS começa a cair abaixo de 3:1. Sobra a margem estética REAL, que é a camada da casa: tipografia (Arial normativa, corpo menor, título 24 pt), respiro (densidade 1,25), tinta de seta mais leve (`#545B64`, a que os próprios templates AWS do draw.io usam), cantos vivos como as 156 lâminas do deck, qualificador em itálico (O21) e a linha de revisão técnica dos Reference Architecture PDFs (O24).",
+  "background": "light",
+  "inherits": "light",
+  "text": {
+    "family": "Arial",
+    "label": 11,
+    "group": 12,
+    "edge": 10,
+    "title": 24,
+    "subtitle": 12,
+    "qualifier": true
+  },
+  "edge": {
+    "color": "#545B64",
+    "thickness": 1.4,
+    "tip": "open",
+    "corners": 0,
+    "jumps": "arc",
+    "flow": "solid"
+  },
+  "gap": { "base": 8, "density": 1.25 },
+  "block": { "background": "#FFFFFF", "edge": "#5A6C86", "corners": 0 },
+  "note": { "background": "#FFFFFF", "edge": "#7D8998", "ink": "#232F3E" },
+  "card": { "revision": "Revisado para exatidão técnica em 2026-08-21" }
+}

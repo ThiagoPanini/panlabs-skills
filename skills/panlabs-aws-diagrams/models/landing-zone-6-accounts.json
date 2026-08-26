@@ -1,0 +1,55 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "landing-zone",
+  "title": "Landing zone · seis contas em três OUs",
+  "subtitle": "Vista técnica T5 · o conjunto canônico do AWS SRA — mesmo vocabulário do outro modelo, outro modo de vista",
+  "view": "technical",
+  "genre": "T5",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+
+    { "id": "c-mgmt", "kind": "account", "account": "100000000001", "label": "Org Management", "inside": "cloud" },
+    { "id": "orgs", "kind": "service", "service": "organizations", "label": "Organizations", "inside": "c-mgmt" },
+    { "id": "ct", "kind": "service", "service": "control tower", "label": "Control Tower", "inside": "c-mgmt" },
+
+    { "id": "c-sec", "kind": "account", "account": "100000000002", "ou": "Security", "label": "Security Tooling", "inside": "cloud" },
+    { "id": "hub", "kind": "service", "service": "security hub", "label": "Security Hub", "inside": "c-sec" },
+    { "id": "gd", "kind": "service", "service": "guardduty", "label": "GuardDuty", "inside": "c-sec" },
+
+    { "id": "c-log", "kind": "account", "account": "100000000003", "ou": "Security", "label": "Log Archive", "inside": "cloud" },
+    { "id": "trilha", "kind": "service", "service": "cloudtrail", "label": "CloudTrail", "inside": "c-log" },
+    { "id": "balde", "kind": "service", "service": "s3", "label": "Log bucket", "inside": "c-log" },
+    { "id": "politica", "kind": "service", "service": "iam", "label": "Bucket policy", "inside": "c-log", "enables": "balde" },
+
+    { "id": "c-net", "kind": "account", "account": "100000000004", "ou": "Infrastructure", "label": "Network", "inside": "cloud" },
+    { "id": "tgw", "kind": "service", "service": "transit gateway", "label": "Transit Gateway", "inside": "c-net" },
+    { "id": "vpc-net", "kind": "vpc", "label": "VPC de egresso", "cidr": "10.0.0.0/16", "inside": "c-net" },
+    { "id": "sub-net", "kind": "subnet", "label": "Public subnet", "access": "public", "inside": "vpc-net" },
+    { "id": "nat", "kind": "service", "service": "nat gateway", "label": "NAT gateway", "inside": "sub-net" },
+
+    { "id": "c-shared", "kind": "account", "account": "100000000005", "ou": "Infrastructure", "label": "Shared Services", "inside": "cloud" },
+    { "id": "idc", "kind": "service", "service": "iam identity center", "label": "IAM Identity Center", "inside": "c-shared" },
+    { "id": "r53", "kind": "service", "service": "route 53", "label": "Route 53 resolver", "inside": "c-shared" },
+
+    { "id": "c-app", "kind": "account", "account": "100000000006", "ou": "Workloads", "label": "Application", "inside": "cloud" },
+    { "id": "vpc-app", "kind": "vpc", "label": "VPC de aplicação", "cidr": "10.1.0.0/16", "inside": "c-app" },
+    { "id": "sub-app", "kind": "subnet", "label": "Private subnet", "access": "private", "inside": "vpc-app" },
+    { "id": "ecs", "kind": "service", "service": "ecs", "label": "ECS", "inside": "sub-app" },
+    { "id": "rds", "kind": "service", "service": "rds", "label": "RDS", "inside": "sub-app" }
+  ],
+
+  "edges": [
+    { "from": "trilha", "to": "balde", "label": "grava trilha da organização" },
+    { "from": "ecs", "to": "rds", "label": "consulta", "protocol": "sql" },
+    { "from": "gd", "to": "hub", "label": "findings" },
+    { "from": "ecs", "to": "balde", "label": "logs de acesso" },
+    { "from": "nat", "to": "tgw", "label": "egresso centralizado" },
+    { "from": "idc", "to": "ecs", "label": "acesso federado" }
+  ],
+
+  "notes": [
+    { "text": "As colunas de OU não estão no modelo — cada conta só declara a dimensão \"ou\". O motor decidiu que a declaração agrupa (uma OU com ≥2 contas, e conta fora dela) e desenhou os rótulos, sem caixa: o deck oficial não tem shape de Organizational unit.", "origin": "legend" },
+    { "text": "As travessias de conta foram SUPRIMIDAS nesta vista. É a regra soberana E1 do #6: o diagrama multi-conta carro-chefe da AWS (SRA slide 3, 6 contas) tem zero conectores. Elas aparecem em texto nas vistas de detalhe, uma por conta.", "origin": "legend" }
+  ]
+}

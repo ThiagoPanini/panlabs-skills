@@ -1,0 +1,63 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "logical-support",
+  "title": "Atendimento · capacidades e fronteiras",
+  "subtitle": "L1 · blocos lógicos agrupados por fronteira de responsabilidade, sem passo numerado e sem um nome de serviço",
+  "view": "logical",
+  "genre": "L1",
+
+  "nodes": [
+    { "id": "cliente", "kind": "actor", "service": "users", "label": "Cliente final",
+      "qualifier": "web, app e telefone" },
+    { "id": "atendente", "kind": "actor", "service": "user", "label": "Atendente",
+      "qualifier": "opera pelo console interno" },
+
+    { "id": "canais", "kind": "group", "label": "Canais",
+      "qualifier": "dono: time de experiência" },
+    { "id": "recepcao", "kind": "block", "label": "Recepção de contato", "inside": "canais",
+      "qualifier": "identifica e classifica" },
+    { "id": "roteamento", "kind": "block", "label": "Roteamento de fila", "inside": "canais",
+      "qualifier": "escolhe quem atende" },
+
+    { "id": "nucleo", "kind": "group", "label": "Núcleo de atendimento",
+      "qualifier": "dono: time de operações" },
+    { "id": "caso", "kind": "block", "label": "Gestão de casos", "inside": "nucleo",
+      "qualifier": "abre, transfere, encerra" },
+    { "id": "conhecimento", "kind": "block", "label": "Base de conhecimento", "inside": "nucleo",
+      "qualifier": "respostas revisadas" },
+
+    { "id": "governanca", "kind": "group", "label": "Governança",
+      "qualifier": "dono: jurídico e compliance" },
+    { "id": "trilha", "kind": "block", "label": "Trilha de auditoria", "inside": "governanca",
+      "qualifier": "quem viu o quê, e quando" },
+    { "id": "retencao", "kind": "block", "label": "Política de retenção", "inside": "governanca",
+      "qualifier": "cinco anos, imutável" }
+  ],
+
+  "edges": [
+    { "from": "cliente", "to": "recepcao", "label": "abre contato" },
+    { "from": "recepcao", "to": "roteamento", "label": "classifica" },
+    { "from": "roteamento", "to": "caso", "label": "abre caso" },
+    { "from": "atendente", "to": "caso", "label": "trabalha o caso" },
+    { "from": "caso", "to": "conhecimento", "label": "consulta resposta", "data": "back" },
+    { "from": "caso", "to": "trilha", "label": "registra acesso" },
+    { "from": "trilha", "to": "retencao", "label": "obedece" }
+  ],
+
+  "notes": [
+    { "id": "nota-fronteira",
+      "text": "Os três grupos são fronteiras de RESPONSABILIDADE, não contas AWS (#15 §6). Esta vista é mostrada a produto, jurídico e diretoria — o vocabulário é de capacidade, e nenhum nome de tecnologia aparece.",
+      "origin": "assumption" }
+  ],
+
+  "dossier": {
+    "_comentario": "L1 do corpus do #26: o gênero de blocos lógicos SEM passo numerado, que é o regime em que eixoDaGrade devolve `coluna` e o ELK fica com o grafo inteiro.",
+    "axes": {
+      "E1": "não decidido — a vista lógica é anterior à postura de computação",
+      "E2": "síncrono no contato, assíncrono na trilha",
+      "E3": "casos com histórico longo e retenção legal",
+      "E4": "canal público de entrada, núcleo interno",
+      "E5": "três fronteiras: canais, núcleo, governança"
+    }
+  }
+}

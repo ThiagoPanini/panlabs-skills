@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Checagens estáticas do catálogo. Rodam sem renderizar nada.
+ * Static catalog checks. Run without rendering anything.
  *
- *   node check-catalog.cjs                 # checagens auto-contidas
- *   node check-catalog.cjs /tmp/drawio     # + round-trip contra o upstream
+ *   node check-catalog.cjs                 # self-contained checks
+ *   node check-catalog.cjs /tmp/drawio     # + round-trip against upstream
  *
- * A checagem que mais importa é a de round-trip: prova que guardar
- * `template + (categoria, stencil)` em vez de 1009 strings literais é
- * COMPACTAÇÃO, não perda — todo style reconstruído bate byte a byte com o que
- * o Sidebar-AWS4.js produz.
+ * The check that matters most is the round-trip one: it proves that storing
+ * `template + (category, stencil)` instead of 1009 literal strings is
+ * COMPACTION, not loss — every reconstructed style matches byte for byte what
+ * Sidebar-AWS4.js produces.
  */
 'use strict';
 
@@ -17,194 +17,195 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const dir = path.join(__dirname, '..');
-const { carregar, aplicarTemplate, corrigirGrupo } = require(path.join(dir, 'aws-shapes.cjs'));
+const { load, applyTemplate, fixGroup } = require(path.join(dir, 'aws-shapes.cjs'));
 
-const cat = carregar(dir);
-const catalogo = cat.catalogo;
-const correcoes = cat.correcoes;
+const cat = load(dir);
+const catalog = cat.catalog;
+const corrections = cat.corrections;
 
-const falhas = [];
-const notas = [];
-function checar(nome, ok, detalhe) {
-  if (ok) notas.push(`  ok    ${nome}${detalhe ? ' — ' + detalhe : ''}`);
-  else falhas.push(`  FALHA ${nome}${detalhe ? ' — ' + detalhe : ''}`);
+const failures = [];
+const notes = [];
+function verify(name, ok, detail) {
+  if (ok) notes.push(`  ok    ${name}${detail ? ' — ' + detail : ''}`);
+  else failures.push(`  FAIL  ${name}${detail ? ' — ' + detail : ''}`);
 }
 
-// ------------------------------------------------- 1. integridade do catálogo
+// ------------------------------------------------- 1. catalog integrity
 
-checar('extração sem referência quebrada',
-  catalogo.meta.referenciasQuebradas.length === 0,
-  `${catalogo.meta.stencilsDeclarados} stencils declarados no aws4.xml`);
+verify('extraction has no broken reference',
+  catalog.meta.referenciasQuebradas.length === 0,
+  `${catalog.meta.stencilsDeclarados} stencils declared in aws4.xml`);
 
-const semStencil = [...catalogo.services, ...catalogo.resources].filter(e => !e.stencil);
-checar('toda entrada tem stencil', semStencil.length === 0,
-  semStencil.length ? semStencil.map(e => e.title).join(', ') : `${catalogo.services.length + catalogo.resources.length} entradas`);
+const missingStencil = [...catalog.services, ...catalog.resources].filter(e => !e.stencil);
+verify('every entry has a stencil', missingStencil.length === 0,
+  missingStencil.length ? missingStencil.map(e => e.title).join(', ') : `${catalog.services.length + catalog.resources.length} entries`);
 
-const hexRuim = Object.entries(catalogo.categories)
+const badHex = Object.entries(catalog.categories)
   .filter(([, c]) => !/^#[0-9A-Fa-f]{6}$/.test(c.fill || ''));
-checar('toda categoria tem cor hex válida', hexRuim.length === 0,
-  hexRuim.length ? hexRuim.map(([k]) => k).join(', ') : `${Object.keys(catalogo.categories).length} categorias`);
+verify('every category has a valid hex color', badHex.length === 0,
+  badHex.length ? badHex.map(([k]) => k).join(', ') : `${Object.keys(catalog.categories).length} categories`);
 
-// ------------------------------------------------------- 2. os dois caminhos
+// ------------------------------------------------------- 2. the two paths
 
-// O modo de falha que o ticket nomeia: buscar só por resourceIcon faz o
-// gerador concluir que S3 Tables, EventBridge Pipes/Scheduler e Trainium
-// não existem, e cair no fallback sem necessidade.
-const doisCaminhos = ['s3 tables', 's3 express one zone', 'eventbridge pipes',
-                      'eventbridge scheduler', 'trainium', 'inferentia'];
-for (const nome of doisCaminhos) {
-  const r = cat.servico(nome);
-  checar(`caminho de resource icon: ${nome}`,
-    !!r && r.via.startsWith('recurso'),
-    r ? `${r.title} -> ${r.stencil} (${r.via})` : 'não resolvido');
+// The failure mode the ticket names: looking up only by resourceIcon makes the
+// generator conclude that S3 Tables, EventBridge Pipes/Scheduler and Trainium
+// don't exist, and fall back needlessly.
+const twoPaths = ['s3 tables', 's3 express one zone', 'eventbridge pipes',
+                  'eventbridge scheduler', 'trainium', 'inferentia'];
+for (const name of twoPaths) {
+  const r = cat.service(name);
+  verify(`resource icon path: ${name}`,
+    !!r && r.via.startsWith('resource'),
+    r ? `${r.title} -> ${r.stencil} (${r.via})` : 'not resolved');
 }
 
-// ---------------------------------------------------------- 3. renomes/siglas
+// ---------------------------------------------------------- 3. renames/acronyms
 
-const stencilsConhecidos = new Set(
-  [...catalogo.services, ...catalogo.resources].map(e => e.stencil));
+const knownStencils = new Set(
+  [...catalog.services, ...catalog.resources].map(e => e.stencil));
 
-for (const grupoTabela of ['renomes', 'sinonimos']) {
-  const tabela = correcoes[grupoTabela];
-  const ruins = Object.entries(tabela)
+for (const tableName of ['renames', 'synonyms']) {
+  const table = corrections[tableName];
+  const bad = Object.entries(table)
     .filter(([k]) => !k.startsWith('_'))
-    .filter(([, stencil]) => !stencilsConhecidos.has(stencil));
-  checar(`tabela de ${grupoTabela} aponta só para stencil existente`,
-    ruins.length === 0,
-    ruins.length ? ruins.map(([k, v]) => `${k}->${v}`).join(', ')
-                 : `${Object.keys(tabela).length - 1} entradas`);
+    .filter(([, stencil]) => !knownStencils.has(stencil));
+  verify(`${tableName} table points only to an existing stencil`,
+    bad.length === 0,
+    bad.length ? bad.map(([k, v]) => `${k}->${v}`).join(', ')
+                 : `${Object.keys(table).length - 1} entries`);
 
-  const naoResolve = Object.keys(tabela).filter(k => !k.startsWith('_'))
-    .filter(k => !cat.servico(k));
-  checar(`toda chave de ${grupoTabela} resolve`, naoResolve.length === 0,
-    naoResolve.join(', ') || 'todas');
+  const unresolved = Object.keys(table).filter(k => !k.startsWith('_'))
+    .filter(k => !cat.service(k));
+  verify(`every ${tableName} key resolves`, unresolved.length === 0,
+    unresolved.join(', ') || 'all');
 
-  // Resolver != apontar. "sagemaker" apontava certo na tabela e resolvia
-  // errado, porque o título obsoleto de OUTRO serviço casava antes.
-  const desviou = Object.entries(tabela)
+  // Resolving != pointing. "sagemaker" pointed correctly in the table and
+  // resolved wrong, because another service's obsolete title matched first.
+  const drifted = Object.entries(table)
     .filter(([k]) => !k.startsWith('_'))
     .filter(([k, stencil]) => {
-      const r = cat.servico(k);
+      const r = cat.service(k);
       return !r || r.stencil !== stencil;
     });
-  checar(`toda chave de ${grupoTabela} resolve PARA O STENCIL DECLARADO`,
-    desviou.length === 0,
-    desviou.map(([k, v]) => `${k}: esperado ${v}, veio ${(cat.servico(k) || {}).stencil}`).join('; ')
-      || 'todas');
+  verify(`every ${tableName} key resolves TO THE DECLARED STENCIL`,
+    drifted.length === 0,
+    drifted.map(([k, v]) => `${k}: expected ${v}, got ${(cat.service(k) || {}).stencil}`).join('; ')
+      || 'all');
 }
 
-// ------------------------------------------------------------- 4. correções
+// ------------------------------------------------------------- 4. corrections
 
-const legados = Object.keys(correcoes.paletaLegada).filter(k => !k.startsWith('_'));
-let corrigidos = 0, semContainer = [], comLegado = [];
+const legacyColors = Object.keys(corrections.legacyPalette).filter(k => !k.startsWith('_'));
+let corrected = 0, missingContainer = [], withLegacy = [];
 
-for (const g of catalogo.groups) {
-  const r = cat.grupo(g.title);
-  if (!r) { falhas.push(`  FALHA grupo não resolve: ${g.title}`); continue; }
-  if (!/(^|;)container=1(;|$)/.test(r.style)) semContainer.push(g.title);
-  for (const l of legados) if (r.style.includes(l)) comLegado.push(`${g.title}:${l}`);
-  if (r.correcoes.length) corrigidos++;
+for (const g of catalog.groups) {
+  const r = cat.group(g.title);
+  if (!r) { failures.push(`  FAIL  group does not resolve: ${g.title}`); continue; }
+  if (!/(^|;)container=1(;|$)/.test(r.style)) missingContainer.push(g.title);
+  for (const l of legacyColors) if (r.style.includes(l)) withLegacy.push(`${g.title}:${l}`);
+  if (r.corrections.length) corrected++;
 }
 
-checar('nenhum grupo sem container=1 depois da correção',
-  semContainer.length === 0, semContainer.join(', ') || `${catalogo.groups.length} grupos`);
-checar('nenhuma cor da paleta pré-2022 sobrevive num grupo',
-  comLegado.length === 0, comLegado.join(', ') || legados.join(' '));
-checar('as correções de fato pegaram', corrigidos > 0, `${corrigidos} grupos corrigidos`);
+verify('no group without container=1 after correction',
+  missingContainer.length === 0, missingContainer.join(', ') || `${catalog.groups.length} groups`);
+verify('no pre-2022 palette color survives on a group',
+  withLegacy.length === 0, withLegacy.join(', ') || legacyColors.join(' '));
+verify('the corrections actually took effect', corrected > 0, `${corrected} groups corrected`);
 
-// Os grupos que o upstream entrega sem container=1 (pesquisa §3.5).
-const semContainerUpstream = catalogo.groups
+// The groups upstream delivers without container=1 (research §3.5).
+const missingContainerUpstream = catalog.groups
   .filter(g => !/container=1/.test(g.style)).map(g => g.title);
-checar('os 4 retângulos puros do upstream foram identificados',
-  semContainerUpstream.length === 4, semContainerUpstream.join(', '));
+verify('the 4 plain rectangles from upstream were identified',
+  missingContainerUpstream.length === 4, missingContainerUpstream.join(', '));
 
-// ------------------------------------------------------- 4b. desambiguação
+// ------------------------------------------------------- 4b. disambiguation
 
-// Um título de service icon que aparece em duas paletas com cor (ou stencil)
-// diferente é uma bomba-relógio: sem tabela, a escolha vira ordem de paleta.
-const porTitulo = new Map();
-for (const s of catalogo.services) {
-  const n = cat.normalizar(s.title);
-  if (!porTitulo.has(n)) porTitulo.set(n, []);
-  porTitulo.get(n).push(s);
+// A service icon title that appears in two palettes with a different color
+// (or stencil) is a time bomb: without a table, the choice becomes palette
+// order.
+const byTitle = new Map();
+for (const s of catalog.services) {
+  const n = cat.normalize(s.title);
+  if (!byTitle.has(n)) byTitle.set(n, []);
+  byTitle.get(n).push(s);
 }
-const corDe = e => e.fill || cat.corDaCategoria(e.palette);
-const ambiguos = [...porTitulo.entries()]
-  .filter(([, v]) => new Set(v.map(corDe)).size > 1 || new Set(v.map(e => e.stencil)).size > 1)
+const colorOf = e => e.fill || cat.categoryColor(e.palette);
+const ambiguous = [...byTitle.entries()]
+  .filter(([, v]) => new Set(v.map(colorOf)).size > 1 || new Set(v.map(e => e.stencil)).size > 1)
   .map(([k]) => k);
 
-const semTabela = ambiguos.filter(k => !correcoes.desambiguacao[k]);
-checar('todo título ambíguo tem entrada de desambiguação',
-  semTabela.length === 0, semTabela.join(', ') || `${ambiguos.length} títulos ambíguos cobertos`);
+const missingTable = ambiguous.filter(k => !corrections.disambiguation[k]);
+verify('every ambiguous title has a disambiguation entry',
+  missingTable.length === 0, missingTable.join(', ') || `${ambiguous.length} ambiguous titles covered`);
 
-const desRuins = Object.entries(correcoes.desambiguacao)
+const badDisambiguation = Object.entries(corrections.disambiguation)
   .filter(([k]) => !k.startsWith('_'))
   .filter(([k, d]) => {
-    const r = cat.servico(k);
+    const r = cat.service(k);
     return !r || r.stencil !== d.stencil || r.palette !== d.palette;
   });
-checar('desambiguação de fato governa a resolução', desRuins.length === 0,
-  desRuins.map(([k]) => k).join(', ') ||
-  `${Object.keys(correcoes.desambiguacao).length - 1} entradas`);
+verify('disambiguation actually governs resolution', badDisambiguation.length === 0,
+  badDisambiguation.map(([k]) => k).join(', ') ||
+  `${Object.keys(corrections.disambiguation).length - 1} entries`);
 
-const arbitrarios = Object.entries(correcoes.desambiguacao)
-  .filter(([k, d]) => !k.startsWith('_') && d.revisar).map(([k]) => k);
-notas.push(`  --    ${arbitrarios.length} desempates arbitrários abertos: ${arbitrarios.join(', ')}`);
+const openTieBreaks = Object.entries(corrections.disambiguation)
+  .filter(([k, d]) => !k.startsWith('_') && d.review).map(([k]) => k);
+notes.push(`  --    ${openTieBreaks.length} open arbitrary tie-breaks: ${openTieBreaks.join(', ')}`);
 
-// ------------------------------------------------- 5. round-trip (precisa repo)
+// ------------------------------------------------- 5. round-trip (needs a repo)
 
 const repo = process.argv[2];
 if (repo && fs.existsSync(repo)) {
-  const tmp = path.join(require('os').tmpdir(), `catalogo-roundtrip-${process.pid}.json`);
+  const tmp = path.join(require('os').tmpdir(), `catalog-roundtrip-${process.pid}.json`);
   execFileSync('node', [path.join(__dirname, 'extract-aws4-catalog.cjs'), repo, tmp],
     { stdio: ['ignore', 'ignore', 'ignore'] });
-  const fresco = JSON.parse(fs.readFileSync(tmp, 'utf8'));
+  const fresh = JSON.parse(fs.readFileSync(tmp, 'utf8'));
   fs.unlinkSync(tmp);
 
-  checar('reextração é determinística',
-    JSON.stringify(fresco) === JSON.stringify(catalogo),
-    'mesmo commit -> mesmo JSON');
+  verify('re-extraction is deterministic',
+    JSON.stringify(fresh) === JSON.stringify(catalog),
+    'same commit -> same JSON');
 
-  // Reconstrói cada style a partir do template e compara com o upstream.
-  let divergentes = 0, literais = 0, reconstruidos = 0;
-  for (const [lista, tplKey] of [[catalogo.services, 'svc'], [catalogo.resources, 'res']]) {
-    for (const e of lista) {
-      if (e.style) { literais++; continue; }       // guardado verbatim, nada a reconstruir
-      const fill = e.fill || cat.corDaCategoria(e.palette);
-      const montado = aplicarTemplate(catalogo.templates[tplKey].style, { fill, stencil: e.stencil });
-      const upstream = (tplKey === 'svc' ? fresco.services : fresco.resources)
+  // Reconstructs each style from the template and compares it with upstream.
+  let divergent = 0, literal = 0, reconstructed = 0;
+  for (const [list, tplKey] of [[catalog.services, 'svc'], [catalog.resources, 'res']]) {
+    for (const e of list) {
+      if (e.style) { literal++; continue; }       // stored verbatim, nothing to reconstruct
+      const fill = e.fill || cat.categoryColor(e.palette);
+      const built = applyTemplate(catalog.templates[tplKey].style, { fill, stencil: e.stencil });
+      const upstream = (tplKey === 'svc' ? fresh.services : fresh.resources)
         .find(x => x.stencil === e.stencil && x.title === e.title && x.palette === e.palette);
-      const esperado = upstream && upstream.style
+      const expected = upstream && upstream.style
         ? upstream.style
-        : aplicarTemplate(fresco.templates[tplKey].style,
-            { fill: upstream.fill || (fresco.categories[upstream.palette] || {}).fill, stencil: upstream.stencil });
-      if (montado !== esperado) divergentes++; else reconstruidos++;
+        : applyTemplate(fresh.templates[tplKey].style,
+            { fill: upstream.fill || (fresh.categories[upstream.palette] || {}).fill, stencil: upstream.stencil });
+      if (built !== expected) divergent++; else reconstructed++;
     }
   }
-  checar('round-trip: style reconstruído == style do upstream',
-    divergentes === 0,
-    `${reconstruidos} reconstruídos, ${literais} literais, ${divergentes} divergentes`);
+  verify('round-trip: reconstructed style == upstream style',
+    divergent === 0,
+    `${reconstructed} reconstructed, ${literal} literal, ${divergent} divergent`);
 
-  // Todo stencil citado existe no aws4.xml.
+  // Every cited stencil exists in aws4.xml.
   const xml = fs.readFileSync(path.join(repo, 'src/main/webapp/stencils/aws4.xml'), 'utf8');
-  const declarados = new Set([...xml.matchAll(/<shape [^>]*name="([^"]*)"/g)]
+  const declared = new Set([...xml.matchAll(/<shape [^>]*name="([^"]*)"/g)]
     .map(m => m[1].replace(/ /g, '_').toLowerCase()));
-  const citados = new Set([...stencilsConhecidos,
-    ...catalogo.groups.filter(g => g.grIcon).map(g => g.grIcon)]);
-  const ausentes = [...citados].filter(s => !declarados.has(s));
-  checar('todo stencil citado existe em aws4.xml', ausentes.length === 0,
-    ausentes.join(', ') || `${citados.size} stencils`);
+  const cited = new Set([...knownStencils,
+    ...catalog.groups.filter(g => g.grIcon).map(g => g.grIcon)]);
+  const missing = [...cited].filter(s => !declared.has(s));
+  verify('every cited stencil exists in aws4.xml', missing.length === 0,
+    missing.join(', ') || `${cited.size} stencils`);
 } else {
-  notas.push('  --    round-trip pulado (passe o caminho do repo do draw.io para rodá-lo)');
+  notes.push('  --    round-trip skipped (pass the draw.io repo path to run it)');
 }
 
-// ----------------------------------------------------------------- resultado
+// ----------------------------------------------------------------- result
 
-console.log(`catálogo aws4 — draw.io ${catalogo.meta.drawio && catalogo.meta.drawio.version}, commit ${(catalogo.meta.commit || '').slice(0, 8)}`);
-console.log(notas.join('\n'));
-if (falhas.length) {
-  console.log(falhas.join('\n'));
-  console.log(`\n${falhas.length} falha(s).`);
+console.log(`aws4 catalog — draw.io ${catalog.meta.drawio && catalog.meta.drawio.version}, commit ${(catalog.meta.commit || '').slice(0, 8)}`);
+console.log(notes.join('\n'));
+if (failures.length) {
+  console.log(failures.join('\n'));
+  console.log(`\n${failures.length} failure(s).`);
   process.exit(1);
 }
-console.log(`\ntodas as ${notas.filter(n => n.includes('ok ')).length} checagens passaram.`);
+console.log(`\nall ${notes.filter(n => n.includes('ok ')).length} checks passed.`);

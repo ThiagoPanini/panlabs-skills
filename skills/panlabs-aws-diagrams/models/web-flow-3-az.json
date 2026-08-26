@@ -1,0 +1,53 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "web-flow-3-az",
+  "title": "Web · fluxo numerado sobre três zonas",
+  "subtitle": "Vista técnica T4 · o mesmo motor do web-multi-az, com passo numerado — e o eixo da grade muda por regra",
+  "view": "technical",
+  "genre": "T4",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
+
+    { "id": "pub-a", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "pub-b", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "pub-c", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1c", "inside": "vpc" },
+
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "app-c", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1c", "inside": "vpc" },
+
+    { "id": "dado-a", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "dado-b", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "dado-c", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1c", "inside": "vpc" },
+
+    { "id": "alb-a", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-a" },
+    { "id": "alb-b", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-b" },
+    { "id": "alb-c", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-c" },
+
+    { "id": "ec2-a", "kind": "service", "service": "ec2", "label": "EC2", "inside": "app-a" },
+    { "id": "ec2-b", "kind": "service", "service": "ec2", "label": "EC2", "inside": "app-b" },
+    { "id": "ec2-c", "kind": "service", "service": "ec2", "label": "EC2", "inside": "app-c" },
+
+    { "id": "rds-a", "kind": "service", "service": "rds", "label": "RDS primária", "inside": "dado-a" },
+    { "id": "rds-b", "kind": "service", "service": "rds", "label": "RDS standby", "inside": "dado-b" },
+    { "id": "cache-c", "kind": "service", "service": "elasticache", "label": "ElastiCache", "inside": "dado-c" }
+  ],
+
+  "edges": [
+    { "from": "alb-a", "to": "ec2-a", "label": "encaminha", "order": 1 },
+    { "from": "alb-b", "to": "ec2-b", "label": "encaminha", "order": 2 },
+    { "from": "ec2-a", "to": "rds-a", "label": "grava", "protocol": "sql", "order": 3 },
+    { "from": "ec2-b", "to": "rds-a", "label": "grava", "protocol": "sql", "order": 4 },
+    { "from": "ec2-c", "to": "rds-a", "label": "grava", "protocol": "sql", "order": 5 }
+  ],
+
+  "bands": [
+    { "id": "asg", "kind": "auto-scaling", "label": "Auto Scaling group", "members": ["ec2-a", "ec2-b", "ec2-c"] }
+  ],
+
+  "notes": [
+    { "text": "Nem as raias de zona nem o eixo estão no modelo. O motor derivou que a arquitetura afirma redundância zonal (#19) e que há passo numerado — e o #21 diz que a dimensão ORDENADA fica com a horizontal, então a zona virou raia empilhada. O web-multi-az, sem passo numerado, continua com a zona em coluna.", "origin": "legend" }
+  ]
+}

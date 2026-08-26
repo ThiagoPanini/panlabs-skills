@@ -112,11 +112,11 @@ expect "a fence opened and never closed turns red" red "SKILL.md has a code fenc
 # `references.sh` already established that a skill's other Markdown is read by
 # the agent too, not just SKILL.md. An open fence anywhere in the tree
 # swallows the same way.
-mkdir -p "$PROOF_BENCH/fence-open-nested/guia"
+mkdir -p "$PROOF_BENCH/fence-open-nested/guide"
 skill_md 0 > "$PROOF_BENCH/fence-open-nested/SKILL.md"
-printf -- '# notes\n\n```text\nunterminated\n' > "$PROOF_BENCH/fence-open-nested/guia/notes.md"
+printf -- '# notes\n\n```text\nunterminated\n' > "$PROOF_BENCH/fence-open-nested/guide/notes.md"
 out="$("$CHECK" "$PROOF_BENCH/fence-open-nested" 2>&1)"; code=$?
-expect "an open fence outside SKILL.md turns red too" red "guia/notes.md has a code fence that never closes" "$out" "$code"
+expect "an open fence outside SKILL.md turns red too" red "guide/notes.md has a code fence that never closes" "$out" "$code"
 
 # ── 11 . THE TWO VERBS ────────────────────────────────────────────────────────
 out="$("$CHECK" --describe 2>&1)"; code=$?

@@ -1,0 +1,11 @@
+{
+  "schema": "panlabs-aws-diagrams/theme@1",
+  "id": "trap",
+  "label": "Armadilha (rejeitado pelo portão)",
+  "because": "Um tema DIZÍVEL e ERRADO, de propósito. Pede o off-white corporativo que todo mundo pede (`#F2F3F5`), tinta cinza-clara elegante e seta fininha. Nenhuma linha aqui é proibida pelo vocabulário — e é exatamente por isso que ele existe: mostra o que o vocabulário fechado NÃO alcança e o portão de contraste alcança. Gerado só com `--force`.",
+  "background": "light",
+  "inherits": "light",
+  "page": { "color": "#F2F3F5", "margin": 32 },
+  "ink": { "strong": "#5A6C86", "weak": "#AAB7B8", "halo": "#F2F3F5" },
+  "edge": { "color": "#AAB7B8", "thickness": 1.0, "tip": "open", "corners": 12, "jumps": "arc", "flow": "dashed" }
+}

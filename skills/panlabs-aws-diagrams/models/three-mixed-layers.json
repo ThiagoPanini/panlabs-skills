@@ -1,0 +1,32 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "three-mixed-layers",
+  "title": "Três andares, e uma subnet que mistura dois",
+  "subtitle": "A regra de mistura: vence o membro mais fundo. A Analytics subnet guarda ECS e Redshift — e é lida como dados.",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC analítica · 10.40.0.0/16", "cidr": "10.40.0.0/16", "inside": "cloud" },
+
+    { "id": "fw-a", "kind": "subnet", "label": "Firewall subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "fw-b", "kind": "subnet", "label": "Firewall subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "worker-a", "kind": "subnet", "label": "Worker subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "worker-b", "kind": "subnet", "label": "Worker subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+    { "id": "ana-a", "kind": "subnet", "label": "Analytics subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "ana-b", "kind": "subnet", "label": "Analytics subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+
+    { "id": "nfw-a", "kind": "service", "service": "network firewall", "label": "Inspeção", "inside": "fw-a" },
+    { "id": "nfw-b", "kind": "service", "service": "network firewall", "label": "Inspeção", "inside": "fw-b" },
+    { "id": "wecs-a", "kind": "service", "service": "ecs", "label": "Workers", "inside": "worker-a" },
+    { "id": "wecs-b", "kind": "service", "service": "ecs", "label": "Workers", "inside": "worker-b" },
+    { "id": "aecs-a", "kind": "service", "service": "ecs", "label": "Job de carga", "inside": "ana-a" },
+    { "id": "rs-a", "kind": "service", "service": "redshift", "label": "Redshift", "inside": "ana-a" },
+    { "id": "rs-b", "kind": "service", "service": "redshift", "label": "Redshift", "inside": "ana-b" }
+  ],
+
+  "notes": [
+    { "text": "Por rótulo a ordem seria Analytics, Firewall, Worker — os três andares embaralhados. Por conteúdo sai Firewall (borda), Worker (aplicação), Analytics (dados). A Analytics guarda ECS E Redshift; vence o mais fundo, porque a regra existe para impedir que subnet com dado suba.", "origin": "legend" }
+  ]
+}

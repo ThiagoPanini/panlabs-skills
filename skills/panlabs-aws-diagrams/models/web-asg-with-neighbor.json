@@ -1,0 +1,36 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "web-asg-with-neighbor",
+  "title": "Web · Auto Scaling group com vizinho de subnet",
+  "subtitle": "T4 · dois membros do ASG em AZs distintas, um terceiro serviço na subnet do primeiro deles",
+  "view": "technical",
+  "genre": "T4",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
+
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+
+    { "id": "web-a", "kind": "service", "service": "ec2", "label": "EC2 · web", "inside": "app-a" },
+    { "id": "fraude-a", "kind": "service", "service": "lambda", "label": "Lambda · antifraude", "inside": "app-a" },
+    { "id": "web-b", "kind": "service", "service": "ec2", "label": "EC2 · web", "inside": "app-b" }
+  ],
+
+  "edges": [
+    { "from": "web-a", "to": "fraude-a", "label": "pontua o risco", "order": 1 },
+    { "from": "web-a", "to": "web-b", "label": "sincroniza sessão", "order": 2 }
+  ],
+
+  "bands": [
+    { "id": "asg-web", "kind": "auto-scaling", "label": "Auto Scaling group", "members": ["web-a", "web-b"] }
+  ],
+
+  "notes": [
+    {
+      "text": "fraude-a mora na mesma subnet de web-a e NÃO escala com o grupo. Na grade, a faixa é a união das subnets inteiras dos membros (app-a e app-b) — sem degradar, qualquer vizinho de web-a cairia dentro da caixa. É o caso frequente do #31: aqui a faixa vira rótulo em vez de afirmar um atributo que fraude-a não tem.",
+      "origin": "legend"
+    }
+  ]
+}

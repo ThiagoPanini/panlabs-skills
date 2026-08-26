@@ -1,0 +1,26 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "declared-empty-subnet",
+  "title": "A subnet vazia, depois do escape",
+  "subtitle": "Mesmo modelo que a grade recusou, com uma linha a mais: camada declarada na subnet que não guarda nada.",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC reservada · 10.60.0.0/16", "cidr": "10.60.0.0/16", "inside": "cloud" },
+
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "eu-west-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "eu-west-1b", "inside": "vpc" },
+
+    { "id": "res-a", "kind": "subnet", "label": "Reserved subnet", "access": "private", "az": "eu-west-1a", "layer": "data", "cidr": "10.60.20.0/24", "inside": "vpc" },
+    { "id": "res-b", "kind": "subnet", "label": "Reserved subnet", "access": "private", "az": "eu-west-1b", "layer": "data", "cidr": "10.60.21.0/24", "inside": "vpc" },
+
+    { "id": "ecs-a", "kind": "service", "service": "ecs", "label": "API", "inside": "app-a" },
+    { "id": "ecs-b", "kind": "service", "service": "ecs", "label": "API", "inside": "app-b" }
+  ],
+
+  "notes": [
+    { "text": "As duas subnets de baixo estão vazias de propósito — são o range reservado para o banco que ainda não existe. Sem 'camada' declarada o motor recusa o modelo inteiro, e a mensagem nomeia exatamente estas duas. Declarada, ele desenha: o escape é semântico ('que andar de rede'), nunca posicional.", "origin": "assumption" }
+  ]
+}

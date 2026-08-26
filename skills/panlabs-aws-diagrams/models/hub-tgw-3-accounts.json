@@ -1,0 +1,34 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "hub-tgw",
+  "title": "Hub de rede · o mesmo vínculo para duas contas",
+  "subtitle": "Vista técnica T5 · o caso que dispara o nível 4 da hierarquia do #6 — barramento, 1 linha + N stubs",
+  "view": "technical",
+  "genre": "T5",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+
+    { "id": "c-net", "kind": "account", "account": "200000000001", "ou": "Infrastructure", "label": "Network", "inside": "cloud" },
+    { "id": "tgw", "kind": "service", "service": "transit gateway", "label": "Transit Gateway", "inside": "c-net" },
+
+    { "id": "c-a", "kind": "account", "account": "200000000002", "ou": "Workloads", "label": "Workload A", "inside": "cloud" },
+    { "id": "vpc-a", "kind": "vpc", "label": "VPC A", "cidr": "10.1.0.0/16", "inside": "c-a" },
+    { "id": "sub-a", "kind": "subnet", "label": "Private subnet", "access": "private", "inside": "vpc-a" },
+    { "id": "ecs-a", "kind": "service", "service": "ecs", "label": "ECS A", "inside": "sub-a" },
+
+    { "id": "c-b", "kind": "account", "account": "200000000003", "ou": "Workloads", "label": "Workload B", "inside": "cloud" },
+    { "id": "vpc-b", "kind": "vpc", "label": "VPC B", "cidr": "10.2.0.0/16", "inside": "c-b" },
+    { "id": "sub-b", "kind": "subnet", "label": "Private subnet", "access": "private", "inside": "vpc-b" },
+    { "id": "ecs-b", "kind": "service", "service": "ecs", "label": "ECS B", "inside": "sub-b" }
+  ],
+
+  "edges": [
+    { "from": "tgw", "to": "ecs-a", "label": "atracamento VPC" },
+    { "from": "tgw", "to": "ecs-b", "label": "atracamento VPC" }
+  ],
+
+  "notes": [
+    { "text": "As duas travessias saem da MESMA origem e carregam o MESMO vínculo — e é a segunda condição que autoriza o barramento. Mesma origem com vínculos diferentes cai no nível 6 (aresta direta), porque uma barra ligando coisas diferentes afirmaria que as duas contas recebem a mesma coisa.", "origin": "legend" }
+  ]
+}

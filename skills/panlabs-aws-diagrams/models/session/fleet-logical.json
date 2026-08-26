@@ -1,0 +1,306 @@
+{
+  "schema": "panlabs-aws-diagrams/session@1",
+  "id": "predictive-fleet",
+  "title": "Frota · manutenção preditiva",
+  "stage": "logical",
+  "vistas": {
+    "logical": {
+      "genre": "L2",
+      "title": "Frota · manutenção preditiva · vista lógica",
+      "subtitle": "Capacidades e fronteiras de responsabilidade — zero nome de serviço AWS. O caso ponta a ponta do #26."
+    },
+    "technical": {
+      "genre": "T3",
+      "title": "Frota · manutenção preditiva · vista técnica",
+      "subtitle": "T3 event-driven · a MESMA vista aprovada, agora com serviços AWS e um nível de rede que a lógica não tem."
+    }
+  },
+  "nodes": [
+    {
+      "id": "veiculo",
+      "label": "Caminhões",
+      "logical": {
+        "kind": "actor",
+        "note": "1.200 veículos, telemetria a cada 30 s"
+      }
+    },
+    {
+      "id": "oficina",
+      "label": "Oficinas",
+      "logical": {
+        "kind": "actor",
+        "note": "34 pontos próprios"
+      }
+    },
+    {
+      "id": "coleta",
+      "label": "Coleta",
+      "logical": {
+        "kind": "group",
+        "note": "dono: engenharia embarcada"
+      }
+    },
+    {
+      "id": "analise",
+      "label": "Análise",
+      "logical": {
+        "kind": "group",
+        "note": "dono: time de dados"
+      }
+    },
+    {
+      "id": "acao",
+      "label": "Ação",
+      "logical": {
+        "kind": "group",
+        "note": "dono: operações de fleet"
+      }
+    },
+    {
+      "id": "receber-telemetria",
+      "label": "Recepção de telemetria",
+      "inside": "coleta",
+      "logical": {
+        "kind": "block",
+        "note": "aceita lote e tempo real"
+      }
+    },
+    {
+      "id": "guardar-serie",
+      "label": "Série histórica",
+      "inside": "coleta",
+      "logical": {
+        "kind": "block",
+        "note": "dois anos, consultável por veículo"
+      }
+    },
+    {
+      "id": "detectar-anomalia",
+      "label": "Detecção de anomalia",
+      "inside": "analise",
+      "logical": {
+        "kind": "block",
+        "note": "regra simples sobre a janela"
+      }
+    },
+    {
+      "id": "pontuar-risco",
+      "label": "Pontuação de risco",
+      "inside": "analise",
+      "logical": {
+        "kind": "block",
+        "note": "modelo treinado, roda por veículo"
+      }
+    },
+    {
+      "id": "abrir-ordem",
+      "label": "Abertura de ordem",
+      "inside": "acao",
+      "logical": {
+        "kind": "block",
+        "note": "só acima do corte de risco"
+      }
+    },
+    {
+      "id": "avisar-oficina",
+      "label": "Aviso à oficina",
+      "inside": "acao",
+      "logical": {
+        "kind": "block",
+        "note": "canal único, com confirmação"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "a-envia",
+      "from": "veiculo",
+      "to": "receber-telemetria",
+      "label": "envia telemetria",
+      "order": 1
+    },
+    {
+      "id": "a-grava",
+      "from": "receber-telemetria",
+      "to": "guardar-serie",
+      "label": "grava a série",
+      "order": 2
+    },
+    {
+      "id": "a-le",
+      "from": "detectar-anomalia",
+      "to": "guardar-serie",
+      "label": "lê a janela",
+      "data": "back",
+      "order": 3
+    },
+    {
+      "id": "a-pontua",
+      "from": "detectar-anomalia",
+      "to": "pontuar-risco",
+      "label": "anomalia encontrada",
+      "order": 4
+    },
+    {
+      "id": "a-abre",
+      "from": "pontuar-risco",
+      "to": "abrir-ordem",
+      "label": "risco acima do corte",
+      "order": 5
+    },
+    {
+      "id": "a-avisa",
+      "from": "abrir-ordem",
+      "to": "avisar-oficina",
+      "label": "ordem aberta",
+      "order": 6
+    },
+    {
+      "id": "a-alerta",
+      "from": "avisar-oficina",
+      "to": "oficina",
+      "label": "alerta com prazo",
+      "order": 7
+    }
+  ],
+  "notes": [
+    {
+      "id": "n-fronteira",
+      "origin": "assumption",
+      "text": "Os três grupos são fronteiras de RESPONSABILIDADE, não contas AWS (#15 §6). Esta vista foi a que a diretoria aprovou."
+    },
+    {
+      "id": "n-spof",
+      "origin": "rejected-finding",
+      "about": "receber-telemetria",
+      "text": "Ponto único de recepção conhecido e aceito: um caminho de entrada só, sem par. A fleet tolera 30 min de buffer no veículo, e o time aceitou para a fase 1 (2026-08)."
+    }
+  ],
+  "dossier": {
+    "facts": [
+      {
+        "fact": "1.200 veículos, telemetria a cada 30 s",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "o caminhão guarda 30 min de leitura se perder o link",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "a oficina precisa de 48 h de antecedência para agendar",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "hoje a manutenção é por quilometragem, não por condição",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "não há requisito de multi-região",
+        "provenance": "inferred",
+        "confirmed": true,
+        "from": "\"a operação é só Brasil\", na ata da reunião de 12/08"
+      },
+      {
+        "fact": "a série tem de durar dois anos para treinar o modelo",
+        "provenance": "inferred",
+        "confirmed": true,
+        "from": "\"o pessoal de dados falou em dois ciclos de revisão\""
+      }
+    ],
+    "candidates": [
+      {
+        "id": "cand-a",
+        "name": "Fluxo contínuo com pontuação por veículo",
+        "state": "chosen",
+        "tuple": [
+          "gerenciado-sem-compute",
+          "evento",
+          "serie-temporal",
+          "privado",
+          "tres-fronteiras"
+        ],
+        "buys": "o alerta sai minutos depois da leitura, que é o que a antecedência de 48 h exige",
+        "pays": "custo por evento, e um modelo que precisa ser retreinado",
+        "chooseIf": "a antecedência importa mais que o custo por leitura",
+        "wrongIf": "a fleet crescer para dezenas de milhares e o custo por evento dominar"
+      },
+      {
+        "id": "cand-b",
+        "name": "Lote noturno sobre a série",
+        "state": "discarded",
+        "tuple": [
+          "gerenciado-sem-compute",
+          "lote-agendado",
+          "serie-temporal",
+          "privado",
+          "tres-fronteiras"
+        ],
+        "differsIn": [
+          "E2"
+        ],
+        "buys": "custo muito menor e operação mais simples",
+        "pays": "até 24 h de atraso entre a leitura e o alerta",
+        "chooseIf": "48 h de antecedência forem folgadas",
+        "wrongIf": "a falha se desenvolver em menos de um dia",
+        "because": "a antecedência de 48 h não sobrevive a um atraso de até 24 h — sobra meio dia para a oficina agendar, e o fato perguntado diz que não dá."
+      },
+      {
+        "id": "cand-c",
+        "name": "Pontuação no próprio veículo",
+        "state": "discarded",
+        "tuple": [
+          "computacao-na-borda",
+          "evento",
+          "serie-temporal",
+          "hibrido",
+          "duas-fronteiras"
+        ],
+        "differsIn": [
+          "E1",
+          "E4",
+          "E5"
+        ],
+        "buys": "funciona sem link, e manda só o alerta em vez da série inteira",
+        "pays": "atualizar modelo em 1.200 veículos, e perder a série que treina o próximo",
+        "chooseIf": "a conectividade for ruim a ponto de a série não chegar",
+        "wrongIf": "for preciso retreinar com frequência",
+        "because": "o fato de que a série tem de durar dois anos para treinar mata a variante: pontuar na borda e não trazer a leitura joga fora exatamente o insumo do modelo."
+      }
+    ],
+    "findings": [
+      {
+        "rule": "spof",
+        "target": "receber-telemetria",
+        "state": "rejected",
+        "at": "2026-08-23",
+        "viaNote": "n-spof",
+        "note": "sem par, e é o único caminho do caminhão até 5 outros componentes. Aceito: o veículo tem 30 min de buffer."
+      },
+      {
+        "rule": "spof",
+        "target": "avisar-oficina",
+        "state": "accepted",
+        "at": "2026-08-23",
+        "note": "o outro extremo da cadeia, visto da oficina: um canal de aviso só. Vira tópico gerenciado na fase técnica, com entrega a múltiplos assinantes — deixa de ser ponto único sem mudar a vista lógica."
+      }
+    ],
+    "parking": [
+      {
+        "name": "Kinesis",
+        "capability": "receber-telemetria",
+        "state": "parked",
+        "note": "dito no primeiro minuto da reunião. Volta na fase técnica como sugestão inferida."
+      },
+      {
+        "name": "SageMaker",
+        "capability": "pontuar-risco",
+        "state": "parked",
+        "note": "dito junto, e pela mesma razão fica fora da vista lógica."
+      }
+    ]
+  }
+}

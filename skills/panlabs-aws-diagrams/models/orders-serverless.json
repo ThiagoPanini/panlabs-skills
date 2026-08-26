@@ -1,0 +1,75 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "orders-serverless",
+  "title": "Pedidos · API serverless com catálogo relacional",
+  "subtitle": "Vista técnica T1 · us-east-1 · o exemplo que o ticket #11 pediu, escrito só com semântica",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cliente", "kind": "actor", "service": "users", "label": "Clientes",
+      "qualifier": "app móvel e web" },
+
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "region", "kind": "region", "label": "us-east-1", "inside": "cloud" },
+
+    { "id": "apigw", "kind": "service", "service": "api gateway", "label": "API Gateway", "inside": "region",
+      "qualifier": "borda pública da API" },
+    { "id": "ddb", "kind": "service", "service": "dynamodb", "label": "DynamoDB", "inside": "region",
+      "qualifier": "pedidos gravados" },
+
+    { "id": "vpc", "kind": "vpc", "label": "VPC de aplicação · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "region" },
+
+    { "id": "sub-priv", "kind": "subnet", "label": "Private subnet", "access": "private",
+      "az": "us-east-1a", "cidr": "10.0.1.0/24", "inside": "vpc" },
+
+    { "id": "lambda", "kind": "service", "service": "lambda", "label": "Processar pedido", "inside": "sub-priv",
+      "qualifier": "valida e persiste" },
+    { "id": "vpce", "kind": "service", "service": "endpoints", "label": "VPC endpoint", "inside": "sub-priv",
+      "qualifier": "saída sem NAT" },
+    { "id": "rds", "kind": "service", "service": "rds", "label": "Catálogo", "inside": "sub-priv",
+      "qualifier": "Postgres, leitura", "note": "single-AZ" }
+  ],
+
+  "edges": [
+    { "from": "cliente", "to": "apigw", "label": "POST /pedidos", "protocol": "https", "order": 1 },
+    { "from": "apigw", "to": "lambda", "label": "invoca", "order": 2 },
+    { "from": "lambda", "to": "rds", "label": "consulta catálogo", "protocol": "sql", "order": 3 },
+    { "from": "lambda", "to": "vpce", "label": "grava pedido", "order": 4 },
+    { "from": "vpce", "to": "ddb", "label": "sem sair da rede AWS", "order": 5 }
+  ],
+
+  "notes": [
+    {
+      "id": "nota-spof",
+      "text": "RDS em AZ única: ponto único de falha conhecido. O time aceitou para o piloto e vai revisar antes do go-live.",
+      "origin": "rejected-finding"
+    }
+  ],
+
+  "dossier": {
+    "_comentario": "OPACO AO MOTOR. Existe aqui para provar que o dossiê da sabatina (#15) viaja junto e volta intacto do .drawio, sem que o motor leia um único campo.",
+    "axes": {
+      "E1": "serverless gerenciado",
+      "E2": "síncrono request/response",
+      "E3": "relacional para catálogo, chave-valor para pedido",
+      "E4": "exposto por API pública, dado em subnet privada",
+      "E5": "conta única"
+    },
+    "candidates": [
+      { "name": "Serverless puro", "tuple": ["serverless", "sincrono", "misto", "public", "conta-unica"], "chosen": true },
+      { "name": "Containers no ECS", "tuple": ["container", "sincrono", "misto", "public", "conta-unica"], "chosen": false,
+        "differsIn": "E1" }
+    ],
+    "facts": [
+      { "fact": "300 pedidos por minuto no pico", "provenance": "asked", "confirmed": true },
+      { "fact": "catálogo já vive em Postgres", "provenance": "asked", "confirmed": true },
+      { "fact": "sem requisito de multi-região", "provenance": "inferred", "confirmed": true }
+    ],
+    "parking": ["o usuário disse 'Lambda' no primeiro minuto — voltou na fase técnica, confirmado"],
+    "findings": [
+      { "rule": "spof", "target": "rds", "state": "rejected", "note": "aceito para o piloto" },
+      { "rule": "egress-sem-controle", "target": "sub-priv", "state": "resolved", "note": "VPC endpoint em vez de NAT" }
+    ]
+  }
+}

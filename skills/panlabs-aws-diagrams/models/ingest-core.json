@@ -1,0 +1,27 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "ingest-core",
+  "title": "Ingest · Core — a linha em que nem 'dados' aparece no nome",
+  "subtitle": "Linha 3 da tabela do #22. Nenhum dos dois rótulos diz que andar ocupa; o conteúdo diz.",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de ingestão · 10.20.0.0/16", "cidr": "10.20.0.0/16", "inside": "cloud" },
+
+    { "id": "ingest-a", "kind": "subnet", "label": "Ingest subnet", "access": "private", "az": "sa-east-1a", "inside": "vpc" },
+    { "id": "ingest-b", "kind": "subnet", "label": "Ingest subnet", "access": "private", "az": "sa-east-1b", "inside": "vpc" },
+    { "id": "core-a", "kind": "subnet", "label": "Core subnet", "access": "private", "az": "sa-east-1a", "inside": "vpc" },
+    { "id": "core-b", "kind": "subnet", "label": "Core subnet", "access": "private", "az": "sa-east-1b", "inside": "vpc" },
+
+    { "id": "nlb-a", "kind": "service", "service": "network load balancer", "label": "NLB de entrada", "inside": "ingest-a" },
+    { "id": "nlb-b", "kind": "service", "service": "network load balancer", "label": "NLB de entrada", "inside": "ingest-b" },
+    { "id": "core-ecs-a", "kind": "service", "service": "ecs", "label": "Processamento", "inside": "core-a" },
+    { "id": "core-ecs-b", "kind": "service", "service": "ecs", "label": "Processamento", "inside": "core-b" }
+  ],
+
+  "notes": [
+    { "text": "O caso mais duro dos três: nem 'Ingest' nem 'Core' contém uma palavra que diga andar de rede, então um léxico de rótulos também erraria aqui. O que decide é o Network Load Balancer ('network_content_delivery', borda) contra o ECS ('containers', aplicação).", "origin": "legend" }
+  ]
+}

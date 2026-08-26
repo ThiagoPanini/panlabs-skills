@@ -1,0 +1,67 @@
+{
+  "schema": "panlabs-aws-diagrams/elaboration@1",
+  "about": "predictive-fleet",
+  "_": "O delta da fase técnica do caso ponta a ponta do #26. Difere do retail de propósito em duas coisas que exercitam caminhos diferentes do motor: as fronteiras viram GRUPO e não conta (conta única, então o caminho é o do ELK e não o das contas), e o nível de rede que a vista lógica não tem entra numa fronteira só.",
+
+  "nodes": [
+    { "id": "cloud", "layer": "technical", "technical": { "kind": "cloud", "label": "AWS Cloud" } },
+
+    { "id": "vpc-modelo", "layer": "technical", "inside": "analise",
+      "technical": { "kind": "vpc", "label": "VPC de inferência · 10.30.0.0/16", "cidr": "10.30.0.0/16" } },
+
+    { "id": "sub-modelo", "layer": "technical", "inside": "vpc-modelo",
+      "technical": { "kind": "subnet", "label": "Private subnet", "access": "private", "cidr": "10.30.1.0/24" } },
+
+    { "id": "endpoint-s3", "layer": "technical", "inside": "sub-modelo",
+      "technical": { "kind": "service", "service": "endpoints", "label": "VPC endpoint (S3)" } }
+  ],
+
+  "facets": {
+    "veiculo": { "kind": "actor", "service": "users", "label": "Caminhões" },
+    "oficina": { "kind": "actor", "service": "users", "label": "Oficinas" },
+
+    "coleta":  { "kind": "group", "label": "Coleta" },
+    "analise": { "kind": "group", "label": "Análise" },
+    "acao":    { "kind": "group", "label": "Ação" },
+
+    "receber-telemetria": { "kind": "service", "service": "kinesis", "label": "Kinesis Data Streams" },
+    "guardar-serie":      { "kind": "service", "service": "timestream", "label": "Timestream" },
+    "detectar-anomalia":  { "kind": "service", "service": "lambda", "label": "Lambda · janela e regra" },
+    "pontuar-risco":      { "kind": "service", "service": "sagemaker", "label": "SageMaker · endpoint de inferência" },
+    "abrir-ordem":        { "kind": "service", "service": "step functions", "label": "Step Functions · abertura de ordem" },
+    "avisar-oficina":     { "kind": "service", "service": "sns", "label": "SNS · tópico de alerta" }
+  },
+
+  "_reparenta": "A operação de risco, isolada aqui para ficar visível na revisão: `pontuar-risco` foi APROVADO dentro de `analise`, e a fase técnica o empurra dois níveis para baixo, para dentro de uma sub-rede que a vista lógica não conhece. A projeção lógica tem de sair byte a byte idêntica assim mesmo — é o colapso de contenção do #14, e é o que `conferir()` mede no passo 6.",
+  "inside": {
+    "coleta": "cloud",
+    "analise": "cloud",
+    "acao": "cloud",
+    "pontuar-risco": "sub-modelo"
+  },
+
+  "_arestas": "Como o modelo alcança o objeto é detalhe técnico. A vista lógica diz \"anomalia encontrada, pontua\" e foi isso que a diretoria aprovou.",
+  "edges": [
+    { "id": "a-artefato", "from": "pontuar-risco", "to": "endpoint-s3", "layer": "technical",
+      "label": "carrega o artefato do modelo", "data": "back" }
+  ],
+
+  "facetEdges": {
+    "a-envia": { "label": "PutRecord · 30 s" },
+    "a-le": { "label": "consulta a janela de 24 h" }
+  },
+
+  "notes": [
+    { "id": "n-buffer", "layer": "technical", "origin": "assumption",
+      "text": "Retenção de 24 h no fluxo: cobre os 30 min de buffer do veículo com folga, e é o que sustenta o SPOF aceito na recepção." }
+  ],
+
+  "dossier": {
+    "parking": [
+      { "name": "Kinesis", "capability": "receber-telemetria", "state": "returned",
+        "note": "voltou na fase técnica como sugestão inferida contra a capacidade, e foi confirmado (#15 §5)." },
+      { "name": "SageMaker", "capability": "pontuar-risco", "state": "returned",
+        "note": "voltou e foi confirmado — é ele que vive dentro da sub-rede privada." }
+    ]
+  }
+}

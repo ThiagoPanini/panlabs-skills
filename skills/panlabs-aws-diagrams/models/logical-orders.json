@@ -1,0 +1,35 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "logical-orders",
+  "title": "Pedidos · vista lógica",
+  "subtitle": "L2 · a mesma arquitetura antes de nomear serviço — premissa 2 do mapa",
+  "view": "logical",
+  "genre": "L2",
+
+
+  "nodes": [
+    { "id": "cliente", "kind": "actor", "service": "users", "label": "Clientes",
+      "qualifier": "app móvel e web" },
+    { "id": "edge", "kind": "block", "label": "Borda pública",
+      "qualifier": "autentica e limita taxa" },
+    { "id": "processa", "kind": "block", "label": "Processamento de pedido",
+      "qualifier": "valida, calcula, persiste" },
+    { "id": "catalog", "kind": "block", "label": "Catálogo de produtos",
+      "qualifier": "leitura consistente" },
+    { "id": "registro", "kind": "block", "label": "Registro de pedidos",
+      "qualifier": "escrita de alto volume" }
+  ],
+
+  "edges": [
+    { "from": "cliente", "to": "edge", "label": "faz pedido", "order": 1 },
+    { "from": "edge", "to": "processa", "label": "encaminha", "order": 2 },
+    { "from": "processa", "to": "catalog", "label": "consulta preço", "order": 3 },
+    { "from": "processa", "to": "registro", "label": "grava", "order": 4 }
+  ],
+
+  "notes": [
+    { "id": "nota-fronteira",
+      "text": "Agrupado por fronteira de responsabilidade, não por conta AWS — decisão do #15, tomada contra render real.",
+      "origin": "assumption" }
+  ]
+}

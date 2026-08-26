@@ -29,7 +29,7 @@ As três medições abaixo são o que esta árvore mostrava no dia em que a dout
 
 ## A tese: ninguém roda a união
 
-O cabeçalho de `skills/panlabs-aws-diagrams/tests/rodar.sh` guarda a lição do #23 com todas as letras:
+O cabeçalho de `skills/panlabs-aws-diagrams/tests/run.sh` guarda a lição do #23 com todas as letras:
 
 > *"as duas suítes estão verdes, cada uma contra o seu próprio motor; ninguém rodou a união"*
 
@@ -68,8 +68,8 @@ O número no nome não é enfeite: é o que liga a branch ao ticket em qualquer 
 ```bash
 gh issue edit <n> --add-assignee @me
 gh issue comment <n> --body 'Território
-posse: skills/panlabs-aws-diagrams/sessao/, skills/panlabs-aws-diagrams/tests/check-paridade-tecnica.cjs
-acréscimo: skills/panlabs-aws-diagrams/SKILL.md, skills/panlabs-aws-diagrams/tests/rodar.sh'
+posse: skills/panlabs-aws-diagrams/session/, skills/panlabs-aws-diagrams/tests/check-technical-parity.cjs
+acréscimo: skills/panlabs-aws-diagrams/SKILL.md, skills/panlabs-aws-diagrams/tests/run.sh'
 ```
 
 | Grau | Significa |
@@ -92,7 +92,7 @@ Achou cruzamento? **Não negocie o diff — pegue outro ticket.** Os comandos ac
 
 Três arquivos aqui são registros lineares cuja **ordem é carga**:
 
-- `skills/*/tests/rodar.sh` — a lista de `passo`. O cabeçalho dele diz: *"a ordem das camadas é a ordem em que uma falha invalida as seguintes"*.
+- `skills/*/tests/run.sh` — a lista de `passo`. O cabeçalho dele diz: *"a ordem das camadas é a ordem em que uma falha invalida as seguintes"*.
 - `skills/*/SKILL.md` — as tabelas de ponteiro.
 - `CLAUDE.md` — a seção de skills.
 
@@ -117,11 +117,13 @@ Um ticket que **renomeia, move ou apaga caminho rastreado** invalida o territór
 
 São quatro sobre a mesma árvore, e eles são uma **fila, não um lote**: a [#36](https://github.com/ThiagoPanini/panlabs-skills/issues/36) tira `docs/` da árvore da skill — **já aterrissou**, em `29307b4`, sozinha e primeiro, como a regra manda —, a [#44](https://github.com/ThiagoPanini/panlabs-skills/issues/44) tira `tests/` e o corpus, a [#45](https://github.com/ThiagoPanini/panlabs-skills/issues/45) tira a bancada e as ferramentas, e a [#53](https://github.com/ThiagoPanini/panlabs-skills/issues/53) renomeia a árvore inteira para inglês. Por cima delas, a [#43](https://github.com/ThiagoPanini/panlabs-skills/issues/43) reescreve o `SKILL.md` que aponta para todas.
 
+> **A #53 aterrissou, e este documento cita nomes que ela mudou.** Todo relato histórico abaixo — os PRs da primeira rodada, o resgate do #54, a tabela das cinco entradas — guarda o nome que o arquivo tinha **no dia do evento**, e continua assim de propósito: reescrever o registro para combinar com a árvore de hoje é falsificá-lo. O mapa para ler aqueles relatos é `modelo/`→`models/`, `motor/`→`engine/`, `sessao/`→`session/`, `tema/`→`theme/`, `guia/`→`guide/`, `validador/`→`validator/`, `saida/`→`output/`, `rodar.sh`→`run.sh`, `motor.manifesto.json`→`engine.manifest.json`, e todo `check-<algo-em-português>.cjs` pelo seu equivalente inglês. As **regras** deste arquivo, que apontam para arquivos vivos, já estão no nome novo.
+
 A #36 rodando primeiro deixou a medida do custo: quem entrou depois dela **teve de rebasear e regenerar o derivado**, e foi barato porque foi um. Se as quatro tivessem corrido juntas, seriam quatro renomeações sobre os mesmos diretórios e um `SKILL.md` reescrito por baixo delas.
 
 ## Derivado não se mergeia, se regenera
 
-`tests/motor.manifesto.json` é hash do motor. `saida/*.drawio` e `saida/*.png` são render. Nenhum é fonte, e o histórico já pagou por tratá-los como se fossem: `bdeb67b Re-render da suíte: o id do keyframe da animação não é determinístico`.
+`tests/engine.manifest.json` é hash do motor. `output/*.drawio` e `output/*.png` são render. Nenhum é fonte, e o histórico já pagou por tratá-los como se fossem: `bdeb67b Re-render da suíte: o id do keyframe da animação não é determinístico`.
 
 **No rebase, em arquivo derivado, não resolva o conflito — rode o gerador e commite o resultado.** Nunca `--ours`, nunca `--theirs`: as duas escolhas produzem um derivado que não corresponde a fonte nenhuma, e um manifesto assim passa verde exatamente no check que ele deveria fazer falhar.
 
@@ -130,7 +132,7 @@ A #36 rodando primeiro deixou a medida do custo: quem entrou depois dela **teve 
 O requisito é que **toda implementação termine com o código na `main`** — não numa branch, não num PR aberto.
 
 1. **A união** — compare o seu diff com o que entrou na `origin/main` enquanto você trabalhava, pelos dois `git diff --name-only` de [A tese: ninguém roda a união](#a-tese-ninguém-roda-a-união). Cruzou? `git rebase origin/main`, e leia de novo.
-2. `skills/<skill>/tests/rodar.sh` — verde **contra o resultado do rebase**, não contra a sua branch.
+2. `skills/<skill>/tests/run.sh` — verde **contra o resultado do rebase**, não contra a sua branch.
 3. `gh pr create --fill --draft` no primeiro push; o corpo se escreve no fim, por quem tem o ticket na mão. `gh pr create` não é idempotente — a guarda é `gh pr list --head "$BRANCH" --state open`.
 4. `gh pr ready` e `gh pr merge --squash`. Squash porque a `main` guarda **um commit por ticket**: é o que torna um revert uma operação e não uma arqueologia.
 5. `git push origin --delete <branch>`.

@@ -1,0 +1,629 @@
+{
+  "_readme": [
+    "Escrito à mão. NÃO é gerado — reexecutar o extrator não sobrescreve este arquivo.",
+    "Separação deliberada: aws4.catalog.json é o que o draw.io ENTREGA; este arquivo é o",
+    "delta para o que a AWS PRESCREVE. Toda entrada carrega a evidência que a sustenta.",
+    "Ver §3.4, §3.5 e §5.4 da pesquisa de shapes do #17."
+  ],
+  "_version": {
+    "awsDeck": "Q3 2026 — Icon-package_07312026 (31/07/2026)",
+    "drawio": "31.3.1, commit d3140c3105c7fe8fb47259f6283e7ef566c647c6 (embute ~deck Q1-2026)",
+    "gap": "o draw.io está ~2 releases da AWS atrás (Q2-2026 e Q3-2026). É por isso que este arquivo existe.",
+    "awsCadence": "trimestral — Q1 fim de janeiro, Q2 fim de abril, Q3 fim de julho; sem release em Q4",
+    "onUpdate": "bump do draw.io -> rodar o extrator de novo e rodar check-catalog; bump do deck AWS -> reconferir legacyPalette e uncorrectedDivergences contra os SVGs novos"
+  },
+  "legacyPalette": {
+    "_note": [
+      "8 dos 20 grupos da paleta do draw.io ainda usam a paleta AWS pré-2022.",
+      "As cores de SERVIÇO batem 100% com o deck Q3-2026; só as de GRUPO envelheceram.",
+      "A substituição vale para o hex onde quer que ele apareça na style de um grupo",
+      "(strokeColor e fontColor), porque são literalmente a versão antiga do mesmo",
+      "ponto da paleta. Não se aplica a service/resource icons — lá nada está errado."
+    ],
+    "#D86613": {
+      "to": "#ED7100",
+      "palette": "laranja Compute",
+      "affects": [
+        "Auto Scaling group",
+        "Elastic Beanstalk container",
+        "EC2 instance contents",
+        "Spot Fleet"
+      ],
+      "evidence": "Architecture-Group-Icons_07312026/*.svg (Icon-package_07312026.zip)"
+    },
+    "#CD2264": {
+      "to": "#E7157B",
+      "palette": "rosa Application Integration / Management",
+      "affects": [
+        "AWS Account",
+        "AWS Step Functions workflow"
+      ],
+      "evidence": "Architecture-Group-Icons_07312026/*.svg"
+    },
+    "#147EBA": {
+      "to": "#00A4A6",
+      "palette": "teal Region / Availability Zone",
+      "affects": [
+        "Availability Zone (borda e rótulo)",
+        "Region (rótulo)",
+        "Private subnet (rótulo)"
+      ],
+      "evidence": "Architecture-Group-Icons_07312026/*.svg — Region e Private subnet já usam #00A4A6 na borda; o rótulo ficou para trás"
+    },
+    "#DD3522": {
+      "to": "#DD344C",
+      "palette": "vermelho Security Identity Compliance",
+      "affects": [
+        "Security group"
+      ],
+      "evidence": "Architecture-Group-Icons_07312026/*.svg"
+    }
+  },
+  "uncorrectedDivergences": {
+    "_note": [
+      "RESOLVIDO em #13, e a resolução é: fontColor de grupo NÃO É FATO DE CATÁLOGO.",
+      "O deck manda 12 pt Arial na cor `tx1` — preto no deck claro, branco no escuro.",
+      "`tx1` não é um hex, é um papel, e só o tema sabe contra que fundo ele resolve.",
+      "Por isso o catálogo continua espelhando o upstream aqui e a camada de tema",
+      "sobrescreve `fontColor` em todo grupo com a tinta forte do tema.",
+      "O que fecha o argumento é a medição, não a citação: borda de grupo é grafismo",
+      "(WCAG 1.4.11, 3:1) e rótulo é texto (1.4.3, 4,5:1). Dois limiares diferentes não",
+      "cabem na mesma cor. 'O rótulo herda a cor da borda' é a leitura que não sobrevive",
+      "a troca de fundo — no fundo escuro as CINCO cores abaixo reprovam.",
+      "#AAB7B8 (VPC) reprova já no fundo claro: 2,06:1 contra branco.",
+      "#232F3E do AWS Cloud fica como está: é o squid ink de 403 service icons, e o",
+      "#242F3E do deck é inconsistência do próprio pacote da AWS (ver §Incertezas",
+      "da pesquisa de convenções de diagrama AWS, #12)."
+    ],
+    "#248814": {
+      "where": "fontColor de Public subnet",
+      "edge": "#7AA116"
+    },
+    "#3F8624": {
+      "where": "fontColor de AWS IoT Greengrass e IoT Greengrass Deployment",
+      "edge": "#7AA116"
+    },
+    "#AAB7B8": {
+      "where": "fontColor de VPC (cinza)",
+      "edge": "#8C4FFF"
+    },
+    "#5A6C86": {
+      "where": "fontColor de Server contents e Corporate data center",
+      "edge": "#7D8998"
+    },
+    "#232F3E": {
+      "where": "AWS Cloud — deck traz #242F3E, 1 dígito de diferença",
+      "edge": "#232F3E",
+      "note": "é também o squid ink usado como fontColor de TODO service icon; mexer aqui desalinha 403 entradas para ganhar 1 dígito"
+    },
+    "_resolvedIn": "https://github.com/ThiagoPanini/panlabs-skills/issues/13",
+    "_measurement": {
+      "#AAB7B8": {
+        "againstWhite": 2.06,
+        "againstDark": 8.09,
+        "verdict": "reprova A7.1 no claro"
+      },
+      "#248814": {
+        "againstWhite": 4.56,
+        "againstDark": 3.66,
+        "verdict": "reprova A7.1 no escuro"
+      },
+      "#3F8624": {
+        "againstWhite": 4.52,
+        "againstDark": 3.69,
+        "verdict": "reprova A7.1 no escuro"
+      },
+      "#5A6C86": {
+        "againstWhite": 5.35,
+        "againstDark": 3.12,
+        "verdict": "reprova A7.1 no escuro"
+      },
+      "#232F3E": {
+        "againstWhite": 13.57,
+        "againstDark": 1.23,
+        "verdict": "reprova A7.1 no escuro — é a única cor que o deck escuro da AWS inverte"
+      }
+    }
+  },
+  "container": {
+    "_note": [
+      "Quatro entradas de grupo saem da paleta como retângulo puro, SEM container=1.",
+      "Sem essa chave o mxGraph rejeita drop (Graph.isContainer exige container=='1'),",
+      "então soltar um shape em cima não aninha — o grupo vira decoração.",
+      "O próprio draw.io corrige isso no importador do Lucidchart (Extensions.js).",
+      "O ticket nomeia AZ e Security group; estendi aos dois Generic group porque é o",
+      "mesmo defeito e um grupo genérico que não aninha é inútil como container de fallback."
+    ],
+    "suffix": "container=1;pointerEvents=0;collapsible=0;recursiveResize=0;",
+    "affects": [
+      "Availability Zone",
+      "Security group",
+      "Generic group"
+    ],
+    "evidence": "Extensions.js:3391 — var containerStyle = 'container=1;pointerEvents=0;collapsible=0;recursiveResize=0;'"
+  },
+  "groupFill": {
+    "_note": [
+      "CORREÇÃO RETIRADA no #13, depois do retorno do dono do mapa. Fica registrada porque",
+      "a medição que a motivou continua verdadeira — o que estava errado era a conclusão.",
+      "",
+      "O que eu tinha feito: zerar o fillColor de Private subnet (#E6F6F7) e Public subnet",
+      "(#F2F6E8), as duas únicas das 20 entradas de grupo que o draw.io entrega tingidas,",
+      "alegando o A2 do deck (<a:noFill/> em 156 lâminas) e o fato de o tingimento derrubar",
+      "um ícone #ED7100 dentro da subnet de 3,02 para 2,71:1.",
+      "",
+      "Por que estava errado, em três camadas:",
+      "1. A pesquisa do #5 JÁ DIZIA, na ressalva honesta do A2, que diagramas oficiais reais",
+      "   tingem subnet (Web Application Architecture, EKS, Security Automations for WAF,",
+      "   DeepRacer) e que 'sem preenchimento' é padrão de fábrica, NÃO proibição. Eu li a",
+      "   regra e ignorei a ressalva.",
+      "2. O tingimento do draw.io não é arbitrário: medido, ele é exatamente 10% da PRÓPRIA",
+      "   cor normativa do grupo sobre o fundo da página. 10% de #00A4A6 sobre branco dá",
+      "   #E6F6F6 contra os #E6F6F7 entregues; 10% de #7AA116 dá #F2F6E8 exato. Ou seja: o",
+      "   tingimento REFORÇA a legenda por cor em vez de inventar canal novo.",
+      "3. O 2,71:1 é do QUADRADO do ícone, uma área sólida de 48 px identificada pelo glifo",
+      "   branco que ela contém — não de um traço fino. Aplicar a ele o mesmo limiar duro de",
+      "   uma borda de 1,25 pt era leitura estrita demais da WCAG 1.4.11. O portão passou a",
+      "   separar traço (reprova) de área (avisa).",
+      "",
+      "O que ficou no lugar: o tingimento voltou a ser do catálogo, e o VALOR virou derivação",
+      "do tema (`grupo.tingimento`), porque um azul-claro que funciona no deck claro é um",
+      "bloco luminoso num fundo escuro. Ver prototypes/q13/theme/schema.json."
+    ],
+    "_withdrawnIn": "https://github.com/ThiagoPanini/panlabs-skills/issues/13",
+    "affects": []
+  },
+  "renames": {
+    "_note": [
+      "Nomes de stencil CONGELAM: o título da paleta acompanha o rename de marketing,",
+      "o nome do stencil nunca — mudá-lo quebraria todo diagrama salvo. Chave = nome",
+      "atual normalizado; valor = stencil no draw.io."
+    ],
+    "opensearch": "elasticsearch_service",
+    "opensearch service": "elasticsearch_service",
+    "iam identity center": "single_sign_on",
+    "identity center": "single_sign_on",
+    "sso": "single_sign_on",
+    "cloudwatch": "cloudwatch_2",
+    "efs": "elastic_file_system",
+    "elastic file system": "elastic_file_system",
+    "memorydb": "memorydb_for_redis",
+    "application migration service": "cloudendure_migration",
+    "mgn": "cloudendure_migration",
+    "elastic disaster recovery": "cloudendure_disaster_recovery",
+    "drs": "cloudendure_disaster_recovery",
+    "fault injection service": "fault_injection_simulator",
+    "fis": "fault_injection_simulator",
+    "data firehose": "kinesis_data_firehose",
+    "firehose": "kinesis_data_firehose",
+    "infrastructure composer": "application_composer",
+    "quick suite": "quick_suite",
+    "quicksight": "quicksight",
+    "sagemaker": "sagemaker",
+    "_sagemaker": "A AWS renomeou SageMaker -> SageMaker AI. O draw.io tem AS DUAS entradas com stencils diferentes: 'sagemaker' (titulo 'SageMaker AI', paleta AI, #01A88D) e 'sagemaker_2' (titulo 'Sagemaker', paleta Analytics, #8C4FFF). Sem esta linha, 'sagemaker' casaria por titulo exato com sagemaker_2 — o icone e a cor errados.",
+    "managed streaming for apache kafka": "managed_streaming_for_kafka",
+    "_msk": "O titulo da paleta diz 'Apache Kafka'; o stencil congelou sem o 'apache'."
+  },
+  "synonyms": {
+    "_note": [
+      "NÃO são renomes — são siglas e apelidos pelos quais o serviço é pedido em",
+      "conversa. Separados dos renomes de propósito: renome é fato do upstream,",
+      "sinônimo é conveniência nossa e pode crescer sem cerimônia."
+    ],
+    "s3": "s3",
+    "sqs": "sqs",
+    "sns": "sns",
+    "iam": "identity_and_access_management",
+    "kms": "key_management_service",
+    "ecs": "ecs",
+    "eks": "eks",
+    "ec2": "ec2",
+    "rds": "rds",
+    "alb": "elastic_load_balancing",
+    "nlb": "elastic_load_balancing",
+    "elb": "elastic_load_balancing",
+    "load balancer": "elastic_load_balancing",
+    "api gateway": "api_gateway",
+    "apigw": "api_gateway",
+    "step functions": "step_functions",
+    "secrets manager": "secrets_manager",
+    "vpc": "vpc",
+    "dynamodb": "dynamodb",
+    "athena": "athena",
+    "glue": "glue",
+    "kinesis": "kinesis",
+    "msk": "managed_streaming_for_kafka",
+    "aurora": "aurora",
+    "elasticache": "elasticache",
+    "cloudfront": "cloudfront",
+    "route 53": "route_53",
+    "waf": "waf",
+    "guardduty": "guardduty",
+    "cloudtrail": "cloudtrail",
+    "eventbridge": "eventbridge",
+    "bedrock": "bedrock",
+    "fargate": "fargate",
+    "lambda": "lambda",
+    "batch": "batch",
+    "emr": "emr",
+    "redshift": "redshift",
+    "transit gateway": "transit_gateway",
+    "direct connect": "direct_connect",
+    "nat gateway": "nat_gateway",
+    "internet gateway": "internet_gateway"
+  },
+  "disambiguation": {
+    "_note": [
+      "22 titulos de service icon aparecem em MAIS DE UMA paleta com cor divergente —",
+      "e em varios casos com stencil divergente tambem, ou seja, icone diferente:",
+      "'auto scaling' e auto_scaling3 (Compute) ou autoscaling (Management); 'codeguru'",
+      "e codeguru_2 (AI) ou codeguru (Management). Sem esta tabela o catalogo devolveria",
+      "o primeiro que casasse, e a mesma arquitetura sairia com cores diferentes conforme",
+      "a ordem da paleta. Chave = titulo normalizado.",
+      "origem=deck-aws: a AWS coloca o servico em UMA categoria no Icon-package_07312026,",
+      "  e essa categoria decide. 17 dos 22.",
+      "origem=stencil-casa-titulo: o titulo colide entre dois servicos distintos ('Analytics'",
+      "  da paleta Analytics vs 'Analytics' que e IoT Analytics); vence quem tem o stencil",
+      "  com o mesmo nome do titulo. 1 dos 22.",
+      "origem=ordem-da-paleta: desempate ARBITRARIO, marcado review=true. Ou a AWS lista o",
+      "  servico em duas categorias (Compute Optimizer, Kinesis Video Streams), ou o servico",
+      "  sumiu do deck por descontinuacao (QLDB, Snowmobile). 4 dos 22 — decisao aberta para",
+      "  o ticket de camada de estilo. Nota: 'snowmobile' cai em migration por ordem de",
+      "  paleta enquanto Snowball e Snowball Edge caem em storage pelo deck; os irmaos",
+      "  ficam inconsistentes ate alguem decidir."
+    ],
+    "analytics": {
+      "palette": "analytics",
+      "stencil": "analytics",
+      "fill": "#8C4FFF",
+      "origin": "stencil-casa-titulo",
+      "evidence": "stencil 'analytics' e o titulo normalizado sao o mesmo nome",
+      "alternatives": [
+        {
+          "palette": "internet_of_things",
+          "stencil": "iot_analytics",
+          "fill": "#7AA116"
+        }
+      ]
+    },
+    "api gateway": {
+      "palette": "network_content_delivery",
+      "stencil": "api_gateway",
+      "fill": "#8C4FFF",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Networking-Content-Delivery",
+      "alternatives": [
+        {
+          "palette": "application_integration",
+          "stencil": "api_gateway",
+          "fill": "#E7157B"
+        }
+      ]
+    },
+    "auto scaling": {
+      "palette": "management_governance",
+      "stencil": "autoscaling",
+      "fill": "#E7157B",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Management-Tools",
+      "alternatives": [
+        {
+          "palette": "compute",
+          "stencil": "auto_scaling3",
+          "fill": "#ED7100"
+        }
+      ]
+    },
+    "cloud directory": {
+      "palette": "security_identity_compliance",
+      "stencil": "cloud_directory",
+      "fill": "#DD344C",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Security-Identity",
+      "alternatives": [
+        {
+          "palette": "network_content_delivery",
+          "stencil": "cloud_directory",
+          "fill": "#8C4FFF"
+        }
+      ]
+    },
+    "codeguru": {
+      "palette": "artificial_intelligence",
+      "stencil": "codeguru_2",
+      "fill": "#01A88D",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Artificial-Intelligence",
+      "alternatives": [
+        {
+          "palette": "management_governance",
+          "stencil": "codeguru",
+          "fill": "#E7157B"
+        }
+      ]
+    },
+    "command line interface": {
+      "palette": "developer_tools",
+      "stencil": "command_line_interface",
+      "fill": "#C925D1",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Developer-Tools",
+      "alternatives": [
+        {
+          "palette": "management_governance",
+          "stencil": "command_line_interface",
+          "fill": "#E7157B"
+        }
+      ]
+    },
+    "compute optimizer": {
+      "palette": "compute",
+      "stencil": "compute_optimizer",
+      "fill": "#ED7100",
+      "origin": "ordem-da-paleta",
+      "evidence": "AWS lista em Compute,Management-Tools",
+      "alternatives": [
+        {
+          "palette": "management_governance",
+          "stencil": "compute_optimizer",
+          "fill": "#E7157B"
+        }
+      ],
+      "review": true,
+      "_whyStillOpen": "sem irmandade que decida — Compute Optimizer é listado pela propria AWS em duas categorias e nao tem familia; QLDB foi descontinuado e nao tem irmao de produto. Fica registrado, nao escondido."
+    },
+    "connect": {
+      "palette": "business_applications",
+      "stencil": "connect",
+      "fill": "#DD344C",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Business-Applications",
+      "alternatives": [
+        {
+          "palette": "contact_center",
+          "stencil": "connect",
+          "fill": "#DD344C"
+        },
+        {
+          "palette": "customer_engagement",
+          "stencil": "connect",
+          "fill": "#3334B9"
+        }
+      ]
+    },
+    "database migration service": {
+      "palette": "database",
+      "stencil": "database_migration_service",
+      "fill": "#C925D1",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Databases",
+      "alternatives": [
+        {
+          "palette": "migration_modernization",
+          "stencil": "database_migration_service",
+          "fill": "#01A88D"
+        }
+      ]
+    },
+    "elastic load balancing": {
+      "palette": "network_content_delivery",
+      "stencil": "elastic_load_balancing",
+      "fill": "#8C4FFF",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Networking-Content-Delivery",
+      "alternatives": [
+        {
+          "palette": "compute",
+          "stencil": "elastic_load_balancing",
+          "fill": "#ED7100"
+        }
+      ]
+    },
+    "elastic vmware service": {
+      "palette": "compute",
+      "stencil": "elastic_vmware_service",
+      "fill": "#ED7100",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Compute",
+      "alternatives": [
+        {
+          "palette": "migration_modernization",
+          "stencil": "elastic_vmware_service",
+          "fill": "#01A88D"
+        }
+      ]
+    },
+    "kinesis video streams": {
+      "palette": "analytics",
+      "stencil": "kinesis_video_streams",
+      "fill": "#8C4FFF",
+      "origin": "irmandade",
+      "evidence": "AWS lista em Analytics,Media-Services; Kinesis, Kinesis Data Streams e Data Firehose resolvem em analytics",
+      "alternatives": [
+        {
+          "palette": "media_services",
+          "stencil": "kinesis_video_streams",
+          "fill": "#ED7100"
+        }
+      ],
+      "siblings": [
+        "kinesis",
+        "kinesis data streams",
+        "kinesis data firehose"
+      ]
+    },
+    "managed services": {
+      "palette": "customer_enablement",
+      "stencil": "managed_services",
+      "fill": "#C925D1",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Customer-Enablement",
+      "alternatives": [
+        {
+          "palette": "management_governance",
+          "stencil": "managed_services",
+          "fill": "#E7157B"
+        }
+      ]
+    },
+    "organizations": {
+      "palette": "management_governance",
+      "stencil": "organizations",
+      "fill": "#E7157B",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Management-Tools",
+      "alternatives": [
+        {
+          "palette": "security_identity_compliance",
+          "stencil": "organizations",
+          "fill": "#DD344C"
+        }
+      ]
+    },
+    "pinpoint": {
+      "palette": "business_applications",
+      "stencil": "pinpoint",
+      "fill": "#DD344C",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Business-Applications",
+      "alternatives": [
+        {
+          "palette": "customer_engagement",
+          "stencil": "pinpoint",
+          "fill": "#3334B9"
+        }
+      ]
+    },
+    "quantum ledger database": {
+      "palette": "blockchain",
+      "stencil": "quantum_ledger_database",
+      "fill": "#ED7100",
+      "origin": "ordem-da-paleta",
+      "evidence": "servico ausente do deck AWS Q3-2026 (descontinuado)",
+      "alternatives": [
+        {
+          "palette": "database",
+          "stencil": "quantum_ledger_database",
+          "fill": "#C925D1"
+        }
+      ],
+      "review": true,
+      "_whyStillOpen": "sem irmandade que decida — Compute Optimizer é listado pela propria AWS em duas categorias e nao tem familia; QLDB foi descontinuado e nao tem irmao de produto. Fica registrado, nao escondido."
+    },
+    "redshift": {
+      "palette": "analytics",
+      "stencil": "redshift",
+      "fill": "#8C4FFF",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Analytics",
+      "alternatives": [
+        {
+          "palette": "database",
+          "stencil": "redshift",
+          "fill": "#C925D1"
+        }
+      ]
+    },
+    "simple email service": {
+      "palette": "business_applications",
+      "stencil": "simple_email_service",
+      "fill": "#DD344C",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Business-Applications",
+      "alternatives": [
+        {
+          "palette": "customer_engagement",
+          "stencil": "simple_email_service",
+          "fill": "#3334B9"
+        }
+      ]
+    },
+    "snowball": {
+      "palette": "storage",
+      "stencil": "snowball",
+      "fill": "#7AA116",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Storage",
+      "alternatives": [
+        {
+          "palette": "migration_modernization",
+          "stencil": "snowball",
+          "fill": "#01A88D"
+        }
+      ]
+    },
+    "snowball edge": {
+      "palette": "storage",
+      "stencil": "snowball_edge",
+      "fill": "#7AA116",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Storage",
+      "alternatives": [
+        {
+          "palette": "migration_modernization",
+          "stencil": "snowball_edge",
+          "fill": "#01A88D"
+        }
+      ]
+    },
+    "snowmobile": {
+      "palette": "storage",
+      "stencil": "snowmobile",
+      "fill": "#7AA116",
+      "origin": "irmandade",
+      "evidence": "servico ausente do deck AWS Q3-2026 (descontinuado); Snowball e Snowball Edge resolvidos pelo deck em storage",
+      "alternatives": [
+        {
+          "palette": "migration_modernization",
+          "stencil": "snowmobile",
+          "fill": "#01A88D"
+        }
+      ],
+      "siblings": [
+        "snowball",
+        "snowball edge"
+      ]
+    },
+    "workdocs": {
+      "palette": "business_applications",
+      "stencil": "workdocs",
+      "fill": "#DD344C",
+      "origin": "deck-aws",
+      "evidence": "Icon-package_07312026 / Arch_Business-Applications",
+      "alternatives": [
+        {
+          "palette": "end_user_computing",
+          "stencil": "workdocs",
+          "fill": "#01A88D"
+        }
+      ]
+    },
+    "_tieBreakRule": [
+      "Fixada no #13, para os 4 casos que o deck não decide.",
+      "1. Deck oficial, quando ele decide (18 dos 22 casos). Já aplicado.",
+      "2. IRMANDADE: serviço cuja família tem irmãos já resolvidos pelo deck segue os",
+      "   irmãos. O sintoma que a regra existe para matar é visível: Snowball e",
+      "   Snowball Edge caem em Storage pelo deck, e o Snowmobile caía em Migration —",
+      "   três irmãos em duas cores no mesmo diagrama.",
+      "3. Sem deck e sem irmãos, a ordem da paleta fica e o caso continua marcado",
+      "   `review: true`. Ambiguidade registrada é honesta; ambiguidade escondida não.",
+      "O tema NÃO pode mexer nisto: cor de categoria não tem token. A cor É a legenda",
+      "(§6.4 da pesquisa de convenções de diagrama AWS, #12)."
+    ]
+  },
+  "bugsUpstream": {
+    "_note": "Defeitos do próprio Sidebar-AWS4.js encontrados na extração. Não são corrigidos aqui — o catálogo espelha o upstream; quem consome precisa saber.",
+    "edgeOpenDouble": {
+      "where": "Sidebar-AWS4.js — createEdgeTemplateEntry da aresta 'Open (double)'",
+      "symptom": "a style traz 'htmDepartman barl=1' no lugar de 'html=1' — string de tradução vazou para dentro da style",
+      "impact": "usar essa aresta verbatim entrega uma chave de style inexistente e perde html=1; qualquer aresta gerada por nós deve montar a style, não copiar esta entrada",
+      "verified": "grep -c 'Departman' Sidebar-AWS4.js -> 1"
+    },
+    "pointsDuplicated": {
+      "where": "paleta AWS / Management Governance, 39 entradas",
+      "symptom": "points=[...] aparece duas vezes na mesma style",
+      "impact": "cosmético — o mxGraph usa a última ocorrência",
+      "verified": "as 39 entradas caem fora do template canônico por isso"
+    }
+  }
+}

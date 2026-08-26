@@ -1,0 +1,73 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "events-fanout",
+  "title": "Pagamentos · leque de eventos",
+  "subtitle": "Vista técnica T3 · um evento, três consumidores assíncronos — dois com fila morta, um sem",
+  "view": "technical",
+  "genre": "T3",
+
+  "nodes": [
+    { "id": "checkout", "kind": "actor", "service": "users", "label": "Checkout",
+      "qualifier": "publica o evento de pagamento aprovado" },
+
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "region", "kind": "region", "label": "us-east-1", "inside": "cloud" },
+
+    { "id": "barramento", "kind": "service", "service": "eventbridge", "label": "Barramento de pagamentos", "inside": "region",
+      "qualifier": "uma regra por consumidor" },
+
+    { "id": "fila-fiscal", "kind": "service", "service": "sqs", "label": "Fila fiscal", "inside": "region",
+      "qualifier": "amortece o pico da virada" },
+    { "id": "nota-fiscal", "kind": "service", "service": "lambda", "label": "Emitir nota fiscal", "inside": "region",
+      "qualifier": "chama a prefeitura, falha muito" },
+    { "id": "dlq-fiscal", "kind": "service", "service": "sqs", "label": "Fila morta · fiscal", "inside": "region",
+      "qualifier": "guarda o que a prefeitura recusou" },
+
+    { "id": "fila-estoque", "kind": "service", "service": "sqs", "label": "Fila de estoque", "inside": "region",
+      "qualifier": "ordem por item" },
+    { "id": "baixa-estoque", "kind": "service", "service": "lambda", "label": "Dar baixa no estoque", "inside": "region",
+      "qualifier": "idempotente por id de pedido" },
+    { "id": "dlq-estoque", "kind": "service", "service": "sqs", "label": "Fila morta · estoque", "inside": "region" },
+
+    { "id": "fila-fidelidade", "kind": "service", "service": "sqs", "label": "Fila de fidelidade", "inside": "region",
+      "qualifier": "creditar pontos" },
+    { "id": "pontos", "kind": "service", "service": "lambda", "label": "Creditar pontos", "inside": "region",
+      "qualifier": "sem destino para o que falha" },
+
+    { "id": "ledger", "kind": "service", "service": "dynamodb", "label": "Livro de pontos", "inside": "region",
+      "qualifier": "saldo por cliente" }
+  ],
+
+  "edges": [
+    { "from": "checkout", "to": "barramento", "label": "pagamento aprovado", "order": 1 },
+
+    { "from": "barramento", "to": "fila-fiscal", "label": "regra fiscal", "order": 2 },
+    { "from": "fila-fiscal", "to": "nota-fiscal", "label": "consome", "data": "back", "order": 3 },
+    { "from": "nota-fiscal", "to": "dlq-fiscal", "label": "após 3 tentativas", "order": 4 },
+
+    { "from": "barramento", "to": "fila-estoque", "label": "regra de estoque", "order": 5 },
+    { "from": "fila-estoque", "to": "baixa-estoque", "label": "consome", "data": "back", "order": 6 },
+    { "from": "baixa-estoque", "to": "dlq-estoque", "label": "após 3 tentativas", "order": 7 },
+
+    { "from": "barramento", "to": "fila-fidelidade", "label": "regra de fidelidade", "order": 8 },
+    { "from": "fila-fidelidade", "to": "pontos", "label": "consome", "data": "back", "order": 9 },
+    { "from": "pontos", "to": "ledger", "label": "credita", "order": 10 }
+  ],
+
+  "notes": [
+    { "id": "nota-dlq",
+      "text": "Creditar pontos não tem fila morta, e isso é deliberado no modelo: o corpus precisa de um caso em que a regra de assíncrono-sem-DLQ tenha o que dizer, ao lado de dois consumidores em que ela tem de ficar calada.",
+      "origin": "legend" }
+  ],
+
+  "dossier": {
+    "_comentario": "T3 do corpus do #26. O leque assíncrono é o que dá à revisão de lacunas um sujeito real: três caminhos por fila, dois com destino de falha declarado e um sem.",
+    "axes": {
+      "E1": "gerenciado sem compute próprio",
+      "E2": "assíncrono por evento",
+      "E3": "chave-valor para saldo, fila para trânsito",
+      "E4": "sem exposição de rede própria",
+      "E5": "fronteira única: pagamentos"
+    }
+  }
+}

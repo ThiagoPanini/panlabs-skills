@@ -1,43 +1,43 @@
 'use strict';
 /**
- * ONDE ESTÁ O draw.io HEADLESS — um lugar só, e três formas de dizer.
+ * WHERE draw.io HEADLESS LIVES — one single place, and three ways to say it.
  *
- * O caminho estava escrito à mão em oito arquivos, em duas variantes que não são
- * a mesma coisa: uns apontavam para `squashfs-root/drawio`, outros para
- * `squashfs-root/AppRun`. Os dois funcionam, e é justamente por isso que a
- * divergência passou despercebida — até a suíte passar o binário como argumento
- * para dois checks e não para os outros dois, que caíam no default e podiam
- * pular em silêncio (`exit 0`) enquanto a camada inteira se dizia executada.
+ * The path used to be hand-written in eight files, in two variants that are not
+ * the same thing: some pointed to `squashfs-root/drawio`, others to
+ * `squashfs-root/AppRun`. Both work, and that is exactly why the divergence went
+ * unnoticed — until the suite passed the binary as an argument to two checks and
+ * not to the other two, which fell back to the default and could skip silently
+ * (`exit 0`) while the whole layer called itself run.
  *
- * A ordem de resolução, do mais explícito ao menos:
+ * The resolution order, from most explicit to least:
  *
- *   1. o argumento que quem chamou passou;
- *   2. `$DRAWIO`, para a suíte exportar uma vez e todo mundo herdar;
- *   3. o caminho onde o #10 instalou.
+ *   1. the argument whoever called this passed;
+ *   2. `$DRAWIO`, so the suite can export it once and everyone inherits it;
+ *   3. the path where #10 installed it.
  *
- * ⚠️ É DEPENDÊNCIA DE DESENVOLVIMENTO (premissa 8). Nada em `motor/`,
- * `validador/`, `tema/` ou `sessao/` importa este arquivo — e `check-sem-prototipo`
- * cobra isso medindo o `require.cache` do pipeline.
+ * ⚠️ THIS IS A DEVELOPMENT DEPENDENCY (assumption 8). Nothing in `engine/`,
+ * `validator/`, `theme/` or `session/` imports this file — and `check-no-prototype`
+ * enforces that by measuring the pipeline's `require.cache`.
  */
 
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const INSTALADO = path.join(os.homedir(), '.local', 'opt', 'drawio', 'squashfs-root', 'drawio');
+const INSTALLED = path.join(os.homedir(), '.local', 'opt', 'drawio', 'squashfs-root', 'drawio');
 
 /**
- * @param {string} [arg]  o que veio na linha de comando, se veio
- * @returns {string}      o caminho, existindo ou não — quem chama decide o que fazer
+ * @param {string} [arg]  whatever came from the command line, if anything did
+ * @returns {string}      the path, whether it exists or not — the caller decides what to do
  */
-function binario(arg) {
-  return arg || process.env.DRAWIO || INSTALADO;
+function binary(arg) {
+  return arg || process.env.DRAWIO || INSTALLED;
 }
 
-/** O caminho, ou `null` quando não há binário executável ali. */
-function binarioSeExistir(arg) {
-  const p = binario(arg);
+/** The path, or `null` when there is no executable binary there. */
+function binaryIfPresent(arg) {
+  const p = binary(arg);
   try { fs.accessSync(p, fs.constants.X_OK); return p; } catch (e) { return null; }
 }
 
-module.exports = { binario, binarioSeExistir, INSTALADO };
+module.exports = { binary, binaryIfPresent, INSTALLED };

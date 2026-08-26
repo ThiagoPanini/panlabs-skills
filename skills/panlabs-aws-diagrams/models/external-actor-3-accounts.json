@@ -1,0 +1,35 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "external-actor-3-accounts",
+  "title": "Ator externo · três contas em cadeia",
+  "subtitle": "Vista técnica T5 · o #32 — aresta de conta do meio para ator fora de todas as contas",
+  "view": "technical",
+  "genre": "T5",
+
+  "nodes": [
+    { "id": "cliente", "kind": "actor", "service": "users", "label": "Cliente" },
+    { "id": "regulador", "kind": "actor", "service": "users", "label": "Regulador" },
+
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+
+    { "id": "c-a", "kind": "account", "account": "200000000011", "ou": "Workloads", "label": "Conta A", "inside": "cloud" },
+    { "id": "svc-a", "kind": "service", "service": "ecs", "label": "ECS · A", "inside": "c-a" },
+
+    { "id": "c-b", "kind": "account", "account": "200000000012", "ou": "Workloads", "label": "Conta B", "inside": "cloud" },
+    { "id": "svc-b", "kind": "service", "service": "athena", "label": "Athena · consolidação", "inside": "c-b" },
+
+    { "id": "c-c", "kind": "account", "account": "200000000013", "ou": "Workloads", "label": "Conta C", "inside": "cloud" },
+    { "id": "svc-c", "kind": "service", "service": "s3", "label": "S3 · trilha", "inside": "c-c" }
+  ],
+
+  "edges": [
+    { "from": "cliente", "to": "svc-a", "label": "solicita" },
+    { "from": "svc-a", "to": "svc-b", "label": "envia posição" },
+    { "from": "svc-b", "to": "svc-c", "label": "grava trilha" },
+    { "from": "svc-b", "to": "regulador", "label": "envia relatório" }
+  ],
+
+  "notes": [
+    { "text": "A cadeia A→B→C força B para o MEIO da fileira em qualquer ordem de menor custo — e é B, não A nem C, que fala com o ator. A aresta B→regulador tem de atravessar a fronteira de A (ou de C) para alcançar o ator, que fica sempre à esquerda de toda a fileira (#5 O19). É o caso que faltava no corpus do #24: dos multi-conta existentes, só `platform-3-accounts` tem ator fora, e nele a conta do ator já sai primeira na varredura — a geometria nunca força a travessia.", "origin": "legend" }
+  ]
+}

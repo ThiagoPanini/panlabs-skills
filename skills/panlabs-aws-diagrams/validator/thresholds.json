@@ -1,0 +1,313 @@
+{
+  "_readme": [
+    "The validator's geometric thresholds, split by the one thing that changes what",
+    "can be done with them: whether there is a measurement behind them.",
+    "",
+    "`normative` come from a norm or a published experiment — WCAG 2.2, the expert",
+    "percentiles from Table 2 of Mooney et al. (GD 2025), the C4 checklist. Changing",
+    "one of these isn't configuring, it's disagreeing with the source; so the source",
+    "is written alongside, and whoever changes it has to swap the citation too.",
+    "",
+    "`calibratable` are the ones the rubric (#8) flagged in place as an 'engineering",
+    "default': plausible numbers nobody measured. #18 decides these become",
+    "config — not because configuring is good, but because an unmeasured number",
+    "hard-coded inside an `if` is indistinguishable from a measured one, and the",
+    "difference is exactly what the rubric bothered to record. Once it becomes a",
+    "named key, the number carries `because: null` — the empty field is the request",
+    "for measurement, visible to whoever calibrates it."
+  ],
+  "normative": {
+    "smallTextContrast": {
+      "value": 4.5,
+      "unit": "ratio",
+      "source": "WCAG 2.2 SC 1.4.3 (AA), formula in G18"
+    },
+    "largeTextContrast": {
+      "value": 3.0,
+      "unit": "ratio",
+      "source": "WCAG 2.2 SC 1.4.3 — ≥18pt (24px) or ≥14pt bold (18.5px)"
+    },
+    "nonTextContrast": {
+      "value": 3.0,
+      "unit": "ratio",
+      "source": "WCAG 2.2 SC 1.4.11"
+    },
+    "largeTextPx": {
+      "value": 24,
+      "unit": "px",
+      "source": "WCAG 2.2 SC 1.4.3 — 18pt threshold"
+    },
+    "largeBoldTextPx": {
+      "value": 18.5,
+      "unit": "px",
+      "source": "WCAG 2.2 SC 1.4.3 — 14pt bold threshold"
+    },
+    "nodeResolutionQ1": {
+      "value": 0.067,
+      "unit": "NR",
+      "source": "Mooney et al., GD 2025, eq. (9) + Table 2 (expert Q1)"
+    },
+    "nodeResolutionMedian": {
+      "value": 0.127,
+      "unit": "NR",
+      "source": "Mooney et al., GD 2025, Table 2 (median)"
+    },
+    "crossingsQ1": {
+      "value": 0.966,
+      "unit": "EC",
+      "source": "Mooney et al., GD 2025, eq. (3) + Table 2"
+    },
+    "crossingAngleQ1": {
+      "value": 0.762,
+      "unit": "CA",
+      "source": "Mooney et al., GD 2025, eq. (2) + Table 2"
+    },
+    "idealCrossingAngle": {
+      "value": 70,
+      "unit": "degrees",
+      "source": "Huang, Eades, Hong & Lin (JVLC 2014); adopted by Dunne et al. 2015 and greadability.js"
+    },
+    "minCrossingAngle": {
+      "value": 30,
+      "unit": "degrees",
+      "source": "Mooney et al., GD 2025 — below this the crossing stops being legible"
+    },
+    "minIncidentAngle": {
+      "value": 15,
+      "unit": "degrees",
+      "source": "rubric A6.1 — below this two incident edges are indistinguishable to the eye"
+    },
+    "angularResolutionQ1": {
+      "value": 0.352,
+      "unit": "AR",
+      "source": "Mooney et al., GD 2025, eq. (1) + Table 2"
+    },
+    "nodeUniformityQ1": {
+      "value": 0.5,
+      "unit": "NU",
+      "source": "Mooney et al., GD 2025, eq. (10) + Table 2"
+    },
+    "aspectRatioQ1": {
+      "value": 0.499,
+      "unit": "Asp",
+      "source": "Mooney et al., GD 2025 + Table 2"
+    },
+    "edgeLengthUniformityQ1": {
+      "value": 0.647,
+      "unit": "ELD",
+      "source": "Mooney et al., GD 2025, eq. (4) + Table 2"
+    },
+    "orthogonalityTarget": {
+      "value": 0.9,
+      "unit": "EO",
+      "source": "Mooney et al., GD 2025, eqs. (5)-(6)"
+    },
+    "orthogonalityQ1": {
+      "value": 0.486,
+      "unit": "EO",
+      "source": "Mooney et al., GD 2025, Table 2 — below this it's a disordered mix of angles"
+    },
+    "neighborhoodPreservationQ1": {
+      "value": 0.341,
+      "unit": "NP",
+      "source": "Mooney et al., GD 2025, eq. (7)"
+    },
+    "stressQ1": {
+      "value": 0.618,
+      "unit": "KSM",
+      "source": "Mooney et al., GD 2025, eq. (8)"
+    },
+    "graphicComplexityTarget": {
+      "value": 6,
+      "unit": "legend entries",
+      "source": "Moody, Physics of Notations — span of absolute judgement ≈ 6 categories"
+    },
+    "graphicComplexityFail": {
+      "value": 8,
+      "unit": "legend entries",
+      "source": "Moody, Physics of Notations — 7-8 is warn, above is fail"
+    },
+    "elementsTarget": {
+      "value": 20,
+      "unit": "nodes",
+      "source": "Ghoniem/Fekete/Castagliola; Yoghourdjian et al. (arXiv:1809.00270) — cutoff at 20"
+    },
+    "elementsFail": {
+      "value": 50,
+      "unit": "nodes",
+      "source": "Yoghourdjian et al. — cutoff at 50"
+    },
+    "maxDensity": {
+      "value": 0.1,
+      "unit": "|E|/C(|V|,2)",
+      "source": "Yoghourdjian et al. — 78% of studies use density <10%"
+    }
+  },
+  "calibratable": {
+    "minEdgeLabelFontSize": {
+      "value": 12,
+      "unit": "px",
+      "because": null,
+      "rubric": "A3.9 — 'practical floor below which text stops being legible in print/slide'; the rubric warns this is NOT a WCAG rule (WCAG governs contrast, not size)"
+    },
+    "minElementNameFontSize": {
+      "value": 14,
+      "unit": "px",
+      "because": null,
+      "rubric": "A3.9 — same origin"
+    },
+    "maxProximity": {
+      "value": 0.6,
+      "unit": "ρ",
+      "because": null,
+      "rubric": "A4.7 — 'Threshold value is an engineering default, not measured'"
+    },
+    "bendsTarget": {
+      "value": 1,
+      "unit": "bends per edge",
+      "because": null,
+      "rubric": "A5.3 — 'The value 2 is an engineering default'; 1 is the declared target"
+    },
+    "bendsWarn": {
+      "value": 2,
+      "unit": "bends per edge",
+      "because": null,
+      "rubric": "A5.3 — the number the rubric flagged"
+    },
+    "bendsFail": {
+      "value": 4,
+      "unit": "bends per edge",
+      "because": null,
+      "rubric": "A5.3 — 'fail above 4'"
+    },
+    "bendAngleTarget": {
+      "value": 90,
+      "unit": "degrees",
+      "because": null,
+      "rubric": "A5.4 — derived from Gestalt/continuity, with no experiment of its own"
+    },
+    "bendAngleFail": {
+      "value": 60,
+      "unit": "degrees",
+      "because": null,
+      "rubric": "A5.4 — 'fail below 60°'"
+    },
+    "minConsistentFlow": {
+      "value": 0.9,
+      "unit": "fraction of edges",
+      "because": null,
+      "rubric": "A5.7 — 'The value 0.90 is an engineering default'"
+    },
+    "minAlignment": {
+      "value": 0.7,
+      "unit": "fraction of nodes",
+      "because": null,
+      "rubric": "A6.4 — 'The value 70% is an engineering default'"
+    },
+    "gridStep": {
+      "value": 8,
+      "unit": "px",
+      "because": null,
+      "rubric": "A6.4 — the grid step is an example in the rubric ('e.g.: 8 px')"
+    },
+    "minDeltaE00": {
+      "value": 10,
+      "unit": "ΔE00",
+      "because": null,
+      "rubric": "A7.4 — 'engineering operationalization (the W3C does not prescribe ΔE). Mark as a calibratable default'"
+    },
+    "gapBetweenBoxes": {
+      "value": 8,
+      "unit": "px",
+      "because": null,
+      "rubric": "A3.1 — 'gap ≥ 8 px (or ≥ 0.25 × icon height)'; the rubric gives two forms of the same number and does not pick one"
+    },
+    "groupPadding": {
+      "value": 8,
+      "unit": "px",
+      "because": "CALIBRATED AT THE #23 RECERTIFICATION, and the 12 was a mirror. #18 inherited the number from the `PAD = 12` that #11's engine used, and under that regime the check measured the engine against itself. With the theme layer (#13) the engine started deriving the gap from a base-8 grid — and the measurement leaves no room for interpretation: with threshold 12, A4.1 flags 77 occurrences across 14 of the 15 models in the corpus, and ALL of them report exactly 8 px; with threshold 8, it flags zero. None of them is defective containment, all of them are the new scale. And 8 isn't a number picked to make the test pass: `gridStep` and `gapBetweenBoxes` already held 8 in this same table, and the theme's base 8 comes from the AWS normative icons (48 and 40 px, A9/A6 of #5) and the N7 floor of 0.05\" ≈ 4.8 px, whose next step is 8. The three numbers now agree instead of one contradicting the other two. What A4.1 protects — child INSIDE parent, without touching — stays protected; A4.2, untouched, is what guards membership.",
+      "rubric": "A4.1 — minimum inner padding on all four sides"
+    },
+    "maxPaddingDeviation": {
+      "value": 4,
+      "unit": "px (σ)",
+      "because": null,
+      "rubric": "A4.5 — 'σ ≤ 4 px intra-group'"
+    },
+    "canvasMargin": {
+      "value": 16,
+      "unit": "px",
+      "because": null,
+      "rubric": "A3.7 — 'margin ≥ 16 px'"
+    },
+    "parallelEdgeSeparation": {
+      "value": 6,
+      "unit": "px (Hausdorff)",
+      "because": null,
+      "rubric": "A5.8 — 'Hausdorff distance < 6 px'"
+    },
+    "anchorTolerance": {
+      "value": 2,
+      "unit": "px",
+      "because": null,
+      "rubric": "A3.6 — '±2 px' over the perimeter"
+    },
+    "labelPadding": {
+      "value": 2,
+      "unit": "px",
+      "because": null,
+      "rubric": "A3.2 — 'padding of 2 px' on the intersection of text bounding boxes"
+    },
+    "aspectRatioTolerance": {
+      "value": 0.2,
+      "unit": "fraction",
+      "because": null,
+      "rubric": "A6.3 — 'differs from the canvas ratio by more than 20%'"
+    },
+    "maxFanOut": {
+      "value": 8,
+      "unit": "degree",
+      "because": null,
+      "rubric": "A8.3 — the rubric's U8 lists deg ≤ 8 among the \"engineering defaults\"; the derivation from A6.1 is reasoning, not measurement"
+    },
+    "inkCoverage": {
+      "value": [
+        0.15,
+        0.6
+      ],
+      "unit": "fraction of canvas",
+      "because": null,
+      "rubric": "A8.4 — the rubric's U8 lists the coverage range among the \"engineering defaults\"; the rubric itself calls it a diagnostic signal, not a failure"
+    },
+    "avgCharWidth": {
+      "value": 6.6,
+      "unit": "px per character at 12px",
+      "because": null,
+      "rubric": "none — it's the validator's own. Average glyph advance in Helvetica 12px (~0.55em). The engine calibrated 6.7 independently (resolve.cjs); the agreement is expected, and the check's value isn't in the constant but in composing label boxes and intersecting them, which the engine never does"
+    },
+    "lineHeight": {
+      "value": 17,
+      "unit": "px",
+      "because": null,
+      "rubric": "none — it's the validator's own. Line height for a leaf label at 12px"
+    },
+    "minLabelHeight": {
+      "value": 23,
+      "unit": "px",
+      "because": null,
+      "rubric": "none — it's the validator's own. Floor for a single-line label band"
+    },
+    "maxLabelWidth": {
+      "value": 120,
+      "unit": "px",
+      "because": null,
+      "rubric": "none — it's the validator's own. Width at which the service icon's label wraps"
+    },
+    "titleBandHeight": {
+      "value": 34,
+      "unit": "px",
+      "because": null,
+      "rubric": "none — it's the validator's own. Title band reserved at the top of a container"
+    }
+  }
+}

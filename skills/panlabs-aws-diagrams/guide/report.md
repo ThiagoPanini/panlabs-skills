@@ -42,7 +42,7 @@ a razão é que **ela não existia**: `A5.5` varre `cena.grupos`, faixa é outra
 classe, e o motor era estruturalmente cego ao defeito que o fallback do #21
 existe para evitar. Ela entra **armada e calada** — medida em malha completa de
 3 a 6 zonas, `F2` = 0 nas quatro. O que ela compra é a regressão: no dia em que
-uma mudança de roteamento reintroduzir o cruzamento, o portão `veracidade` barra.
+uma mudança de roteamento reintroduzir o cruzamento, o portão `truthfulness` barra.
 
 ## As oito famílias
 
@@ -67,7 +67,7 @@ cálculo, e existe para responder *"quais das 62, com que severidade"* sem
 executar nada.
 
 ```bash
-node -e "require('./validator/index.cjs').CHECAGENS.filter(c=>c.familia==='A5').forEach(c=>console.log(c.id,c.severidade,c.nome))"
+node -e "require('./validator/index.cjs').CHECKS.filter(c=>c.family==='A5').forEach(c=>console.log(c.id,c.severity,c.name))"
 ```
 
 **Os limiares não foram inventados.** As métricas contínuas estão calibradas nos
@@ -76,19 +76,21 @@ experimental e estão marcadas `calibravel: true`, com `porque: null` em
 `thresholds.json` — o campo vazio é um pedido de medição, não um número
 respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
 
-## Os quatro níveis, e por que o default é `nenhum`
+## Os quatro níveis, e quem nasce em qual
 
 | `--gate` | barra quando |
 |---|---|
-| `nenhum` | nunca — **default** |
-| `veracidade` | há falha semântica |
-| `falha` | há qualquer falha |
-| `estrito` | há qualquer falha **ou** aviso |
+| `none` | nunca |
+| `truthfulness` | há falha semântica |
+| `failure` | há qualquer falha |
+| `strict` | há qualquer falha **ou** aviso |
 
-`veracidade` é o default recomendado de **publicação**, e publicar não é desenhar.
-Bloquear em `gerar` faria o motor recusar por dívida conhecida, com dono e
+`truthfulness` é o default recomendado de **publicação**, e publicar não é desenhar.
+Bloquear em `generate` faria o motor recusar por dívida conhecida, com dono e
 endereço. **Recusar desenhar é decisão de quem entrega, e ela tem hora** — por
-isso o verbo é `publicar` e a decisão é do passo 7, não do passo 6.
+isso `engine/generate.cjs` nasce em `none` e quem nasce em `truthfulness` é
+`tools/case.cjs`, o verbo que grava no projeto de quem chamou. Escrever no
+repositório de outra pessoa é publicar.
 
 Mas o laudo não fica calado: **uma falha semântica vira aviso mesmo sem ninguém
 pedir portão**. Um portão que só existe quando alguém pede é um portão que

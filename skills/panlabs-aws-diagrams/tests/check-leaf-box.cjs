@@ -60,14 +60,23 @@ console.log('\n1 · unit — resolve.leaf() measures the label, does not clamp i
 }
 
 {
-  // theme with the token off: the qualifier does not even show up in the
-  // label, so the box has no reason to widen — #39 (out of #33's scope) is
-  // what turns the token on across the three themes.
-  const res = resolverMod.create(themeMod.load('light'));
-  const f = res.leaf({ id: 'n3', kind: 'service', service: 'aurora-postgresql', qualifier: LONG_QUALIFIER });
-  ok(f.boxW === f.shapeW,
-    '"light" theme (qualifier off) → boxW does not widen',
-    `boxW=${f.boxW} shapeW=${f.shapeW}`);
+  // #39: the three themes now turn the qualifier token on by default, so a
+  // long one widens the box in every one of them — not just `corporate`.
+  for (const id of ['light', 'dark', 'corporate']) {
+    const res = resolverMod.create(themeMod.load(id));
+    const f = res.leaf({ id: 'n3', kind: 'service', service: 'aurora-postgresql', qualifier: LONG_QUALIFIER });
+    ok(f.boxW > f.shapeW,
+      `"${id}" theme (qualifier on by default) → boxW widens past the icon`,
+      `boxW=${f.boxW} shapeW=${f.shapeW}`);
+  }
+
+  // and the partition still holds when the token is explicitly off: the
+  // qualifier does not show up in the label, so the box has no reason to widen.
+  const off = resolverMod.create(themeMod.withPatch('light', { text: { qualifier: false } }));
+  const g = off.leaf({ id: 'n4', kind: 'service', service: 'aurora-postgresql', qualifier: LONG_QUALIFIER });
+  ok(g.boxW === g.shapeW,
+    'qualifier explicitly off → boxW does not widen',
+    `boxW=${g.boxW} shapeW=${g.shapeW}`);
 }
 
 // ---------------------------------------------------------------------------

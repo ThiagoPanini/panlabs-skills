@@ -29,6 +29,7 @@ const { createScene } = require(path.join(ROOT, 'validator', 'scene.cjs'));
 const geo = require(path.join(ROOT, 'validator', 'geometry.cjs'));
 const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 const { validateGeometry } = require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
+const themeMod = require(path.join(ROOT, 'theme', 'theme.cjs'));
 
 let failures = 0;
 const ok = (cond, title, detail) => {
@@ -79,8 +80,13 @@ console.log('\n1 · unit — two edge labels planted on the same point separate\
 console.log('\n2 · end to end — a corpus model that used to collide comes back clean\n');
 
 {
+  // #39 turned `qualifier` on by default in "light", which widens leaf boxes
+  // enough to shift this model's layout — the specific collision below no
+  // longer occurs under today's "light". Forcing the token off reproduces
+  // the exact geometry this proof was measured against; the fix under test
+  // is #40's collision resolver, not #39's default, so pin the OLD condition.
   const model = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'events-fanout.json'), 'utf8'));
-  const r = await generate(model, { tema: 'light' });
+  const r = await generate(model, { tema: themeMod.withPatch('light', { text: { qualifier: false } }) });
   const report = validateGeometry(r.layoutPlan);
   const a32 = report.resultados.find(c => c.id === 'A3.2');
   ok(a32.state === 'ok', 'A3.2 (label-label overlap) is clean on "events-fanout"', JSON.stringify(a32.occurrences));

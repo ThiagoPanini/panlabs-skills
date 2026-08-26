@@ -34,7 +34,7 @@ const { validateGeometry } = require(path.join(__dirname, '..', 'validator', 'va
 const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
 /**
- * ⚠️ NAMED QUARANTINE — EMPTY today, and the empty list is the record.
+ * ⚠️ NAMED QUARANTINE — the machinery demands EXACT equality, and that is the record.
  *
  * #23's recertification ran #18's validator over #12's corpus for the first
  * time and found a real, SEMANTIC debt: `web-flow-3-az` was flagging `A5.5`
@@ -47,13 +47,34 @@ const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
  * perpendicular detour computed the midpoint between the ICONS, and on a 3×3
  * grid that point lands inside the middle column. `corredorLivre` started
  * looking for a GAP instead, and the suite demanded the removal of this entry
- * exactly as promised. The record stays: a quarantine that knows how to
- * expire, expired.
+ * exactly as promised. A quarantine that knows how to expire, expired — and
+ * the object stayed here, empty, because the machinery that reads it is the
+ * one that demands exact equality, and the next named debt enters through it.
  *
- * The object stays here, empty, because the machinery that reads it is the
- * one that demands exact equality — and the next named debt enters through it.
+ * **The next named debt, #39 found it.** Turning `qualifier` on by default
+ * made `check-good.cjs` — which only ever runs the DEFAULT theme — exercise,
+ * for the first time, a corpus where the token is on everywhere. `F2` on
+ * `quorum-3-az` is pre-existing (confirmed under `--theme corporate`, which
+ * always had the token on, independent of #39) and was simply never seen: the
+ * far pair of a 3-zone triangle graph is geometrically forced through the
+ * middle zone (#21's known cost), and `corredorLivre` avoids the middle
+ * zone's SUBNET box but not its AZ band's own label lane, so the corridor it
+ * finds still lands inside that lane. #110 has the diagnosis (file:line) and
+ * a fix attempt that was tried and reverted — it closed this case but broke
+ * `web-flow-3-az`'s already-paid `A5.5`, trading one zero-tolerance failure
+ * for another.
  */
-const QUARANTINE = {};
+const QUARANTINE = {
+  'quorum-3-az': {
+    ticket: '#110',
+    because: 'far pair of a 3-zone triangle graph forced through the middle ' +
+      'zone (#21); corredorLivre’s obstacle is the middle zone’s SUBNET box, ' +
+      'not its AZ band’s label lane, so the corridor still lands inside the ' +
+      'band. Pre-existing under --theme corporate; #39 only exposed it by ' +
+      'checking the default theme with qualifier on for the first time.',
+    expected: ['F2×2'],
+  },
+};
 
 async function main() {
   const models = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();

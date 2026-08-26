@@ -3,17 +3,20 @@
 /**
  * #33 — `tools/check-geometry.cjs` starts accepting `--theme`.
  *
- * Today the report always evaluates the default theme (`light`), which is
- * blind to the `qualifier` field — it only appears in the `corporate` theme.
- * Without `--theme`, the geometric validator never sees what `--theme
- * corporate` turns on.
+ * Born blind to `--theme`: the report always evaluated the default theme
+ * (`light`), and back then `qualifier` only appeared in `corporate` — so the
+ * report never saw what only that theme turned on. #39 later moved
+ * `qualifier` on by default into all three themes, which closed that
+ * specific blind spot; the flag stays needed regardless, because the themes
+ * still differ on other metric tokens (font size, gap density) that also
+ * move geometry and that a light-only report would never see.
  *
  * The proof doesn't open the report's JSON (that would couple the test to
  * its format). It compares STDOUT across three calls:
  *
  *   · without `--theme`                (A, today's default)
  *   · with `--theme light` explicit    (B, the same default, said out loud)
- *   · with `--theme corporate`         (C, turns on the qualifier)
+ *   · with `--theme corporate`         (C, a theme with other metric deltas)
  *
  * A === B proves the flag is recognized without corrupting the positional
  * arguments (today's bug: `--theme light` leaves "light" left over as if it

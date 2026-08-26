@@ -1,23 +1,25 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * A terceira candidata do ticket, medida em vez de descartada por argumento.
+ * The ticket's third candidate, measured instead of dismissed by argument.
  *
- *   > "Ou ordenar por distância da borda, contando saltos até o nó mais
- *   >  exposto — funciona quando há arestas, e cai para o quê quando não há?"
+ *   > "Or order by distance from the boundary, counting hops to the most
+ *   >  exposed node — works when there are edges, and falls back to what when
+ *   >  there aren't?"
  *
- * A pergunta tem duas metades, e as duas se respondem contando:
+ * The question has two halves, and both are answered by counting:
  *
- *   1. QUANTO do corpus ela alcança — em quantos modelos existe aresta
- *      suficiente para a distância significar alguma coisa;
- *   2. ONDE ela alcança, se DISCORDA da regra de conteúdo. Se concordar, ela
- *      não acrescenta informação: é a mesma ordem por um caminho mais frágil.
+ *   1. HOW MUCH of the corpus it reaches — in how many models there is enough
+ *      edge to make the distance mean something;
+ *   2. WHERE it reaches, if it DISAGREES with the content rule. If it agrees,
+ *      it adds no information: it is the same order by a more fragile path.
  *
- * O corpus é o de rede INTEIRO da skill, não só os modelos escritos para esta
- * pergunta — e a contagem separa os dois grupos, porque medir a candidata só nos
- * exemplos desenhados para a vencedora seria fazer a régua concordar comigo. A
- * separação, que era de diretório enquanto o corpus morava nos protótipos, virou
- * a lista `DO_22` abaixo. É a mesma linha, escrita.
+ * The corpus is the skill's WHOLE network corpus, not just the models written
+ * for this question — and the count separates the two groups, because
+ * measuring the candidate only on the examples drawn for the winner would be
+ * making the ruler agree with me. The separation, which used to be a
+ * directory while the corpus lived in the prototypes, became the `FROM_22`
+ * list below. It is the same line, written down.
  */
 
 const fs = require('fs');
@@ -27,19 +29,20 @@ const ROOT = path.join(__dirname, '..');
 
 
 const { derive } = require(path.join(ROOT, 'engine', 'derive.cjs'));
-const camadas = require(path.join(ROOT, 'engine', 'layers.cjs'));
+const layers = require(path.join(ROOT, 'engine', 'layers.cjs'));
 const resolverMod = require(path.join(ROOT, 'engine', 'resolve.cjs'));
 
 const cat = resolverMod.create(require(path.join(ROOT, 'theme', 'theme.cjs')).load('light')).cat;
 
 /**
- * Os modelos que o #22 escreveu PARA esta pergunta. O resto do corpus veio de
- * outros tickets, antes dela — e é essa a linha que a medição precisa separar:
- * rodar a candidata rival só nos modelos feitos sob medida para a vencedora
- * seria fazer a régua concordar comigo.
+ * The models #22 wrote FOR this question. The rest of the corpus came from
+ * other tickets, before it — and that is the line the measurement needs to
+ * separate: running the rival candidate only on the models tailor-made for
+ * the winner would be making the ruler agree with me.
  *
- * Na árvore de produção o corpus mora todo em `models/`, então a separação que
- * antes era de DIRETÓRIO passa a ser esta lista. É a mesma linha, escrita.
+ * In the production tree the corpus lives entirely under `models/`, so the
+ * separation that used to be by DIRECTORY becomes this list. It is the same
+ * line, written down.
  */
 const FROM_22 = new Set(['app-data', 'elk-no-layer', 'ingest-core', 'declared-empty-subnet',
   'three-mixed-layers', 'web-data-with-flow', 'web-data', 'empty-subnet']);
@@ -48,112 +51,112 @@ const corpus = [];
 for (const dir of [path.join(ROOT, 'models'), path.join(ROOT, 'models', 'refusal')])
   for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json')).sort()) {
     const name = f.replace(/\.json$/, '');
-    corpus.push({ group: FROM_22.has(name) ? 'q22' : 'herdado', name,
+    corpus.push({ group: FROM_22.has(name) ? 'q22' : 'inherited', name,
       model: JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) });
   }
 
 /**
- * Distância em saltos, no grafo NÃO dirigido das arestas do modelo, do papel de
- * subnet até a coisa mais exposta que existir.
+ * Distance in hops, on the model's edges as an UNDIRECTED graph, from the
+ * subnet role to the most exposed thing that exists.
  *
- * "Mais exposto" na ordem que o próprio IR oferece: um nó fora de qualquer VPC
- * (ator, serviço regional), senão uma folha de subnet pública. Sem nenhum dos
- * dois não há de onde contar, e a candidata não tem resposta — que já é meia
- * resposta à pergunta do ticket.
+ * "Most exposed" in the order the IR itself offers: a node outside any VPC
+ * (actor, regional service), else a public subnet leaf. With neither of the
+ * two there is nothing to count from, and the candidate has no answer — which
+ * is already half an answer to the ticket's question.
  */
 function edgeDistance(model, d) {
-  const subnetDe = id => {
+  const subnetOf = id => {
     const n = d.t.byId.get(id);
     if (!n) return null;
     return n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet') || null;
   };
-  const emVpc = n => d.t.ancestrais(n).some(a => a.kind === 'vpc');
+  const inVpc = n => d.t.ancestrais(n).some(a => a.kind === 'vpc');
 
-  const fontes = model.nodes.filter(n => ['service', 'block', 'actor'].includes(n.kind))
-    .filter(n => !emVpc(n) || (subnetDe(n.id) || {}).access === 'public')
+  const sources = model.nodes.filter(n => ['service', 'block', 'actor'].includes(n.kind))
+    .filter(n => !inVpc(n) || (subnetOf(n.id) || {}).access === 'public')
     .map(n => n.id);
-  if (!fontes.length) return { ok: false, because: 'nenhum nó exposto de onde contar', dist: new Map() };
+  if (!sources.length) return { ok: false, because: 'no exposed node to count from', dist: new Map() };
 
-  const viz = new Map(model.nodes.map(n => [n.id, []]));
+  const adj = new Map(model.nodes.map(n => [n.id, []]));
   for (const a of model.edges || []) {
-    if (!viz.has(a.from) || !viz.has(a.to)) continue;
-    viz.get(a.from).push(a.to);
-    viz.get(a.to).push(a.from);
+    if (!adj.has(a.from) || !adj.has(a.to)) continue;
+    adj.get(a.from).push(a.to);
+    adj.get(a.to).push(a.from);
   }
 
-  const dist = new Map(fontes.map(f => [f, 0]));
-  const fila = [...fontes];
-  while (fila.length) {
-    const id = fila.shift();
-    for (const v of viz.get(id) || []) if (!dist.has(v)) { dist.set(v, dist.get(id) + 1); fila.push(v); }
+  const dist = new Map(sources.map(f => [f, 0]));
+  const queue = [...sources];
+  while (queue.length) {
+    const id = queue.shift();
+    for (const v of adj.get(id) || []) if (!dist.has(v)) { dist.set(v, dist.get(id) + 1); queue.push(v); }
   }
 
-  // a distância de um PAPEL é a menor entre as folhas que ele guarda
-  const porPapel = new Map();
+  // a ROLE's distance is the smallest among the leaves it holds
+  const perRole = new Map();
   for (const [id, dd] of dist) {
-    const s = subnetDe(id);
+    const s = subnetOf(id);
     if (!s) continue;
-    const key = camadas.chaveDePapel(s, d.t);
-    porPapel.set(key, Math.min(porPapel.get(key) ?? Infinity, dd));
+    const key = layers.chaveDePapel(s, d.t);
+    perRole.set(key, Math.min(perRole.get(key) ?? Infinity, dd));
   }
-  return { ok: porPapel.size > 0, because: porPapel.size ? null : 'nenhuma subnet alcançada por aresta', dist: porPapel };
+  return { ok: perRole.size > 0, because: perRole.size ? null : 'no subnet reached by an edge', dist: perRole };
 }
 
-let alcanca = 0, mudo = 0, concorda = 0, discorda = 0;
-// Contagem à parte para o corpus HERDADO (q11 + q12). Os modelos do q22 foram
-// escritos para esta pergunta, então medir a candidata rival só neles seria
-// fazer a régua concordar comigo — a linha que importa é a de baixo.
-let herdadoFala = 0, herdadoMudo = 0, herdadoDiscorda = 0;
-const detalhes = [];
+let reaches = 0, mute = 0, agrees = 0, disagrees = 0;
+// Separate count for the INHERITED corpus (q11 + q12). The q22 models were
+// written for this question, so measuring the rival candidate only on them
+// would be making the ruler agree with me — the line that matters is the one below.
+let inheritedSpeaks = 0, inheritedMute = 0, inheritedDisagrees = 0;
+const details = [];
 
 for (const { group, name, model } of corpus) {
   const d = derive(model, { cat });
-  const papeis = [...camadas.papeisDeSubnet(model, d.t, d.camadas).values()];
-  const privados = papeis.filter(p => p.access === 'private');
-  if (privados.length < 2) { detalhes.push([group, name, '—', 'menos de 2 papéis privados: a pergunta não se põe']); continue; }
+  const roles = [...layers.papeisDeSubnet(model, d.t, d.camadas).values()];
+  const privateRoles = roles.filter(p => p.access === 'private');
+  if (privateRoles.length < 2) { details.push([group, name, '—', 'fewer than 2 private roles: the question does not apply']); continue; }
 
   const s = edgeDistance(model, d);
-  const cobertos = privados.filter(p => s.dist.has(p.key));
-  if (!s.ok || cobertos.length < 2) {
-    mudo++;
-    if (group !== 'q22') herdadoMudo++;
-    detalhes.push([group, name, 'MUDA', s.because || `só ${cobertos.length} de ${privados.length} papéis alcançados por aresta`]);
+  const covered = privateRoles.filter(p => s.dist.has(p.key));
+  if (!s.ok || covered.length < 2) {
+    mute++;
+    if (group !== 'q22') inheritedMute++;
+    details.push([group, name, 'MUTE', s.because || `only ${covered.length} of ${privateRoles.length} roles reached by an edge`]);
     continue;
   }
-  alcanca++;
-  if (group !== 'q22') herdadoFala++;
+  reaches++;
+  if (group !== 'q22') inheritedSpeaks++;
 
-  const porSalto = [...cobertos].sort((a, b) => s.dist.get(a.key) - s.dist.get(b.key) || a.label.localeCompare(b.label, 'pt'));
-  const byLayer = [...cobertos].sort((a, b) =>
-    camadas.layerOrder(a.layer) - camadas.layerOrder(b.layer) || a.label.localeCompare(b.label, 'pt'));
-  const igual = JSON.stringify(porSalto.map(p => p.label)) === JSON.stringify(byLayer.map(p => p.label));
-  if (igual) concorda++; else discorda++;
-  if (!igual && group !== 'q22') herdadoDiscorda++;
-  detalhes.push([group, name, igual ? 'CONCORDA' : 'DISCORDA',
-    `saltos → ${porSalto.map(p => `${p.label}(${s.dist.get(p.key)})`).join(' · ')}`]);
+  const byHop = [...covered].sort((a, b) => s.dist.get(a.key) - s.dist.get(b.key) || a.label.localeCompare(b.label, 'pt'));
+  const byLayer = [...covered].sort((a, b) =>
+    layers.layerOrder(a.layer) - layers.layerOrder(b.layer) || a.label.localeCompare(b.label, 'pt'));
+  const equal = JSON.stringify(byHop.map(p => p.label)) === JSON.stringify(byLayer.map(p => p.label));
+  if (equal) agrees++; else disagrees++;
+  if (!equal && group !== 'q22') inheritedDisagrees++;
+  details.push([group, name, equal ? 'AGREES' : 'DISAGREES',
+    `hops → ${byHop.map(p => `${p.label}(${s.dist.get(p.key)})`).join(' · ')}`]);
 }
 
-console.log('\n  distância da borda vs. camada do conteúdo — todo o corpus de rede da skill\n');
-for (const [g, n, v, det] of detalhes)
+console.log('\n  distance from the boundary vs. content layer — the skill\'s whole network corpus\n');
+for (const [g, n, v, det] of details)
   console.log(`  ${g}  ${n.padEnd(24)} ${String(v).padEnd(9)} ${det}`);
 
-console.log(`\n  modelos em que a distância consegue ordenar: ${alcanca}`);
-console.log(`  modelos em que ela fica muda:               ${mudo}`);
-console.log(`  onde ela fala, concorda com o conteúdo:     ${concorda}`);
-console.log(`  onde ela fala, DISCORDA do conteúdo:        ${discorda}`);
-console.log(`  só no corpus HERDADO (escrito antes desta pergunta): ` +
-  `fala em ${herdadoFala}, muda em ${herdadoMudo}, discorda em ${herdadoDiscorda}`);
+console.log(`\n  models where distance manages to order: ${reaches}`);
+console.log(`  models where it stays mute:              ${mute}`);
+console.log(`  where it speaks, it agrees with content:  ${agrees}`);
+console.log(`  where it speaks, it DISAGREES with content: ${disagrees}`);
+console.log(`  INHERITED corpus only (written before this question): ` +
+  `speaks in ${inheritedSpeaks}, mute in ${inheritedMute}, disagrees in ${inheritedDisagrees}`);
 
 /**
- * Isto é PORTÃO, não relatório — e por isso sai 1 quando discorda.
+ * This is a GATE, not a report — and that is why it exits 1 on disagreement.
  *
- * A conclusão do #22 sobre a candidata rival é "ela não carrega informação que
- * o conteúdo não tenha". Uma discordância derruba essa conclusão, e uma régua
- * que imprime "reabrir" e sai 0 deixa a suite verde em cima de uma decisão que
- * acabou de perder o argumento.
+ * #22's conclusion about the rival candidate is "it carries no information the
+ * content does not already have". One disagreement knocks that conclusion
+ * down, and a ruler that prints "reopen" and exits 0 leaves the suite green on
+ * top of a decision that just lost the argument.
  */
-console.log(discorda
-  ? '\n  ✗ há discordância — a candidata dos saltos carrega informação que o conteúdo não tem. Reabrir a decisão do #22.'
-  : '\n  ✓ onde a distância fala, ela repete o que o conteúdo já dizia; onde o conteúdo fala sozinho, ' +
-    'ela está muda. Ela não é uma segunda fonte — é a mesma resposta por um caminho que depende de aresta.');
-process.exit(discorda ? 1 : 0);
+console.log(disagrees
+  ? '\n  ✗ there is disagreement — the hop candidate carries information the content does not have. Reopen #22\'s decision.'
+  : '\n  ✓ where distance speaks, it repeats what the content already said; where content speaks alone, ' +
+    'it is mute. It is not a second source — it is the same answer by a path that depends on edges.');
+process.exit(disagrees ? 1 : 0);

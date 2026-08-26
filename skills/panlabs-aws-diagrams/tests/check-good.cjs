@@ -1,28 +1,29 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Os diagramas bons do corpus, laudados — a outra metade do critério de aceite.
+ * The corpus's good diagrams, reported on — the other half of the acceptance criteria.
  *
- * O ticket pede que o validador "separe os dois": os quebrados de propósito e o
- * diagrama bom. `check-broken.cjs` cobre o primeiro lado. Aqui está o
- * segundo, e ele NÃO é "tudo verde".
+ * The ticket asks for the validator to "separate the two": the ones broken on
+ * purpose, and the good diagram. `check-broken.cjs` covers the first side.
+ * This is the second, and it is NOT "all green".
  *
- * A distinção que a suíte trava é entre duas coisas que um relatório único
- * embaralha:
+ * The distinction the suite locks down is between two things a single report
+ * blends together:
  *
- *   o desenho está INCOMPLETO — falta legenda, faltam metadados de frescor, o
- *   título de um grupo tem contraste de 3,06:1. São defeitos reais do motor, e a
- *   suíte os reporta em vez de escondê-los. Não travam: travar aqui seria
- *   transformar achado do #18 em regressão do motor.
+ *   the drawing is INCOMPLETE — missing a legend, missing freshness metadata,
+ *   a group title has 3.06:1 contrast. These are real engine defects, and the
+ *   suite reports them instead of hiding them. They do not block: blocking
+ *   here would turn a #18 finding into an engine regression.
  *
- *   o desenho está MENTINDO — um nó desenhado numa VPC de que não é membro,
- *   uma aresta cortando uma rede alheia, uma faixa afirmando um atributo que o
- *   modelo nega. É o que o índice marca como `semantica`, e é tolerância zero.
- *   ISSO trava a suíte, porque se aparecer num exemplo do #11 é porque o motor
- *   regrediu ou o validador está errado, e as duas coisas precisam de olho.
+ *   the drawing is LYING — a node drawn in a VPC it is not a member of, an
+ *   edge cutting through a network it has no business in, a band asserting an
+ *   attribute the model denies. This is what the index marks as `semantica`,
+ *   and it is zero tolerance. THIS blocks the suite, because if it shows up in
+ *   one of #11's examples it means the engine regressed or the validator is
+ *   wrong, and both need an eye on them.
  *
- * A contagem por estado fica impressa a cada rodada de propósito: é o número
- * que se compara entre uma sessão e a seguinte para saber se melhorou.
+ * The count by state is printed on every run on purpose: it is the number
+ * compared from one session to the next to know whether things improved.
  */
 
 const fs = require('fs');
@@ -33,133 +34,136 @@ const { validateGeometry } = require(path.join(__dirname, '..', 'validator', 'va
 const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
 /**
- * ⚠️ QUARENTENA NOMEADA — hoje VAZIA, e a lista vazia é o registro.
+ * ⚠️ NAMED QUARANTINE — EMPTY today, and the empty list is the record.
  *
- * A recertificação do #23 rodou o validador do #18 sobre o corpus do #12 pela
- * primeira vez e achou uma dívida real e SEMÂNTICA: o `web-flow-3-az` acusava
- * `A5.5` ×2 — duas gravações de EC2 em raias diferentes atravessando o grupo
- * "app-a", de onde não saíam nem para onde iam. Ela entrou aqui com ticket
- * (#24), com o porquê e com a contagem EXATA, e com a regra de que quando fosse
- * paga a suíte quebraria pedindo a remoção da entrada.
+ * #23's recertification ran #18's validator over #12's corpus for the first
+ * time and found a real, SEMANTIC debt: `web-flow-3-az` was flagging `A5.5`
+ * ×2 — two EC2 writes on different lanes crossing the "app-a" group, which
+ * they neither left from nor went to. It entered here with a ticket (#24),
+ * the reason, and the EXACT count, and with the rule that once it was paid
+ * off the suite would break, demanding the entry be removed.
  *
- * **Foi paga.** O #24 achou a causa em `dispor`/`planejar` — o desvio da grade
- * calculava a perna perpendicular como ponto médio entre os ÍCONES, e num grid
- * 3×3 esse ponto cai dentro da coluna do meio. `corredorLivre` passou a
- * procurar um VÃO, e a suíte cobrou a remoção desta entrada exatamente como
- * prometido. O registro fica: quarentena que sabe expirar expirou.
+ * **It was paid.** #24 found the cause in `layout`/`plan` — the grid's
+ * perpendicular detour computed the midpoint between the ICONS, and on a 3×3
+ * grid that point lands inside the middle column. `corredorLivre` started
+ * looking for a GAP instead, and the suite demanded the removal of this entry
+ * exactly as promised. The record stays: a quarantine that knows how to
+ * expire, expired.
  *
- * O objeto continua aqui, vazio, porque a mecânica que o lê é a que cobra
- * igualdade exata — e a próxima dívida nomeada entra por ela.
+ * The object stays here, empty, because the machinery that reads it is the
+ * one that demands exact equality — and the next named debt enters through it.
  */
 const QUARANTINE = {};
 
 async function main() {
-  const modelos = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
-  let falhou = 0;
+  const models = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
+  let failed = 0;
 
-  for (const arquivo of modelos) {
-    const name = path.basename(arquivo, '.json');
+  for (const file of models) {
+    const name = path.basename(file, '.json');
     let r;
     try {
-      r = await generate(JSON.parse(fs.readFileSync(path.join(ROOT, 'models', arquivo), 'utf8')));
+      r = await generate(JSON.parse(fs.readFileSync(path.join(ROOT, 'models', file), 'utf8')));
     } catch (e) {
-      console.log(`  ✗ ${name}: o motor não gerou — ${e.message}`);
-      falhou = 1;
+      console.log(`  ✗ ${name}: the engine did not generate — ${e.message}`);
+      failed = 1;
       continue;
     }
 
     const report = validateGeometry(r.layoutPlan);
     const s = report.resumo;
 
-    // 1. tolerância zero no que é semântico — salvo quarentena nomeada, e ela
-    //    cobra igualdade EXATA, não "menos ou igual"
-    const mentiras = report.semanticas;
-    const assinatura = mentiras.map(m => `${m.id}×${m.occurrences.length}`).sort();
+    // 1. zero tolerance for what is semantic — save for a named quarantine,
+    //    and it demands EXACT equality, not "less than or equal"
+    const lies = report.semanticas;
+    const signature = lies.map(m => `${m.id}×${m.occurrences.length}`).sort();
     const q = QUARANTINE[name];
-    const emQuarentena = q && JSON.stringify(assinatura) === JSON.stringify([...q.expected].sort());
+    const quarantined = q && JSON.stringify(signature) === JSON.stringify([...q.expected].sort());
 
-    if (emQuarentena) {
-      console.log(`  ⚠ ${name}: ${assinatura.join(', ')} — QUARENTENA ${q.ticket} (${q.because})`);
+    if (quarantined) {
+      console.log(`  ⚠ ${name}: ${signature.join(', ')} — QUARANTINE ${q.ticket} (${q.because})`);
     } else {
-      console.log(`  ${mentiras.length ? '✗' : '✓'} ${name}: ${mentiras.length ? `${mentiras.length} FALHA(S) SEMÂNTICA(S)` : 'nenhuma falha semântica'}`);
-      for (const m of mentiras) {
-        falhou = 1;
+      console.log(`  ${lies.length ? '✗' : '✓'} ${name}: ${lies.length ? `${lies.length} SEMANTIC FAILURE(S)` : 'no semantic failure'}`);
+      for (const m of lies) {
+        failed = 1;
         console.log(`      ${m.id} ${m.name}: ${m.mensagem}`);
         for (const o of m.occurrences.slice(0, 3)) console.log(`        · ${o.o_que}`);
       }
       if (q) {
-        falhou = 1;
-        console.log(`      ✗ a quarentena ${q.ticket} para "${name}" esperava ${q.expected.join(', ')} e veio ` +
-          `${assinatura.length ? assinatura.join(', ') : 'nada'} — ` +
-          (assinatura.length ? 'a dívida mudou de forma' : 'a dívida foi PAGA: apague a entrada de QUARENTENA'));
+        failed = 1;
+        console.log(`      ✗ quarantine ${q.ticket} for "${name}" expected ${q.expected.join(', ')} and got ` +
+          `${signature.length ? signature.join(', ') : 'nothing'} — ` +
+          (signature.length ? 'the debt changed shape' : 'the debt was PAID: remove the QUARANTINE entry'));
       }
     }
 
-    // 2. o laudo tem de ser completo — uma checagem muda não pode passar por verde
+    // 2. the report has to be complete — a check that is missing cannot pass as green
     if (report.cobertura.naoRodaram.length) {
-      falhou = 1;
-      console.log(`      ✗ não rodaram: ${report.cobertura.naoRodaram.join(', ')}`);
+      failed = 1;
+      console.log(`      ✗ did not run: ${report.cobertura.naoRodaram.join(', ')}`);
     }
-    const erros = report.resultados.filter(x => x.state === 'erro');
-    for (const e of erros) { falhou = 1; console.log(`      ✗ ${e.mensagem}`); }
+    const blownUp = report.resultados.filter(x => x.state === 'erro');
+    for (const e of blownUp) { failed = 1; console.log(`      ✗ ${e.mensagem}`); }
 
-    // 3. o retrato, que é o que se compara entre sessões
-    console.log(`      ${s.ok} ok · ${s.warning} aviso · ${s.failure} falha · ${s.notApplicable} inaplicável · ${s.skipped} do render`);
+    // 3. the snapshot, which is what gets compared between sessions
+    console.log(`      ${s.ok} ok · ${s.warning} warning · ${s.failure} failure · ${s.notApplicable} not applicable · ${s.skipped} from render`);
     if (report.falhas.length)
-      console.log(`      achados (não travam a suíte): ${report.falhas.map(f => f.id).join(', ')}`);
+      console.log(`      findings (do not block the suite): ${report.falhas.map(f => f.id).join(', ')}`);
   }
 
-  // ---------------------------------------------------- a separação, explícita
+  // ---------------------------------------------------------- the separation, made explicit
   //
-  // O critério de aceite do ticket é "mostrar que separa os dois". Vale dizer
-  // em que EIXO a separação acontece, porque no eixo do relatório inteiro ela
-  // não acontece — e esconder isso seria vender a ferramenta melhor do que ela é.
+  // The ticket's acceptance criterion is "show that it separates the two". It
+  // is worth saying on which AXIS the separation happens, because on the
+  // whole-report axis it does not — and hiding that would be selling the tool
+  // as better than it is.
   //
-  // Os exemplos do #11 acumulam 6 falhas cada um: sem legenda, sem metadados,
-  // contraste do catálogo abaixo da WCAG. São defeitos REAIS. Então "tem falha"
-  // não distingue um diagrama bom de um quebrado — os dois têm.
+  // #11's examples pile up 6 failures each: no legend, no metadata, catalog
+  // contrast below WCAG. These are REAL defects. So "has a failure" does not
+  // distinguish a good diagram from a broken one — both have them.
   //
-  // O que distingue é a VERACIDADE: o desenho afirma alguma coisa que o modelo
-  // nega? Aí a separação é limpa, e é ela que o portão usa como nível default.
+  // What distinguishes them is TRUTHFULNESS: does the drawing assert something
+  // the model denies? There the separation is clean, and it is what the gate
+  // uses as its default level.
   const { gate } = require(path.join(__dirname, '..', 'validator', 'gate.cjs'));
   const { CASES } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 
-  console.log('\n  a separação, no eixo da veracidade:\n');
-  const mentirosos = CASES.filter(c => ['A4.2', 'A4.4', 'A5.5', 'F1'].some(id => c.espera.includes(id)));
-  let barrados = 0;
-  for (const c of mentirosos) {
-    let barrou = false;
-    try { gate(c.layoutPlan, { model: c.model, level: 'truthfulness' }); } catch { barrou = true; }
-    if (barrou) barrados++;
-    else { falhou = 1; console.log(`  ✗ "${c.name}" passou o portão de veracidade`); }
+  console.log('\n  the separation, on the truthfulness axis:\n');
+  const liars = CASES.filter(c => ['A4.2', 'A4.4', 'A5.5', 'F1'].some(id => c.expect.includes(id)));
+  let blocked = 0;
+  for (const c of liars) {
+    let wasBlocked = false;
+    try { gate(c.layoutPlan, { model: c.model, level: 'truthfulness' }); } catch { wasBlocked = true; }
+    if (wasBlocked) blocked++;
+    else { failed = 1; console.log(`  ✗ "${c.name}" passed the truthfulness gate`); }
   }
-  console.log(`  ${barrados === mentirosos.length ? '✓' : '✗'} ${barrados}/${mentirosos.length} diagramas que mentem foram barrados`);
+  console.log(`  ${blocked === liars.length ? '✓' : '✗'} ${blocked}/${liars.length} lying diagrams were blocked`);
 
-  let passaram = 0, emQuarentenaNoPortao = 0;
-  for (const arquivo of modelos) {
-    const name = path.basename(arquivo, '.json');
-    const r = await generate(JSON.parse(fs.readFileSync(path.join(ROOT, 'models', arquivo), 'utf8')));
-    try { gate(r.layoutPlan, { level: 'truthfulness' }); passaram++; }
+  let passed = 0, quarantinedAtGate = 0;
+  for (const file of models) {
+    const name = path.basename(file, '.json');
+    const r = await generate(JSON.parse(fs.readFileSync(path.join(ROOT, 'models', file), 'utf8')));
+    try { gate(r.layoutPlan, { level: 'truthfulness' }); passed++; }
     catch (e) {
-      // o portão barra o que mente, e a quarentena não o desliga: ele CONTINUA
-      // barrando o `web-flow-3-az`, que é o comportamento certo. O que a
-      // quarentena faz é não chamar de regressão uma dívida já nomeada.
-      if (QUARANTINE[name]) { emQuarentenaNoPortao++; console.log(`  ⚠ ${arquivo} barrado pelo portão — quarentena ${QUARANTINE[name].ticket}`); }
-      else { falhou = 1; console.log(`  ✗ ${arquivo} foi barrado: ${e.erros.join(' | ')}`); }
+      // the gate blocks what lies, and the quarantine does not turn it off: it
+      // KEEPS blocking `web-flow-3-az`, which is the correct behavior. What the
+      // quarantine does is not call a named debt a regression.
+      if (QUARANTINE[name]) { quarantinedAtGate++; console.log(`  ⚠ ${file} blocked by the gate — quarantine ${QUARANTINE[name].ticket}`); }
+      else { failed = 1; console.log(`  ✗ ${file} was blocked: ${e.erros.join(' | ')}`); }
     }
   }
-  const esperados = modelos.length - Object.keys(QUARANTINE).length;
-  console.log(`  ${passaram === esperados ? '✓' : '✗'} ${passaram}/${esperados} diagramas do corpus passaram` +
-    (emQuarentenaNoPortao ? `  (+${emQuarentenaNoPortao} em quarentena nomeada)` : ''));
-  if (passaram !== esperados) falhou = 1;
-  console.log('      (no eixo do relatório inteiro NÃO há separação, e é honesto: os');
-  console.log('       diagramas do corpus têm 6 a 9 falhas reais cada um. "Tem falha"');
-  console.log('       não distingue bom de quebrado; "mente" distingue.)');
+  const expected = models.length - Object.keys(QUARANTINE).length;
+  console.log(`  ${passed === expected ? '✓' : '✗'} ${passed}/${expected} corpus diagrams passed` +
+    (quarantinedAtGate ? `  (+${quarantinedAtGate} in named quarantine)` : ''));
+  if (passed !== expected) failed = 1;
+  console.log('      (on the whole-report axis there is NO separation, and that is honest: the');
+  console.log('       corpus diagrams have 6 to 9 real failures each. "Has a failure" does not');
+  console.log('       distinguish good from broken; "lies" does.)');
 
-  console.log(falhou
-    ? '\n  ✗ há falha semântica fora de quarentena, ou laudo incompleto, no corpus'
-    : '\n  ✓ o corpus tem defeitos reportados, e nenhum fora de quarentena é o desenho mentindo.');
-  process.exit(falhou ? 1 : 0);
+  console.log(failed
+    ? '\n  ✗ there is a semantic failure outside quarantine, or an incomplete report, in the corpus'
+    : '\n  ✓ the corpus has reported defects, and none outside quarantine is the drawing lying.');
+  process.exit(failed ? 1 : 0);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

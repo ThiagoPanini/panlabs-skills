@@ -1,30 +1,30 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * O índice é o contrato com a rubrica (#8), e esta checagem é o que impede ele
- * de derivar dela em silêncio.
+ * The index is the contract with the rubric (#8), and this check is what keeps
+ * it from drifting away from it in silence.
  *
- * A rubrica tem 62 checagens mecanizáveis. Um índice com 61 não avisa que
- * perdeu uma: ele só reporta 61 linhas verdes, e a que sumiu vira um buraco que
- * ninguém procura. Por isso os 62 ids abaixo estão escritos à mão, lidos da
- * rubrica, e não derivados do índice — se fossem derivados, a checagem seria
- * o índice conferindo a si mesmo.
+ * The rubric has 62 mechanizable checks. An index with 61 does not warn that
+ * it lost one: it just reports 61 green lines, and the one that vanished
+ * becomes a hole nobody looks for. That is why the 62 ids below are written
+ * by hand, read from the rubric, and not derived from the index — if they
+ * were derived, the check would be the index checking itself.
  *
- * Confere quatro coisas:
+ * Checks four things:
  *
- *   1. o conjunto de ids é exatamente o da rubrica — nem falta nem sobra;
- *   2. toda checagem declara família, severidade máxima e insumo;
- *   3. todo limiar que a rubrica marcou "default de engenharia" virou config
- *      nomeada, e não número solto no meio de um `if`;
- *   4. a divisão validador × render não tem sobreposição nem buraco: todo id
- *      cai em exatamente um dos dois lados, e quem cai no render diz por quê.
+ *   1. the set of ids is exactly the rubric's — neither missing nor extra;
+ *   2. every check declares family, max severity and input;
+ *   3. every threshold the rubric marked "engineering default" became named
+ *      config, not a loose number in the middle of an `if`;
+ *   4. the validator × render split has no overlap and no gap: every id falls
+ *      into exactly one of the two sides, and whichever falls to render says why.
  */
 
 const path = require('path');
 const { CHECKS, THRESHOLDS, byId, SEVERITIES, INPUTS } = require(
   path.join(__dirname, '..', 'validator', 'index.cjs'));
 
-// Os 62 ids de (A), congelados da rubrica de qualidade que originou o validador.
+// The 62 (A) ids, frozen from the quality rubric that originated the validator.
 const FROM_RUBRIC = [
   'A1.1', 'A1.2', 'A1.3', 'A1.4', 'A1.5', 'A1.6', 'A1.7', 'A1.8', 'A1.9', 'A1.10', 'A1.11', 'A1.12',
   'A2.1', 'A2.2', 'A2.3', 'A2.4', 'A2.5', 'A2.6', 'A2.7', 'A2.8', 'A2.9', 'A2.10', 'A2.11',
@@ -36,16 +36,17 @@ const FROM_RUBRIC = [
   'A8.1', 'A8.2', 'A8.3', 'A8.4',
 ];
 
-// As checagens que a rubrica marca com tolerância zero e gravidade semântica —
-// não são estéticas, e o ticket #18 pede confirmação explícita delas.
+// The checks the rubric marks with zero tolerance and semantic severity — not
+// aesthetic, and ticket #18 asks for explicit confirmation of them.
 const ZERO_TOLERANCE = ['A4.2', 'A5.5'];
 
-// A SEVERIDADE QUE A RUBRICA ATRIBUIU, checagem por checagem, lida do campo
-// **Severidade:** de cada uma. Conferir só que o valor está em {fail, warn}
-// não prova nada: um índice que trocasse `fail` por `warn` em A4.2 passaria
-// nessa checagem e desarmaria a falha mais grave do validador em silêncio.
-// Onde a rubrica dá dois níveis ("warn / fail acima de X"), o esperado aqui é o
-// PIOR que a checagem pode emitir — que é o que o campo `severidade` significa.
+// THE SEVERITY THE RUBRIC ASSIGNED, check by check, read from the
+// **Severity:** field of each one. Checking only that the value is in {fail,
+// warn} proves nothing: an index that swapped `fail` for `warn` on A4.2 would
+// pass that check and silently disarm the validator's most serious failure.
+// Where the rubric gives two levels ("warn / fail above X"), what is expected
+// here is the WORST the check can emit — which is what the `severity` field
+// means.
 const RUBRIC_SEVERITY = {
   'A1.1': 'fail', 'A1.2': 'fail', 'A1.3': 'fail', 'A1.4': 'fail', 'A1.5': 'fail', 'A1.6': 'fail',
   'A1.7': 'fail', 'A1.8': 'fail', 'A1.9': 'warn', 'A1.10': 'fail', 'A1.11': 'warn', 'A1.12': 'fail',
@@ -61,93 +62,95 @@ const RUBRIC_SEVERITY = {
   'A8.1': 'fail', 'A8.2': 'warn', 'A8.3': 'warn', 'A8.4': 'warn',
 };
 
-// As que a rubrica escreve com DOIS níveis, e que por isso têm de trazer
-// `escalona: true` — quem decide o caso concreto é a checagem, não a tabela.
+// The ones the rubric writes with TWO levels, and that therefore have to
+// carry `escalona: true` — the concrete case is decided by the check, not by
+// the table.
 const SCALE_WITH = ['A2.1', 'A5.1', 'A5.2', 'A5.3', 'A5.4', 'A6.1', 'A8.1'];
 
-const falhas = [];
-const anota = m => falhas.push(m);
+const failures = [];
+const note = m => failures.push(m);
 
-// ---------------------------------------------------------------- 1. o conjunto
+// ---------------------------------------------------------------- 1. the set
 
 const ids = CHECKS.map(c => c.id);
-const conjunto = new Set(ids);
+const idSet = new Set(ids);
 
-if (ids.length !== 62) anota(`o índice tem ${ids.length} checagens, a rubrica tem 62`);
-if (conjunto.size !== ids.length) {
-  const vistos = new Set();
-  const repetidos = ids.filter(i => vistos.has(i) || (vistos.add(i), false));
-  anota(`ids repetidos: ${[...new Set(repetidos)].join(', ')}`);
+if (ids.length !== 62) note(`the index has ${ids.length} checks, the rubric has 62`);
+if (idSet.size !== ids.length) {
+  const seen = new Set();
+  const duplicates = ids.filter(i => seen.has(i) || (seen.add(i), false));
+  note(`duplicate ids: ${[...new Set(duplicates)].join(', ')}`);
 }
-for (const id of FROM_RUBRIC) if (!conjunto.has(id)) anota(`a rubrica tem "${id}" e o índice não`);
-for (const id of ids) if (!FROM_RUBRIC.includes(id)) anota(`o índice inventou "${id}", que não está na rubrica`);
+for (const id of FROM_RUBRIC) if (!idSet.has(id)) note(`the rubric has "${id}" and the index does not`);
+for (const id of ids) if (!FROM_RUBRIC.includes(id)) note(`the index invented "${id}", which is not in the rubric`);
 
-// ---------------------------------------------------- 2. os campos obrigatórios
+// ---------------------------------------------------- 2. the mandatory fields
 
 for (const c of CHECKS) {
-  if (!c.name) anota(`${c.id} sem nome`);
-  if (c.family !== c.id.split('.')[0]) anota(`${c.id} declara família "${c.family}"`);
-  if (!SEVERITIES.includes(c.severity)) anota(`${c.id} tem severidade "${c.severity}", fora de ${SEVERITIES.join('|')}`);
+  if (!c.name) note(`${c.id} has no name`);
+  if (c.family !== c.id.split('.')[0]) note(`${c.id} declares family "${c.family}"`);
+  if (!SEVERITIES.includes(c.severity)) note(`${c.id} has severity "${c.severity}", outside ${SEVERITIES.join('|')}`);
   else if (RUBRIC_SEVERITY[c.id] && c.severity !== RUBRIC_SEVERITY[c.id])
-    anota(`${c.id} está como "${c.severity}" e a rubrica diz "${RUBRIC_SEVERITY[c.id]}"`);
-  if (SCALE_WITH.includes(c.id) && !c.escalona) anota(`${c.id} tem dois níveis na rubrica e não traz escalona: true`);
-  if (!SCALE_WITH.includes(c.id) && c.escalona) anota(`${c.id} se diz escalonável, e a rubrica lhe dá um nível só`);
-  if (!INPUTS.includes(c.input)) anota(`${c.id} tem insumo "${c.input}", fora de ${INPUTS.join('|')}`);
-  if (!c.mede) anota(`${c.id} não diz o que mede`);
-  if (!c.fonte) anota(`${c.id} não cita a fonte — a rubrica cita, o índice tem de citar`);
+    note(`${c.id} is set to "${c.severity}" and the rubric says "${RUBRIC_SEVERITY[c.id]}"`);
+  if (SCALE_WITH.includes(c.id) && !c.escalona) note(`${c.id} has two levels in the rubric and does not carry escalona: true`);
+  if (!SCALE_WITH.includes(c.id) && c.escalona) note(`${c.id} calls itself scalable, and the rubric gives it a single level`);
+  if (!INPUTS.includes(c.input)) note(`${c.id} has input "${c.input}", outside ${INPUTS.join('|')}`);
+  if (!c.mede) note(`${c.id} does not say what it measures`);
+  if (!c.fonte) note(`${c.id} does not cite a source — the rubric cites one, the index has to cite one`);
 }
 
-// -------------------------------------------- 3. os "defaults de engenharia"
+// -------------------------------------------- 3. the "engineering defaults"
 
-// A lista é do U8 da rubrica, que é onde ela se dá ao trabalho de enumerar os
-// números sem base experimental — e onde manda expô-los: "Devem ser expostos
-// como configuração, não embutidos". A marcação in loco no corpo de cada
-// checagem esquece duas (A8.3 e A8.4); o U8 é a lista completa, e é ele que vale.
+// The list comes from the rubric's U8, which is where it takes the trouble to
+// enumerate the numbers with no experimental basis — and where it demands
+// they be exposed: "Must be exposed as configuration, not hardcoded". The
+// inline marking in each check's body misses two (A8.3 and A8.4); U8 is the
+// complete list, and it is the one that counts.
 const TUNABLE = ['A3.9', 'A4.7', 'A5.3', 'A5.7', 'A6.4', 'A7.4', 'A8.3', 'A8.4'];
 
 for (const id of TUNABLE) {
   const c = byId(id);
-  if (!c) continue;                       // já reportado acima
-  if (!c.calibravel) anota(`${id} é "default de engenharia" na rubrica e o índice não marcou como calibrável`);
-  if (!c.limiar || !c.limiar.key) anota(`${id} é calibrável e não aponta para uma chave de thresholds.json`);
-  else if (!(c.limiar.key in THRESHOLDS)) anota(`${id} aponta para a chave "${c.limiar.key}", ausente de thresholds.json`);
+  if (!c) continue;                       // already reported above
+  if (!c.calibravel) note(`${id} is an "engineering default" in the rubric and the index did not mark it as calibravel`);
+  if (!c.limiar || !c.limiar.key) note(`${id} is calibravel and does not point to a thresholds.json key`);
+  else if (!(c.limiar.key in THRESHOLDS)) note(`${id} points to key "${c.limiar.key}", missing from thresholds.json`);
 }
 
 for (const c of CHECKS) {
   if (c.calibravel && !TUNABLE.includes(c.id))
-    anota(`${c.id} se diz calibrável, mas a rubrica não o marcou como default de engenharia`);
+    note(`${c.id} calls itself calibravel, but the rubric did not mark it as an engineering default`);
 }
 
-// ------------------------------------------- 4. a divisão validador × render
+// ------------------------------------------- 4. the validator × render split
 
 for (const c of CHECKS) {
   if (c.input === 'render' && !c.porqueRender)
-    anota(`${c.id} foi entregue ao render sem dizer por quê — a divisão do #18 exige o motivo`);
+    note(`${c.id} was handed to render without saying why — #18's split demands the reason`);
   if (c.input !== 'render' && c.porqueRender)
-    anota(`${c.id} é do validador e mesmo assim justifica o render`);
+    note(`${c.id} belongs to the validator and still justifies render`);
 }
 
 for (const id of ZERO_TOLERANCE) {
   const c = byId(id);
   if (!c) continue;
-  if (c.severity !== 'fail') anota(`${id} tem tolerância zero na rubrica e o índice não a marcou como fail`);
-  if (c.input === 'render') anota(`${id} é a espinha semântica do validador e foi empurrada para o render`);
-  if (!c.semantica) anota(`${id} não está marcada como falha semântica — é o que separa linter de guarda de veracidade`);
+  if (c.severity !== 'fail') note(`${id} has zero tolerance in the rubric and the index did not mark it fail`);
+  if (c.input === 'render') note(`${id} is the validator's semantic backbone and was pushed to render`);
+  if (!c.semantica) note(`${id} is not marked as a semantic failure — that is what separates a linter from a truthfulness guard`);
 }
 
-// ------------------------------------------------------------------ relatório
+// ------------------------------------------------------------------ report
 
-const doValidador = CHECKS.filter(c => c.input !== 'render');
-console.log(`  checagens no índice:        ${CHECKS.length}/62`);
-console.log(`  do validador (obrigatório): ${doValidador.length}`);
-console.log(`  do render (oportunista):    ${CHECKS.length - doValidador.length}`);
+const validatorOwned = CHECKS.filter(c => c.input !== 'render');
+console.log(`  checks in the index:        ${CHECKS.length}/62`);
+console.log(`  validator's (mandatory):    ${validatorOwned.length}`);
+console.log(`  render's (opportunistic):   ${CHECKS.length - validatorOwned.length}`);
 console.log(`  fail / warn:                ${CHECKS.filter(c => c.severity === 'fail').length} / ` +
   `${CHECKS.filter(c => c.severity === 'warn').length}`);
-console.log(`  limiares calibráveis:       ${CHECKS.filter(c => c.calibravel).length}`);
+console.log(`  calibratable thresholds:    ${CHECKS.filter(c => c.calibravel).length}`);
 
-if (falhas.length) {
-  console.log('\n  ✗ o índice não bate com a rubrica:');
-  for (const f of falhas) console.log(`      · ${f}`);
+if (failures.length) {
+  console.log('\n  ✗ the index does not match the rubric:');
+  for (const f of failures) console.log(`      · ${f}`);
   process.exit(1);
 }
-console.log('\n  ✓ as 62 checagens da rubrica estão no índice, classificadas e com fonte.');
+console.log('\n  ✓ the rubric\'s 62 checks are in the index, classified and sourced.');

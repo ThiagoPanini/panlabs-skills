@@ -1,20 +1,23 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * A mesma decisão, conferida NO ARQUIVO EMITIDO — não na regra que eu escrevi.
+ * The same decision, checked in the EMITTED FILE — not in the rule I wrote.
  *
- * O `check-layer.cjs` prova que a REGRA ordena certo, e ele faz isso chamando
- * a regra. Se um dia o `layout.cjs` parar de consultar a camada, aquela régua
- * continua verde e o desenho sai errado: ela estaria conferindo a minha
- * intenção, não o produto. É a lição que o #17 pagou caro — "checagem estática
- * não substitui render" — e o formato aqui é o do `check-traversal.cjs` do #12.
+ * `check-layer.cjs` proves the RULE orders correctly, and it does so by
+ * calling the rule. If one day `layout.cjs` stops consulting the layer, that
+ * gauge stays green and the drawing comes out wrong: it would be checking my
+ * intent, not the product. It's the lesson #17 paid dearly for — "static
+ * checking doesn't replace rendering" — and the format here is the one from
+ * `check-traversal.cjs` in #12.
  *
- * Esta lê o `.drawio` que o motor acabou de emitir, extrai o Y de cada célula
- * de subnet e confere que a ordem de cima para baixo é a que o ticket espera.
- * Passa pelo pipeline inteiro: derivar › dispor › planejar › emitir.
+ * This reads the `.drawio` the engine just emitted, extracts the Y of each
+ * subnet cell, and checks that the top-to-bottom order is what the ticket
+ * expects. It goes through the whole pipeline: derive › lay out › plan ›
+ * emit.
  *
- * O Y é da GEOMETRIA, não da ordem das células no documento: a ordem do
- * documento é ordem Z e não é o que o leitor vê empilhado.
+ * The Y comes from the GEOMETRY, not from the order of cells in the
+ * document: document order is Z-order and isn't what the reader sees
+ * stacked.
  */
 
 const fs = require('fs');
@@ -25,8 +28,8 @@ const ROOT = path.join(__dirname, '..');
 const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
 /**
- * O que o ticket #22 espera ver, de cima para baixo, em cada modelo.
- * É a tabela do enunciado, mais os casos que este protótipo acrescentou.
+ * What ticket #22 expects to see, top to bottom, in each model.
+ * It's the table from the ticket's statement, plus the cases this prototype added.
  */
 const EXPECTED = {
   'app-data': ['App subnet', 'Data subnet'],
@@ -39,56 +42,58 @@ const EXPECTED = {
 };
 
 /**
- * As faixas de subnet do XML, de cima para baixo, sem repetir rótulo.
+ * The subnet rows from the XML, top to bottom, without repeating a label.
  *
- * O `value` de uma célula de subnet é o rótulo, e o estilo dela traz
- * `grIcon=…group_security_group` — é assim que o catálogo (#17) desenha as duas
- * subnets, e é o que separa a subnet da VPC e da nuvem no mesmo arquivo.
+ * A subnet cell's `value` is the label, and its style carries
+ * `grIcon=…group_security_group` — that's how the catalog (#17) draws the
+ * two subnets, and it's what tells the subnet apart from the VPC and the
+ * cloud in the same file.
  *
- * Cada papel aparece uma vez por zona, todas na mesma linha: deduplicar por
- * rótulo devolve exatamente as LINHAS da grade, que é o que se quer conferir.
+ * Each role appears once per zone, all on the same row: deduplicating by
+ * label returns exactly the grid's ROWS, which is what we want to check.
  */
-function linhasDoArquivo(xml) {
-  const celulas = [...xml.matchAll(
+function fileRows(xml) {
+  const cells = [...xml.matchAll(
     /<mxCell id="([^"]+)" value="([^"]*)" style="([^"]*)"[^>]*>\s*<mxGeometry x="(-?\d+)" y="(-?\d+)"/g)]
     .filter(m => /group_security_group/.test(m[3]))
     .map(m => ({ id: m[1], label: m[2], y: Number(m[5]) }));
 
-  celulas.sort((a, b) => a.y - b.y || a.id.localeCompare(b.id));
-  const vistos = new Set();
-  return celulas.filter(c => !vistos.has(c.label) && vistos.add(c.label)).map(c => c.label);
+  cells.sort((a, b) => a.y - b.y || a.id.localeCompare(b.id));
+  const seen = new Set();
+  return cells.filter(c => !seen.has(c.label) && seen.add(c.label)).map(c => c.label);
 }
 
 (async () => {
-  let falhas = 0;
-  console.log('\n  ordem das linhas LIDA DO ARQUIVO EMITIDO\n');
+  let failures = 0;
+  console.log('\n  row order READ FROM THE EMITTED FILE\n');
 
   for (const [name, expected] of Object.entries(EXPECTED)) {
     const model = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', `${name}.json`), 'utf8'));
     const { xml } = await generate(model);
-    const got = linhasDoArquivo(xml);
+    const got = fileRows(xml);
     const ok = JSON.stringify(got) === JSON.stringify(expected);
-    if (!ok) falhas++;
+    if (!ok) failures++;
     console.log(`  ${ok ? '✓' : '✗'} ${name.padEnd(24)} ${got.join(' → ')}`);
-    if (!ok) console.log(`      esperado: ${expected.join(' → ')}`);
+    if (!ok) console.log(`      expected: ${expected.join(' → ')}`);
   }
 
   /**
-   * O controle: sem ele, um extrator que devolvesse lista vazia passaria em
-   * tudo. Aqui a subnet de dados é declarada como borda — o desenho TEM de
-   * inverter, e se não inverter é porque o arquivo não está sendo lido.
+   * The control: without it, an extractor that always returned an empty list
+   * would pass everything. Here the data subnet is declared as edge — the
+   * drawing MUST invert, and if it doesn't invert it's because the file
+   * isn't actually being read.
    */
-  const controle = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'web-data.json'), 'utf8'));
-  for (const n of controle.nodes) if (n.label === 'Data subnet') n.layer = 'edge';
-  const { xml } = await generate(controle);
-  const inverted = linhasDoArquivo(xml);
-  const inverteu = JSON.stringify(inverted) === JSON.stringify(['Data subnet', 'Web subnet']);
-  if (!inverteu) falhas++;
-  console.log(`\n  ${inverteu ? '✓' : '✗'} controle: declarar a Data subnet como "borda" inverte o desenho ` +
+  const control = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'web-data.json'), 'utf8'));
+  for (const n of control.nodes) if (n.label === 'Data subnet') n.layer = 'edge';
+  const { xml } = await generate(control);
+  const inverted = fileRows(xml);
+  const didInvert = JSON.stringify(inverted) === JSON.stringify(['Data subnet', 'Web subnet']);
+  if (!didInvert) failures++;
+  console.log(`\n  ${didInvert ? '✓' : '✗'} control: declaring the Data subnet as "edge" inverts the drawing ` +
     `— ${inverted.join(' → ')}`);
 
-  console.log(falhas
-    ? `\n  ✗ ${falhas} falha(s) — a ordem no arquivo não é a que a regra promete`
-    : '\n  ✓ o que a regra decide é o que o arquivo mostra.');
-  process.exit(falhas ? 1 : 0);
+  console.log(failures
+    ? `\n  ✗ ${failures} failure(s) — the order in the file isn't what the rule promises`
+    : '\n  ✓ what the rule decides is what the file shows.');
+  process.exit(failures ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

@@ -1,25 +1,26 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * O portão, rodado ponta a ponta — a decisão 2 provada, não declarada.
+ * The gate, run end to end — decision 2 proven, not just declared.
  *
- * A revisão do #18 apontou que "o validador é um portão depois de `planejar` e
- * antes de `emitir`" estava só na prosa: nada no código exercitava o enxerto, e
- * uma decisão de arquitetura que ninguém executa é uma intenção.
+ * #18's review pointed out that "the validator is a gate after `plan` and
+ * before `emit`" lived only in prose: nothing in the code exercised the
+ * graft, and an architecture decision nobody executes is an intention.
  *
- * Este teste executa. Ele monta o pipeline na mão até `planejar`, chama o portão
- * exatamente onde ele mora, e confere as duas metades:
+ * This test executes it. It assembles the pipeline by hand up to `plan`,
+ * calls the gate exactly where it lives, and checks both halves:
  *
- *   · num plano que mente, o portão LANÇA, e a mensagem diz o que quebrou;
- *   · num plano correto, ele DEIXA PASSAR e o `emitir` roda em seguida,
- *     produzindo o XML — que é a prova de que o portão cabe no meio do
- *     pipeline sem quebrá-lo.
+ *   · on a plan that lies, the gate THROWS, and the message says what broke;
+ *   · on a correct plan, it LETS IT THROUGH and `emit` runs right after,
+ *     producing the XML — which is the proof that the gate fits in the
+ *     middle of the pipeline without breaking it.
  *
- * ✅ E o enxerto ESTÁ aplicado desde a consolidação do #23 — quando este teste foi
- * escrito ele não estava, porque o motor era protótipo de outro ticket, e o que
- * se provava aqui era que ele CABIA. Continua provando, e agora prova o mais
- * forte: o portão que a suíte exercita à mão é o mesmo que `engine/generate.cjs`
- * chama. A ponta a ponta pelo motor está em `tests/run.sh`, camada 5.
+ * ✅ And the graft IS in place since the #23 consolidation — when this test was
+ * written it was not, because the engine was another ticket's prototype, and
+ * what was being proven here was that it FIT. It keeps proving that, and now
+ * proves the stronger claim: the gate the suite exercises by hand is the same
+ * one `engine/generate.cjs` calls. The end-to-end run through the engine is in
+ * `tests/run.sh`, layer 5.
  */
 
 const fs = require('fs');
@@ -31,107 +32,110 @@ const { CASES, CONTROL } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 const { emit, checkXml } = require(path.join(ROOT, 'engine', 'emit.cjs'));
 const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
-let falhas = 0;
-const anota = (ok, o_que, detail) => {
-  if (!ok) falhas++;
-  console.log(`  ${ok ? '✓' : '✗'} ${o_que}`);
+let failures = 0;
+const note = (ok, what, detail) => {
+  if (!ok) failures++;
+  console.log(`  ${ok ? '✓' : '✗'} ${what}`);
   if (detail) console.log(`      ${detail}`);
 };
 
-// ------------------------------------------------- 1. o portão barra a mentira
+// ------------------------------------------------- 1. the gate blocks the lie
 
 /**
- * ⚠️ UMA FAMÍLIA SEMÂNTICA DE CADA VEZ, e não só a primeira que a lista achar.
+ * ⚠️ ONE SEMANTIC FAMILY AT A TIME, and not just the first one the list finds.
  *
- * A versão anterior exercitava só `A4.2`. A revisão do #24 apontou o buraco: se
- * o portão passasse a barrar `A4.2` e a deixar passar `A5.5`, este arquivo
- * continuaria verde — e `A5.5` é justamente a família que o #24 zerou no motor,
- * o que significa que nenhum modelo do corpus a produz mais para cobrar em
- * outro lugar. Um portão que perde a checagem mais grave do validador não pode
- * depender de um defeito existir no corpus para ser pego.
+ * The previous version only exercised `A4.2`. #24's review pointed out the
+ * hole: if the gate started blocking `A4.2` and letting `A5.5` through, this
+ * file would stay green — and `A5.5` is exactly the family #24 zeroed out in
+ * the engine, which means no model in the corpus produces it anymore to
+ * charge it elsewhere. A gate that loses the validator's most serious check
+ * cannot depend on a defect existing in the corpus to be caught.
  *
- * As CINCO famílias de tolerância zero, cada uma com o seu caso plantado — `F2`
- * entrou no #26, e entrou pelo mesmo argumento que o #24 usou para `A5.5`: ela é
- * a checagem que NENHUM modelo do corpus produz (medido em malha completa de 3 a
- * 6 zonas, F2 = 0 nas quatro), então se ela não for cobrada aqui, não é cobrada
- * em lugar nenhum.
+ * The FIVE zero-tolerance families, each with its own planted case — `F2`
+ * came in with #26, and by the same argument #24 used for `A5.5`: it is the
+ * check that NO model in the corpus produces (measured on a full 3-to-6-zone
+ * mesh, F2 = 0 across all four), so if it is not charged here, it is not
+ * charged anywhere.
  */
 {
   for (const id of ['A4.2', 'A4.4', 'A5.5', 'F1', 'F2']) {
-    const lying = CASES.find(c => c.espera.includes(id));
-    if (!lying) { anota(false, `há um caso plantado para ${id}`); continue; }
-    let lancou = null;
+    const lying = CASES.find(c => c.expect.includes(id));
+    if (!lying) { note(false, `there is a planted case for ${id}`); continue; }
+    let thrown = null;
     try {
       gate(lying.layoutPlan, { model: lying.model, level: 'truthfulness' });
-    } catch (e) { lancou = e; }
+    } catch (e) { thrown = e; }
 
-    anota(!!lancou, `nível "veracidade" barra o plano que mente por ${id} ("${lying.name}")`,
-      lancou ? `→ ${lancou.erros[0]}` : 'passou, e não devia');
-    if (!lancou) continue;
-    anota(Array.isArray(lancou.erros) && lancou.erros.length > 0,
-      `${id}: o erro traz linhas legíveis em \`.erros\`, como o resto do motor`);
-    anota(!!lancou.report, `${id}: o erro carrega o laudo inteiro para quem quiser detalhar`);
-    anota(lancou.erros.some(l => l.includes(id)), `${id}: a mensagem nomeia a checagem que barrou`);
+    note(!!thrown, `"truthfulness" level blocks the plan that lies via ${id} ("${lying.name}")`,
+      thrown ? `→ ${thrown.erros[0]}` : 'passed, and it should not have');
+    if (!thrown) continue;
+    note(Array.isArray(thrown.erros) && thrown.erros.length > 0,
+      `${id}: the error carries readable lines in \`.erros\`, like the rest of the engine`);
+    note(!!thrown.report, `${id}: the error carries the whole report for whoever wants the detail`);
+    note(thrown.erros.some(l => l.includes(id)), `${id}: the message names the check that blocked it`);
   }
 }
 
-// ------------------ 2. incompletude nunca passa, mesmo no nível mais frouxo
+// ------------------ 2. incompleteness never passes, even at the loosest level
 
 {
-  // Um plano correto no nível `nenhum` tem de passar…
-  let passou = true;
+  // A correct plan at the `none` level has to pass…
+  let passed = true;
   try { gate(CONTROL.layoutPlan, { model: CONTROL.model, level: 'none' }); }
-  catch { passou = false; }
-  anota(passou, 'nível "nenhum" deixa passar um plano correto');
+  catch { passed = false; }
+  note(passed, '"none" level lets a correct plan through');
 
-  // …mas nem `nenhum` engole laudo incompleto. Simula-se removendo uma família
-  // do índice não dá; o que se confere é que a regra existe e está ligada.
+  // …but not even `none` swallows an incomplete report. There is no way to
+  // simulate this by removing a family from the index; what is checked is
+  // that the rule exists and is wired in.
   const report = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'))
     .validateGeometry(CONTROL.layoutPlan, { model: CONTROL.model });
-  anota(report.cobertura.naoRodaram.length === 0 && !report.resultados.some(r => r.state === 'erro'),
-    'o laudo do controle é completo (nenhuma checagem muda)',
-    `${report.cobertura.rodaram}/${report.cobertura.esperadas} rodaram`);
+  note(report.cobertura.naoRodaram.length === 0 && !report.resultados.some(r => r.state === 'erro'),
+    "the control's report is complete (no check is missing)",
+    `${report.cobertura.rodaram}/${report.cobertura.esperadas} ran`);
 }
 
-// --------------------------- 3. o enxerto real: planejar › PORTÃO › emitir
+// --------------------------- 3. the real graft: plan › GATE › emit
 
 {
-  // O pipeline do #11 até o plano. `gerar` já faz tudo, então usa-se o plano que
-  // ele devolve — é o mesmo objeto que existiria entre `planejar` e `emitir`.
+  // #11's pipeline up to the plan. `generate` already does everything, so the
+  // plan it returns is used — it is the same object that would exist between
+  // `plan` and `emit`.
   const model = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'orders-serverless.json'), 'utf8'));
   generate(model).then(r => {
     let report = null;
-    let barrou = null;
+    let blocked = null;
     try {
-      // é ISTO que entra em `generate.cjs`, nas duas linhas documentadas em gate.cjs
+      // this is EXACTLY what goes into `generate.cjs`, in the two lines documented in gate.cjs
       report = gate(r.layoutPlan, { level: 'truthfulness' });
-    } catch (e) { barrou = e; }
+    } catch (e) { blocked = e; }
 
-    anota(!barrou, 'o diagrama bom do #11 passa o portão de veracidade',
-      barrou ? barrou.erros.join(' | ') : `${report.resumo.ok} ok, ${report.resumo.failure} falha, 0 semânticas`);
+    note(!blocked, "#11's good diagram passes the truthfulness gate",
+      blocked ? blocked.erros.join(' | ') : `${report.resumo.ok} ok, ${report.resumo.failure} failure, 0 semantic`);
 
-    // e o pipeline continua: o portão não consumiu nem alterou o plano
+    // and the pipeline continues: the gate did not consume or alter the plan
     const xml = emit(r.layoutPlan);
     const malformed = checkXml(xml);
-    anota(malformed.length === 0 && xml.length > 0,
-      '`emitir` roda depois do portão e produz XML bem formado',
+    note(malformed.length === 0 && xml.length > 0,
+      '`emit` runs after the gate and produces well-formed XML',
       `${xml.length} bytes`);
-    anota(xml === r.xml, 'o XML é byte a byte o mesmo — o portão é puro, não tocou no plano');
+    note(xml === r.xml, 'the XML is byte for byte the same — the gate is pure, it did not touch the plan');
 
     /**
-     * ⚠️ O CONTROLE MAIS IMPORTANTE DESTE ARQUIVO — e o único que precisa de um
-     * processo filho.
+     * ⚠️ THE MOST IMPORTANT CONTROL IN THIS FILE — and the only one that needs
+     * a child process.
      *
-     * O #18 garante que *"um laudo incompleto nunca passa, EM NENHUM NÍVEL"*: se
-     * uma família de checagem parou de rodar, o verde não quer dizer nada. É a
-     * garantia mais fácil de perder no enxerto, e ela FOI perdida na primeira
-     * versão do #23 — `generate.cjs` chamava `portao` dentro de um `try` e pulava a
-     * página quando ele lançava, então uma família quebrada saía como portão
-     * verde sobre um laudo que não mediu nada.
+     * #18 guarantees that *"an incomplete report never passes, AT NO LEVEL"*:
+     * if a check family stopped running, green means nothing. It is the
+     * easiest guarantee to lose in the graft, and it WAS lost in the first
+     * version of #23 — `generate.cjs` called `gate` inside a `try` and skipped
+     * the page when it threw, so a broken family came out as a green gate over
+     * a report that measured nothing.
      *
-     * Para exercitar isso é preciso quebrar uma família ANTES de `gate.cjs`
-     * ser carregado — ele destrutura `validarGeometria` na carga, então trocar a
-     * propriedade depois não alcança a referência que ele guardou. Daí o filho.
+     * Exercising this requires breaking a family BEFORE `gate.cjs` is loaded —
+     * it destructures `validateGeometry` at load time, so swapping the
+     * property afterward does not reach the reference it kept. Hence the
+     * child process.
      */
     const { execFileSync } = require('child_process');
     const script = `
@@ -139,7 +143,7 @@ const anota = (ok, o_que, detail) => {
       const ROOT = ${JSON.stringify(ROOT)};
       const target = require.resolve(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
       const real = require(target);
-      // um laudo que se declara INCOMPLETO, e nada mais
+      // a report that declares itself INCOMPLETE, and nothing else
       require.cache[target].exports = {
         ...real,
         validateGeometry: (layoutPlan, opts) => {
@@ -151,21 +155,21 @@ const anota = (ok, o_que, detail) => {
       const fs = require('fs');
       const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'web-multi-az.json'), 'utf8'));
       generate(m, { gate: 'none' })
-        .then(() => { console.log('PASSOU'); })
-        .catch(e => { console.log('BARROU:' + e.message); });
+        .then(() => { console.log('PASSED'); })
+        .catch(e => { console.log('BLOCKED:' + e.message); });
     `;
-    const saidaFilho = execFileSync(process.execPath, ['-e', script], { encoding: 'utf8' }).trim();
-    anota(saidaFilho.startsWith('BARROU:'),
-      'laudo INCOMPLETO não passa nem no nível "nenhum" (a garantia do #18)',
-      saidaFilho.slice(0, 110));
+    const childOutput = execFileSync(process.execPath, ['-e', script], { encoding: 'utf8' }).trim();
+    note(childOutput.startsWith('BLOCKED:'),
+      'an INCOMPLETE report does not pass even at the "none" level (the #18 guarantee)',
+      childOutput.slice(0, 110));
 
-    console.log(falhas
-      ? `\n  ✗ ${falhas} verificação(ões) falharam`
-      : `\n  ✓ o portão barra o que mente, deixa passar o que não mente, e cabe entre planejar e emitir.`);
-    process.exit(falhas ? 1 : 0);
+    console.log(failures
+      ? `\n  ✗ ${failures} check(s) failed`
+      : '\n  ✓ the gate blocks what lies, lets through what does not lie, and fits between plan and emit.');
+    process.exit(failures ? 1 : 0);
   }).catch(e => { console.error(e); process.exit(1); });
 }
 
-// sanidade do próprio módulo: os níveis declarados existem
-anota(Object.keys(LEVELS).length === 4, 'os quatro níveis de portão estão declarados',
+// module sanity: the declared levels exist
+note(Object.keys(LEVELS).length === 4, 'the four gate levels are declared',
   Object.keys(LEVELS).join(', '));

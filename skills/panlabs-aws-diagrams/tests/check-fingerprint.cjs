@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * M2 — que granularidade de impressao serve para detectar edicao humana?
+ * M2 — what fingerprint granularity is good enough to detect human edits?
  *
- *   node tools/medir-fingerprint.cjs [binario-drawio]
+ *   node tests/check-fingerprint.cjs [drawio-binary]
  *
- * O reflexo e guardar um hash do arquivo. A medicao existe para mostrar que ele
- * nao serve, e por dois motivos distintos:
+ * The reflex is to keep a hash of the file. The measurement exists to show
+ * that it does not work, for two distinct reasons:
  *
- *   1. ele acusa arquivo INTOCADO — abrir e salvar no proprio draw.io reescreve
- *      o XML, e nenhum humano editou nada;
- *   2. ele nao distingue arrastar uma caixa (o modelo continua valendo) de
- *      apagar um servico (o modelo virou mentira). Sao respostas opostas.
+ *   1. it flags an UNTOUCHED file — opening and saving in draw.io itself
+ *      rewrites the XML, and no human edited anything;
+ *   2. it does not distinguish dragging a box (the model is still valid) from
+ *      deleting a service (the model became a lie). These are opposite answers.
  *
- * Dez edicoes que um humano faz de verdade, tres esquemas de impressao, e a
- * classificacao esperada de cada uma. O terceiro esquema e o adotado — e a
- * diferenca entre ele e o segundo e UM caso, que e o experimento de controle:
- * repintar uma subnet privada com o hex da publica. Elas tem o mesmo `shape` e o
- * mesmo `grIcon` (medido no catalogo do #17); a fronteira que a checagem A4.2 da
- * rubrica (#8) protege mora so na cor.
+ * Ten edits a human really makes, three fingerprint schemes, and the expected
+ * classification of each. The third scheme is the adopted one — and the
+ * difference between it and the second is ONE case, which is the control
+ * experiment: repainting a private subnet with the public one's hex. They
+ * have the same `shape` and the same `grIcon` (measured in #17's catalog);
+ * the boundary that rubric (#8)'s A4.2 check protects lives only in the color.
  */
 
 const fs = require('fs');
@@ -27,7 +27,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
-const { readPages, impressaoSemantica, appearanceFingerprint } = require('../session/fingerprint.cjs');
+const { readPages, semanticFingerprint, appearanceFingerprint } = require('../session/fingerprint.cjs');
 const { approve } = require('../session/agreement.cjs');
 const { elaborate } = require('../session/elaborate.cjs');
 const { draw } = require('../session/draw.cjs');
@@ -36,93 +36,95 @@ const ROOT = path.join(__dirname, '..');
 const { binary } = require(path.join(__dirname, '..', 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
 
-// ------------------------------------------------------------- as edicoes
+// ------------------------------------------------------------------ the edits
 
 /**
- * Troca dentro da PRIMEIRA celula com este id. Aqui a base e uma pagina so, entao
- * primeira e unica — o nome diz "primeira" mesmo assim, porque existe um irmao
- * deste helper em `demo-divergence.cjs` que casa a ULTIMA, e dois helpers com o
- * mesmo nome e semanticas opostas e o jeito mais barato de plantar um bug.
+ * Swaps inside the FIRST cell with this id. Here the base is a single page, so
+ * first and only are the same — the name still says "first" because there is
+ * a sibling of this helper in `demo-divergence.cjs` that matches the LAST
+ * one, and two helpers with the same name and opposite semantics is the
+ * cheapest way to plant a bug.
  */
 function inFirstCell(xml, id, fn) {
   const re = new RegExp(`(<mxCell id="${id}"[\\s\\S]*?</mxCell>)`);
   const m = re.exec(xml);
-  if (!m) throw new Error(`celula "${id}" nao achada`);
+  if (!m) throw new Error(`cell "${id}" not found`);
   return xml.replace(re, fn(m[1]));
 }
 
 const EDITS = [
-  { name: 'salvar sem editar nada', expected: 'intacto', app: true,
-    because: 'o codec do proprio app reescreve o arquivo; ninguem editou' },
+  { name: 'save without editing anything', expected: 'intact', app: true,
+    because: "the app's own codec rewrites the file; nobody edited it" },
 
-  { name: 'arrastar uma caixa', expected: 'remanejado',
-    // Ancorar em `<mxGeometry x=` e obrigatorio: um `/x="(\d+)"/` solto casa
-    // dentro de `vertex="1"` e a edicao vira outra coisa. Custou uma rodada.
-    faz: x => inFirstCell(x, 'processar-na-chegada',
+  { name: 'drag a box', expected: 'moved',
+    // Anchoring on `<mxGeometry x=` is mandatory: a loose `/x="(\d+)"/` matches
+    // inside `vertex="1"` and the edit turns into something else. It cost a
+    // round trip.
+    apply: x => inFirstCell(x, 'processar-na-chegada',
       c => c.replace(/<mxGeometry x="(-?\d+)"/, (_, v) => `<mxGeometry x="${+v + 40}"`)) },
 
-  { name: 'trocar a fonte de um rotulo', expected: 'remanejado',
-    faz: x => inFirstCell(x, 'title', c => c.replace('fontSize=19', 'fontSize=15')) },
+  { name: "change a label's font", expected: 'moved',
+    apply: x => inFirstCell(x, 'title', c => c.replace('fontSize=19', 'fontSize=15')) },
 
-  { name: 'recolher um container', expected: 'remanejado',
-    faz: x => inFirstCell(x, 'vpc-dados', c => c.replace('<mxCell id="vpc-dados"', '<mxCell id="vpc-dados" collapsed="1"')) },
+  { name: 'collapse a container', expected: 'moved',
+    apply: x => inFirstCell(x, 'vpc-dados', c => c.replace('<mxCell id="vpc-dados"', '<mxCell id="vpc-dados" collapsed="1"')) },
 
-  { name: 'reordenar celulas (ordem z)', expected: 'remanejado',
-    faz: x => {
+  { name: 'reorder cells (z-order)', expected: 'moved',
+    apply: x => {
       const re = /( *<mxCell id="tratar-falha"[\s\S]*?<\/mxCell>\n)/;
       const block = re.exec(x)[1];
       return x.replace(re, '').replace(/( *<mxCell id="loja")/, block + '$1');
     } },
 
-  { name: 'repintar subnet privada de publica', expected: 'divergente', controle: true,
-    faz: x => inFirstCell(x, 'sub-app', c => c.replace('#00A4A6', '#7AA116').replace('#E6F6F7', '#F2F6E8')),
-    because: 'mesma forma, mesmo grIcon — a fronteira publica/privada so existe no hex' },
+  { name: 'repaint a private subnet as public', expected: 'divergent', control: true,
+    apply: x => inFirstCell(x, 'sub-app', c => c.replace('#00A4A6', '#7AA116').replace('#E6F6F7', '#F2F6E8')),
+    because: 'same shape, same grIcon — the public/private boundary only exists in the hex' },
 
-  { name: 'renomear um servico', expected: 'divergente',
-    faz: x => inFirstCell(x, 'reter-objeto', c => c.replace('value="S3 · zona curada"', 'value="S3 · arquivo morto"')) },
+  { name: 'rename a service', expected: 'divergent',
+    apply: x => inFirstCell(x, 'reter-objeto', c => c.replace('value="S3 · zona curada"', 'value="S3 · archived zone"')) },
 
-  { name: 'apagar um no', expected: 'divergente',
-    faz: x => x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '') },
+  { name: 'delete a node', expected: 'divergent',
+    apply: x => x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '') },
 
-  { name: 'acrescentar um no', expected: 'divergente',
-    faz: x => x.replace('      </root>',
+  { name: 'add a node', expected: 'divergent',
+    apply: x => x.replace('      </root>',
       '        <mxCell id="caixa-do-humano" value="Firewall" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">\n' +
       '          <mxGeometry x="10" y="10" width="80" height="40" as="geometry"/>\n' +
       '        </mxCell>\n      </root>') },
 
-  { name: 'trocar o icone de um servico', expected: 'divergente',
-    faz: x => inFirstCell(x, 'processar-na-chegada', c => c.replace(/resIcon=mxgraph\.aws4\.\w+/, 'resIcon=mxgraph.aws4.ec2')) },
+  { name: "change a service's icon", expected: 'divergent',
+    apply: x => inFirstCell(x, 'processar-na-chegada', c => c.replace(/resIcon=mxgraph\.aws4\.\w+/, 'resIcon=mxgraph.aws4.ec2')) },
 ];
 
-// ------------------------------------------------------------- os esquemas
+// ---------------------------------------------------------------- the schemas
 
-const shaArquivo = s => 'sha256:' + crypto.createHash('sha256').update(s, 'utf8').digest('hex');
+const fileSha = s => 'sha256:' + crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 
 const SCHEMAS = [
   {
-    name: 'hash do arquivo inteiro',
-    sealInto: xml => ({ arquivo: shaArquivo(xml) }),
-    read: (xml, seal) => shaArquivo(xml) === seal.arquivo ? 'intacto' : 'divergente',
+    name: 'hash of the whole file',
+    sealInto: xml => ({ file: fileSha(xml) }),
+    read: (xml, seal) => fileSha(xml) === seal.file ? 'intact' : 'divergent',
   },
   {
-    name: 'semantica SEM cor + aparencia',
-    sealInto: xml => { const c = readPages(xml).pages[0].celulas;
-      return { s: impressaoSemantica(c, { comCor: false }), a: appearanceFingerprint(c) }; },
-    read: (xml, seal) => { const c = readPages(xml).pages[0].celulas;
-      if (impressaoSemantica(c, { comCor: false }) !== seal.s) return 'divergente';
-      return appearanceFingerprint(c) === seal.a ? 'intacto' : 'remanejado'; },
+    name: 'semantics WITHOUT color + appearance',
+    sealInto: xml => { const c = readPages(xml).pages[0].cells;
+      return { s: semanticFingerprint(c, { withColor: false }), a: appearanceFingerprint(c) }; },
+    read: (xml, seal) => { const c = readPages(xml).pages[0].cells;
+      if (semanticFingerprint(c, { withColor: false }) !== seal.s) return 'divergent';
+      return appearanceFingerprint(c) === seal.a ? 'intact' : 'moved'; },
   },
   {
-    name: 'semantica COM cor + aparencia  ← adotado',
-    sealInto: xml => { const c = readPages(xml).pages[0].celulas;
-      return { s: impressaoSemantica(c), a: appearanceFingerprint(c) }; },
-    read: (xml, seal) => { const c = readPages(xml).pages[0].celulas;
-      if (impressaoSemantica(c) !== seal.s) return 'divergente';
-      return appearanceFingerprint(c) === seal.a ? 'intacto' : 'remanejado'; },
+    name: 'semantics WITH color + appearance  ← adopted',
+    sealInto: xml => { const c = readPages(xml).pages[0].cells;
+      return { s: semanticFingerprint(c), a: appearanceFingerprint(c) }; },
+    read: (xml, seal) => { const c = readPages(xml).pages[0].cells;
+      if (semanticFingerprint(c) !== seal.s) return 'divergent';
+      return appearanceFingerprint(c) === seal.a ? 'intact' : 'moved'; },
   },
 ];
 
-// ------------------------------------------------------------------ medida
+// ------------------------------------------------------------- measurement
 
 async function main() {
   const logical = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', 'retail-logical.json'), 'utf8'));
@@ -130,66 +132,66 @@ async function main() {
   const technical = elaborate(approve(logical, { at: '2026-08-21' }), elab);
   const base = (await draw(technical, 'technical')).xml;
 
-  const temApp = fs.existsSync(DRAWIO);
-  const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'impressao-'));
+  const hasApp = fs.existsSync(DRAWIO);
+  const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'fingerprint-'));
 
-  const selos = SCHEMAS.map(e => e.sealInto(base));
-  const linhas = [];
-  let bytesDoCodec = null;
+  const seals = SCHEMAS.map(e => e.sealInto(base));
+  const rows = [];
+  let codecBytes = null;
 
-  for (const ed of EDITS) {
-    let depois;
-    if (ed.app) {
-      if (!temApp) { linhas.push({ ed, pulou: true }); continue; }
-      const ent = path.join(TMP, 'e.drawio'), sai = path.join(TMP, 's.drawio');
-      fs.writeFileSync(ent, base);
-      execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', sai, ent],
+  for (const edit of EDITS) {
+    let after;
+    if (edit.app) {
+      if (!hasApp) { rows.push({ edit, skipped: true }); continue; }
+      const inPath = path.join(TMP, 'e.drawio'), outPath = path.join(TMP, 's.drawio');
+      fs.writeFileSync(inPath, base);
+      execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', outPath, inPath],
         { stdio: ['ignore', 'ignore', 'ignore'] });
-      depois = fs.readFileSync(sai, 'utf8');
-      bytesDoCodec = { antes: base.length, depois: depois.length, iguais: base === depois };
+      after = fs.readFileSync(outPath, 'utf8');
+      codecBytes = { before: base.length, after: after.length, equal: base === after };
     } else {
-      depois = ed.faz(base);
-      if (depois === base) throw new Error(`a edicao "${ed.name}" nao mudou nada — o teste seria vazio`);
+      after = edit.apply(base);
+      if (after === base) throw new Error(`the "${edit.name}" edit changed nothing — the test would be empty`);
     }
-    linhas.push({ ed, veredictos: SCHEMAS.map((e, i) => e.read(depois, selos[i])) });
+    rows.push({ edit, verdicts: SCHEMAS.map((e, i) => e.read(after, seals[i])) });
   }
 
-  // --------------------------------------------------------------- relatorio
-  console.log('\n  Dez edicoes humanas contra tres esquemas de impressao\n');
-  const larg = 34;
-  console.log('    ' + 'edicao'.padEnd(larg) + 'expected'.padEnd(13) +
+  // ------------------------------------------------------------------ report
+  console.log('\n  Ten human edits against three fingerprint schemas\n');
+  const colWidth = 34;
+  console.log('    ' + 'edit'.padEnd(colWidth) + 'expected'.padEnd(13) +
     SCHEMAS.map((e, i) => `[${i + 1}]`.padEnd(6)).join(''));
-  console.log('    ' + '─'.repeat(larg + 13 + 6 * SCHEMAS.length));
+  console.log('    ' + '─'.repeat(colWidth + 13 + 6 * SCHEMAS.length));
 
-  const erros = SCHEMAS.map(() => 0);
-  for (const l of linhas) {
-    if (l.pulou) { console.log(`    ${l.ed.name.padEnd(larg)}${'(precisa do app — pulada)'}`); continue; }
-    const marcas = l.veredictos.map((v, i) => {
-      const ok = v === l.ed.expected;
-      if (!ok) erros[i]++;
+  const misses = SCHEMAS.map(() => 0);
+  for (const row of rows) {
+    if (row.skipped) { console.log(`    ${row.edit.name.padEnd(colWidth)}${'(needs the app — skipped)'}`); continue; }
+    const marks = row.verdicts.map((v, i) => {
+      const ok = v === row.edit.expected;
+      if (!ok) misses[i]++;
       return (ok ? '✓' : '✗').padEnd(6);
     });
-    console.log(`    ${l.ed.name.padEnd(larg)}${l.ed.expected.padEnd(13)}${marcas.join('')}`);
-    for (const [i, v] of l.veredictos.entries())
-      if (v !== l.ed.expected) console.log(`      └ [${i + 1}] disse "${v}"${l.ed.because ? ' — ' + l.ed.because : ''}`);
+    console.log(`    ${row.edit.name.padEnd(colWidth)}${row.edit.expected.padEnd(13)}${marks.join('')}`);
+    for (const [i, v] of row.verdicts.entries())
+      if (v !== row.edit.expected) console.log(`      └ [${i + 1}] said "${v}"${row.edit.because ? ' — ' + row.edit.because : ''}`);
   }
 
   console.log('');
   for (const [i, e] of SCHEMAS.entries()) {
-    const total = linhas.filter(l => !l.pulou).length;
-    console.log(`    [${i + 1}] ${e.name.padEnd(38)} ${total - erros[i]}/${total} certo(s)`);
+    const total = rows.filter(row => !row.skipped).length;
+    console.log(`    [${i + 1}] ${e.name.padEnd(38)} ${total - misses[i]}/${total} correct`);
   }
 
-  if (bytesDoCodec)
-    console.log(`\n    Abrir e salvar sem editar: ${bytesDoCodec.antes} → ${bytesDoCodec.depois} bytes, ` +
-      `arquivo ${bytesDoCodec.iguais ? 'IDENTICO' : 'DIFERENTE'}. ` +
-      (bytesDoCodec.iguais ? '' : 'Hash de arquivo acusa divergencia em arquivo que ninguem editou.'));
+  if (codecBytes)
+    console.log(`\n    Open and save without editing: ${codecBytes.before} → ${codecBytes.after} bytes, ` +
+      `file ${codecBytes.equal ? 'IDENTICAL' : 'DIFFERENT'}. ` +
+      (codecBytes.equal ? '' : 'File hash flags divergence on a file nobody edited.'));
 
   fs.rmSync(TMP, { recursive: true, force: true });
-  const adopted = erros[SCHEMAS.length - 1];
+  const adopted = misses[SCHEMAS.length - 1];
   console.log(adopted === 0
-    ? '\n  ✓ o esquema adotado classifica todas as edicoes medidas.\n'
-    : `\n  ✗ o esquema adotado errou ${adopted}.\n`);
+    ? '\n  ✓ the adopted scheme classifies every measured edit.\n'
+    : `\n  ✗ the adopted scheme got ${adopted} wrong.\n`);
   return adopted === 0 ? 0 : 1;
 }
 

@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * A árvore de produção não alcança `prototypes/` — e a checagem é de RUNTIME,
- * não de grep.
+ * The production tree does not reach into `prototypes/` — and the check is a
+ * RUNTIME one, not a grep.
  *
- * O critério de aceite do #23 é literal: *"`node <raiz>/engine/generate.cjs <modelo>
- * --output <x>` funciona a partir da raiz da skill, sem depender de nada dentro de
- * `prototypes/`"*. Um grep por `prototypes` acharia o caminho escrito à mão e
- * perderia o caminho montado (`path.join(dir, '..', '..')`), que é justamente
- * como todos os protótipos se referenciavam.
+ * #23's acceptance criterion is literal: *"`node <root>/engine/generate.cjs
+ * <model> --output <x>` works from the skill's root, without depending on
+ * anything inside `prototypes/`"*. A grep for `prototypes` would find the
+ * path written by hand and miss the assembled one (`path.join(dir, '..',
+ * '..')`), which is exactly how every prototype referenced itself.
  *
- * Então a régua é `require.cache`: carrega o pipeline inteiro, gera cada modelo do
- * corpus e depois pergunta ao Node QUAIS arquivos ele de fato abriu. Se algum
- * estiver sob `prototypes/`, a dependência existe — não importa como foi escrita.
+ * So the ruler is `require.cache`: load the whole pipeline, generate every
+ * model in the corpus, and then ask Node WHICH files it actually opened. If
+ * any is under `prototypes/`, the dependency exists — no matter how it was
+ * written.
  *
- * A segunda metade é o oposto e é igualmente necessária: **nada de fora da árvore
- * da skill**, exceto o próprio Node. Um `require('ajv')` passaria no teste acima e
- * quebraria a premissa 7 (zero dependência de rede ou binário em runtime).
+ * The second half is the opposite and equally necessary: **nothing from
+ * outside the skill's tree**, except Node itself. A `require('ajv')` would
+ * pass the check above and break premise 7 (zero network or binary
+ * dependency at runtime).
  */
 
 const fs = require('fs');
@@ -25,14 +27,14 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const PROTOTYPES = path.join(ROOT, 'prototypes');
 
-let falhas = 0;
+let failures = 0;
 const ok = (cond, title, detail) => {
   console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
-  if (!cond) falhas++;
+  if (!cond) failures++;
 };
 
 async function main() {
-  // carrega TUDO o que a skill publicada expõe, e roda o pipeline de verdade
+  // load EVERYTHING the published skill exposes, and run the real pipeline
   const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
   require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
   require(path.join(ROOT, 'validator', 'gate.cjs'));
@@ -41,56 +43,57 @@ async function main() {
   require(path.join(ROOT, 'session', 'open.cjs'));
   require(path.join(ROOT, 'session', 'publish.cjs'));
 
-  const modelos = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
-  for (const m of modelos)
+  const models = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
+  for (const m of models)
     await generate(JSON.parse(fs.readFileSync(path.join(ROOT, 'models', m), 'utf8')));
 
-  const carregados = Object.keys(require.cache)
+  const loaded = Object.keys(require.cache)
     .filter(f => !f.includes(`${path.sep}node_modules${path.sep}`))
     .filter(f => f !== __filename);
 
-  const doProto = carregados.filter(f => f.startsWith(PROTOTYPES + path.sep));
-  ok(doProto.length === 0, 'nenhum arquivo de prototypes/ foi carregado',
-    doProto.length ? doProto.map(f => path.relative(ROOT, f)).join(', ') : `${carregados.length} módulos carregados`);
+  const fromProto = loaded.filter(f => f.startsWith(PROTOTYPES + path.sep));
+  ok(fromProto.length === 0, 'no file from prototypes/ was loaded',
+    fromProto.length ? fromProto.map(f => path.relative(ROOT, f)).join(', ') : `${loaded.length} modules loaded`);
 
-  const foraDaSkill = carregados.filter(f => !f.startsWith(ROOT + path.sep));
-  ok(foraDaSkill.length === 0, 'nem nada de fora da árvore da skill (premissa 7)',
-    foraDaSkill.length ? foraDaSkill.join(', ') : 'só Node e o que a skill embarca');
+  const outsideSkill = loaded.filter(f => !f.startsWith(ROOT + path.sep));
+  ok(outsideSkill.length === 0, 'nor anything from outside the skill\'s tree (premise 7)',
+    outsideSkill.length ? outsideSkill.join(', ') : 'only Node and what the skill bundles');
 
-  // ------------------------------------------------ e os DADOS, não só o código
+  // ------------------------------------------------ and the DATA, not just the code
   //
-  // `require.cache` só vê `require`. Catálogo, correções e arquivo de tema entram
-  // por `readFileSync`, e um deles apontando para o protótipo passaria
-  // despercebido pela primeira asserção.
+  // `require.cache` only sees `require`. The catalog, corrections and theme
+  // file come in through `readFileSync`, and one of them pointing at the
+  // prototype would slip past the first assertion unnoticed.
   //
-  // ⚠️ O `schema.json` e o `thresholds.json` NÃO aparecem nesta lista, e não é
-  // buraco: os dois são lidos no topo do módulo, na CARGA — então já foram lidos
-  // quando a espia entra, e a primeira asserção (`require.cache`) é quem cobre o
-  // caminho deles. Um comentário anterior os citava aqui; era falso, e a revisão
-  // do #23 pegou instrumentando a espia.
-  const lidos = [];
+  // ⚠️ `schema.json` and `thresholds.json` do NOT show up in this list, and it
+  // is not a gap: both are read at the top of the module, at LOAD time — so
+  // they were already read by the time the spy kicks in, and the first
+  // assertion (`require.cache`) is what covers their path. An earlier comment
+  // named them here; it was wrong, and #23's review caught it by
+  // instrumenting the spy.
+  const reads = [];
   const realFs = fs.readFileSync;
-  fs.readFileSync = function (p, ...resto) { lidos.push(String(p)); return realFs.call(fs, p, ...resto); };
+  fs.readFileSync = function (p, ...rest) { reads.push(String(p)); return realFs.call(fs, p, ...rest); };
   try {
     delete require.cache[require.resolve(path.join(ROOT, 'catalog', 'aws-shapes.cjs'))];
     require(path.join(ROOT, 'catalog', 'aws-shapes.cjs')).load();
     await generate(JSON.parse(realFs.call(fs, path.join(ROOT, 'models', 'web-multi-az.json'), 'utf8')),
       { tema: 'corporate' });
   } finally { fs.readFileSync = realFs; }
-  // e a espia tem de ter visto ALGUMA coisa — uma espia que não observa nada
-  // torna a asserção seguinte vacuamente verdadeira
-  ok(lidos.length > 0, 'a espia de `readFileSync` observou leituras',
-    `${new Set(lidos).size} arquivo(s) distintos`);
+  // and the spy has to have seen SOMETHING — a spy that observes nothing makes
+  // the next assertion vacuously true
+  ok(reads.length > 0, 'the `readFileSync` spy observed reads',
+    `${new Set(reads).size} distinct file(s)`);
 
-  const dadosDoProto = lidos.filter(p => p.startsWith(PROTOTYPES + path.sep));
-  ok(dadosDoProto.length === 0, 'nenhum ARQUIVO DE DADOS veio de prototypes/',
-    dadosDoProto.length ? dadosDoProto.map(p => path.relative(ROOT, p)).join(', ')
-      : `${new Set(lidos).size} arquivo(s) lidos, todos na árvore`);
+  const dataFromProto = reads.filter(p => p.startsWith(PROTOTYPES + path.sep));
+  ok(dataFromProto.length === 0, 'no DATA FILE came from prototypes/',
+    dataFromProto.length ? dataFromProto.map(p => path.relative(ROOT, p)).join(', ')
+      : `${new Set(reads).size} file(s) read, all inside the tree`);
 
-  // --------------------------------------------- a CLI, do jeito que o AC pede
+  // --------------------------------------------- the CLI, the way the AC asks
   const { execFileSync } = require('child_process');
   const os = require('os');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sem-proto-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'no-proto-'));
   const output = path.join(tmp, 'x.drawio');
   let cli = true;
   try {
@@ -99,14 +102,14 @@ async function main() {
       { stdio: 'ignore', cwd: ROOT });
   } catch (e) { cli = false; }
   ok(cli && fs.existsSync(output) && fs.statSync(output).size > 0,
-    'node engine/generate.cjs <modelo> --output <x> roda a partir da raiz da skill',
-    cli ? `${fs.statSync(output).size} bytes` : 'a CLI falhou');
+    'node engine/generate.cjs <model> --output <x> runs from the skill\'s root',
+    cli ? `${fs.statSync(output).size} bytes` : 'the CLI failed');
   fs.rmSync(tmp, { recursive: true, force: true });
 
-  console.log(falhas
-    ? '\n  ✗ a árvore de produção ainda depende do protótipo.\n'
-    : '\n  ✓ a árvore de produção se sustenta sozinha.\n');
-  process.exit(falhas ? 1 : 0);
+  console.log(failures
+    ? '\n  ✗ the production tree still depends on the prototype.\n'
+    : '\n  ✓ the production tree stands on its own.\n');
+  process.exit(failures ? 1 : 0);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

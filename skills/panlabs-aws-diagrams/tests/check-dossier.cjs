@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * A privacidade do dossiê, conferida NO ARQUIVO — não no objeto.
+ * The dossier's privacy, checked IN THE FILE — not in the object.
  *
- * A checagem que valeria a pena escrever errado seria esta: comparar o objeto
- * podado com o esperado e dar-se por satisfeita. Não serve. A pergunta do #23 é
- * sobre o que alguém lê abrindo *Extras › Editar diagrama*, e o que se lê ali são
- * BYTES. Então a régua é: plantar frases inconfundíveis em cada campo que a
- * decisão manda embora, publicar, e **procurar as frases no XML**.
+ * The check that would be worth writing wrong is this one: compare the pruned
+ * object against the expected one and call it a day. That does not work.
+ * #23's question is about what someone reads opening *Extra › Edit Diagram*,
+ * and what gets read there is BYTES. So the ruler is: plant unmistakable
+ * phrases in every field the decision sends away, publish, and **search for
+ * the phrases in the XML**.
  *
- * O experimento de controle é a outra metade, e sem ele a checagem não prova
- * nada: as mesmas frases têm de estar presentes no arquivo de TRABALHO. Se elas
- * sumissem dos dois, a busca poderia estar errada e ninguém saberia.
+ * The control experiment is the other half, and without it the check proves
+ * nothing: the same phrases have to be present in the WORKING file. If they
+ * vanished from both, the search could be wrong and nobody would know.
  */
 
 const fs = require('fs');
@@ -24,191 +25,193 @@ const { draw } = require(path.join(ROOT, 'session', 'draw.cjs'));
 const { publish, prune, dossierWarning, countDeliberation, DELIBERATION } =
   require(path.join(ROOT, 'session', 'publish.cjs'));
 const { open } = require(path.join(ROOT, 'session', 'open.cjs'));
-const { readPages, impressaoSemantica, appearanceFingerprint } =
+const { readPages, semanticFingerprint, appearanceFingerprint } =
   require(path.join(ROOT, 'session', 'fingerprint.cjs'));
 
-let falhas = 0;
+let failures = 0;
 const ok = (cond, title, detail) => {
   console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
-  if (!cond) falhas++;
+  if (!cond) failures++;
 };
 
 /**
- * As frases plantadas SAEM DA PRÓPRIA RÉGUA — uma por campo que `DELIBERACAO`
- * manda embora, mais uma por item que ela apaga inteiro.
+ * The planted phrases COME FROM THE RULER ITSELF — one per field that
+ * `DELIBERATION` sends away, plus one per item it erases whole.
  *
- * Escrevê-las à mão foi o erro da primeira versão, e a revisão pegou: a lista
- * cobria 6 dos 12 campos, e `compra`, `paga`, `escolhaSe`, `erradaSe`,
- * `difereEm` e `acordo.recorte` nunca eram plantados — exatamente a fresta por
- * onde o contador e a poda tinham divergido. Derivando da régua, um campo novo
- * na poda nasce com marca plantada no mesmo commit.
+ * Writing them by hand was the first version's mistake, and the review caught
+ * it: the list covered 6 of the 12 fields, and `buys`, `pays`, `chooseIf`,
+ * `wrongIf`, `differsIn` and `agreement.snapshot` were never planted —
+ * exactly the gap where the counter and the pruning had drifted apart.
+ * Deriving from the ruler, a new field in the pruning is born with its mark
+ * planted in the same commit.
  *
- * Nenhuma marca se parece com texto que o motor produziria: se aparecer no XML,
- * veio do dossiê.
+ * No mark resembles text the engine would produce: if it shows up in the XML,
+ * it came from the dossier.
  */
-const marcaDe = (onde, campo) => `MARCA-${onde}-${campo}`.toUpperCase();
+const markFor = (where, field) => `MARK-${where}-${field}`.toUpperCase();
 
-/** O que TEM de sobreviver — senão a poda virou censura e o arquivo não serve para nada. */
+/** What HAS to survive — otherwise the pruning became censorship and the file is useless. */
 const KEPT = {
-  'o fato em si': 'MARCA-FATO-EM-SI',
-  'o nome da candidata escolhida': 'MARCA-CANDIDATA-ESCOLHIDA-NOME',
-  'o rotulo de um no do desenho': 'MARCA-ROTULO-DE-NO',
+  'the fact itself': 'MARK-FACT-ITSELF',
+  "the chosen candidate's name": 'MARK-CANDIDATE-CHOSEN-NAME',
+  'the label of a node in the drawing': 'MARK-NODE-LABEL',
 };
 
 async function main() {
   const logical = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', 'retail-logical.json'), 'utf8'));
   const elab = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', 'retail-elaboration.json'), 'utf8'));
 
-  // ---------------------------------------------------------------- 1 · planta
+  // ---------------------------------------------------------------- 1 · plant
   const seeded = JSON.parse(JSON.stringify(logical));
   const d = seeded.dossier;
   const chosen = d.candidates.find(c => c.state === 'chosen');
-  chosen.name = KEPT['o nome da candidata escolhida'];
+  chosen.name = KEPT["the chosen candidate's name"];
   d.facts[0].provenance = 'inferred';
-  d.facts[0].fact = KEPT['o fato em si'];
-  seeded.nodes[0].label = KEPT['o rotulo de um no do desenho'];
-  // `acordo` é escrito por `aprovar`, então a marca de quem aprovou entra por lá
-  const POR = marcaDe('agreement', 'by');
+  d.facts[0].fact = KEPT['the fact itself'];
+  seeded.nodes[0].label = KEPT['the label of a node in the drawing'];
+  // `agreement` is written by `approve`, so the mark for who approved goes in through there
+  const BY_MARK = markFor('agreement', 'by');
 
-  const technical = elaborate(approve(seeded, { at: '2026-08-21', by: POR }), elab);
+  const technical = elaborate(approve(seeded, { at: '2026-08-21', by: BY_MARK }), elab);
 
   /**
-   * A plantação, derivada da régua. Roda DEPOIS de `elaborar` porque é ele quem
-   * reescreve a nota de cada entrada do estacionamento ao devolvê-la na fase
-   * técnica (#15 §5) — plantar antes mediria o texto do elaborador.
+   * The planting, derived from the ruler. Runs AFTER `elaborate` because it is
+   * the one that rewrites each parking-lot entry's note when returning it in
+   * the technical phase (#15 §5) — planting before would measure the
+   * elaborator's own text.
    */
   const MARKS = {};
-  const list = (dd, onde) => (Array.isArray(dd[onde]) ? dd[onde] : dd[onde] ? [dd[onde]] : []);
+  const list = (dd, where) => (Array.isArray(dd[where]) ? dd[where] : dd[where] ? [dd[where]] : []);
   for (const r of DELIBERATION) {
     for (const it of list(technical.dossier, r.onde)) {
       for (const c of r.campos) {
-        // só planta onde o valor é texto: `recorte` e `difereEm` são estrutura,
-        // e trocá-los por string quebraria o esquema. Para esses, a marca vai
-        // DENTRO — uma chave que não existe em lugar nenhum.
-        const m = marcaDe(r.onde, c);
+        // only plant where the value is text: `snapshot` and `differsIn` are
+        // structure, and swapping them for a string would break the schema.
+        // For those, the mark goes INSIDE — a key that does not exist anywhere.
+        const m = markFor(r.onde, c);
         if (c === 'snapshot') { if (it[c]) { it[c][m] = m; MARKS[`${r.onde}.${c}`] = m; } continue; }
-        if (c === 'differsIn') { if (Array.isArray(it[c])) { /* enum fechado — não plantável */ } continue; }
+        if (c === 'differsIn') { if (Array.isArray(it[c])) { /* closed enum — not plantable */ } continue; }
         it[c] = m;
         MARKS[`${r.onde}.${c}`] = m;
       }
     }
   }
-  MARKS['acordo.by'] = POR;
-  // e o item que some INTEIRO: uma candidata descartada, marcada no nome
+  MARKS['agreement.by'] = BY_MARK;
+  // and the item that vanishes WHOLE: a discarded candidate, marked in the name
   const discarded = technical.dossier.candidates.find(c => c.state === 'discarded');
-  discarded.name = marcaDe('candidates', 'nome-da-descartada');
-  MARKS['candidatas[descartada].nome'] = discarded.name;
+  discarded.name = markFor('candidates', 'discarded-name');
+  MARKS['candidates[discarded].name'] = discarded.name;
 
-  const trabalho = (await draw(technical, 'technical')).xml;
-  const copia = publish(trabalho);
+  const working = (await draw(technical, 'technical')).xml;
+  const copy = publish(working);
 
-  // -------------------------------------------------- 2 · o controle, primeiro
+  // -------------------------------------------------- 2 · the control, first
   //
-  // Antes de afirmar que a cópia não tem as marcas, prove que o arquivo de
-  // trabalho TEM. Uma busca que não acha nada nos dois arquivos não distingue
-  // "podou" de "a busca está quebrada".
-  console.log(`\n1 · controle: o arquivo de TRABALHO carrega tudo — ${Object.keys(MARKS).length} campos da régua\n`);
-  for (const [name, marca] of Object.entries(MARKS))
-    ok(trabalho.includes(marca), `${name} está no arquivo de trabalho`);
-  // e a régua tem de estar coberta: um campo novo em DELIBERACAO sem marca aqui
-  // é a fresta que a revisão do #23 achou
-  const previstos = DELIBERATION.flatMap(r => r.campos.filter(c => c !== 'differsIn').map(c => `${r.onde}.${c}`));
-  const semMarca = previstos.filter(k => !(k in MARKS));
-  ok(semMarca.length === 0, 'todo campo da régua tem marca plantada',
-    semMarca.length ? `sem marca: ${semMarca.join(', ')}` : `${previstos.length} campos`);
+  // Before claiming the copy does not have the marks, prove that the WORKING
+  // file DOES. A search that finds nothing in either file does not
+  // distinguish "it was pruned" from "the search is broken".
+  console.log(`\n1 · control: the WORKING file carries everything — ${Object.keys(MARKS).length} fields from the ruler\n`);
+  for (const [name, mark] of Object.entries(MARKS))
+    ok(working.includes(mark), `${name} is in the working file`);
+  // and the ruler has to be covered: a new field in DELIBERATION without a
+  // mark here is the gap #23's review found
+  const expected = DELIBERATION.flatMap(r => r.campos.filter(c => c !== 'differsIn').map(c => `${r.onde}.${c}`));
+  const missingMark = expected.filter(k => !(k in MARKS));
+  ok(missingMark.length === 0, 'every field in the ruler has a planted mark',
+    missingMark.length ? `no mark: ${missingMark.join(', ')}` : `${expected.length} fields`);
 
-  // ------------------------------------------------------------- 3 · a poda
-  console.log('\n2 · a cópia publicada: a deliberação não sai da casa\n');
-  for (const [name, marca] of Object.entries(MARKS))
-    ok(!copia.includes(marca), `${name} NÃO está na cópia`,
-      copia.includes(marca) ? 'VAZOU' : undefined);
+  // ------------------------------------------------------------- 3 · the pruning
+  console.log('\n2 · the published copy: the deliberation does not leave the house\n');
+  for (const [name, mark] of Object.entries(MARKS))
+    ok(!copy.includes(mark), `${name} is NOT in the copy`,
+      copy.includes(mark) ? 'LEAKED' : undefined);
 
-  console.log('\n3 · e o que fica, fica — poda não é censura\n');
-  for (const [name, marca] of Object.entries(KEPT))
-    ok(copia.includes(marca), `${name} sobreviveu`);
+  console.log('\n3 · and what stays, stays — pruning is not censorship\n');
+  for (const [name, mark] of Object.entries(KEPT))
+    ok(copy.includes(mark), `${name} survived`);
 
-  // as impressões continuam: são o que prova que o PNG é este arquivo
-  const pubs = readPages(copia).pages;
+  // the fingerprints carry on: they are what proves the PNG is this very file
+  const pubs = readPages(copy).pages;
   ok(pubs.every(p => p.seal && p.seal.panlabsSemantica && p.seal.panlabsAparencia),
-    'as impressões do desenho sobreviveram em todas as páginas',
-    `${pubs.length} pagina(s)`);
+    'the drawing fingerprints survived on every page',
+    `${pubs.length} page(s)`);
   ok(pubs.every(p => p.seal.panlabsRetomavel === 'nao'),
-    'toda página da cópia se declara não-retomável');
+    'every page of the copy declares itself not-resumable');
 
   /**
-   * E O DESENHO É O MESMO DESENHO — célula por célula, nas duas impressões.
+   * AND THE DRAWING IS THE SAME DRAWING — cell by cell, in both fingerprints.
    *
-   * É a afirmação que a decisão inteira depende de e que seria a mais fácil de
-   * quebrar sem perceber: a cópia que circula tem de ser o MESMO diagrama, não
-   * um diagrama parecido. Se a poda tocasse uma coordenada ou um rótulo, o
-   * usuário mandaria para fora algo que ele nunca viu na tela.
+   * This is the claim the whole decision rests on, and it would be the
+   * easiest one to break without noticing: the copy that circulates has to be
+   * the SAME diagram, not a similar one. If the pruning touched a coordinate
+   * or a label, the user would send out something they never saw on screen.
    */
-  const trab = readPages(trabalho).pages;
-  const mesmoDesenho = trab.length === pubs.length && trab.every((p, i) =>
-    impressaoSemantica(p.celulas) === impressaoSemantica(pubs[i].celulas) &&
-    appearanceFingerprint(p.celulas) === appearanceFingerprint(pubs[i].celulas));
-  ok(mesmoDesenho, 'e o desenho é célula por célula o mesmo — a poda só mexe no selo',
-    `${trab.length} páginas, semântica e aparência idênticas`);
+  const workingPages = readPages(working).pages;
+  const sameDrawing = workingPages.length === pubs.length && workingPages.every((p, i) =>
+    semanticFingerprint(p.cells) === semanticFingerprint(pubs[i].cells) &&
+    appearanceFingerprint(p.cells) === appearanceFingerprint(pubs[i].cells));
+  ok(sameDrawing, 'and the drawing is cell for cell the same — the pruning only touches the seal',
+    `${workingPages.length} pages, identical semantics and appearance`);
 
-  // ------------------------------------------------------- 4 · a cópia se anuncia
-  console.log('\n4 · a cópia se declara, em vez de parecer um arquivo de trabalho quebrado\n');
-  const a = open(copia);
-  ok(a.ours === true, 'a skill ainda reconhece o arquivo como dela');
-  ok(a.published === true, 'e sabe que é uma cópia publicada');
-  ok(a.session === null, 'não devolve sessão — não há o que retomar');
-  ok(/publicada/i.test(a.because || ''), 'e diz por quê', (a.because || '').slice(0, 70) + '…');
+  // ------------------------------------------------------- 4 · the copy announces itself
+  console.log('\n4 · the copy declares itself, instead of looking like a broken working file\n');
+  const a = open(copy);
+  ok(a.ours === true, 'the skill still recognizes the file as its own');
+  ok(a.published === true, 'and knows it is a published copy');
+  ok(a.session === null, 'does not return a session — there is nothing to resume');
+  ok(/publicada/i.test(a.because || ''), 'and says why', (a.because || '').slice(0, 70) + '…');
 
-  const t = open(trabalho);
+  const t = open(working);
   ok(t.published !== true && t.session !== null,
-    'controle: o arquivo de trabalho continua retomando normalmente');
+    'control: the working file keeps resuming normally');
 
-  // ------------------------------------------------------------- 5 · o aviso
-  console.log('\n5 · o aviso de uma linha (padrão do #16: avisa, nunca bloqueia)\n');
+  // ------------------------------------------------------------- 5 · the warning
+  console.log('\n5 · the one-line warning (#16 pattern: warns, never blocks)\n');
   const warning = dossierWarning(technical);
-  ok(!!warning && /deliberacao/i.test(warning), 'a sessão com deliberação gera aviso', (warning || '').slice(0, 62) + '…');
+  ok(!!warning && /deliberacao/i.test(warning), 'the session with deliberation produces a warning', (warning || '').slice(0, 62) + '…');
   ok(dossierWarning(prune(technical)) === null,
-    'e a sessão já podada NÃO gera aviso — o aviso mede, não decora');
+    'and the already-pruned session does NOT produce a warning — the warning measures, it does not decorate');
   /**
-   * O CONTADOR NÃO PODE CONTAR EM DOBRO nem deixar campo de fora — os dois
-   * defeitos que a revisão achou, um em cada direção.
+   * THE COUNTER MUST NOT DOUBLE-COUNT nor leave a field out — the two defects
+   * the review found, one in each direction.
    */
-  const soUmCampo = (onde, campo, valor) => {
+  const onlyOneField = (where, field, value) => {
     const t = prune(JSON.parse(JSON.stringify(technical)));
-    const target = list(t.dossier, onde)[0];
+    const target = list(t.dossier, where)[0];
     if (!target) return null;
-    target[campo] = valor;
+    target[field] = value;
     return countDeliberation(t);
   };
   for (const r of DELIBERATION)
     for (const c of r.campos) {
       if (c === 'differsIn' || c === 'snapshot') continue;
-      const n = soUmCampo(r.onde, c, 'x');
+      const n = onlyOneField(r.onde, c, 'x');
       if (n === null) continue;
-      ok(n === 1, `um único "${r.onde}.${c}" conta exatamente 1`, `contou ${n}`);
+      ok(n === 1, `a single "${r.onde}.${c}" counts as exactly 1`, `counted ${n}`);
     }
-  const dupla = prune(JSON.parse(JSON.stringify(technical)));
-  dupla.dossier.candidates.push({ id: 'z', name: 'Z', tuple: ['a', 'b', 'c', 'd', 'e'],
+  const duplicate = prune(JSON.parse(JSON.stringify(technical)));
+  duplicate.dossier.candidates.push({ id: 'z', name: 'Z', tuple: ['a', 'b', 'c', 'd', 'e'],
     state: 'discarded', because: 'x', pays: 'y' });
-  ok(countDeliberation(dupla) === 1,
-    'uma candidata descartada COM `porque` e `paga` conta 1, não 3',
-    `contou ${countDeliberation(dupla)}`);
+  ok(countDeliberation(duplicate) === 1,
+    'a discarded candidate WITH `because` and `pays` counts 1, not 3',
+    `counted ${countDeliberation(duplicate)}`);
   const r = await draw(technical, 'logical');
   ok(r.relatorio.avisos.some(x => /Editar diagrama/.test(x)),
-    'e ele chega ao relatório de quem desenhou');
+    'and it reaches the report of whoever drew it');
 
-  // ------------------------------------------------- 6 · a poda é determinística
-  console.log('\n6 · a poda é função pura e determinística\n');
-  const antes = JSON.stringify(technical);
+  // ------------------------------------------------- 6 · the pruning is deterministic
+  console.log('\n6 · the pruning is a pure, deterministic function\n');
+  const before = JSON.stringify(technical);
   const p1 = JSON.stringify(prune(technical));
-  ok(JSON.stringify(technical) === antes, 'podar não muta a sessão de quem chamou');
-  ok(p1 === JSON.stringify(prune(technical)), 'podar duas vezes dá o mesmo resultado');
-  ok(p1 === JSON.stringify(prune(JSON.parse(p1))), 'podar o já podado é no-op (idempotente)');
-  ok(publish(copia) === copia, 'publicar a cópia devolve a mesma cópia');
+  ok(JSON.stringify(technical) === before, 'pruning does not mutate the caller\'s session');
+  ok(p1 === JSON.stringify(prune(technical)), 'pruning twice gives the same result');
+  ok(p1 === JSON.stringify(prune(JSON.parse(p1))), 'pruning the already-pruned is a no-op (idempotent)');
+  ok(publish(copy) === copy, 'publishing the copy returns the same copy');
 
-  console.log(falhas
-    ? `\n  ✗ ${falhas} checagem(ns) falharam — o dossiê não está onde a decisão diz que está.\n`
-    : '\n  ✓ a deliberação fica no arquivo de trabalho e não sai na cópia que circula.\n');
-  process.exit(falhas ? 1 : 0);
+  console.log(failures
+    ? `\n  ✗ ${failures} check(s) failed — the dossier is not where the decision says it is.\n`
+    : '\n  ✓ the deliberation stays in the working file and does not leave in the copy that circulates.\n');
+  process.exit(failures ? 1 : 0);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

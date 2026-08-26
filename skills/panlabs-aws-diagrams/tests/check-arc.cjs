@@ -1,38 +1,40 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * O ARCO PONTA A PONTA — os sete passos do `SKILL.md`, cada um fechando na
- * condição escrita DELE.
+ * THE END-TO-END ARC — the `SKILL.md`'s seven steps, each closing on the
+ * condition ITS OWN text sets.
  *
  *   node tests/check-arc.cjs
  *
- * O #26 pede a skill rodando *necessidade vaga → sabatina → candidatas →
- * aprovação da vista lógica → vista técnica → `.drawio`*. O critério tem uma
- * primeira linha que decide o sujeito:
+ * #26 asks for the skill to run *vague need → interview → candidates →
+ * approval of the logical view → technical view → `.drawio`*. The criterion
+ * has one line up front that decides the subject:
  *
- *   > E1 · o arco roda contra um caso que NÃO EXISTIA antes deste ticket —
- *   >      validar o arco contra a própria fixture dele não mede nada.
+ *   > E1 · the arc runs against a case that DID NOT EXIST before this
+ *   >      ticket — validating the arc against its own fixture measures
+ *   >      nothing.
  *
- * Por isso o caso é `predictive-fleet` e não `retail-300-stores`. O retail já era
- * fixture quando o #14 e o #23 rodaram; ele prova que a camada de sessão não
- * regrediu, e é o que `tools/approve.cjs` e `tools/resume.cjs` guardam. Este
- * arquivo prova outra coisa: que o arco fecha num caso que nasceu depois das
- * regras.
+ * That is why the case is `predictive-fleet` and not `retail-300-stores`.
+ * Retail was already a fixture when #14 and #23 ran; it proves the session
+ * layer did not regress, and it is what `tools/approve.cjs` and
+ * `tools/resume.cjs` guard. This file proves something else: that the arc
+ * closes on a case born after the rules.
  *
- * E as diferenças com o retail são deliberadas, para o arco não passar duas
- * vezes pelo mesmo caminho de código:
+ * And the differences from retail are deliberate, so the arc does not walk
+ * the same code path twice:
  *
- *   retail   3 contas · caminho `porContas` · 1+N páginas · fronteira = conta
- *   fleet    1 conta  · caminho `porElk`    · 1 página    · fronteira = grupo
+ *   retail   3 accounts · `byAccounts` path · 1+N pages · boundary = account
+ *   fleet    1 account  · `byElk` path      · 1 page    · boundary = group
  *
- * ⚠️ ELE COMEÇA NO PASSO 2, e isso é limite declarado e não esquecimento.
+ * ⚠️ IT STARTS AT STEP 2, and that is a declared limit, not an oversight.
  *
- * A perna *necessidade vaga → sabatina* não tem código: a sabatina é um protocolo
- * que um AGENTE conduz com um humano, e não há função a chamar entre *"quero
- * saber que um caminhão vai quebrar antes de quebrar na estrada"* e o primeiro
- * fato confirmado. O que este arquivo faz com essa perna é conferir o PRODUTO
- * dela — todo fato confirmado, todo inferido dizendo de onde saiu, candidatas que
- * não colapsam. Do passo 4 em diante tudo roda de verdade.
+ * The *vague need → interview* leg has no code: the interview is a protocol
+ * an AGENT runs with a human, and there is no function to call between *"I
+ * want to know a truck will break before it breaks on the road"* and the
+ * first confirmed fact. What this file does with that leg is check its
+ * PRODUCT — every fact confirmed, every inferred one saying where it came
+ * from, candidates that do not collapse into each other. From step 4 on,
+ * everything runs for real.
  */
 
 const fs = require('fs');
@@ -50,10 +52,10 @@ const { publish, prune, countDeliberation } = require(path.join(ROOT, 'session',
 const { review } = require(path.join(ROOT, 'session', 'gaps.cjs'));
 const { briefing } = require(path.join(ROOT, 'session', 'briefing.cjs'));
 
-let falhou = 0;
-const anota = (ok, o_que, detail) => {
-  if (!ok) falhou++;
-  console.log(`  ${ok ? '✓' : '✗'} ${o_que}`);
+let failed = 0;
+const record = (ok, what, detail) => {
+  if (!ok) failed++;
+  console.log(`  ${ok ? '✓' : '✗'} ${what}`);
   if (detail) console.log(`      ${detail}`);
 };
 
@@ -65,195 +67,196 @@ const PUBLISHED = path.join(ROOT, 'output', 'predictive-fleet.published.drawio')
 (async () => {
   const session = JSON.parse(fs.readFileSync(LOGICAL, 'utf8'));
 
-  // ─────────────────────────────────────────────── passo 2 · a sabatina fecha
-  console.log('\npasso 2 · a sabatina fecha quando A1 chega ao piso\n');
+  // ─────────────────────────────────────────────── step 2 · the interview closes
+  console.log('\nstep 2 · the interview closes when A1 hits the floor\n');
   {
     const v = validate(session);
-    anota(v.ok, 'o modelo de sessão é válido contra `session@1`', (v.erros || []).join(' · ') || 'sem erros');
+    record(v.ok, 'the session model is valid against `session@1`', (v.erros || []).join(' · ') || 'no errors');
 
     const facts = session.dossier.facts || [];
-    anota(facts.length > 0 && facts.every(f => f.confirmed),
-      'todo fato do dossiê está confirmado — inferido não conta até confirmar',
-      `${facts.length} fatos, ${facts.filter(f => f.provenance === 'inferred').length} inferido(s), ` +
-      `todos com \`confirmado: true\``);
+    record(facts.length > 0 && facts.every(f => f.confirmed),
+      "every fact in the dossier is confirmed — inferred does not count until confirmed",
+      `${facts.length} facts, ${facts.filter(f => f.provenance === 'inferred').length} inferred, ` +
+      `all with \`confirmed: true\``);
 
-    const semDe = facts.filter(f => f.provenance === 'inferred' && !f.from);
-    anota(!semDe.length, 'todo fato inferido diz DE ONDE saiu',
-      semDe.length ? semDe.map(f => f.fact).join(' · ') : 'os inferidos carregam o trecho de origem');
+    const missingFrom = facts.filter(f => f.provenance === 'inferred' && !f.from);
+    record(!missingFrom.length, 'every inferred fact says WHERE it came from',
+      missingFrom.length ? missingFrom.map(f => f.fact).join(' · ') : 'the inferred ones carry the source excerpt');
   }
 
-  // ────────────────────────────────────── passo 3 · candidatas genuinamente distintas
-  console.log('\npasso 3 · toda dupla de candidatas difere em ≥1 eixo, e você sabe dizer qual\n');
+  // ────────────────────────────────────── step 3 · genuinely distinct candidates
+  console.log('\nstep 3 · every pair of candidates differs on ≥1 axis, and you can name which\n');
   {
     const cs = session.dossier.candidates || [];
-    anota(cs.length >= 2 && cs.length <= 3, 'teto 3, piso 2', `${cs.length} candidatas`);
-    anota(cs.filter(c => c.state === 'chosen').length === 1, 'exatamente uma escolhida');
+    record(cs.length >= 2 && cs.length <= 3, 'ceiling 3, floor 2', `${cs.length} candidates`);
+    record(cs.filter(c => c.state === 'chosen').length === 1, 'exactly one chosen');
 
-    // o invariante de tupla: nenhuma dupla colapsa
-    const colapsam = [];
+    // the tuple invariant: no pair collapses
+    const collapsed = [];
     for (let i = 0; i < cs.length; i++)
       for (let j = i + 1; j < cs.length; j++)
         if (JSON.stringify(cs[i].tuple) === JSON.stringify(cs[j].tuple))
-          colapsam.push(`${cs[i].id}=${cs[j].id}`);
-    anota(!colapsam.length, 'nenhuma dupla tem a MESMA tupla — tuplas iguais colapsam e seriam descartadas',
-      colapsam.length ? colapsam.join(' · ') : `${(cs.length * (cs.length - 1)) / 2} duplas, todas distintas`);
+          collapsed.push(`${cs[i].id}=${cs[j].id}`);
+    record(!collapsed.length, 'no pair has the SAME tuple — equal tuples collapse and would be discarded',
+      collapsed.length ? collapsed.join(' · ') : `${(cs.length * (cs.length - 1)) / 2} pairs, all distinct`);
 
-    // e `difereEm` tem de bater com a diferença REAL contra a escolhida
+    // and `differsIn` has to match the REAL difference against the chosen one
     const chosen = cs.find(c => c.state === 'chosen');
     const AXES = ['E1', 'E2', 'E3', 'E4', 'E5'];
     for (const c of cs.filter(x => x.state === 'discarded')) {
-      const real = AXES.filter((_, i) => c.tuple[i] !== chosen.tuple[i]);
-      anota(JSON.stringify(real.sort()) === JSON.stringify([...(c.differsIn || [])].sort()),
-        `"${c.id}": \`difereEm\` bate com a tupla, e não com a intenção`,
-        `declarado [${(c.differsIn || []).join(',')}] · medido [${real.join(',')}]`);
-      anota(!!c.because, `"${c.id}" descartada carrega o \`porque\` — é o que responde "por que não a B?"`);
+      const actual = AXES.filter((_, i) => c.tuple[i] !== chosen.tuple[i]);
+      record(JSON.stringify(actual.sort()) === JSON.stringify([...(c.differsIn || [])].sort()),
+        `"${c.id}": \`differsIn\` matches the tuple, not the intent`,
+        `declared [${(c.differsIn || []).join(',')}] · measured [${actual.join(',')}]`);
+      record(!!c.because, `"${c.id}" discarded carries \`because\` — it is what answers "why not B?"`);
     }
   }
 
-  // ─────────────────────────────────── passo 4 · a revisão de lacunas, com o código
-  console.log('\npasso 4 · a revisão roda sobre o grafo montado, e a recusa chega ao desenho\n');
+  // ─────────────────────────────────── step 4 · the gap review, with the code
+  console.log('\nstep 4 · the review runs over the assembled graph, and the refusal reaches the drawing\n');
   {
     const proj = project(session, 'logical').model;
     const r = review(proj);
-    anota(r.dentroDoTeto, 'a revisão fica dentro do teto do §4.2',
-      `${r.findings.length} achado(s) · teto ⌈${proj.nodes.length}÷4⌉ = ${r.ceiling}`);
+    record(r.dentroDoTeto, "the review stays within §4.2's ceiling",
+      `${r.findings.length} finding(s) · ceiling ⌈${proj.nodes.length}÷4⌉ = ${r.ceiling}`);
 
-    // o que o código acha tem de estar no dossiê: o dossiê é a DECISÃO sobre o
-    // achado, e um achado sem decisão é um achado que ninguém viu
-    const decididos = new Set((session.dossier.findings || []).map(a => `${a.rule}/${a.target}`));
-    const undecided = r.findings.filter(a => !decididos.has(`${a.rule}/${a.target}`));
-    anota(!undecided.length, 'todo achado que o código produz tem decisão no dossiê',
+    // what the code finds has to be in the dossier: the dossier is the
+    // DECISION about the finding, and a finding with no decision is a finding
+    // nobody saw
+    const decided = new Set((session.dossier.findings || []).map(a => `${a.rule}/${a.target}`));
+    const undecided = r.findings.filter(a => !decided.has(`${a.rule}/${a.target}`));
+    record(!undecided.length, 'every finding the code produces has a decision in the dossier',
       undecided.length
         ? undecided.map(a => `${a.rule}/${a.target}`).join(' · ')
-        : [...decididos].join(' · '));
+        : [...decided].join(' · '));
 
-    // e a recusa tem de ter o elo explícito até uma nota
-    const recusados = (session.dossier.findings || []).filter(a => a.state === 'rejected');
-    anota(recusados.length > 0, 'o caso exercita ao menos uma RECUSA', `${recusados.length} recusa(s)`);
-    for (const a of recusados) {
+    // and the rejection has to have an explicit link to a note
+    const rejected = (session.dossier.findings || []).filter(a => a.state === 'rejected');
+    record(rejected.length > 0, 'the case exercises at least one REJECTION', `${rejected.length} rejection(s)`);
+    for (const a of rejected) {
       const note = (session.notes || []).find(n => n.id === a.viaNote);
-      anota(!!note && note.origin === 'rejected-finding',
-        `a recusa de "${a.rule}/${a.target}" chega ao desenho por \`viaNota\``,
-        note ? `→ ${note.id} (origem "${note.origin}")` : 'sem nota ligada — a recusa morreria no dossiê');
+      record(!!note && note.origin === 'rejected-finding',
+        `the rejection of "${a.rule}/${a.target}" reaches the drawing via \`viaNote\``,
+        note ? `→ ${note.id} (origin "${note.origin}")` : 'no note linked — the rejection would die in the dossier');
     }
   }
 
-  // ──────────────────────────────────── passo 5 · o acordo, e ele é conferível
-  console.log('\npasso 5 · a aprovação não é um booleano — é o recorte, e ele confere\n');
+  // ──────────────────────────────────── step 5 · the agreement, and it is checkable
+  console.log('\nstep 5 · approval is not a boolean — it is the snapshot, and it checks out\n');
   let approved;
   {
-    approved = approve(session, { at: '2026-08-23', by: 'diretoria de operações', candidate: 'cand-a' });
+    approved = approve(session, { at: '2026-08-23', by: 'operations leadership', candidate: 'cand-a' });
     const d = check(approved);
-    anota(d.ok, '`conferir(aprovado).ok` logo depois de aprovar');
-    anota(/^sha256:[0-9a-f]{64}$/.test(approved.dossier.agreement.fingerprint),
-      'o acordo guarda a impressão do recorte, não um `true`',
+    record(d.ok, '`check(approved).ok` right after approving');
+    record(/^sha256:[0-9a-f]{64}$/.test(approved.dossier.agreement.fingerprint),
+      'the agreement stores the fingerprint of the snapshot, not a `true`',
       approved.dossier.agreement.fingerprint.slice(0, 26) + '…');
 
-    // e o controle: mexer no que foi aprovado tem de QUEBRAR o acordo
+    // and the control: touching what was approved has to BREAK the agreement
     const tampered = JSON.parse(JSON.stringify(approved));
-    tampered.nodes.find(n => n.id === 'pontuar-risco').label = 'Pontuação de risco (v2)';
-    anota(!check(tampered).ok,
-      'CONTROLE: mudar um rótulo aprovado quebra o acordo — senão o acordo não media nada',
-      `${(check(tampered).diferencas || []).length} diferença(s) apontada(s)`);
+    tampered.nodes.find(n => n.id === 'pontuar-risco').label = 'Risk scoring (v2)';
+    record(!check(tampered).ok,
+      'CONTROL: changing an approved label breaks the agreement — otherwise the agreement measured nothing',
+      `${(check(tampered).diferencas || []).length} difference(s) reported`);
 
     const r = await draw(approved, 'logical');
     fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
     fs.writeFileSync(OUTPUT, r.xml);
-    anota(fs.existsSync(OUTPUT), 'a vista lógica está gravada', `${r.xml.length} bytes, caminho "${r.caminho}"`);
+    record(fs.existsSync(OUTPUT), 'the logical view is written', `${r.xml.length} bytes, path "${r.caminho}"`);
 
-    const semanticas = r.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0);
-    anota(semanticas === 0, 'a vista lógica não tem falha semântica', `${semanticas} semânticas`);
+    const semanticFailures = r.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0);
+    record(semanticFailures === 0, 'the logical view has no semantic failure', `${semanticFailures} semantic`);
   }
 
-  // ───────────────── passo 6 · a vista técnica, e a projeção sobrevive ao nível de rede
-  console.log('\npasso 6 · a fase técnica enfia VPC e subnet, e o aprovado continua o aprovado\n');
+  // ───────────────── step 6 · the technical view, and the projection survives the network level
+  console.log('\nstep 6 · the technical phase inserts VPC and subnet, and the approved stays approved\n');
   let technical;
   {
-    const aberto = open(fs.readFileSync(OUTPUT, 'utf8'));
-    anota(aberto.ours, 'o `.drawio` gravado é reconhecido como nosso', aberto.because || '');
+    const opened = open(fs.readFileSync(OUTPUT, 'utf8'));
+    record(opened.ours, 'the written `.drawio` is recognized as ours', opened.because || '');
 
     const delta = JSON.parse(fs.readFileSync(DELTA, 'utf8'));
-    technical = elaborate(aberto.session, delta);
+    technical = elaborate(opened.session, delta);
 
     const v = validate(technical);
-    anota(v.ok, 'o modelo elaborado continua válido', (v.erros || []).join(' · ') || 'sem erros');
+    record(v.ok, 'the elaborated model is still valid', (v.erros || []).join(' · ') || 'no errors');
 
-    // A PROVA do #14: o nó aprovado foi empurrado dois níveis para baixo…
+    // #14's PROOF: the approved node was pushed two levels down…
     const target = technical.nodes.find(n => n.id === 'pontuar-risco');
-    anota(target.inside === 'sub-modelo',
-      '`pontuar-risco` foi reparenteado para dentro de uma subnet que a vista lógica não conhece',
-      `dentro = "${target.inside}" (era "analise")`);
+    record(target.inside === 'sub-modelo',
+      '`pontuar-risco` was reparented into a subnet the logical view does not know about',
+      `inside = "${target.inside}" (was "analise")`);
 
-    // …e a projeção lógica sai IDÊNTICA assim mesmo
+    // …and today's logical projection still comes out IDENTICAL
     const d = check(technical);
-    anota(d.ok, 'E3 · `conferir()` continua ok — a projeção lógica de hoje é byte a byte a aprovada',
-      d.ok ? 'o colapso de contenção passa por cima dos níveis só-técnicos'
+    record(d.ok, "E3 · `check()` still passes — today's logical projection is byte for byte the approved one",
+      d.ok ? 'the containment collapse rides right over the technical-only levels'
         : (d.diferencas || []).map(x => x.text).join(' · '));
 
     const rl = await draw(technical, 'logical');
     const rt = await draw(technical, 'technical');
     fs.writeFileSync(OUTPUT, stitch([rl.xml, rt.xml]));
 
-    const sem = rt.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0);
-    anota(sem === 0, 'E4 · a vista técnica passa no portão de veracidade — zero falhas semânticas',
-      `${rt.relatorio.geometry.length} página(s), ${sem} semânticas`);
+    const semanticFailures = rt.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0);
+    record(semanticFailures === 0, 'E4 · the technical view passes the truthfulness gate — zero semantic failures',
+      `${rt.relatorio.geometry.length} page(s), ${semanticFailures} semantic`);
 
-    // e nenhum nome de serviço vazou para a vista lógica
+    // and no service name leaked into the logical view
     const logical = project(technical, 'logical').model;
-    const vazou = logical.nodes.filter(n => n.service && n.kind !== 'actor');
-    anota(!vazou.length, 'nenhum nome de serviço AWS vazou para a vista lógica',
-      vazou.length ? vazou.map(n => `${n.id}=${n.service}`).join(' · ')
-        : `${logical.nodes.length} nós lógicos, zero \`servico\` fora de ator`);
+    const leaked = logical.nodes.filter(n => n.service && n.kind !== 'actor');
+    record(!leaked.length, 'no AWS service name leaked into the logical view',
+      leaked.length ? leaked.map(n => `${n.id}=${n.service}`).join(' · ')
+        : `${logical.nodes.length} logical nodes, zero \`service\` outside an actor`);
   }
 
-  // ───────────────────────────────────── passo 1 · a porta de retomada (o briefing)
-  console.log('\npasso 1 · o arquivo retoma, e o briefing devolve o que não se pergunta de novo\n');
+  // ───────────────────────────────────── step 1 · the resume door (the briefing)
+  console.log('\nstep 1 · the file resumes, and the briefing returns what does not get asked again\n');
   {
-    const aberto = open(fs.readFileSync(OUTPUT, 'utf8'));
-    anota(aberto.ours, 'o arquivo costurado ainda é reconhecido');
-    const corpo = briefing(aberto).join('\n');
-    for (const [o_que, agulha] of [
-      ['as candidatas descartadas, com o motivo', 'Lote noturno'],
-      ['os achados e o estado deles', 'spof'],
-      ['o estacionamento', 'Kinesis'],
-    ]) anota(corpo.includes(agulha), `o briefing traz ${o_que}`, `procurou "${agulha}"`);
+    const opened = open(fs.readFileSync(OUTPUT, 'utf8'));
+    record(opened.ours, 'the stitched file is still recognized');
+    const body = briefing(opened).join('\n');
+    for (const [what, needle] of [
+      ['the discarded candidates, with the reason', 'Lote noturno'],
+      ['the findings and their state', 'spof'],
+      ['the parking lot', 'Kinesis'],
+    ]) record(body.includes(needle), `the briefing carries ${what}`, `looked for "${needle}"`);
   }
 
-  // ────────────────────────────────────────── passo 7 · a cópia que circula
-  console.log('\npasso 7 · o arquivo que retoma e o que circula não são o mesmo arquivo\n');
+  // ────────────────────────────────────────── step 7 · the copy that circulates
+  console.log('\nstep 7 · the file that resumes and the one that circulates are not the same file\n');
   {
-    const trabalhoXml = fs.readFileSync(OUTPUT, 'utf8');
-    const aberto = open(trabalhoXml);
-    const antes = countDeliberation(aberto.session);
-    const depois = countDeliberation(prune(aberto.session));
-    anota(antes > 0 && depois === 0, 'a poda tira toda a deliberação do selo',
-      `${antes} item(ns) antes, ${depois} depois`);
+    const workingXml = fs.readFileSync(OUTPUT, 'utf8');
+    const opened = open(workingXml);
+    const before = countDeliberation(opened.session);
+    const after = countDeliberation(prune(opened.session));
+    record(before > 0 && after === 0, 'pruning strips all deliberation from the seal',
+      `${before} item(s) before, ${after} after`);
 
-    fs.writeFileSync(PUBLISHED, publish(trabalhoXml));
+    fs.writeFileSync(PUBLISHED, publish(workingXml));
     const bytes = fs.readFileSync(PUBLISHED, 'utf8');
-    for (const [o_que, agulha] of [
-      ['o motivo do descarte de uma candidata', 'a antecedência de 48 h não sobrevive'],
-      ['quem aprovou', 'diretoria de operações'],
-      ['a fala de reunião que virou fato inferido', 'o pessoal de dados falou'],
-    ]) anota(!bytes.includes(agulha), `E5 · a cópia publicada NÃO carrega ${o_que}`, `procurou "${agulha}" nos bytes`);
+    for (const [what, needle] of [
+      ["a candidate's discard reason", 'a antecedência de 48 h não sobrevive'],
+      ['who approved', 'operations leadership'],
+      ['the meeting remark that became an inferred fact', 'o pessoal de dados falou'],
+    ]) record(!bytes.includes(needle), `E5 · the published copy does NOT carry ${what}`, `looked for "${needle}" in the bytes`);
 
-    // …e o controle na outra ponta: o arquivo de trabalho carrega
-    const trabalho = fs.readFileSync(OUTPUT, 'utf8');
-    anota(trabalho.includes('a antecedência de 48 h não sobrevive'),
-      'CONTROLE: o arquivo de TRABALHO carrega a deliberação — senão a checagem acima não media nada');
+    // …and the control on the other end: the working file carries it
+    const working = fs.readFileSync(OUTPUT, 'utf8');
+    record(working.includes('a antecedência de 48 h não sobrevive'),
+      'CONTROL: the WORKING file carries the deliberation — otherwise the check above measured nothing');
 
-    // ⚠️ a cópia continua sendo NOSSA — o que ela deixa de ser é RETOMÁVEL, e as
-    // duas coisas são diferentes: um arquivo que não fosse reconhecido não
-    // saberia dizer POR QUE não retoma.
+    // ⚠️ the copy is still OURS — what it stops being is RESUMABLE, and the two
+    // are different: a file that was not recognized would not be able to say
+    // WHY it does not resume.
     const reopened = open(bytes);
-    anota(reopened.published === true && reopened.session === null,
-      'E5 · a cópia publicada se declara publicada e não devolve sessão',
+    record(reopened.published === true && reopened.session === null,
+      'E5 · the published copy declares itself published and returns no session',
       reopened.because || '');
-    anota(/publicada/i.test(reopened.because || ''),
-      'e diz por quê, em vez de só falhar', (reopened.because || '').slice(0, 72) + '…');
+    record(/publicada/i.test(reopened.because || ''),
+      'and says why, instead of just failing', (reopened.because || '').slice(0, 72) + '…');
   }
 
   console.log();
-  if (falhou) { console.log(`  ✗ ${falhou} condição(ões) do arco não fecharam.`); process.exit(1); }
-  console.log('  ✓ os sete passos fecham, num caso que não existia antes deste ticket.');
-})().catch(e => { console.error('\n  ✗ o arco estourou:', e.message); console.error(e.stack); process.exit(1); });
+  if (failed) { console.log(`  ✗ ${failed} arc condition(s) did not close.`); process.exit(1); }
+  console.log('  ✓ the seven steps close, on a case that did not exist before this ticket.');
+})().catch(e => { console.error('\n  ✗ the arc blew up:', e.message); console.error(e.stack); process.exit(1); });

@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * A fronteira, verificada mecanicamente.
+ * The boundary, verified mechanically.
  *
- * A regra que o #11 tinha de defender é "o agente nunca escreve coordenada".
- * Regra que depende de disciplina é regra que se perde na terceira sessão. Esta
- * checagem troca disciplina por impossibilidade:
+ * The rule #11 had to defend is "the agent never writes a coordinate". A rule
+ * that depends on discipline is a rule that gets lost by the third session.
+ * This check trades discipline for impossibility:
  *
- *   1. nenhuma propriedade do esquema — em nenhuma profundidade — nomeia
- *      posição, tamanho, distância ou direção;
- *   2. todo objeto do esquema é `additionalProperties: false`, então não dá
- *      para contrabandear uma chave que o esquema não previu;
- *   3. os modelos de exemplo não contêm nenhum número que seja pixel.
+ *   1. no schema property — at any depth — names position, size, distance or
+ *      direction;
+ *   2. every object in the schema is `additionalProperties: false`, so there
+ *      is no way to smuggle in a key the schema did not foresee;
+ *   3. the example models contain no number that is a pixel.
  *
- * Se as três passam, "o agente nunca escreve coordenada" deixa de ser promessa
- * e vira propriedade do formato: não existe onde escrever.
+ * If the three pass, "the agent never writes a coordinate" stops being a
+ * promise and becomes a property of the format: there is nowhere to write it.
  */
 
 const fs = require('fs');
@@ -23,6 +23,9 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schema.json'), 'utf8'));
 
+// Deliberately bilingual: a contributor could type either word, so both
+// languages are denylisted here regardless of which one the rest of the
+// codebase uses.
 const GEOMETRY = [
   'x', 'y', 'w', 'h', 'cx', 'cy', 'dx', 'dy',
   'width', 'height', 'widthOf', 'altura', 'tamanho', 'size',
@@ -35,58 +38,58 @@ const GEOMETRY = [
   'style', 'style', 'color', 'color', 'fill', 'stroke',
 ];
 
-const falhas = [];
+const failures = [];
 const props = new Set();
 const unclosed = [];
 
-(function tier(no, caminho) {
-  if (!no || typeof no !== 'object') return;
-  if (Array.isArray(no)) return no.forEach((v, i) => tier(v, `${caminho}[${i}]`));
+(function walk(node, ptr) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) return node.forEach((v, i) => walk(v, `${ptr}[${i}]`));
 
-  if (no.properties) {
-    for (const k of Object.keys(no.properties)) props.add(k);
-    if (no.additionalProperties !== false && no.type === 'object' && caminho !== '/properties/dossie')
-      unclosed.push(caminho || '(raiz)');
+  if (node.properties) {
+    for (const k of Object.keys(node.properties)) props.add(k);
+    if (node.additionalProperties !== false && node.type === 'object' && ptr !== '/properties/dossie')
+      unclosed.push(ptr || '(root)');
   }
-  for (const [k, v] of Object.entries(no)) tier(v, `${caminho}/${k}`);
+  for (const [k, v] of Object.entries(node)) walk(v, `${ptr}/${k}`);
 })(schema, '');
 
 for (const p of props) {
   const n = p.toLowerCase().replace(/[^a-z]/g, '');
-  if (GEOMETRY.includes(n)) falhas.push(`o esquema declara a propriedade "${p}" — vocabulário de geometria`);
+  if (GEOMETRY.includes(n)) failures.push(`the schema declares property "${p}" — geometry vocabulary`);
 }
-for (const c of unclosed) falhas.push(`objeto sem additionalProperties:false em ${c} — dá para contrabandear chave`);
+for (const c of unclosed) failures.push(`object without additionalProperties:false at ${c} — a key could be smuggled in`);
 
-// 3. os modelos de exemplo
+// 3. the example models
 //
-// O diretório é argumento pelo mesmo motivo que o do `check-determinismo`:
-// outro corpus aponta os SEUS modelos para esta mesma régua. A fronteira é
-// propriedade do formato, não de um conjunto de exemplos — e quando o #22
-// acrescentou `camada` ao esquema, quem tinha de dizer que ela não é geometria
-// era esta checagem rodando contra os modelos que a usam.
-const dirModelos = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, 'models');
-const modelos = fs.existsSync(dirModelos) ? fs.readdirSync(dirModelos).filter(f => f.endsWith('.json')) : [];
-for (const arq of modelos) {
-  const bruto = JSON.parse(fs.readFileSync(path.join(dirModelos, arq), 'utf8'));
-  (function sweep(no, caminho) {
-    if (!no || typeof no !== 'object') return;
-    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${caminho}[${i}]`));
-    for (const [k, v] of Object.entries(no)) {
-      if (caminho.startsWith('dossier')) continue;      // o dossiê é opaco por contrato
+// The directory is an argument for the same reason `check-determinism`'s is:
+// another corpus points ITS models at this same ruler. The boundary is a
+// property of the format, not of one set of examples — and when #22 added
+// `layer` to the schema, what had to say it is not geometry was this check,
+// run against the models that use it.
+const modelsDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, 'models');
+const models = fs.existsSync(modelsDir) ? fs.readdirSync(modelsDir).filter(f => f.endsWith('.json')) : [];
+for (const file of models) {
+  const raw = JSON.parse(fs.readFileSync(path.join(modelsDir, file), 'utf8'));
+  (function sweep(node, ptr) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach((v, i) => sweep(v, `${ptr}[${i}]`));
+    for (const [k, v] of Object.entries(node)) {
+      if (ptr.startsWith('dossier')) continue;      // the dossier is opaque by contract
       const n = k.toLowerCase().replace(/[^a-z]/g, '');
-      if (GEOMETRY.includes(n)) falhas.push(`${arq}: chave "${k}" em ${caminho}`);
-      sweep(v, caminho ? `${caminho}.${k}` : k);
+      if (GEOMETRY.includes(n)) failures.push(`${file}: key "${k}" at ${ptr}`);
+      sweep(v, ptr ? `${ptr}.${k}` : k);
     }
-  })(bruto, '');
+  })(raw, '');
 }
 
-console.log(`  propriedades declaradas no esquema: ${props.size}`);
-console.log(`  nenhuma delas em geometria:         ${falhas.length ? 'NÃO' : 'sim'}`);
-console.log(`  modelos varridos:                   ${modelos.length} (${modelos.join(', ')})`);
+console.log(`  properties declared in the schema: ${props.size}`);
+console.log(`  none of them geometry:              ${failures.length ? 'NO' : 'yes'}`);
+console.log(`  models swept:                       ${models.length} (${models.join(', ')})`);
 
-if (falhas.length) {
-  console.log('\n  ✗ a fronteira vazou:');
-  for (const f of falhas) console.log(`      · ${f}`);
+if (failures.length) {
+  console.log('\n  ✗ the boundary leaked:');
+  for (const f of failures) console.log(`      · ${f}`);
   process.exit(1);
 }
-console.log('\n  ✓ o modelo não tem onde escrever uma coordenada.');
+console.log('\n  ✓ the model has nowhere to write a coordinate.');

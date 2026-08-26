@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Determinismo — três perguntas, e a terceira estava aberta.
+ * Determinism — three questions, and the third one was open.
  *
- *   1. Mesma entrada, mesmo processo, N vezes -> byte a byte idêntico?
- *   2. Mesma entrada, processo NOVO -> idêntico? (o `$H` do GWT vaza com um
- *      contador global de processo; o #7 provou que ele não move coordenada,
- *      mas quem serializa o objeto cru do ELK versiona lixo.)
- *   3. Entrada REORDENADA -> mesmo desenho?
+ *   1. Same input, same process, N times -> byte for byte identical?
+ *   2. Same input, NEW process -> identical? (GWT's `$H` leaks a global
+ *      process counter; #7 proved it does not move a coordinate, but whoever
+ *      serializes the ELK's raw object versions garbage.)
+ *   3. REORDERED input -> same drawing?
  *
- * A 3 é a incerteza 4 do #7, deixada explicitamente sem resposta lá:
+ * #3 is #7's uncertainty 4, explicitly left unanswered there:
  *
- *   > "Não testei se reordenar `children`/`edges` no JSON de entrada muda o
- *   >  desenho — e há forte indício de que muda, já que existe
- *   >  `considerModelOrder.strategy`. Se o gerador itera sobre um Map sem ordem
- *   >  estável, o layout pode variar mesmo com o ELK sendo determinístico."
+ *   > "I did not test whether reordering `children`/`edges` in the input JSON
+ *   >  changes the drawing — and there is strong evidence that it does, since
+ *   >  `considerModelOrder.strategy` exists. If the generator iterates over a
+ *   >  Map with no stable order, the layout can vary even with ELK being
+ *   >  deterministic."
  *
- * Importa porque o `.drawio` é para ser versionado: se a ordem da lista plana
- * mexe no desenho, um diff de modelo que só move uma linha vira um diff de
- * diagrama inteiro.
+ * It matters because the `.drawio` is meant to be versioned: if the order of
+ * the flat list moves the drawing, a model diff that only moves one line
+ * becomes a diff of the whole diagram.
  */
 
 const fs = require('fs');
@@ -30,24 +31,24 @@ const ROOT = path.join(__dirname, '..');
 const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
 
 const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
-// o diretório de modelos é argumento para que outro corpus aponte os SEUS
-// modelos para esta mesma régua — o determinismo é propriedade do motor, não
-// de um conjunto de exemplos
+// the models directory is an argument so that another corpus can point ITS
+// models at this same ruler — determinism is a property of the engine, not of
+// one set of examples
 const MODELS_DIR = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, 'models');
-const modelos = fs.readdirSync(MODELS_DIR).filter(f => f.endsWith('.json'));
+const models = fs.readdirSync(MODELS_DIR).filter(f => f.endsWith('.json'));
 
-/** Só a geometria — ignora ids, estilos e a ordem em que as células saíram. */
-function digital(xml) {
+/** Geometry only — ignores ids, styles and the order the cells came out in. */
+function fingerprint(xml) {
   const geos = [...xml.matchAll(/id="([^"]+)"[^>]*>\s*<mxGeometry x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)"/g)]
     .map(m => `${m[1]}:${m[2]},${m[3]},${m[4]},${m[5]}`).sort();
   const pts = [...xml.matchAll(/<mxPoint x="(-?\d+)" y="(-?\d+)"\/>/g)].map(m => `${m[1]},${m[2]}`);
   return hash(geos.join('|') + '#' + pts.join('|'));
 }
 
-/** Embaralho determinístico — sem Math.random, para o teste ser reproduzível. */
-function shuffle(arr, semente) {
+/** Deterministic shuffle — no Math.random, so the test is reproducible. */
+function shuffle(arr, seed) {
   const a = [...arr];
-  let s = semente;
+  let s = seed;
   for (let i = a.length - 1; i > 0; i--) {
     s = (s * 1103515245 + 12345) & 0x7fffffff;
     const j = s % (i + 1);
@@ -57,49 +58,49 @@ function shuffle(arr, semente) {
 }
 
 (async () => {
-  let falhas = 0;
+  let failures = 0;
 
-  for (const arq of modelos) {
-    const bruto = fs.readFileSync(path.join(MODELS_DIR, arq), 'utf8');
-    const model = JSON.parse(bruto);
-    console.log(`\n  ${arq}`);
+  for (const file of models) {
+    const raw = fs.readFileSync(path.join(MODELS_DIR, file), 'utf8');
+    const model = JSON.parse(raw);
+    console.log(`\n  ${file}`);
 
-    // 1. mesmo processo, 3 execuções
+    // 1. same process, 3 runs
     const hs = [];
-    for (let i = 0; i < 3; i++) hs.push(hash((await generate(JSON.parse(bruto))).xml));
-    const iguais = new Set(hs).size === 1;
-    console.log(`    mesmo processo  ×3   ${iguais ? '✓' : '✗'}  ${hs[0]}`);
-    if (!iguais) { falhas++; console.log(`        ${hs.join('  ')}`); }
+    for (let i = 0; i < 3; i++) hs.push(hash((await generate(JSON.parse(raw))).xml));
+    const same = new Set(hs).size === 1;
+    console.log(`    same process    ×3   ${same ? '✓' : '✗'}  ${hs[0]}`);
+    if (!same) { failures++; console.log(`        ${hs.join('  ')}`); }
 
-    // 2. processo novo
-    const outro = execFileSync(process.execPath, ['-e', `
+    // 2. new process
+    const otherProcess = execFileSync(process.execPath, ['-e', `
       const { generate } = require(${JSON.stringify(path.join(ROOT, 'engine', 'generate.cjs'))});
-      const m = JSON.parse(require('fs').readFileSync(${JSON.stringify(path.join(MODELS_DIR, arq))}, 'utf8'));
+      const m = JSON.parse(require('fs').readFileSync(${JSON.stringify(path.join(MODELS_DIR, file))}, 'utf8'));
       generate(m).then(r => process.stdout.write(require('crypto').createHash('sha256').update(r.xml).digest('hex').slice(0,16)));
     `], { encoding: 'utf8' });
-    const novoOk = outro === hs[0];
-    console.log(`    processo novo        ${novoOk ? '✓' : '✗'}  ${outro}`);
-    if (!novoOk) falhas++;
+    const newProcessOk = otherProcess === hs[0];
+    console.log(`    new process          ${newProcessOk ? '✓' : '✗'}  ${otherProcess}`);
+    if (!newProcessOk) failures++;
 
-    // 3. entrada reordenada — a incerteza 4 do #7
-    const base = digital((await generate(JSON.parse(bruto))).xml);
-    const divergentes = [];
-    for (const semente of [7, 42, 1337]) {
-      const m = JSON.parse(bruto);
-      m.nodes = shuffle(m.nodes, semente);
-      if (m.edges) m.edges = shuffle(m.edges, semente + 1);
+    // 3. reordered input — #7's uncertainty 4
+    const base = fingerprint((await generate(JSON.parse(raw))).xml);
+    const divergent = [];
+    for (const seed of [7, 42, 1337]) {
+      const m = JSON.parse(raw);
+      m.nodes = shuffle(m.nodes, seed);
+      if (m.edges) m.edges = shuffle(m.edges, seed + 1);
       let d;
-      try { d = digital((await generate(m)).xml); }
-      catch (e) { d = 'ERRO: ' + e.message; }
-      if (d !== base) divergentes.push(`semente ${semente} -> ${d}`);
+      try { d = fingerprint((await generate(m)).xml); }
+      catch (e) { d = 'ERROR: ' + e.message; }
+      if (d !== base) divergent.push(`seed ${seed} -> ${d}`);
     }
-    const ordemOk = divergentes.length === 0;
-    console.log(`    entrada reordenada   ${ordemOk ? '✓' : '✗'}  geometria ${ordemOk ? 'idêntica' : 'MUDOU'} (${base})`);
-    if (!ordemOk) { falhas++; for (const d of divergentes) console.log(`        ${d}`); }
+    const orderOk = divergent.length === 0;
+    console.log(`    reordered input      ${orderOk ? '✓' : '✗'}  geometry ${orderOk ? 'identical' : 'CHANGED'} (${base})`);
+    if (!orderOk) { failures++; for (const d of divergent) console.log(`        ${d}`); }
   }
 
-  console.log(falhas
-    ? `\n  ✗ ${falhas} falha(s) de determinismo`
-    : '\n  ✓ determinístico nas três frentes, inclusive sob reordenação da entrada.');
-  process.exit(falhas ? 1 : 0);
+  console.log(failures
+    ? `\n  ✗ ${failures} determinism failure(s)`
+    : '\n  ✓ deterministic on all three fronts, including under input reordering.');
+  process.exit(failures ? 1 : 0);
 })();

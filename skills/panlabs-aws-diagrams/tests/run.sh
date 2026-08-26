@@ -1,217 +1,217 @@
 #!/usr/bin/env bash
-# A régua da árvore de produção — a UNIÃO das suítes que nunca tinham rodado juntas.
+# The ruler of the production tree — the UNION of suites that had never run together.
 #
-#   ./tests/run.sh [binario-drawio]
+#   ./tests/run.sh [drawio-binary]
 #
-# O #23 nasceu de uma frase: *"as duas suítes estão verdes, cada uma contra o seu
-# próprio motor; ninguém rodou a união"*. Este arquivo é a união, e a ordem das
-# camadas é a ordem em que uma falha invalida as seguintes.
+# #23 was born from a sentence: *"both suites are green, each against its own
+# engine; nobody ran the union"*. This file is the union, and the order of the
+# layers is the order in which one failure invalidates the ones that follow.
 #
-#   0  A ÁRVORE      o contrato é único, nada aqui alcança `prototypes/`, e o
-#                    pacote cabe no teto de 30 MB. Se isto falhar, todo verde
-#                    abaixo pode estar medindo o protótipo — ou não poder subir.
-#   1  A FRONTEIRA   o agente não tem onde escrever coordenada — nem no modelo,
-#                    nem no modelo de sessão. É a invariante que o motor inteiro
-#                    defende; se vazou, o resto está guardando uma regra morta.
-#   2  O VALIDADOR   índice, primitivas e os defeitos plantados. O validador tem
-#                    de PROVAR que mede antes de ser usado como régua.
-#   3  O MOTOR       validação, determinismo, camada de rede, gatilhos, travessia.
-#   4  O TEMA        vocabulário fechado, partição pintura×métrica, o portão de
-#                    contraste, e os quatro estilos do #12 saindo de token.
-#   5  A GEOMETRIA   o portão do #18 sobre o corpus inteiro, e o orçamento de
-#                    roteamento do #24 (A5.5=0, A3.4=0, A3.5=0, A5.1 no teto).
-#   6  A SESSÃO      projeção, manifesto, impressão, e a privacidade do dossiê.
-#   7  O APP         round-trip pelo codec do próprio draw.io e render. DEPENDÊNCIA
-#                    DE DESENVOLVIMENTO (premissa 8): sem o binário, avisa e segue.
+#   0  THE TREE       the contract is unique, nothing here reaches `prototypes/`, and
+#                    the package fits under the 30 MB ceiling. If this fails, every green
+#                    below may be measuring the prototype — or unable to ship.
+#   1  THE BOUNDARY   the agent has nowhere to write a coordinate — not in the model,
+#                    not in the session model. It's the invariant the whole engine
+#                    defends; if it leaked, the rest is guarding a dead rule.
+#   2  THE VALIDATOR  index, primitives, and the planted defects. The validator has
+#                    to PROVE it measures before being used as a ruler.
+#   3  THE ENGINE     validation, determinism, network layer, triggers, traversal.
+#   4  THE THEME      closed vocabulary, paint×metric partition, the contrast
+#                    gate, and the four styles from #12 coming out of tokens.
+#   5  THE GEOMETRY   the gate from #18 over the whole corpus, and the routing
+#                    budget from #24 (A5.5=0, A3.4=0, A3.5=0, A5.1 at ceiling).
+#   6  THE SESSION    projection, manifest, fingerprint, and the dossier's privacy.
+#   7  THE APP        round-trip through draw.io's own codec, and render. DEVELOPMENT
+#                    DEPENDENCY (premise 8): without the binary, it warns and moves on.
 #
-# ⚠️ Duas exportações headless simultâneas do draw.io PENDURAM (achado do #13), e
-# `timeout` mata o `xvfb-run` mas não os filhos Electron. Por isso a camada 7 é
-# serial e nunca roda em paralelo com nada.
+# ⚠️ Two simultaneous headless draw.io exports HANG (finding from #13), and
+# `timeout` kills `xvfb-run` but not its Electron children. That's why layer 7 is
+# serial and never runs in parallel with anything.
 set -uo pipefail
 
-AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RAIZ="$(dirname "$AQUI")"
-# ⚠️ EXPORTADO, e não só passado como argumento — a versão anterior passava o
-# binário para dois dos quatro checks da camada 7 e os outros dois caíam num
-# default DIFERENTE (`AppRun` em vez de `drawio`), podendo pular em silêncio
-# enquanto a camada se dizia executada. Com `export`, o resolvedor único
-# (`tools/drawio.cjs`) e o `render.sh` herdam o mesmo valor.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname "$HERE")"
+# ⚠️ EXPORTED, and not just passed as an argument — the previous version passed the
+# binary to two of the four layer-7 checks and the other two fell back to a
+# DIFFERENT default (`AppRun` instead of `drawio`), possibly skipping silently
+# while the layer reported itself as run. With `export`, the single resolver
+# (`tools/drawio.cjs`) and `render.sh` inherit the same value.
 DRAWIO="${1:-$HOME/.local/opt/drawio/squashfs-root/drawio}"
 export DRAWIO
-falhou=0
-declare -a VERMELHAS=()
+failed=0
+declare -a REDS=()
 
-passo() {
-  local titulo="$1"; shift
-  printf '\n── %s\n' "$titulo"
-  if "$@"; then :; else falhou=1; VERMELHAS+=("$titulo"); echo "   ✗ VERMELHO"; fi
+step() {
+  local title="$1"; shift
+  printf '\n── %s\n' "$title"
+  if "$@"; then :; else failed=1; REDS+=("$title"); echo "   ✗ RED"; fi
 }
 
-echo "════ camada 0 · a árvore ════"
-passo "contrato único (um \$id, um arquivo)"        node "$AQUI/check-single-schema.cjs"
-passo "paridade model@1 × casaco técnico (#37)"   node "$AQUI/check-technical-parity.cjs"
-passo "produção não alcança prototypes/"           node "$AQUI/check-no-prototype.cjs"
-# O teto de 30 MB e DURO e so aparece na hora do upload. Medi-lo aqui e o que
-# impede a arvore de voltar a 29 MB sem ninguem perceber — foi onde ela estava.
-passo "o pacote cabe no teto de 30 MB"            "$RAIZ/tools/package.sh" --check
+echo "════ layer 0 · the tree ════"
+step "single contract (one \$id, one file)"        node "$HERE/check-single-schema.cjs"
+step "model@1 × technical facet parity (#37)"   node "$HERE/check-technical-parity.cjs"
+step "production doesn't reach prototypes/"           node "$HERE/check-no-prototype.cjs"
+# The 30 MB ceiling is HARD and only shows up at upload time. Measuring it here is what
+# stops the tree from creeping back to 29 MB without anyone noticing — that's where it was.
+step "the package fits under the 30 MB ceiling"            "$ROOT/tools/package.sh" --check
 
 echo
-echo "════ camada 1 · a fronteira ════"
-passo "model@1 não tem onde escrever coordenada"  node "$AQUI/check-model-boundary.cjs"
-passo "session@1 também não"                        node "$AQUI/check-session-boundary.cjs"
+echo "════ layer 1 · the boundary ════"
+step "model@1 has nowhere to write a coordinate"  node "$HERE/check-model-boundary.cjs"
+step "neither does session@1"                        node "$HERE/check-session-boundary.cjs"
 
 echo
-echo "════ camada 2 · o validador prova que mede ════"
-passo "o índice bate com as 62 da rubrica"         node "$AQUI/check-index.cjs"
-passo "as primitivas batem com valor publicado"    node "$AQUI/check-primitives.cjs"
-passo "reprova os 16 defeitos e absolve o bom"     node "$AQUI/check-broken.cjs"
+echo "════ layer 2 · the validator proves it measures ════"
+step "the index matches the rubric's 62"         node "$HERE/check-index.cjs"
+step "the primitives match published values"    node "$HERE/check-primitives.cjs"
+step "fails the 16 defects and clears the good one"     node "$HERE/check-broken.cjs"
 
 echo
-echo "════ camada 3 · o motor ════"
-passo "validação (reprova o que deve, e explica)"  node "$AQUI/check-validation.cjs"
-passo "geração do corpus inteiro"                  bash -c '
-  for m in "'"$RAIZ"'"/models/*.json; do
+echo "════ layer 3 · the engine ════"
+step "validation (fails what it should, and explains)"  node "$HERE/check-validation.cjs"
+step "generation of the whole corpus"                  bash -c '
+  for m in "'"$ROOT"'"/models/*.json; do
     n="$(basename "$m" .json)"
-    node "'"$RAIZ"'/engine/generate.cjs" "$m" --output "'"$RAIZ"'/output/$n.drawio" > /dev/null || exit 1
+    node "'"$ROOT"'/engine/generate.cjs" "$m" --output "'"$ROOT"'/output/$n.drawio" > /dev/null || exit 1
   done
-  echo "   ✓ $(ls "'"$RAIZ"'"/models/*.json | wc -l) modelos gerados"'
-passo "determinismo (3 frentes, com reordenação)"  node "$AQUI/check-determinism.cjs"
-passo "camada de rede: a ordem sai do conteúdo"    node "$AQUI/check-layer.cjs"
-passo "a caixa da folha mede o rótulo (#33)"        node "$AQUI/check-leaf-box.cjs"
-passo "e é ela que o arquivo mostra"               node "$AQUI/check-node-file.cjs"
-passo "a candidata rival (distância da borda)"     node "$AQUI/check-jumps.cjs"
-passo "revisão de lacunas: dispara E cala (#15)"   node "$AQUI/check-gaps.cjs"
-passo "gatilhos de multi-conta (OU, modo, nível)"  node "$AQUI/check-triggers.cjs"
-passo "travessia: as decisões, no arquivo"         node "$AQUI/check-traversal.cjs"
-passo "bissecção (a ferramenta que isola)"         node "$RAIZ/tools/bisect-model.cjs" "$RAIZ/models/hub-tgw-3-accounts.json"
+  echo "   ✓ $(ls "'"$ROOT"'"/models/*.json | wc -l) models generated"'
+step "determinism (3 fronts, with reordering)"  node "$HERE/check-determinism.cjs"
+step "network layer: order comes from content"    node "$HERE/check-layer.cjs"
+step "the leaf box measures the label (#33)"        node "$HERE/check-leaf-box.cjs"
+step "and it's what the file shows"               node "$HERE/check-node-file.cjs"
+step "the rival candidate (distance from the edge)"     node "$HERE/check-jumps.cjs"
+step "gap review: it fires AND stays quiet (#15)"   node "$HERE/check-gaps.cjs"
+step "multi-account triggers (OR, mode, level)"  node "$HERE/check-triggers.cjs"
+step "traversal: the decisions, in the file"         node "$HERE/check-traversal.cjs"
+step "bisection (the tool that isolates)"         node "$ROOT/tools/bisect-model.cjs" "$ROOT/models/hub-tgw-3-accounts.json"
 
 echo
-echo "════ camada 4 · o tema ════"
-passo "o portão de contraste sabe falhar"          node "$AQUI/check-contrast-gate.cjs"
-passo "a camada normativa é indizível"             node "$AQUI/check-vocabulary.cjs"
-passo "partição: pintura pinta, métrica mede"      node "$AQUI/check-partition.cjs"
-passo "os 4 estilos do #12 saem de token"          node "$AQUI/check-tokens-of-12.cjs"
-passo "o portão reprova o tema errado"             bash -c '
-  M="'"$RAIZ"'/models/orders-serverless.json"
-  if node "'"$RAIZ"'/engine/generate.cjs" "$M" --theme trap --output /dev/null > /dev/null 2>&1; then
-    echo "   ✗ o tema \"trap\" PASSOU no portão"; exit 1
+echo "════ layer 4 · the theme ════"
+step "the contrast gate knows how to fail"          node "$HERE/check-contrast-gate.cjs"
+step "the normative layer is unspeakable"             node "$HERE/check-vocabulary.cjs"
+step "partition: paint paints, metric measures"      node "$HERE/check-partition.cjs"
+step "the 4 styles from #12 come out of tokens"          node "$HERE/check-tokens-of-12.cjs"
+step "the gate fails the wrong theme"             bash -c '
+  M="'"$ROOT"'/models/orders-serverless.json"
+  if node "'"$ROOT"'/engine/generate.cjs" "$M" --theme trap --output /dev/null > /dev/null 2>&1; then
+    echo "   ✗ the \"trap\" theme PASSED the gate"; exit 1
   fi
-  echo "   ✓ \"trap\" reprovado sem --force"
-  if node "'"$RAIZ"'/engine/generate.cjs" "$M" --theme trap --force --output /dev/null > /dev/null 2>&1; then
-    echo "   ✓ --force gera assim mesmo, para o estrago poder ser visto"
+  echo "   ✓ \"trap\" failed without --force"
+  if node "'"$ROOT"'/engine/generate.cjs" "$M" --theme trap --force --output /dev/null > /dev/null 2>&1; then
+    echo "   ✓ --force generates it anyway, so the damage can be seen"
   else
-    echo "   ✗ --force não gerou — a válvula de escape quebrou"; exit 1
+    echo "   ✗ --force did not generate — the escape valve broke"; exit 1
   fi'
 
 echo
-echo "════ camada 5 · a geometria do corpus ════"
-passo "o portão barra o que mente e cabe no meio"  node "$AQUI/check-geometry-gate.cjs"
-passo "o corpus laudado (sem quarentena aberta)"   node "$AQUI/check-good.cjs"
-passo "o orçamento de roteamento do #24"           node "$AQUI/check-routing.cjs"
-passo "check-geometry.cjs aceita --theme (#33)"     node "$AQUI/check-theme-geometry.cjs"
-# ⚠️ O CORPO DE PROVA MUDOU NO #24, e o motivo é o ticket ter dado certo.
+echo "════ layer 5 · the corpus geometry ════"
+step "the gate blocks what lies and fits in between"  node "$HERE/check-geometry-gate.cjs"
+step "the certified corpus (no open quarantine)"   node "$HERE/check-good.cjs"
+step "the #24 routing budget"           node "$HERE/check-routing.cjs"
+step "check-geometry.cjs accepts --theme (#33)"     node "$HERE/check-theme-geometry.cjs"
+# ⚠️ THE PROOF BODY CHANGED IN #24, and the reason is that the ticket succeeded.
 #
-# Até aqui o portão era exercitado contra `web-flow-3-az`, que mentia (`A5.5`
-# ×2, a quarentena do #24). Ele parou de mentir — e um teste cujo sujeito é um
-# defeito morre no dia em que o defeito é consertado. O sujeito passa a ser
-# `models/refusal/lying-band.json`, feito PARA mentir e escolhido por não
-# ter conserto de roteamento: a caixa da faixa é a UNIÃO dos membros, então um
-# não-membro layoutado no meio cai dentro dela por definição, e nenhuma escolha
-# de traçado desfaz isso. Corpo de prova que não se conserta por acidente.
+# Up to here the gate was exercised against `web-flow-3-az`, which lied (`A5.5`
+# ×2, the #24 quarantine). It stopped lying — and a test whose subject is a
+# defect dies the day the defect is fixed. The subject becomes
+# `models/refusal/lying-band.json`, made TO lie and chosen for having
+# no routing fix: the band's box is the UNION of its members, so a
+# non-member laid out in the middle falls inside it by definition, and no
+# routing choice undoes that. A proof body that can't be fixed by accident.
 #
-# ⚠️ E `F1`/`F2` estão FORA das 62 de propósito (#18), então este passo sozinho
-# não provaria que uma família DA RUBRICA barra. Quem prova isso é o passo acima:
-# o `check-geometry-gate.cjs` roda `A4.2`, `A4.4`, `A5.5`, `F1` e `F2` — as
-# CINCO de tolerância zero —, cada uma contra o seu caso plantado, e exige que a
-# mensagem nomeie a checagem. A divisão é: LÁ o portão prova que barra cada
-# família; AQUI o motor prova que chama o portão e obedece ao nível. Não há
-# modelo que faça `A5.5` nem `F2` ponta a ponta porque o motor não produz nenhum.
-passo "e o portão está ENXERTADO no motor"         bash -c '
-  G="'"$RAIZ"'/engine/generate.cjs"
-  M="'"$RAIZ"'/models/refusal/lying-band.json"
+# ⚠️ And `F1`/`F2` are OUTSIDE the 62 on purpose (#18), so this step alone
+# would not prove that a family FROM THE RUBRIC blocks. What proves that is the step above:
+# `check-geometry-gate.cjs` runs `A4.2`, `A4.4`, `A5.5`, `F1` and `F2` — the
+# FIVE zero-tolerance ones —, each against its planted case, and requires the
+# message to name the check. The split is: THERE the gate proves it blocks each
+# family; HERE the engine proves it calls the gate and obeys the level. There is no
+# model that triggers `A5.5` or `F2` end to end, because the engine produces neither.
+step "and the gate is GRAFTED into the engine"         bash -c '
+  G="'"$ROOT"'/engine/generate.cjs"
+  M="'"$ROOT"'/models/refusal/lying-band.json"
   if node "$G" "$M" --gate truthfulness --output /dev/null > /dev/null 2>&1; then
-    echo "   ✗ o motor DESENHOU um plano que mente, com o portão pedido"; exit 1
+    echo "   ✗ the engine DREW a plan that lies, with the gate requested"; exit 1
   fi
-  echo "   ✓ --gate truthfulness recusa o desenho que mente"
-  # e o controle: o mesmo nível deixa passar um que não mente
-  node "$G" "'"$RAIZ"'/models/web-multi-az.json" --gate truthfulness --output /dev/null > /dev/null 2>&1 \
-    && echo "   ✓ e deixa passar o que não mente" \
-    || { echo "   ✗ recusou um desenho que não mente"; exit 1; }
-  # sem portão, o motor desenha — mas AVISA
+  echo "   ✓ --gate truthfulness refuses the lying drawing"
+  # and the control: the same level lets through one that does not lie
+  node "$G" "'"$ROOT"'/models/web-multi-az.json" --gate truthfulness --output /dev/null > /dev/null 2>&1 \
+    && echo "   ✓ and lets through the one that does not lie" \
+    || { echo "   ✗ refused a drawing that does not lie"; exit 1; }
+  # without a gate, the engine draws — but it WARNS
   node "$G" "$M" --output /dev/null 2>&1 | grep -q "⛔ F1" \
-    && echo "   ✓ e sem portão desenha, mas avisa da falha semântica" \
-    || { echo "   ✗ desenhou em silêncio um plano que mente"; exit 1; }'
+    && echo "   ✓ and without a gate it draws, but warns of the semantic failure" \
+    || { echo "   ✗ drew a lying plan silently"; exit 1; }'
 
 echo
-echo "════ camada 6 · a sessão ════"
-passo "o manifesto do motor de produção"           node "$AQUI/check-engine-untouched.cjs"
-passo "a projeção, com 12 mutações de controle"    node "$AQUI/check-projection.cjs"
-passo "passo 5 — a vista lógica, aprovada"        node "$RAIZ/tools/approve.cjs" "$RAIZ/models/session/retail-logical.json" --at 2026-08-21 --output "$RAIZ/output/retail.drawio"
-passo "passos 1 e 6 — retomada e vista técnica"   node "$RAIZ/tools/resume.cjs" "$RAIZ/output/retail.drawio" --delta "$RAIZ/models/session/retail-elaboration.json"
-passo "o arco ponta a ponta, num caso novo (#26)"  node "$AQUI/check-arc.cjs"
-passo "a privacidade do dossiê"                    node "$AQUI/check-dossier.cjs"
+echo "════ layer 6 · the session ════"
+step "the production engine's manifest"           node "$HERE/check-engine-untouched.cjs"
+step "the projection, with 12 control mutations"    node "$HERE/check-projection.cjs"
+step "step 5 — the logical view, approved"        node "$ROOT/tools/approve.cjs" "$ROOT/models/session/retail-logical.json" --at 2026-08-21 --output "$ROOT/output/retail.drawio"
+step "steps 1 and 6 — resume and technical view"   node "$ROOT/tools/resume.cjs" "$ROOT/output/retail.drawio" --delta "$ROOT/models/session/retail-elaboration.json"
+step "the arc end to end, on a new case (#26)"  node "$HERE/check-arc.cjs"
+step "the dossier's privacy"                    node "$HERE/check-dossier.cjs"
 
 echo
-echo "════ camada 7 · o app (dependência de desenvolvimento) ════"
+echo "════ layer 7 · the app (development dependency) ════"
 if [ ! -x "$DRAWIO" ]; then
-  echo "   draw.io headless não encontrado em $DRAWIO — camada 7 pulada."
-  echo "   (dependência de desenvolvimento: draw.io Desktop AppImage + xvfb;"
-  echo "    tools/drawio.cjs é quem sabe onde o binário mora)"
+  echo "   draw.io headless not found at $DRAWIO — layer 7 skipped."
+  echo "   (development dependency: draw.io Desktop AppImage + xvfb;"
+  echo "    tools/drawio.cjs is the one that knows where the binary lives)"
 else
-  passo "impressão: 10 edições humanas × 3 esquemas" node "$AQUI/check-fingerprint.cjs" "$DRAWIO"
-  passo "round-trip do modelo pelo codec do app"     node "$AQUI/check-roundtrip-model.cjs" "$DRAWIO"
-  passo "round-trip do tema pelo codec do app"       node "$AQUI/check-roundtrip-theme.cjs" "$DRAWIO"
-  passo "round-trip do arquivo de sessão"            node "$AQUI/check-roundtrip-session.cjs" "$DRAWIO"
+  step "fingerprint: 10 human edits × 3 schemas" node "$HERE/check-fingerprint.cjs" "$DRAWIO"
+  step "model round-trip through the app's codec"     node "$HERE/check-roundtrip-model.cjs" "$DRAWIO"
+  step "theme round-trip through the app's codec"       node "$HERE/check-roundtrip-theme.cjs" "$DRAWIO"
+  step "session file round-trip"            node "$HERE/check-roundtrip-session.cjs" "$DRAWIO"
 
-  # O RENDER é a outra metade da validação em duas camadas (premissa 9), e a
-  # ordem aqui não é acidental: primeiro o corpus, depois as variantes de tema,
-  # e por último o pixel — porque a verificação de pixel LÊ o que o render
-  # escreveu. Serial de propósito (achado do #13 sobre concorrência do Electron).
-  passo "render do corpus" bash -c '
-    "'"$RAIZ"'/tools/clean-render.sh" > /dev/null 2>&1 || true
-    falhou=0
-    for d in "'"$RAIZ"'"/output/*.drawio; do
-      "'"$RAIZ"'/tools/render.sh" "$d" "${d%.drawio}.png" || falhou=1
+  # RENDER is the other half of the two-layer validation (premise 9), and the
+  # order here is not accidental: first the corpus, then the theme variants,
+  # and last the pixel — because pixel verification READS what render
+  # wrote. Serial on purpose (finding from #13 about Electron concurrency).
+  step "render the corpus" bash -c '
+    "'"$ROOT"'/tools/clean-render.sh" > /dev/null 2>&1 || true
+    failed=0
+    for d in "'"$ROOT"'"/output/*.drawio; do
+      "'"$ROOT"'/tools/render.sh" "$d" "${d%.drawio}.png" || failed=1
     done
-    exit $falhou'
-  # ⚠️ REGENERADAS AQUI, e nao lidas de arquivo versionado.
+    exit $failed'
+  # ⚠️ REGENERATED HERE, and not read from a versioned file.
   #
-  # Ate o #29 `output/themes/*.drawio` estava commitado, e a camada 7 rendia o que
-  # achasse la. Isso punha 6,7 MB de saida gerada dentro do pacote que o usuario
-  # instala — e a convencao oficial de autoria e a oposta: resultado de eval mora
-  # em workspace irmao. `output/` virou rascunho ignorado, e quem constroi as
-  # variantes e quem sempre soube construi-las. Medido: a regeneracao sai byte a
-  # byte igual ao que estava commitado.
-  passo "as variantes de tema, reconstruidas"        bash -c '
-    node "'"$RAIZ"'/tools/generate-themes.cjs" > /dev/null && node "'"$RAIZ"'/tools/generate-trap.cjs" > /dev/null
-    n=$(ls "'"$RAIZ"'"/output/themes/*.drawio | wc -l)
-    [ "$n" -ge 7 ] && echo "   ✓ $n variante(s)" || { echo "   ✗ so $n variante(s)"; exit 1; }'
-  passo "render das variantes de tema" bash -c '
-    "'"$RAIZ"'/tools/clean-render.sh" > /dev/null 2>&1 || true
-    falhou=0
-    for d in "'"$RAIZ"'"/output/themes/*.drawio; do
-      nome="$(basename "$d" .drawio)"
-      # a animada só se vê em SVG — o #4 mediu que o PNG dela vira tracejado
-      # ESTÁTICO sem erro nenhum, e um PNG aqui seria prova falsa
-      if [ "$nome" = "f-fluxo-animado" ]; then
-        "'"$RAIZ"'/tools/render.sh" "$d" "${d%.drawio}.svg" svg || falhou=1
-        grep -q "ge-flow-animation" "${d%.drawio}.svg" || { echo "   ✗ $nome sem animação no SVG"; falhou=1; }
+  # Until #29 `output/themes/*.drawio` was committed, and layer 7 rendered whatever
+  # it found there. That put 6.7 MB of generated output inside the package the user
+  # installs — and the official authoring convention is the opposite: eval output lives
+  # in a sibling workspace. `output/` became an ignored scratch directory, and whoever
+  # builds the variants has always known how to build them. Measured: the regeneration comes out
+  # byte for byte identical to what was committed.
+  step "the theme variants, rebuilt"        bash -c '
+    node "'"$ROOT"'/tools/generate-themes.cjs" > /dev/null && node "'"$ROOT"'/tools/generate-trap.cjs" > /dev/null
+    n=$(ls "'"$ROOT"'"/output/themes/*.drawio | wc -l)
+    [ "$n" -ge 7 ] && echo "   ✓ $n variant(s)" || { echo "   ✗ only $n variant(s)"; exit 1; }'
+  step "render the theme variants" bash -c '
+    "'"$ROOT"'/tools/clean-render.sh" > /dev/null 2>&1 || true
+    failed=0
+    for d in "'"$ROOT"'"/output/themes/*.drawio; do
+      name="$(basename "$d" .drawio)"
+      # the animated one is only visible in SVG — #4 measured that its PNG turns into a
+      # STATIC dashed line with no error, and a PNG here would be false proof
+      if [ "$name" = "f-animated-flow" ]; then
+        "'"$ROOT"'/tools/render.sh" "$d" "${d%.drawio}.svg" svg || failed=1
+        grep -q "ge-flow-animation" "${d%.drawio}.svg" || { echo "   ✗ $name has no animation in the SVG"; failed=1; }
         continue
       fi
-      "'"$RAIZ"'/tools/render.sh" "$d" "${d%.drawio}.png" || falhou=1
+      "'"$ROOT"'/tools/render.sh" "$d" "${d%.drawio}.png" || failed=1
     done
-    exit $falhou'
+    exit $failed'
   if command -v python3 > /dev/null && python3 -c "import PIL" 2>/dev/null; then
-    passo "o tema chegou no PIXEL (a lição do #17)"  python3 "$RAIZ/tools/verify-theme.py" --all
+    step "the theme landed on the PIXEL (the lesson from #17)"  python3 "$ROOT/tools/verify-theme.py" --all
   else
-    echo "   Pillow ausente — verificação de pixel pulada."
+    echo "   Pillow missing — pixel verification skipped."
   fi
 fi
 
 echo
-if [ "$falhou" -ne 0 ]; then
-  echo "SUITE VERMELHA — ${#VERMELHAS[@]} camada(s):"
-  for v in "${VERMELHAS[@]}"; do echo "  · $v"; done
+if [ "$failed" -ne 0 ]; then
+  echo "SUITE RED — ${#REDS[@]} layer(s):"
+  for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite verde — a união roda, e roda contra um motor só."
+echo "suite green — the union runs, and it runs against a single engine."

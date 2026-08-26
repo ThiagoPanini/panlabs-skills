@@ -1,23 +1,24 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * #33 — `tools/check-geometry.cjs` passa a aceitar `--theme`.
+ * #33 — `tools/check-geometry.cjs` starts accepting `--theme`.
  *
- * Hoje o laudo sempre avalia o tema padrão (`claro`), que é cego para o campo
- * `qualificador` — ele só aparece no tema `corporativo`. Sem `--theme`, o
- * validador geométrico nunca vê o que `--theme corporate` liga.
+ * Today the report always evaluates the default theme (`light`), which is
+ * blind to the `qualifier` field — it only appears in the `corporate` theme.
+ * Without `--theme`, the geometric validator never sees what `--theme
+ * corporate` turns on.
  *
- * A prova não abre o JSON do laudo (acoplaria o teste ao formato dele). Ela
- * compara STDOUT entre três chamadas:
+ * The proof doesn't open the report's JSON (that would couple the test to
+ * its format). It compares STDOUT across three calls:
  *
- *   · sem `--theme`                    (A, o padrão de hoje)
- *   · com `--theme light` explícito    (B, o mesmo padrão, dito por fora)
- *   · com `--theme corporate`        (C, liga o qualificador)
+ *   · without `--theme`                (A, today's default)
+ *   · with `--theme light` explicit    (B, the same default, said out loud)
+ *   · with `--theme corporate`         (C, turns on the qualifier)
  *
- * A === B prova que a flag é reconhecida sem corromper os argumentos
- * posicionais (o bug de hoje: `--theme light` deixa "claro" sobrar como se
- * fosse um caminho de modelo, e o CLI tenta ler o arquivo "claro"). A ≠ C
- * prova que o tema pedido de fato chega ao motor.
+ * A === B proves the flag is recognized without corrupting the positional
+ * arguments (today's bug: `--theme light` leaves "light" left over as if it
+ * were a model path, and the CLI tries to read the file "light"). A ≠ C
+ * proves the requested theme actually reaches the engine.
  */
 
 const { execFileSync } = require('child_process');
@@ -25,38 +26,38 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const CLI = path.join(ROOT, 'tools', 'check-geometry.cjs');
-// tem `qualificador` no corpus embarcado — ver #33.
+// has `qualifier` in its embedded corpus — see #33.
 const MODEL = path.join(ROOT, 'models', 'quorum-3-az.json');
 
-let falhas = 0;
+let failures = 0;
 const ok = (cond, title, detail) => {
   console.log(`  ${cond ? '✓' : '✗'} ${title}${detail ? `  — ${detail}` : ''}`);
-  if (!cond) falhas++;
+  if (!cond) failures++;
 };
 
 function run(...flags) {
   try {
-    return { codigo: 0, output: execFileSync('node', [CLI, MODEL, '--json', ...flags], { encoding: 'utf8' }) };
+    return { code: 0, output: execFileSync('node', [CLI, MODEL, '--json', ...flags], { encoding: 'utf8' }) };
   } catch (e) {
-    return { codigo: e.status, output: e.stdout || '', erro: e.stderr || '' };
+    return { code: e.status, output: e.stdout || '', error: e.stderr || '' };
   }
 }
 
-const semFlag = run();
-const temaClaro = run('--theme', 'light');
-const temaCorporativo = run('--theme', 'corporate');
+const withoutFlag = run();
+const lightTheme = run('--theme', 'light');
+const corporateTheme = run('--theme', 'corporate');
 
-ok(semFlag.codigo !== null && [0, 1].includes(semFlag.codigo),
-  'sem --theme roda normalmente (linha de base)',
-  `código=${semFlag.codigo} erro=${semFlag.erro || '(nenhum)'}`);
+ok(withoutFlag.code !== null && [0, 1].includes(withoutFlag.code),
+  'without --theme runs normally (baseline)',
+  `code=${withoutFlag.code} error=${withoutFlag.error || '(none)'}`);
 
-ok(temaClaro.codigo === semFlag.codigo && temaClaro.output === semFlag.output,
-  '--theme light (explícito) reproduz a linha de base — não corrompe os posicionais',
-  temaClaro.erro ? `stderr: ${temaClaro.erro.slice(0, 200)}` : '');
+ok(lightTheme.code === withoutFlag.code && lightTheme.output === withoutFlag.output,
+  "--theme light (explicit) reproduces the baseline — doesn't corrupt the positional args",
+  lightTheme.error ? `stderr: ${lightTheme.error.slice(0, 200)}` : '');
 
-ok(temaCorporativo.output !== semFlag.output,
-  '--theme corporate muda o laudo — o tema pedido chegou ao motor',
-  `tamanho sem-flag=${semFlag.output.length} corporativo=${temaCorporativo.output.length}`);
+ok(corporateTheme.output !== withoutFlag.output,
+  '--theme corporate changes the report — the requested theme reached the engine',
+  `size without-flag=${withoutFlag.output.length} corporate=${corporateTheme.output.length}`);
 
-console.log(falhas ? `\n  ✗ ${falhas} falha(s)` : '\n  ✓ check-geometry.cjs aceita --theme.');
-process.exit(falhas ? 1 : 0);
+console.log(failures ? `\n  ✗ ${failures} failure(s)` : '\n  ✓ check-geometry.cjs accepts --theme.');
+process.exit(failures ? 1 : 0);

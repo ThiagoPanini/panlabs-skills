@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * O TEMA VIAJA RESOLVIDO — e volta intacto pelo codec do próprio draw.io.
+ * THE THEME TRAVELS RESOLVED — and comes back intact through draw.io's own codec.
  *
- * O #11 provou que o modelo embutido faz round-trip byte a byte por
- * `drawio -x -f xml`, que é o app DECODIFICANDO e RE-SERIALIZANDO. Esta checagem
- * estende a prova ao `panlabsTema`, e o que está em jogo não é simetria: é a razão
- * de guardar TOKENS e não o NOME do tema.
+ * #11 proved the embedded model round-trips byte for byte through
+ * `drawio -x -f xml`, which is the app DECODING and RE-SERIALIZING. This check
+ * extends that proof to `panlabsTema`, and what's at stake isn't symmetry: it's
+ * the reason for storing TOKENS and not the theme's NAME.
  *
- * O #4 §7 mediu por que `style="<nome>"` no `<mxGraphModel>` é inútil — nome só
- * resolve contra o que a outra ponta tem. Um `.drawio` que guardasse `tema=claro`
- * regeneraria diferente no dia em que `light.json` mudasse, sem aviso. Guardando os
- * tokens resolvidos, o arquivo continua sendo o próprio formato de persistência.
+ * #4 §7 measured why `style="<name>"` on the `<mxGraphModel>` is useless —
+ * a name only resolves against what the other end has. A `.drawio` that
+ * stored `theme=light` would regenerate differently the day `light.json`
+ * changed, with no warning. By storing the resolved tokens, the file remains
+ * its own persistence format.
  *
- *   node tools/check-roundtrip-theme.cjs [binario-drawio]
+ *   node tools/check-roundtrip-theme.cjs [drawio-binary]
  */
 
 const fs = require('fs');
@@ -22,25 +23,25 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 /**
- * O export headless falha de formas que não são falha DESTE teste: outro
- * processo draw.io pendurado na máquina derruba qualquer export posterior (ver
- * `tools/renderizar.sh`). Uma exceção crua aqui viraria um stack trace de
- * `execFileSync` no meio da suite, sem dizer o que aconteceu — então a chamada é
- * embrulhada, com uma retentativa depois de ceifar pendurado.
+ * The headless export fails in ways that aren't a failure of THIS test:
+ * another draw.io process hung on the machine brings down any later export
+ * (see `tools/render.sh`). A raw exception here would turn into an
+ * `execFileSync` stack trace in the middle of the suite, without saying what
+ * happened — so the call is wrapped, with a retry after reaping anything hung.
  */
-function exportarXml(origin, destino, perfil) {
-  const args = ['-a', DRAWIO, '-x', '-f', 'xml', '-o', destino, origin,
-    '--no-sandbox', '--disable-gpu', '--disable-update', '--user-data-dir=' + perfil];
-  for (let tentativa = 0; tentativa < 2; tentativa++) {
+function exportXml(origin, destination, profile) {
+  const args = ['-a', DRAWIO, '-x', '-f', 'xml', '-o', destination, origin,
+    '--no-sandbox', '--disable-gpu', '--disable-update', '--user-data-dir=' + profile];
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
       execFileSync('xvfb-run', args, { stdio: 'ignore' });
-      if (fs.existsSync(destino) && fs.statSync(destino).size > 0) return true;
-    } catch (e) { /* cai na retentativa */ }
+      if (fs.existsSync(destination) && fs.statSync(destination).size > 0) return true;
+    } catch (e) { /* falls through to the retry */ }
     try {
       execFileSync('bash', ['-c',
         "ps -o pid,etimes -C drawio --no-headers | awk '$2>180 {print $1}' | xargs -r kill -9"],
         { stdio: 'ignore' });
-    } catch (e) { /* sem processo pendurado, ótimo */ }
+    } catch (e) { /* no hung process, great */ }
   }
   return false;
 }
@@ -51,27 +52,28 @@ const DRAWIO = binary(process.argv[2]);
 
 const ENTITIES = { '&quot;': '"', '&#39;': "'", '&lt;': '<', '&gt;': '>', '&#xa;': '\n', '&#x9;': '\t', '&#xd;': '\r', '&amp;': '&' };
 const unescape = s => String(s).replace(/&(?:quot|#39|lt|gt|#xa|#x9|#xd|amp);/g, e => ENTITIES[e]);
-const atributo = (xml, name) => {
+const attribute = (xml, name) => {
   const m = new RegExp(name + '="([^"]*)"').exec(xml);
   return m ? unescape(m[1]) : null;
 };
 
 /**
- * ⚠️ A checagem GERA os arquivos que confere, em vez de esperar que alguém tenha
- * gerado antes. Enquanto ela dependia de arquivos deixados por outro passo, a
- * ausência deles saía como "pulado" e a suíte ficava verde tendo conferido zero
- * — uma checagem que não sabe falhar. Agora ela falha se conferiu nada.
+ * ⚠️ The check GENERATES the files it checks, instead of waiting for someone
+ * to have generated them beforehand. While it depended on files left behind
+ * by another step, their absence came out as "skipped" and the suite stayed
+ * green having checked zero — a check that doesn't know how to fail. Now it
+ * fails if it checked nothing.
  */
 const VARIANTS = [
   { name: 'a-light' }, { name: 'b-dark' }, { name: 'c-corporate' },
   { name: 'g-logical-view' },
-  // multi-conta: a página consolidada MAIS as de detalhe, que é onde o #12 e o
-  // #13 se encontram e onde ninguém tinha medido round-trip de tema
+  // multi-account: the consolidated page PLUS the detail pages, which is
+  // where #12 and #13 meet and where nobody had measured a theme round-trip
   { name: 'h-accounts-dark' },
 ];
 
-/** Quem sabe construir as variantes é `tools/generate-themes.cjs` — um lugar só. */
-async function gerarVariantes() {
+/** The one place that knows how to build the variants is `tools/generate-themes.cjs`. */
+async function generateVariants() {
   const { execFileSync } = require('child_process');
   execFileSync(process.execPath, [path.join(ROOT, 'tools', 'generate-themes.cjs')], { stdio: 'ignore' });
   return path.join(ROOT, 'output', 'themes');
@@ -79,53 +81,53 @@ async function gerarVariantes() {
 
 async function main() {
   if (!fs.existsSync(DRAWIO)) {
-    console.log('   draw.io headless não encontrado — round-trip pulado (premissa 8).');
+    console.log('   draw.io headless not found — round-trip skipped (premise 8).');
     process.exit(0);
   }
-  const dirVariantes = await gerarVariantes();
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tema-rt-'));
-  let falhou = 0, conferidos = 0;
+  const variantsDir = await generateVariants();
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'theme-rt-'));
+  let failed = 0, checked = 0;
 
   for (const { name } of VARIANTS) {
-    const origin = path.join(dirVariantes, name + '.drawio');
-    if (!fs.existsSync(origin)) { console.log(`   ✗ ${name}: .drawio ausente`); falhou = 1; continue; }
-    conferidos++;
-    const destino = path.join(tmp, name + '.xml');
-    if (!exportarXml(origin, destino, tmp)) {
-      console.log(`   ✗ ${name.padEnd(14)} o export headless não produziu XML (ver tools/renderizar.sh)`);
-      falhou = 1;
+    const origin = path.join(variantsDir, name + '.drawio');
+    if (!fs.existsSync(origin)) { console.log(`   ✗ ${name}: .drawio missing`); failed = 1; continue; }
+    checked++;
+    const destination = path.join(tmp, name + '.xml');
+    if (!exportXml(origin, destination, tmp)) {
+      console.log(`   ✗ ${name.padEnd(14)} the headless export produced no XML (see tools/render.sh)`);
+      failed = 1;
       continue;
     }
 
-    const antes = fs.readFileSync(origin, 'utf8');
-    const depois = fs.readFileSync(destino, 'utf8');
+    const before = fs.readFileSync(origin, 'utf8');
+    const after = fs.readFileSync(destination, 'utf8');
     for (const attr of ['panlabsTema', 'panlabsModelo']) {
-      const a = atributo(antes, attr), b = atributo(depois, attr);
+      const a = attribute(before, attr), b = attribute(after, attr);
       const ok = a !== null && a === b;
-      if (!ok) falhou = 1;
-      console.log(`   ${ok ? '✓' : '✗'} ${name.padEnd(14)} ${attr.padEnd(14)} ${String((a || '').length).padStart(5)} bytes  ${ok ? 'idêntico' : 'DIVERGIU'}`);
+      if (!ok) failed = 1;
+      console.log(`   ${ok ? '✓' : '✗'} ${name.padEnd(14)} ${attr.padEnd(14)} ${String((a || '').length).padStart(5)} bytes  ${ok ? 'identical' : 'DIVERGED'}`);
     }
-    // e o tema tem de reconstruir: id, fundo e os grupos de token
-    const t = JSON.parse(atributo(depois, 'panlabsTema') || '{}');
-    const grupos = ['page', 'ink', 'text', 'edge', 'gap', 'note', 'block', 'card'];
-    const faltando = grupos.filter(g => !(g in (t.tokens || {})));
-    if (faltando.length || !t.id || !t.background) {
-      console.log(`   ✗ ${name}: payload incompleto (faltam ${faltando.join(', ') || 'id/fundo'})`);
-      falhou = 1;
+    // and the theme has to rebuild: id, background, and the token groups
+    const t = JSON.parse(attribute(after, 'panlabsTema') || '{}');
+    const groups = ['page', 'ink', 'text', 'edge', 'gap', 'note', 'block', 'card'];
+    const missing = groups.filter(g => !(g in (t.tokens || {})));
+    if (missing.length || !t.id || !t.background) {
+      console.log(`   ✗ ${name}: incomplete payload (missing ${missing.join(', ') || 'id/background'})`);
+      failed = 1;
     }
-    // e NÃO pode carregar metadado do arquivo fingindo ser token
-    const intrusos = ['schema', 'id', 'label', 'because', 'inherits'].filter(k => k in (t.tokens || {}));
-    if (intrusos.length) {
-      console.log(`   ✗ ${name}: chave de identidade viajando como token (${intrusos.join(', ')})`);
-      falhou = 1;
+    // and it must NOT carry file metadata pretending to be a token
+    const stowaways = ['schema', 'id', 'label', 'because', 'inherits'].filter(k => k in (t.tokens || {}));
+    if (stowaways.length) {
+      console.log(`   ✗ ${name}: identity key traveling as a token (${stowaways.join(', ')})`);
+      failed = 1;
     }
   }
 
   fs.rmSync(tmp, { recursive: true, force: true });
-  if (!conferidos) { console.log('   ✗ nenhuma variante conferida — a checagem não mediu nada'); falhou = 1; }
-  console.log(falhou ? '   ROUND-TRIP DO TEMA VERMELHO'
-    : `   ✓ o tema é o seu próprio formato de persistência (${conferidos} variantes)`);
-  process.exit(falhou);
+  if (!checked) { console.log('   ✗ no variant checked — the check measured nothing'); failed = 1; }
+  console.log(failed ? '   THEME ROUND-TRIP RED'
+    : `   ✓ the theme is its own persistence format (${checked} variants)`);
+  process.exit(failed);
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });

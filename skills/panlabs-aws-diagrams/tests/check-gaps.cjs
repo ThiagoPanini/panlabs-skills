@@ -1,26 +1,27 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * A régua da revisão de lacunas — os limiares que o #26 calibrou, travados.
+ * The gap review's ruler — the thresholds #26 calibrated, locked in.
  *
- * O #15 fechou a política (bloqueia em bloco, uma vez só; relata e nunca
- * conserta calado) e deixou o LIMIAR aberto, com o número que o motivava: as
- * regras do protótipo dispararam **4 achados num modelo de 3 nós**.
+ * #15 settled the policy (blocks in bulk, once only; reports and never
+ * silently fixes) and left the THRESHOLD open, with the number that
+ * motivated it: the prototype's rules fired **4 findings on a 3-node model**.
  *
- * O critério de aprovação foi escrito ANTES destas regras existirem. Este
- * arquivo é ele, executável.
+ * The acceptance criterion was written BEFORE these rules existed. This file
+ * is that criterion, executable.
  *
- *   L1  toda regra tem pré-condição escrita, e cala onde o modelo não afirma
- *       a estrutura sobre a qual ela fala  →  conferido por `mudas[]` existir
- *       e trazer motivo
- *   L2  toda regra dispara em ≥1 modelo do corpus
- *   L3  toda regra cala em ≥1 modelo do corpus
- *   L4  nenhum modelo produz mais achados que ⌈nós ÷ 4⌉
+ *   L1  every rule has a written precondition, and stays silent where the
+ *       model does not assert the structure it talks about  →  checked by
+ *       `mudas[]` existing and carrying a reason
+ *   L2  every rule fires on ≥1 model in the corpus
+ *   L3  every rule stays silent on ≥1 model in the corpus
+ *   L4  no model produces more findings than ⌈nodes ÷ 4⌉
  *
- * L2 e L3 juntos são o guarda: uma regra tem de saber dizer sim E saber dizer
- * não, contra o mesmo corpus. Regra que dispara em todos não mede nada, afirma
- * uma constante — é a forma da lição do #23 (o `A4.1` medindo o motor contra ele
- * mesmo, 77 ocorrências todas reportando exatamente 8) aplicada à outra ponta.
+ * L2 and L3 together are the guard: a rule has to know how to say yes AND how
+ * to say no, against the same corpus. A rule that fires on everything measures
+ * nothing, it asserts a constant — it is #23's lesson (`A4.1` measuring the
+ * engine against itself, 77 occurrences all reporting exactly 8) applied to
+ * the other end.
  */
 
 const fs = require('fs');
@@ -31,109 +32,109 @@ const { review, NAMES, arquivosDoCorpus } =
 const ROOT = path.join(__dirname, '..');
 
 /**
- * ⚠️ EXCEÇÕES NOMEADAS AO L4 — nenhuma, e a lista vazia é resultado, não descuido.
+ * ⚠️ NAMED EXCEPTIONS TO L4 — none, and the empty list is a result, not an oversight.
  *
- * Ela teve uma, e a história dela é o mecanismo funcionando. `platform-3-accounts`
- * fazia 6 achados com teto 5, os seis foram conferidos à mão, e a entrada ficou
- * aqui com o motivo medido: o denominador do teto é contagem de nós, e achado
- * escala com SUPERFÍCIE de arquitetura.
+ * It had one, and its story is the mechanism working. `platform-3-accounts`
+ * produced 6 findings with a ceiling of 5, the six were checked by hand, and
+ * the entry stayed here with the measured reason: the ceiling's denominator
+ * is a node count, and findings scale with architecture SURFACE.
  *
- * Aí o caso ponta a ponta do #26 achou a cláusula que faltava no `spof` — só os
- * estrangulamentos MAXIMAIS, porque numa cadeia linear toda ligação é ponto de
- * articulação — e a exceção expirou sozinha: este teste ficou vermelho com a
- * mensagem que ele mesmo tinha preparado (*"ela não estoura mais: APAGUE a
- * entrada"*), e a entrada foi apagada. É a mesma trajetória da quarentena do #23,
- * que o #24 fez expirar do mesmo jeito.
+ * Then #26's end-to-end case found the missing clause in `spof` — only the
+ * MAXIMAL bottlenecks, because in a linear chain every link is an
+ * articulation point — and the exception expired on its own: this test went
+ * red with the message it had itself prepared (*"it no longer fires: DELETE
+ * the entry"*), and the entry was deleted. It is the same trajectory as #23's
+ * quarantine, which #24 made expire the same way.
  *
- * A observação sobre o denominador continua valendo e continua registrada —
- * ela só não tem mais nenhum modelo do corpus para provar.
+ * The observation about the denominator still holds and is still on record —
+ * it just no longer has a corpus model to prove it.
  */
 const OVER_CEILING = {};
 
-let falhou = 0;
-const anota = (ok, o_que, detail) => {
-  if (!ok) falhou++;
-  console.log(`  ${ok ? '✓' : '✗'} ${o_que}`);
+let failed = 0;
+const note = (ok, what, detail) => {
+  if (!ok) failed++;
+  console.log(`  ${ok ? '✓' : '✗'} ${what}`);
   if (detail) console.log(`      ${detail}`);
 };
 
-// ------------------------------------------------------------- roda o corpus
+// ------------------------------------------------------------- run the corpus
 
-// A MESMA varredura que a CLI usa — se fossem duas, `L2`/`L3` poderiam ficar
-// verdes contra metade do corpus.
-const arqs = arquivosDoCorpus(ROOT);
+// The SAME scan the CLI uses — if there were two, `L2`/`L3` could stay green
+// against half the corpus.
+const files = arquivosDoCorpus(ROOT);
 
-const disparou = new Map(), calou = new Map();
-const estouram = [];
-let totalAchados = 0, totalNos = 0;
+const fired = new Map(), silenced = new Map();
+const overflowing = [];
+let totalFindings = 0, totalNodes = 0;
 
-for (const rel of arqs) {
+for (const rel of files) {
   const model = JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
   const name = path.basename(rel, '.json');
   const r = review(model);
-  totalAchados += r.findings.length;
-  totalNos += model.nodes.length;
+  totalFindings += r.findings.length;
+  totalNodes += model.nodes.length;
 
-  for (const k of new Set(r.findings.map(a => a.rule))) disparou.set(k, (disparou.get(k) || 0) + 1);
-  for (const m of r.mudas) calou.set(m.rule, (calou.get(m.rule) || 0) + 1);
-  if (!r.dentroDoTeto) estouram.push({ name, findings: r.findings.length, ceiling: r.ceiling });
+  for (const k of new Set(r.findings.map(a => a.rule))) fired.set(k, (fired.get(k) || 0) + 1);
+  for (const m of r.mudas) silenced.set(m.rule, (silenced.get(m.rule) || 0) + 1);
+  if (!r.dentroDoTeto) overflowing.push({ name, findings: r.findings.length, ceiling: r.ceiling });
 }
 
-console.log(`\n1 · o corpus rodado: ${arqs.length} modelos, ${totalNos} nós, ${totalAchados} achados\n`);
+console.log(`\n1 · corpus run: ${files.length} models, ${totalNodes} nodes, ${totalFindings} findings\n`);
 
-// L1 — toda regra que cala diz POR QUÊ
+// L1 — every rule that stays silent says WHY
 {
-  const semMotivo = [];
-  for (const rel of arqs) {
+  const noReason = [];
+  for (const rel of files) {
     const model = JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
     for (const m of review(model).mudas)
-      if (!m.because || !m.because.trim()) semMotivo.push(`${path.basename(rel, '.json')}/${m.rule}`);
+      if (!m.because || !m.because.trim()) noReason.push(`${path.basename(rel, '.json')}/${m.rule}`);
   }
-  anota(!semMotivo.length, 'L1 · toda regra muda traz o motivo — "não acusou" nunca se confunde com "não rodou"',
-    semMotivo.length ? semMotivo.join(', ') : `${[...calou.values()].reduce((a, b) => a + b, 0)} silêncios, todos com motivo`);
+  note(!noReason.length, 'L1 · every silent rule carries the reason — "did not fire" never gets confused with "did not run"',
+    noReason.length ? noReason.join(', ') : `${[...silenced.values()].reduce((a, b) => a + b, 0)} silences, all with a reason`);
 }
 
-// L2 e L3
-console.log('\n2 · o guarda dos dois lados: toda regra sabe dizer sim E sabe dizer não\n');
+// L2 and L3
+console.log('\n2 · the two-sided guard: every rule knows how to say yes AND how to say no\n');
 for (const r of NAMES) {
-  const d = disparou.get(r) || 0, c = calou.get(r) || 0;
-  anota(d >= 1, `L2 · "${r}" dispara em ≥1 modelo`, `disparou em ${d}`);
-  anota(c >= 1, `L3 · "${r}" cala em ≥1 modelo`, `calou em ${c}`);
+  const d = fired.get(r) || 0, c = silenced.get(r) || 0;
+  note(d >= 1, `L2 · "${r}" fires on ≥1 model`, `fired on ${d}`);
+  note(c >= 1, `L3 · "${r}" is silent on ≥1 model`, `silent on ${c}`);
 }
 
 // L4
-console.log('\n3 · o teto\n');
+console.log('\n3 · the ceiling\n');
 {
-  const inesperados = estouram.filter(e => !OVER_CEILING[e.name]);
-  anota(!inesperados.length, 'L4 · nenhum modelo estoura ⌈nós÷4⌉ fora das exceções nomeadas',
-    inesperados.length
-      ? inesperados.map(e => `${e.name}: ${e.findings} > ${e.ceiling}`).join(' · ')
-      : `${arqs.length - estouram.length}/${arqs.length} dentro do teto`);
+  const unexpected = overflowing.filter(e => !OVER_CEILING[e.name]);
+  note(!unexpected.length, 'L4 · no model overflows ⌈nodes÷4⌉ outside the named exceptions',
+    unexpected.length
+      ? unexpected.map(e => `${e.name}: ${e.findings} > ${e.ceiling}`).join(' · ')
+      : `${files.length - overflowing.length}/${files.length} within the ceiling`);
 
-  // a outra ponta: uma exceção que parou de estourar tem de ser APAGADA
+  // the other end: an exception that stopped overflowing has to be DELETED
   for (const [name, expected] of Object.entries(OVER_CEILING)) {
-    const real = estouram.find(e => e.name === name);
-    anota(!!real, `a exceção nomeada "${name}" AINDA estoura`,
-      real ? `${real.findings} achados contra teto ${real.ceiling} — ${expected.because}`
-        : `ela não estoura mais: o teto foi consertado ou a regra mudou. APAGUE a entrada de FORA_DO_TETO.`);
+    const real = overflowing.find(e => e.name === name);
+    note(!!real, `the named exception "${name}" STILL overflows`,
+      real ? `${real.findings} findings against ceiling ${real.ceiling} — ${expected.because}`
+        : `it no longer overflows: the ceiling was fixed or the rule changed. DELETE the entry from OVER_CEILING.`);
     if (real)
-      anota(real.findings === expected.findings && real.ceiling === expected.ceiling,
-        `e estoura pela MESMA margem que foi conferida à mão`,
-        `esperado ${expected.findings}/${expected.ceiling}, veio ${real.findings}/${real.ceiling}`);
+      note(real.findings === expected.findings && real.ceiling === expected.ceiling,
+        'and it overflows by the SAME margin that was checked by hand',
+        `expected ${expected.findings}/${expected.ceiling}, got ${real.findings}/${real.ceiling}`);
   }
 }
 
-// O número do #15, para poder ser comparado
-console.log('\n4 · a régua contra o protótipo do #15\n');
+// #15's number, so it can be compared
+console.log('\n4 · the ruler against the #15 prototype\n');
 {
-  const taxa = totalAchados / totalNos;
-  anota(taxa < 1.33 / 4, 'a taxa está pelo menos 4× abaixo da do protótipo',
-    `${totalAchados} achados / ${totalNos} nós = ${taxa.toFixed(3)} por nó ` +
-    `(protótipo: 4/3 = 1.333 — ${(1.333 / taxa).toFixed(1)}× acima desta)`);
+  const rate = totalFindings / totalNodes;
+  note(rate < 1.33 / 4, "the rate is at least 4× below the prototype's",
+    `${totalFindings} findings / ${totalNodes} nodes = ${rate.toFixed(3)} per node ` +
+    `(prototype: 4/3 = 1.333 — ${(1.333 / rate).toFixed(1)}× above this)`);
 }
 
 console.log();
-if (falhou) { console.log(`  ✗ ${falhou} asserção(ões) da revisão de lacunas falharam.`); process.exit(1); }
-console.log(`  ✓ as seis regras sabem disparar e sabem calar, e ${Object.keys(OVER_CEILING).length
-  ? `o teto tem ${Object.keys(OVER_CEILING).length} exceção(ões) nomeada(s)`
-  : 'nenhum modelo estoura o teto'}.`);
+if (failed) { console.log(`  ✗ ${failed} gap-review assertion(s) failed.`); process.exit(1); }
+console.log(`  ✓ the six rules know how to fire and know how to stay silent, and ${Object.keys(OVER_CEILING).length
+  ? `the ceiling has ${Object.keys(OVER_CEILING).length} named exception(s)`
+  : 'no model overflows the ceiling'}.`);

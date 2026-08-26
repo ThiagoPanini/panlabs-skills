@@ -1,33 +1,33 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * O ORÇAMENTO DE ROTEAMENTO DO #24 — e ele mede o desenho que reprovou.
+ * #24's ROUTING BUDGET — and it measures the drawing that got rejected.
  *
- * A inspeção humana do #14 reprovou a vista técnica por setas em cima dos
- * ícones; o validador do #18 nomeou o que o olho viu; o motor do #12 melhorou e
- * não fechou a conta. Este arquivo é a conta, e ela tem duas partes.
+ * #14's human inspection rejected the technical view for arrows on top of
+ * icons; #18's validator named what the eye saw; #12's engine improved and
+ * didn't close the account. This file is that account, and it has two parts.
  *
- *   ┌ A VERACIDADE, no corpus inteiro. `A5.5` é a aresta que atravessa uma
- *   │ fronteira de rede de que ela não sai nem para onde vai — o desenho
- *   │ afirmando um caminho que o modelo nega. A rubrica (#8) põe tolerância
- *   │ ZERO nela, e o #18 confirmou. Vale para toda página de todo modelo, e
- *   │ não só para a vista técnica: uma travessia espúria não fica menos
- *   │ mentirosa por estar num diagrama que ninguém olhou.
+ *   ┌ TRUTHFULNESS, across the whole corpus. `A5.5` is the edge that crosses
+ *   │ a network boundary it neither leaves from nor heads to — the drawing
+ *   │ asserting a path the model denies. The rubric (#8) puts ZERO tolerance
+ *   │ on it, and #18 confirmed that. It applies to every page of every
+ *   │ model, not just the technical view: a spurious crossing is no less of
+ *   │ a lie for being in a diagram nobody looked at.
  *   │
- *   └ A LEGIBILIDADE, na vista técnica. `A3.5` (aresta por cima de ícone) e
- *     `A3.4` (aresta por cima de rótulo) são o sintoma que a inspeção humana
- *     enxergou sem ver número nenhum, e `A5.1` é o cruzamento, que tem
- *     orçamento em vez de tolerância zero — a rubrica aceita 2.
+ *   └ READABILITY, in the technical view. `A3.5` (edge over an icon) and
+ *     `A3.4` (edge over a label) are the symptom human inspection saw
+ *     without seeing any number, and `A5.1` is the crossing, which carries a
+ *     budget instead of zero tolerance — the rubric accepts 2.
  *
- * ⚠️ O QUE ESTE ARQUIVO NÃO É: um segundo validador. Ele não mede nada por
- * conta própria — chama o do #18 e compara com um orçamento escrito. A decisão
- * 2 do #18 continua valendo: quem corrige é `dispor`/`alinhar`, quem julga é o
- * validador, e um número num teste não é um laço de correção.
+ * ⚠️ WHAT THIS FILE IS NOT: a second validator. It measures nothing on its
+ * own — it calls #18's and compares against a written budget. #18's decision
+ * 2 still holds: what corrects is `layout`/`align`, what judges is the
+ * validator, and a number in a test is not a correction loop.
  *
- * ⚠️ E ele é EXATO, não "menos ou igual": um orçamento que aceita qualquer
- * coisa abaixo do teto deixa uma melhora passar sem ser registrada, e o ticket
- * pede o número. Quando o desenho melhorar, este arquivo tem de ser atualizado
- * de propósito — que é o mesmo contrato da quarentena do `check-good.cjs`.
+ * ⚠️ And it is EXACT, not "less than or equal": a budget that accepts
+ * anything below the ceiling lets an improvement pass unrecorded, and the
+ * ticket wants the number. When the drawing improves, this file has to be
+ * updated on purpose — the same contract as `check-good.cjs`'s quarantine.
  */
 
 const fs = require('fs');
@@ -41,25 +41,25 @@ const { elaborate } = require(path.join(ROOT, 'session', 'elaborate.cjs'));
 const { project } = require(path.join(ROOT, 'session', 'project.cjs'));
 
 /**
- * A VISTA TÉCNICA NÃO É UM `models/*.json`.
+ * THE TECHNICAL VIEW IS NOT A `models/*.json`.
  *
- * Ela nasce da sessão do #14 — `retail-logical` aprovada, `retail-elaboration`
- * aplicada por cima, e a projeção recortando a camada técnica. Medir só o
- * corpus deixaria de fora exatamente o desenho que este ticket existe para
- * consertar, e foi por isso que a suíte do #14 ficou verde sobre um desenho
- * que a inspeção humana reprovou: ela media a projeção, não o traçado.
+ * It's born from #14's session — `retail-logical` approved, `retail-elaboration`
+ * applied on top, and the projection cutting out the technical layer. Measuring
+ * only the corpus would leave out exactly the drawing this ticket exists to
+ * fix, and that's why #14's suite stayed green over a drawing human inspection
+ * rejected: it measured the projection, not the routing.
  */
 function technicalView() {
   const read = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', f), 'utf8'));
-  const approved = approve(read('retail-logical.json'), { at: '2026-08-21', by: 'usuario', candidate: 'cand-a' });
+  const approved = approve(read('retail-logical.json'), { at: '2026-08-21', by: 'user', candidate: 'cand-a' });
   return project(elaborate(approved, read('retail-elaboration.json')), 'technical').model;
 }
 
-/** O orçamento do ticket, somado sobre TODAS as páginas da vista técnica. */
+/** The ticket's budget, summed over ALL of the technical view's pages. */
 const TECHNICAL_BUDGET = {
-  'A5.5': 0,   // tolerância zero — é veracidade, não gosto
-  'A3.5': 0,   // a seta por cima do ícone que o humano viu
-  'A3.4': 0,   // e a seta por cima do rótulo
+  'A5.5': 0,   // zero tolerance — it's truthfulness, not taste
+  'A3.5': 0,   // the arrow over the icon the human saw
+  'A3.4': 0,   // and the arrow over the label
 };
 
 function occurrences(report, id) {
@@ -68,127 +68,131 @@ function occurrences(report, id) {
 }
 
 /**
- * A PRIMITIVA, contra casos escritos à mão.
+ * THE PRIMITIVE, against hand-written cases.
  *
- * `corredorLivre` é a alavanca nova do #24, e ela é pura: faixa + obstáculos +
- * preferência entram, uma coordenada sai. Conferi-la só pelo desenho inteiro
- * seria conferir a soma de dez decisões — e quando o número mudasse, ninguém
- * saberia qual delas mudou. Os casos abaixo são os que o motor de fato encontra,
- * reduzidos ao mínimo que os distingue.
+ * `corredorLivre` is #24's new lever, and it's pure: band + obstacles +
+ * preference go in, one coordinate comes out. Checking it only through the
+ * whole drawing would mean checking the sum of ten decisions — and when the
+ * number changed, nobody would know which of them changed. The cases below
+ * are the ones the engine actually encounters, reduced to the minimum that
+ * tells them apart.
  */
-function primitiva() {
+function primitive() {
   const { corredorLivre } = require(path.join(ROOT, 'engine', 'layout.cjs'));
+  // `corredorLivre` still expects obstacle boxes shaped exactly `{ini,fim,lo,hi}`
+  // — that's engine/layout.cjs's own contract, unrenamed; match it verbatim.
   const cellBox = (ini, fim, lo, hi) => ({ ini, fim, lo, hi });
 
-  // as três colunas do `web-flow-3-az`, na faixa que a perna atravessa
-  const grade = [cellBox(48, 248, 0, 800), cellBox(339, 539, 0, 800), cellBox(630, 830, 0, 800)];
+  // the three columns of `web-flow-3-az`, on the band the leg crosses
+  const grid = [cellBox(48, 248, 0, 800), cellBox(339, 539, 0, 800), cellBox(630, 830, 0, 800)];
 
-  const casos = [
-    { name: 'preferência já livre passa intacta',
-      r: corredorLivre([100, 300], grade, 584.5), espera: 584.5 },
-    { name: 'preferência DENTRO de coluna cai no vão vizinho',
-      r: corredorLivre([100, 300], grade, 538), espera: 584.5 },
-    { name: 'e escolhe o vão do lado da origem, não o mais largo',
-      r: corredorLivre([100, 300], grade, 350), espera: 293.5 },
-    { name: 'obstáculo que não cruza a faixa não conta',
-      r: corredorLivre([0, 50], [cellBox(339, 539, 100, 800)], 400), espera: 400 },
-    { name: 'rente à borda não é atravessar',
-      r: corredorLivre([100, 300], grade, 539), espera: 539 },
-    { name: 'sem obstáculo nenhum devolve a preferência',
-      r: corredorLivre([100, 300], [], 42), espera: 42 },
-    // a garantia que faz o retorno ser sempre um número: as margens externas
-    // estão livres por construção, então a busca nunca volta de mãos vazias
-    { name: 'tudo bloqueado sai pela margem mais perto',
-      r: corredorLivre([100, 300], [cellBox(0, 1000, 0, 800)], 400), espera: -24 },
-    { name: 'e pela margem da DIREITA quando a preferência está desse lado',
-      r: corredorLivre([100, 300], [cellBox(0, 1000, 0, 800)], 900), espera: 1024 },
+  const cases = [
+    { name: 'a preference that is already free passes through unchanged',
+      r: corredorLivre([100, 300], grid, 584.5), expected: 584.5 },
+    { name: 'a preference INSIDE a column falls into the neighboring gap',
+      r: corredorLivre([100, 300], grid, 538), expected: 584.5 },
+    { name: 'and it picks the gap on the origin side, not the widest one',
+      r: corredorLivre([100, 300], grid, 350), expected: 293.5 },
+    { name: "an obstacle that doesn't cross the band doesn't count",
+      r: corredorLivre([0, 50], [cellBox(339, 539, 100, 800)], 400), expected: 400 },
+    { name: 'flush against the border is not crossing it',
+      r: corredorLivre([100, 300], grid, 539), expected: 539 },
+    { name: 'with no obstacle at all, returns the preference',
+      r: corredorLivre([100, 300], [], 42), expected: 42 },
+    // the guarantee that makes the return value always a number: the outer
+    // margins are free by construction, so the search never comes back empty-handed
+    { name: 'everything blocked exits through the nearest margin',
+      r: corredorLivre([100, 300], [cellBox(0, 1000, 0, 800)], 400), expected: -24 },
+    { name: 'and through the RIGHT margin when the preference is on that side',
+      r: corredorLivre([100, 300], [cellBox(0, 1000, 0, 800)], 900), expected: 1024 },
   ];
 
-  let falhou = 0;
-  console.log('\n  corredorLivre — a alavanca que o desvio não tinha\n');
-  for (const c of casos) {
-    const ok = Math.abs(c.r - c.espera) < 0.001;
-    if (!ok) falhou = 1;
-    console.log(`  ${ok ? '✓' : '✗'} ${c.name}` + (ok ? '' : `  — esperava ${c.espera}, veio ${c.r}`));
+  let failed = 0;
+  console.log("\n  corredorLivre — the lever the workaround didn't have\n");
+  for (const c of cases) {
+    const ok = Math.abs(c.r - c.expected) < 0.001;
+    if (!ok) failed = 1;
+    console.log(`  ${ok ? '✓' : '✗'} ${c.name}` + (ok ? '' : `  — expected ${c.expected}, got ${c.r}`));
   }
-  return falhou;
+  return failed;
 }
 
 async function main() {
-  let falhou = primitiva();
+  let failed = primitive();
 
-  // ---------------------------------------------------- 1 · a veracidade, no corpus
-  console.log('\n  A5.5 — aresta atravessando fronteira alheia (tolerância zero, todo o corpus)\n');
+  // ---------------------------------------------------------- 1 · truthfulness, across the corpus
+  console.log('\n  A5.5 — edge crossing a boundary it has no business with (zero tolerance, whole corpus)\n');
   const corpus = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
-  const entradas = [
+  const entries = [
     ...corpus.map(f => ({ name: path.basename(f, '.json'),
       model: JSON.parse(fs.readFileSync(path.join(ROOT, 'models', f), 'utf8')) })),
-    { name: 'vista técnica (sessão do #14)', model: technicalView() },
+    { name: 'technical view (#14 session)', model: technicalView() },
   ];
 
-  let travessias = 0;
-  for (const { name, model } of entradas) {
+  let crossings = 0;
+  for (const { name, model } of entries) {
     const r = await generate(model);
     for (const p of [r.layoutPlan, ...r.pages]) {
       const a55 = occurrences(validateGeometry(p), 'A5.5');
-      if (!a55) { falhou = 1; console.log(`  ‼ ${name}: A5.5 não rodou`); continue; }
+      if (!a55) { failed = 1; console.log(`  ‼ ${name}: A5.5 did not run`); continue; }
       if (!a55.n) continue;
-      falhou = 1; travessias += a55.n;
-      console.log(`  ✗ ${name} · página "${p.id}": A5.5 ×${a55.n}`);
+      failed = 1; crossings += a55.n;
+      console.log(`  ✗ ${name} · page "${p.id}": A5.5 ×${a55.n}`);
       for (const o of a55.det) console.log(`      · ${o}`);
     }
   }
-  console.log(`  ${travessias ? '✗' : '✓'} ${travessias} travessia(s) espúria(s) no corpus — o orçamento é 0`);
+  console.log(`  ${crossings ? '✗' : '✓'} ${crossings} spurious crossing(s) in the corpus — the budget is 0`);
 
-  // ------------------------------------------- 2 · a legibilidade, na vista técnica
+  // -------------------------------------------------- 2 · legibility, in the technical view
   //
-  // ⚠️ TODAS AS PÁGINAS DA VISTA, não só a consolidada.
+  // ⚠️ ALL OF THE VIEW'S PAGES, not just the consolidated one.
   //
-  // Desde o #12 a vista técnica multi-conta é 1+N páginas (`D2` do #6), e a
-  // primeira versão deste arquivo media só a primeira. Passava — e o
-  // `retail-300-stores-tecnica-processamento` ainda carregava `A3.4` ×1. Medir a
-  // página consolidada e dizer "a vista técnica" é o mesmo erro de escopo que
-  // deixou a suíte do #14 verde sobre um desenho reprovado a olho: o recorte da
-  // medição não era o recorte da entrega.
-  console.log('\n  a vista técnica do #14 — o desenho que a inspeção humana reprovou\n');
+  // Since #12 the multi-account technical view is 1+N pages (#6's `D2`), and
+  // the first version of this file only measured the first one. It passed —
+  // and `retail-300-stores-technical-processing` was still carrying `A3.4`
+  // ×1. Measuring the consolidated page and calling it "the technical view"
+  // is the same scoping mistake that left #14's suite green over a drawing
+  // rejected by eye: the measurement's cut didn't match the delivery's cut.
+  console.log("\n  #14's technical view — the drawing human inspection rejected\n");
   const rt = await generate(technicalView());
   const pages = [rt.layoutPlan, ...rt.pages];
-  const laudos = pages.map(p => ({ page: p.id, report: validateGeometry(p) }));
+  const reports = pages.map(p => ({ page: p.id, report: validateGeometry(p) }));
 
   for (const [id, ceiling] of Object.entries(TECHNICAL_BUDGET)) {
-    let total = 0, faltou = false;
+    let total = 0, missing = false;
     const det = [];
-    for (const { page, report: l } of laudos) {
+    for (const { page, report: l } of reports) {
       const x = occurrences(l, id);
-      if (!x) { faltou = true; console.log(`  ‼ ${id} não rodou em "${page}"`); continue; }
+      if (!x) { missing = true; console.log(`  ‼ ${id} did not run on "${page}"`); continue; }
       total += x.n;
       for (const o of x.det) det.push(`${page}: ${o}`);
     }
-    const ok = !faltou && total === ceiling;
-    if (!ok) falhou = 1;
-    console.log(`  ${ok ? '✓' : '✗'} ${id} ×${total} nas ${pages.length} páginas  (orçamento ${ceiling})`);
+    const ok = !missing && total === ceiling;
+    if (!ok) failed = 1;
+    console.log(`  ${ok ? '✓' : '✗'} ${id} ×${total} across ${pages.length} page(s)  (budget ${ceiling})`);
     if (!ok) for (const o of det.slice(0, 4)) console.log(`      · ${o}`);
   }
-  const report = laudos[0].report;   // `A5.1` é da consolidada — ver abaixo
+  const report = reports[0].report;   // `A5.1` is the consolidated page's — see below
 
   /**
-   * `A5.1` é a única do ticket que tem ORÇAMENTO em vez de tolerância zero, e a
-   * régua é a da própria rubrica: o validador já sabe quantos cruzamentos ele
-   * tolera antes de virar falha (`orcamento_de_falha` na medida). Reimplementar
-   * o número aqui seria uma segunda cópia do limiar — e o #18 mediu o preço de
-   * ter duas cópias de um limiar.
+   * `A5.1` is the only one in the ticket with a BUDGET instead of zero
+   * tolerance, and the ruler is the rubric's own: the validator already knows
+   * how many crossings it tolerates before turning into a failure
+   * (`failBudget` in the measurement). Reimplementing the number here would
+   * be a second copy of the threshold — and #18 measured the price of having
+   * two copies of a threshold.
    */
   const a51 = occurrences(report, 'A5.1');
   const measured = [...report.resultados].find(r => r.id === 'A5.1');
   const inside = a51 && a51.state !== 'failure';
-  if (!inside) falhou = 1;
-  console.log(`  ${inside ? '✓' : '✗'} A5.1 ${measured ? `${measured.measured.cruzamentos} cruzamento(s), orçamento ${measured.measured.orcamento_de_falha}` : '—'}` +
-    ` → ${a51 ? a51.state : 'não rodou'}`);
+  if (!inside) failed = 1;
+  console.log(`  ${inside ? '✓' : '✗'} A5.1 ${measured ? `${measured.measured.crossings} crossing(s), budget ${measured.measured.failBudget}` : '—'}` +
+    ` → ${a51 ? a51.state : 'did not run'}`);
 
-  console.log(falhou
-    ? '\n  ✗ o roteamento da vista técnica está fora do orçamento do #24\n'
-    : '\n  ✓ o roteamento cabe no orçamento: nenhuma travessia espúria, nenhuma seta por cima de ícone ou rótulo.\n');
-  process.exit(falhou ? 1 : 0);
+  console.log(failed
+    ? "\n  ✗ the technical view's routing is outside #24's budget\n"
+    : '\n  ✓ the routing fits the budget: no spurious crossing, no arrow over an icon or label.\n');
+  process.exit(failed ? 1 : 0);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

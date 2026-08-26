@@ -1,89 +1,90 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * O controle negativo: o validador reprova o que tem de reprovar.
+ * The negative control: the validator fails what it has to fail.
  *
- * Cada caso de `casos/broken.cjs` quebra uma coisa nomeada e declara a
- * checagem que tem de acusar. Aqui se confere que ela acusou — e, no fim, que o
- * CONTROLE, construído com o mesmo vocabulário e geometria correta, NÃO é
- * acusado pelas checagens duras. Sem essa segunda metade, a suíte não distingue
- * um validador que sabe medir de um que reprova tudo.
+ * Each case from `cases/broken.cjs` breaks one named thing and declares the
+ * check that has to flag it. Here we confirm it did — and, at the end, that
+ * the CONTROL, built with the same vocabulary and correct geometry, is NOT
+ * flagged by the hard checks. Without this second half, the suite cannot
+ * tell a validator that knows how to measure from one that fails everything.
  */
 
 const path = require('path');
 const { CASES, CONTROL } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 const { validateGeometry } = require(path.join(__dirname, '..', 'validator', 'validate-geometry.cjs'));
 
-/** As checagens que devem passar num desenho geometricamente correto. */
+/** The checks that must pass on a geometrically correct drawing. */
 const HARD = ['A3.1', 'A3.3', 'A3.5', 'A3.7', 'A4.1', 'A4.2', 'A4.3', 'A4.4', 'A5.5', 'A5.8', 'F1'];
 
-let falhas = 0;
+let failures = 0;
 
-console.log('  casos quebrados de propósito:\n');
-for (const caso of CASES) {
-  const r = validateGeometry(caso.layoutPlan, { model: caso.model });
-  const acusadas = new Set([...r.falhas, ...r.avisos].map(x => x.id));
-  const faltando = caso.espera.filter(id => !acusadas.has(id));
-  const ok = faltando.length === 0;
-  if (!ok) falhas++;
-  console.log(`  ${ok ? '✓' : '✗'} ${caso.name}`);
+console.log('  cases broken on purpose:\n');
+for (const testCase of CASES) {
+  const r = validateGeometry(testCase.layoutPlan, { model: testCase.model });
+  const flagged = new Set([...r.falhas, ...r.avisos].map(x => x.id));
+  const missing = testCase.expect.filter(id => !flagged.has(id));
+  const ok = missing.length === 0;
+  if (!ok) failures++;
+  console.log(`  ${ok ? '✓' : '✗'} ${testCase.name}`);
   if (ok) {
-    const quais = caso.espera.map(id => {
+    const which = testCase.expect.map(id => {
       const finding = [...r.falhas, ...r.avisos].find(x => x.id === id);
-      return `${id} ${finding.state === 'failure' ? 'reprovou' : 'avisou'}`;
+      return `${id} ${finding.state === 'failure' ? 'failed' : 'warned'}`;
     });
-    console.log(`      ${quais.join(', ')}`);
-    const first = [...r.falhas, ...r.avisos].find(x => caso.espera.includes(x.id) && x.occurrences.length);
+    console.log(`      ${which.join(', ')}`);
+    const first = [...r.falhas, ...r.avisos].find(x => testCase.expect.includes(x.id) && x.occurrences.length);
     if (first) console.log(`      → ${first.occurrences[0].o_que}`);
   } else {
-    console.log(`      esperava ${faltando.join(', ')} e não veio; acusadas: ${[...acusadas].join(', ') || '(nenhuma)'}`);
+    console.log(`      expected ${missing.join(', ')} and it did not come; flagged: ${[...flagged].join(', ') || '(none)'}`);
   }
 }
 
-// ------------------------------------------------------------------- controle
+// ------------------------------------------------------------------- control
 
-console.log('\n  controle positivo (mesmo vocabulário, geometria correta):\n');
+console.log('\n  positive control (same vocabulary, correct geometry):\n');
 {
   const r = validateGeometry(CONTROL.layoutPlan, { model: CONTROL.model });
-  const acusadas = new Set(r.falhas.map(x => x.id));
-  const indevidas = HARD.filter(id => acusadas.has(id));
-  const ok = indevidas.length === 0;
-  if (!ok) falhas++;
-  console.log(`  ${ok ? '✓' : '✗'} nenhuma checagem dura acusa o desenho correto`);
-  if (ok) console.log(`      ${HARD.length} checagens duras conferidas, ${r.resumo.ok} ok no total`);
+  const flagged = new Set(r.falhas.map(x => x.id));
+  const undue = HARD.filter(id => flagged.has(id));
+  const ok = undue.length === 0;
+  if (!ok) failures++;
+  console.log(`  ${ok ? '✓' : '✗'} no hard check flags the correct drawing`);
+  if (ok) console.log(`      ${HARD.length} hard checks verified, ${r.resumo.ok} ok overall`);
   else {
-    console.log(`      acusaram sem motivo: ${indevidas.join(', ')}`);
-    for (const id of indevidas) {
+    console.log(`      flagged without cause: ${undue.join(', ')}`);
+    for (const id of undue) {
       const x = r.falhas.find(f => f.id === id);
       for (const o of x.occurrences.slice(0, 3)) console.log(`        · ${id}: ${o.o_que}`);
     }
   }
 
-  // O controle tem de ter falhas semânticas ZERO. É o que separa "o desenho
-  // está feio" de "o desenho está mentindo", e é a promessa central do #18.
-  const semantico = r.semanticas.length === 0;
-  if (!semantico) falhas++;
-  console.log(`  ${semantico ? '✓' : '✗'} zero falhas semânticas no desenho correto`);
-  if (!semantico) for (const s of r.semanticas) console.log(`        · ${s.id}: ${s.mensagem}`);
+  // The control has to have ZERO semantic failures. That is what separates
+  // "the drawing is ugly" from "the drawing is lying", and it is #18's
+  // central promise.
+  const semanticClean = r.semanticas.length === 0;
+  if (!semanticClean) failures++;
+  console.log(`  ${semanticClean ? '✓' : '✗'} zero semantic failures on the correct drawing`);
+  if (!semanticClean) for (const s of r.semanticas) console.log(`        · ${s.id}: ${s.mensagem}`);
 }
 
-// -------------------------------------------- o validador não pode passar calado
+// -------------------------------------------- the validator may not pass silently
 
-console.log('\n  cobertura:\n');
+console.log('\n  coverage:\n');
 {
   const r = validateGeometry(CONTROL.layoutPlan, { model: CONTROL.model });
   const ok = r.cobertura.naoRodaram.length === 0;
-  if (!ok) falhas++;
-  console.log(`  ${ok ? '✓' : '✗'} as ${r.cobertura.esperadas} checagens do validador rodaram`);
-  if (!ok) console.log(`      não rodaram: ${r.cobertura.naoRodaram.join(', ')}`);
+  if (!ok) failures++;
+  console.log(`  ${ok ? '✓' : '✗'} all ${r.cobertura.esperadas} validator checks ran`);
+  if (!ok) console.log(`      did not run: ${r.cobertura.naoRodaram.join(', ')}`);
 
-  // Uma checagem que estoura vira estado `erro`, não silêncio.
-  const erros = r.resultados.filter(x => x.state === 'erro');
-  if (erros.length) { falhas++; console.log(`  ✗ ${erros.length} família(s) estouraram: ${erros.map(e => e.mensagem).join(' | ')}`); }
-  else console.log('  ✓ nenhuma família estourou');
+  // A check that blows up becomes state `erro`, not silence.
+  const blownUp = r.resultados.filter(x => x.state === 'erro');
+  if (blownUp.length) { failures++; console.log(`  ✗ ${blownUp.length} famil(y/ies) blew up: ${blownUp.map(e => e.mensagem).join(' | ')}`); }
+  else console.log('  ✓ no family blew up');
 }
 
-console.log(falhas
-  ? `\n  ✗ ${falhas} verificação(ões) falharam`
-  : `\n  ✓ o validador acusa os ${CASES.length} defeitos e absolve o desenho correto.`);
-process.exit(falhas ? 1 : 0);
+console.log(failures
+  ? `\n  ✗ ${failures} check(s) failed`
+  : `\n  ✓ the validator flags the ${CASES.length} defects and clears the correct drawing.`);
+process.exit(failures ? 1 : 0);

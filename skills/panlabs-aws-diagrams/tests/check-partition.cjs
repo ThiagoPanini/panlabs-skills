@@ -1,25 +1,25 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * PINTURA × MÉTRICA — o tema não é downstream do layout, e isto prova.
+ * PAINT × METRIC — the theme is not downstream of the layout, and this proves it.
  *
- * A intuição confortável é que estilo entra no fim: o layout resolve onde tudo
- * fica e o tema só pinta. É falso, e o #13 mediu onde:
+ * The comfortable intuition is that style enters at the end: layout resolves
+ * where everything sits and the theme just paints. It's false, and #13
+ * measured where:
  *
- *   MÉTRICA  corpo do rótulo, corpo do rótulo de grupo, densidade da grade,
- *            qualificador em duas linhas (O21) e a linha de revisão do bloco de
- *            título. Todos alimentam o layout — o texto reserva espaço, e o
- *            espaço é geometria.
- *   PINTURA  cor de página, tinta, halo, cor/ponta/canto/salto/fluxo de aresta,
- *            cores da nota e do bloco lógico. Nenhum move uma coordenada.
+ *   METRIC  label body, group-label body, grid density, two-line qualifier
+ *           (O21), and the title block's revision line. All of them feed the
+ *           layout — text reserves space, and space is geometry.
+ *   PAINT   page color, ink, halo, edge color/tip/corner/jump/flow, note and
+ *           logical-block colors. None of them moves a coordinate.
  *
- * A checagem perturba UM token por vez e regenera:
+ * The check perturbs ONE token at a time and regenerates:
  *
- *   token de PINTURA  -> mesmas células, geometria IDÊNTICA. Se mover, está
- *                        classificado errado (ou o motor tem acoplamento escondido).
- *   token de MÉTRICA  -> alguma coisa TEM de se mexer. Se não mexer, o motor está
- *                        ignorando o token — foi assim que se descobriu que a faixa
- *                        de título não olhava para `texto.grupo`.
+ *   PAINT token   -> same cells, IDENTICAL geometry. If it moves, it's
+ *                    misclassified (or the engine has hidden coupling).
+ *   METRIC token  -> something MUST move. If nothing moves, the engine is
+ *                    ignoring the token — that's how we found out the title
+ *                    band wasn't looking at `text.group`.
  *
  *   node tools/check-partition.cjs
  */
@@ -27,101 +27,104 @@
 const fs = require('fs');
 const path = require('path');
 const { generate } = require('../engine/generate.cjs');
-const temaMod = require('../theme/theme.cjs');
+const themeMod = require('../theme/theme.cjs');
 
 const read = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'models', f), 'utf8'));
 const MODEL = read('orders-serverless.json');
 
 /**
- * DOIS modelos, e o segundo não é zelo.
+ * TWO models, and the second one isn't fussiness.
  *
- * Os tokens `bloco.*` pintam a caixa da VISTA LÓGICA — o único lugar do produto
- * onde a casa escolhe cor de caixa sem contrariar a AWS. Num modelo técnico não
- * existe nenhum `bloco`, então eles não têm o que pintar e a checagem os acusa de
- * inertes. O acusado certo, nesse caso, não é o token: é o modelo.
+ * The `block.*` tokens paint the LOGICAL VIEW's box — the one place in the
+ * product where the house picks a box color without contradicting AWS. A
+ * technical model has no `block` at all, so those tokens have nothing to
+ * paint and the check would accuse them of being inert. The right target of
+ * that accusation, in this case, isn't the token: it's the model.
  *
- * É o mesmo caso do `texto.qualificador`, que também saiu inerte até o modelo
- * ganhar qualificadores. A lição que sobra para o motor de verdade: **um token de
- * estilo pode depender de um fato do modelo**, e uma bateria de um modelo só não
- * distingue "token morto" de "modelo que não exercita o token".
+ * It's the same case as `text.qualifier`, which also came out inert until the
+ * model gained qualifiers. The lesson that carries over to the real engine:
+ * **a style token can depend on a fact from the model**, and a single-model
+ * battery can't tell "dead token" apart from "model that doesn't exercise the
+ * token".
  */
 const LOGICAL_VIEW = read('logical-orders.json');
 
 const PAINT = [
-  ['pagina.cor', { page: { color: '#FAFAFA' } }],
-  ['tinta.forte', { ink: { strong: '#111111' } }],
-  ['tinta.fraca', { ink: { weak: '#444444' } }],
-  ['tinta.halo', { ink: { halo: '#FFFFF0' } }],
-  ['aresta.cor', { edge: { color: '#545B64' } }],
-  ['aresta.espessura', { edge: { thickness: 2.4 } }],
-  ['aresta.ponta', { edge: { tip: 'open' } }],
-  ['aresta.cantos', { edge: { corners: 0 } }],
-  ['aresta.saltos', { edge: { jumps: 'none' } }],
-  ['aresta.fluxo', { edge: { flow: 'dashed' } }],
-  ['nota.fundo', { note: { background: '#EEEEEE' } }],
-  ['nota.borda', { note: { edge: '#555555' } }],
-  ['nota.tinta', { note: { ink: '#000000' } }],
+  ['page.color', { page: { color: '#FAFAFA' } }],
+  ['ink.strong', { ink: { strong: '#111111' } }],
+  ['ink.weak', { ink: { weak: '#444444' } }],
+  ['ink.halo', { ink: { halo: '#FFFFF0' } }],
+  ['edge.color', { edge: { color: '#545B64' } }],
+  ['edge.thickness', { edge: { thickness: 2.4 } }],
+  ['edge.tip', { edge: { tip: 'open' } }],
+  ['edge.corners', { edge: { corners: 0 } }],
+  ['edge.jumps', { edge: { jumps: 'none' } }],
+  ['edge.flow', { edge: { flow: 'dashed' } }],
+  ['note.background', { note: { background: '#EEEEEE' } }],
+  ['note.edge', { note: { edge: '#555555' } }],
+  ['note.ink', { note: { ink: '#000000' } }],
 
-  // PINTURA por uma razão medida, não por natureza: Arial e Helvetica têm as
-  // mesmas larguras de avanço, então dentro do enum de três a métrica não muda.
-  // Foi esta checagem que fechou o enum — com Verdana no lugar, ela acusava
-  // "não moveu nada", que era o motor dimensionando a faixa para a fonte errada.
-  ['texto.familia', { text: { family: 'Helvetica' } }],
+  // PAINT for a measured reason, not by nature: Arial and Helvetica have the
+  // same advance widths, so within the three-item enum the metric doesn't
+  // change. It was this very check that closed the enum — with Verdana in
+  // its place, it flagged "moved nothing", which was the engine sizing the
+  // band for the wrong font.
+  ['text.family', { text: { family: 'Helvetica' } }],
 ];
 
-/** Pintura que só existe na vista lógica — medida contra o modelo lógico. */
+/** Paint that only exists in the logical view — measured against the logical model. */
 const LOGICAL_PAINT = [
-  ['bloco.fundo', { block: { background: '#F5F5F5' } }],
-  ['bloco.borda', { block: { edge: '#777777' } }],
-  ['bloco.cantos', { block: { corners: 0 } }],
+  ['block.background', { block: { background: '#F5F5F5' } }],
+  ['block.edge', { block: { edge: '#777777' } }],
+  ['block.corners', { block: { corners: 0 } }],
 ];
 
 const METRIC = [
-  // margem da página não move nada DENTRO do desenho, mas desloca o desenho
-  // inteiro e muda a caixa da página — geometria, portanto métrica
-  ['pagina.margem', { page: { margin: 56 } }],
-  ['texto.rotulo', { text: { label: 16 } }],
-  ['texto.grupo', { text: { group: 18 } }],
-  ['texto.aresta', { text: { edge: 16 } }],
-  ['texto.titulo', { text: { title: 30 } }],
-  ['texto.subtitulo', { text: { subtitle: 18 } }],
-  ['texto.qualificador', { text: { qualifier: true } }],
-  ['folga.base', { gap: { base: 4 } }],
-  ['folga.densidade', { gap: { density: 1.6 } }],
-  // não move ninguém de lugar, mas ACRESCENTA célula ao bloco de título — e é por
-  // isso que não é pintura: muda o conjunto de células, não só a cor delas
-  ['cartao.revisao', { card: { revision: 'Revisado em 2026-08-21' } }],
+  // page margin doesn't move anything INSIDE the drawing, but it shifts the
+  // whole drawing and changes the page box — geometry, hence metric
+  ['page.margin', { page: { margin: 56 } }],
+  ['text.label', { text: { label: 16 } }],
+  ['text.group', { text: { group: 18 } }],
+  ['text.edge', { text: { edge: 16 } }],
+  ['text.title', { text: { title: 30 } }],
+  ['text.subtitle', { text: { subtitle: 18 } }],
+  ['text.qualifier', { text: { qualifier: true } }],
+  ['gap.base', { gap: { base: 4 } }],
+  ['gap.density', { gap: { density: 1.6 } }],
+  // doesn't move anyone, but it ADDS a cell to the title block — and that's
+  // exactly why it isn't paint: it changes the set of cells, not just their color
+  ['card.revision', { card: { revision: 'Reviewed on 2026-08-21' } }],
 ];
 
 /**
- * O XML sem o payload do tema.
+ * The XML without the theme payload.
  *
- * A primeira versão comparava `r.xml === base.xml` cru — e essa comparação NUNCA
- * podia dar verdadeiro, porque `comPatch` renomeia o tema para `claro+patch` e o
- * `panlabsTema` embutido carrega o `id`. Era uma condição que não sabia disparar:
- * exatamente o defeito que esta ferramenta existe para pegar nos tokens, dentro
- * da própria ferramenta. Tirando o payload, "o token não pintou nada" volta a ser
- * detectável.
+ * The first version compared `r.xml === base.xml` raw — and that comparison
+ * could NEVER come out true, because `withPatch` renames the theme to
+ * `light+patch` and the embedded `panlabsTema` carries the `id`. It was a
+ * condition that didn't know how to fire: exactly the defect this tool
+ * exists to catch in tokens, right here inside the tool itself. Strip the
+ * payload, and "the token painted nothing" becomes detectable again.
  */
-function semPayload(xml) {
+function withoutPayload(xml) {
   return xml.replace(/panlabsTema="[^"]*"/, 'panlabsTema=""');
 }
 
-/** Assinatura de geometria: id -> x,y,w,h. Pintura não pode mudar nenhuma. */
+/** Geometry signature: id -> x,y,w,h. Paint must not change any of them. */
 function geometry(layoutPlan) {
   const m = new Map();
-  for (const c of layoutPlan.celulas) {
-    if (c.kind === 'edge') { m.set(c.id, JSON.stringify(c.pontos || [])); continue; }
+  for (const c of layoutPlan.cells) {
+    if (c.kind === 'edge') { m.set(c.id, JSON.stringify(c.points || [])); continue; }
     m.set(c.id, `${Math.round(c.geo.x)},${Math.round(c.geo.y)},${Math.round(c.geo.w)},${Math.round(c.geo.h)}`);
   }
   return m;
 }
 
-function diferencas(a, b) {
+function differences(a, b) {
   const out = [];
-  for (const [id, v] of a) if (!b.has(id)) out.push(`${id}: sumiu`);
+  for (const [id, v] of a) if (!b.has(id)) out.push(`${id}: disappeared`);
   for (const [id, v] of b) {
-    if (!a.has(id)) out.push(`${id}: apareceu`);
+    if (!a.has(id)) out.push(`${id}: appeared`);
     else if (a.get(id) !== v) out.push(`${id}: ${a.get(id)} -> ${v}`);
   }
   return out;
@@ -132,39 +135,39 @@ async function main() {
   const g0 = geometry(base.layoutPlan);
   const baseLog = await generate(LOGICAL_VIEW, { tema: 'light', force: true });
   const gLog = geometry(baseLog.layoutPlan);
-  let falhou = 0;
+  let failed = 0;
 
-  console.log(`referência: tema "claro" · técnico ${g0.size} células · lógico ${gLog.size} células\n`);
-  console.log('PINTURA — não pode mover coordenada');
-  for (const [name, patch, ehLogico] of [...PAINT, ...LOGICAL_PAINT.map(p => [...p, true])]) {
-    const model = ehLogico ? LOGICAL_VIEW : MODEL;
-    const ref = ehLogico ? gLog : g0;
-    const refXml = ehLogico ? baseLog.xml : base.xml;
-    const r = await generate(model, { tema: temaMod.withPatch('light', patch), force: true });
-    const d = diferencas(ref, geometry(r.layoutPlan));
-    const inerte = semPayload(r.xml) === semPayload(refXml);
+  console.log(`reference: "light" theme · technical ${g0.size} cells · logical ${gLog.size} cells\n`);
+  console.log('PAINT — must not move a coordinate');
+  for (const [name, patch, isLogical] of [...PAINT, ...LOGICAL_PAINT.map(p => [...p, true])]) {
+    const model = isLogical ? LOGICAL_VIEW : MODEL;
+    const ref = isLogical ? gLog : g0;
+    const refXml = isLogical ? baseLog.xml : base.xml;
+    const r = await generate(model, { tema: themeMod.withPatch('light', patch), force: true });
+    const d = differences(ref, geometry(r.layoutPlan));
+    const inert = withoutPayload(r.xml) === withoutPayload(refXml);
     if (d.length) {
-      console.log(`  ✗ ${name.padEnd(20)} moveu ${d.length} célula(s): ${d.slice(0, 2).join(' · ')}`);
-      falhou = 1;
-    } else if (inerte) {
-      // pintura que não move coordenada E não muda o XML é token morto
-      console.log(`  ✗ ${name.padEnd(20)} não moveu nem pintou — token inerte`);
-      falhou = 1;
+      console.log(`  ✗ ${name.padEnd(20)} moved ${d.length} cell(s): ${d.slice(0, 2).join(' · ')}`);
+      failed = 1;
+    } else if (inert) {
+      // paint that neither moves a coordinate NOR changes the XML is a dead token
+      console.log(`  ✗ ${name.padEnd(20)} moved nothing and painted nothing — inert token`);
+      failed = 1;
     } else {
-      console.log(`  ✓ ${name.padEnd(20)} geometria idêntica, style mudou${ehLogico ? '  (vista lógica)' : ''}`);
+      console.log(`  ✓ ${name.padEnd(20)} identical geometry, style changed${isLogical ? '  (logical view)' : ''}`);
     }
   }
 
-  console.log('\nMÉTRICA — tem de mover alguma coisa');
+  console.log('\nMETRIC — must move something');
   for (const [name, patch] of METRIC) {
-    const r = await generate(MODEL, { tema: temaMod.withPatch('light', patch), force: true });
-    const d = diferencas(g0, geometry(r.layoutPlan));
-    if (!d.length) { console.log(`  ✗ ${name.padEnd(20)} NÃO moveu nada — o motor está ignorando o token`); falhou = 1; }
-    else console.log(`  ✓ ${name.padEnd(20)} moveu ${String(d.length).padStart(2)} célula(s)`);
+    const r = await generate(MODEL, { tema: themeMod.withPatch('light', patch), force: true });
+    const d = differences(g0, geometry(r.layoutPlan));
+    if (!d.length) { console.log(`  ✗ ${name.padEnd(20)} moved NOTHING — the engine is ignoring the token`); failed = 1; }
+    else console.log(`  ✓ ${name.padEnd(20)} moved ${String(d.length).padStart(2)} cell(s)`);
   }
 
-  console.log(falhou ? '\nPARTIÇÃO QUEBRADA' : '\npartição íntegra: pintura pinta, métrica mede');
-  process.exit(falhou);
+  console.log(failed ? '\nPARTITION BROKEN' : '\npartition intact: paint paints, metric measures');
+  process.exit(failed);
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });

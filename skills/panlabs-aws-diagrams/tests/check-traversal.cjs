@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * As decisões do #12, conferidas NO ARQUIVO — não na prosa.
+ * #12's decisions, checked IN THE FILE — not in the prose.
  *
- * Cada checagem aqui corresponde a uma regra medida na pesquisa de multi-conta
- * que originou o #12. A diferença entre "decidimos suprimir a aresta
- * cross-account" e "o arquivo não tem aresta cross-account" é a diferença entre
- * uma nota de reunião e um motor.
+ * Each check here corresponds to a rule measured in the multi-account
+ * research that originated #12. The difference between "we decided to
+ * suppress the cross-account edge" and "the file has no cross-account edge"
+ * is the difference between a meeting note and an engine.
  *
  *   node tools/check-traversal.cjs
  */
@@ -16,51 +16,52 @@ const path = require('path');
 const { generate } = require('../engine/generate.cjs');
 
 const HERE = path.join(__dirname, '..');
-let falhas = 0;
+let failures = 0;
 
-function ok(name, condicao, detail) {
-  if (condicao) { console.log(`  ✓ ${name}${detail ? `  (${detail})` : ''}`); return; }
-  falhas++;
+function ok(name, condition, detail) {
+  if (condition) { console.log(`  ✓ ${name}${detail ? `  (${detail})` : ''}`); return; }
+  failures++;
   console.log(`  ✗ ${name}${detail ? `  — ${detail}` : ''}`);
 }
 
-/** Só a primeira página: é ela a vista consolidada. */
+/** Only the first page: it's the consolidated view. */
 function consolidatedPage(xml) {
   const m = /<diagram\b[\s\S]*?<\/diagram>/.exec(xml);
   return m ? m[0] : xml;
 }
 
-function celulasDeAresta(page) {
+function edgeCells(page) {
   return [...page.matchAll(/<mxCell([^>]*edge="1"[^>]*)>/g)].map(m => m[1]);
 }
 
-function atributo(tag, name) {
+function attribute(tag, name) {
   const m = new RegExp(`${name}="([^"]*)"`).exec(tag);
   return m ? m[1] : null;
 }
 
 /**
- * Quantas vezes uma travessia entra no interior de uma conta que não é nem a
- * origem nem o destino dela. É `A5.5` da rubrica (#8) — aresta cortando faixa
- * alheia — e é a diferença entre "desenhei a aresta" e "desenhei bem".
+ * How many times a crossing enters the interior of an account that is
+ * neither its origin nor its destination. It's the rubric's (#8) `A5.5` —
+ * an edge cutting through someone else's band — and it's the difference
+ * between "I drew the edge" and "I drew it well".
  */
-function countIntrusions(celulas, travessias, caixaDaConta) {
+function countIntrusions(cells, crossings, accountBox) {
   let n = 0;
-  for (const cel of celulas) {
-    const t = travessias.find(x => x.id === cel.id);
+  for (const cell of cells) {
+    const t = crossings.find(x => x.id === cell.id);
     if (!t) continue;
-    const pts = cel.pontos || [];
+    const pts = cell.points || [];
     for (let i = 1; i < pts.length; i++) {
       const [a, b] = [pts[i - 1], pts[i]];
-      for (const [id, cx] of caixaDaConta) {
+      for (const [id, cx] of accountBox) {
         if (id === t.contaDe || id === t.contaPara) continue;
         const inside = p => p.x > cx.x && p.x < cx.x + cx.w && p.y > cx.y && p.y < cx.y + cx.h;
-        // segmento ortogonal: pontas dentro, ou o segmento varando o retângulo
-        const cruzaH = a.y === b.y && a.y > cx.y && a.y < cx.y + cx.h &&
+        // orthogonal segment: endpoints inside, or the segment piercing straight through the rectangle
+        const crossesH = a.y === b.y && a.y > cx.y && a.y < cx.y + cx.h &&
           Math.min(a.x, b.x) < cx.x + cx.w && Math.max(a.x, b.x) > cx.x;
-        const cruzaV = a.x === b.x && a.x > cx.x && a.x < cx.x + cx.w &&
+        const crossesV = a.x === b.x && a.x > cx.x && a.x < cx.x + cx.w &&
           Math.min(a.y, b.y) < cx.y + cx.h && Math.max(a.y, b.y) > cx.y;
-        if (inside(a) || inside(b) || cruzaH || cruzaV) n++;
+        if (inside(a) || inside(b) || crossesH || crossesV) n++;
       }
     }
   }
@@ -71,187 +72,191 @@ async function main() {
   const model = f => JSON.parse(fs.readFileSync(path.join(HERE, 'models', f), 'utf8'));
 
   // ---------------------------------------------------------------- E1
-  console.log('\n1. E1 — a regra soberana: a vista consolidada de inventário não tem travessia');
+  console.log('\n1. E1 — the sovereign rule: the consolidated inventory view has no crossing');
   const inv = model('landing-zone-6-accounts.json');
   const rInv = await generate(inv);
-  // conta de cada nó, subindo a cadeia de `dentro` — sem depender do motor,
-  // para a checagem não conferir o motor contra ele mesmo
+  // each node's account, walking up the `inside` chain — without depending on
+  // the engine, so the check doesn't measure the engine against itself
   const byId = new Map(inv.nodes.map(n => [n.id, n]));
-  const contaDoNo = new Map();
+  const accountOfNode = new Map();
   for (const n of inv.nodes) {
-    let c = n, achou = null;
+    let c = n, found = null;
     while (c) {
-      if (c.kind === 'account') { achou = c.id; break; }
+      if (c.kind === 'account') { found = c.id; break; }
       c = c.inside ? byId.get(c.inside) : null;
     }
-    contaDoNo.set(n.id, achou);
+    accountOfNode.set(n.id, found);
   }
 
-  const cruzamNoModelo = (inv.edges || []).filter(a =>
-    contaDoNo.get(a.from) && contaDoNo.get(a.to) && contaDoNo.get(a.from) !== contaDoNo.get(a.to));
-  ok('o modelo declara travessias', cruzamNoModelo.length > 0, `${cruzamNoModelo.length} no modelo`);
+  const crossInModel = (inv.edges || []).filter(a =>
+    accountOfNode.get(a.from) && accountOfNode.get(a.to) && accountOfNode.get(a.from) !== accountOfNode.get(a.to));
+  ok('the model declares crossings', crossInModel.length > 0, `${crossInModel.length} in the model`);
 
-  const arestasDesenhadas = celulasDeAresta(consolidatedPage(rInv.xml))
-    .map(t => ({ from: atributo(t, 'source'), to: atributo(t, 'target') }));
-  const cruzamDesenhadas = arestasDesenhadas.filter(a =>
-    a.from && a.to && contaDoNo.get(a.from) && contaDoNo.get(a.to) &&
-    contaDoNo.get(a.from) !== contaDoNo.get(a.to));
-  ok('nenhuma delas foi desenhada na consolidada', cruzamDesenhadas.length === 0,
-    cruzamDesenhadas.length ? `${cruzamDesenhadas.length} vazaram` : 'zero conectores cross-account');
-  ok('as arestas INTRA-conta continuam desenhadas', arestasDesenhadas.length > 0,
-    `${arestasDesenhadas.length} arestas na página`);
+  const drawnEdges = edgeCells(consolidatedPage(rInv.xml))
+    .map(t => ({ from: attribute(t, 'source'), to: attribute(t, 'target') }));
+  const drawnCrossings = drawnEdges.filter(a =>
+    a.from && a.to && accountOfNode.get(a.from) && accountOfNode.get(a.to) &&
+    accountOfNode.get(a.from) !== accountOfNode.get(a.to));
+  ok('none of them was drawn on the consolidated page', drawnCrossings.length === 0,
+    drawnCrossings.length ? `${drawnCrossings.length} leaked through` : 'zero cross-account connectors');
+  ok('the INTRA-account edges are still drawn', drawnEdges.length > 0,
+    `${drawnEdges.length} edge(s) on the page`);
 
   // ---------------------------------------------------------------- G2
-  console.log('\n2. G2 — a OU não é container: rótulo flutuante, sem caixa');
-  ok('o motor decidiu desenhar faixas de OU', rInv.derived.ou.draw, rInv.derived.ou.because);
-  const celulasOu = rInv.layoutPlan.celulas.filter(c => String(c.id).startsWith('ou-'));
-  ok('há uma célula por OU declarada', celulasOu.length === rInv.derived.ou.ous.length,
-    `${celulasOu.length} células para ${rInv.derived.ou.ous.length} OUs`);
-  ok('nenhuma delas é container', celulasOu.every(c => !/container=1/.test(c.style)),
-    'sem container=1 — o deck não tem shape de Organizational unit');
-  ok('nenhuma delas tem borda', celulasOu.every(c => !/strokeColor=#/.test(c.style)),
-    'sem strokeColor — o agrupamento é feito pelo contraste de gap 1:4 (S3)');
+  console.log('\n2. G2 — an OU is not a container: floating label, no box');
+  ok('the engine decided to draw OU bands', rInv.derived.ou.draw, rInv.derived.ou.because);
+  const ouCells = rInv.layoutPlan.cells.filter(c => String(c.id).startsWith('ou-'));
+  ok('there is one cell per declared OU', ouCells.length === rInv.derived.ou.ous.length,
+    `${ouCells.length} cell(s) for ${rInv.derived.ou.ous.length} OU(s)`);
+  ok('none of them is a container', ouCells.every(c => !/container=1/.test(c.style)),
+    'no container=1 — the deck has no Organizational unit shape');
+  ok('none of them has a border', ouCells.every(c => !/strokeColor=#/.test(c.style)),
+    'no strokeColor — the grouping is done by the 1:4 gap contrast (S3)');
 
   // ---------------------------------------------------------------- S3
-  console.log('\n3. S3 — o contraste de gap 1:4 entre irmãs e grupos de OU');
-  const colunas = [];
-  for (const c of rInv.layoutPlan.celulas) {
+  console.log('\n3. S3 — the 1:4 gap contrast between siblings and OU groups');
+  const columns = [];
+  for (const c of rInv.layoutPlan.cells) {
     if (!/grIcon=mxgraph\.aws4\.group_account/.test(c.style || '')) continue;
-    colunas.push({ id: c.id, x: c.geo.x, y: c.geo.y, w: c.geo.w, h: c.geo.h });
+    columns.push({ id: c.id, x: c.geo.x, y: c.geo.y, w: c.geo.w, h: c.geo.h });
   }
-  const porColuna = new Map();
-  for (const c of colunas) {
-    if (!porColuna.has(c.x)) porColuna.set(c.x, []);
-    porColuna.get(c.x).push(c);
+  const byColumn = new Map();
+  for (const c of columns) {
+    if (!byColumn.has(c.x)) byColumn.set(c.x, []);
+    byColumn.get(c.x).push(c);
   }
-  let gapIrma = Infinity;
-  for (const list of porColuna.values()) {
+  let siblingGap = Infinity;
+  for (const list of byColumn.values()) {
     list.sort((a, b) => a.y - b.y);
     for (let i = 1; i < list.length; i++)
-      gapIrma = Math.min(gapIrma, list[i].y - (list[i - 1].y + list[i - 1].h));
+      siblingGap = Math.min(siblingGap, list[i].y - (list[i - 1].y + list[i - 1].h));
   }
-  const xs = [...porColuna.keys()].sort((a, b) => a - b);
-  let gapOu = Infinity;
+  const xs = [...byColumn.keys()].sort((a, b) => a - b);
+  let ouGap = Infinity;
   for (let i = 1; i < xs.length; i++) {
-    const fimAnterior = Math.max(...porColuna.get(xs[i - 1]).map(c => c.x + c.w));
-    gapOu = Math.min(gapOu, xs[i] - fimAnterior);
+    const previousEnd = Math.max(...byColumn.get(xs[i - 1]).map(c => c.x + c.w));
+    ouGap = Math.min(ouGap, xs[i] - previousEnd);
   }
-  ok('gap entre grupos de OU ≈ 4× o gap entre irmãs',
-    Number.isFinite(gapIrma) && Number.isFinite(gapOu) && Math.abs(gapOu / gapIrma - 4) < 0.5,
-    `irmãs ${gapIrma}px · OU ${gapOu}px · razão ${(gapOu / gapIrma).toFixed(2)}`);
+  ok('gap between OU groups ≈ 4× the gap between siblings',
+    Number.isFinite(siblingGap) && Number.isFinite(ouGap) && Math.abs(ouGap / siblingGap - 4) < 0.5,
+    `siblings ${siblingGap}px · OU ${ouGap}px · ratio ${(ouGap / siblingGap).toFixed(2)}`);
 
   // ---------------------------------------------------------------- D2
-  console.log('\n4. D2 — uma vista de detalhe por conta, SEMPRE (não é fallback)');
+  console.log('\n4. D2 — one detail view per account, ALWAYS (not a fallback)');
   const pages = [...rInv.xml.matchAll(/<diagram id="([^"]+)"/g)].map(m => m[1]);
   const accounts = inv.nodes.filter(n => n.kind === 'account');
-  ok('há 1 consolidada + 1 página por conta', pages.length === 1 + accounts.length,
-    `${pages.length} páginas para ${accounts.length} contas`);
-  ok('cada conta tem a sua', accounts.every(c => pages.includes(`${inv.id}-${c.id}`)),
+  ok('there is 1 consolidated + 1 page per account', pages.length === 1 + accounts.length,
+    `${pages.length} page(s) for ${accounts.length} account(s)`);
+  ok('every account has its own', accounts.every(c => pages.includes(`${inv.id}-${c.id}`)),
     pages.slice(1).join(', '));
 
   // ------------------------------------------------------- X1 / E8 / E10
-  console.log('\n5. X1/E8/E10 — na vista de integração a travessia é desenhada, e não vira espaguete');
+  console.log("\n5. X1/E8/E10 — in the integration view the crossing is drawn, and doesn't turn into spaghetti");
   const integ = model('platform-3-accounts.json');
   const rInt = await generate(integ);
-  ok('o motor entrou no modo de integração', rInt.derived.modo.modo === 'integracao', rInt.derived.modo.because);
-  ok('escolheu um nível da hierarquia do #6 §6.4', rInt.derived.policy.level > 1,
-    `nível ${rInt.derived.policy.level} — ${rInt.derived.policy.mecanismo}`);
+  ok('the engine entered integration mode', rInt.derived.modo.modo === 'integracao', rInt.derived.modo.because);
+  ok("picked a level from #6 §6.4's hierarchy", rInt.derived.policy.level > 1,
+    `level ${rInt.derived.policy.level} — ${rInt.derived.policy.mecanismo}`);
 
-  const idsTravessia = new Set(rInt.derived.travessias.map(t => t.id));
-  const desenhadas = rInt.layoutPlan.celulas.filter(c => c.kind === 'edge' && idsTravessia.has(c.id));
-  ok('toda travessia declarada foi desenhada', desenhadas.length === idsTravessia.size,
-    `${desenhadas.length}/${idsTravessia.size}`);
+  const crossingIds = new Set(rInt.derived.travessias.map(t => t.id));
+  const drawn = rInt.layoutPlan.cells.filter(c => c.kind === 'edge' && crossingIds.has(c.id));
+  ok('every declared crossing was drawn', drawn.length === crossingIds.size,
+    `${drawn.length}/${crossingIds.size}`);
 
   /**
-   * E8: nada de cerimônia na borda — nenhum marcador de travessia.
+   * E8: no ceremony at the border — no crossing marker.
    *
-   * ⚠️ `jumpStyle` SAIU desta lista na recertificação do #23, e a razão é que ele
-   * nunca pertenceu a ela. O `E8` do #6 fala de marcador NA FRONTEIRA DA CONTA:
-   * "a linha simplesmente passa por cima da borda magenta — não existe convenção
-   * AWS de porta, gateway, losango ou marcador de travessia". `jumpStyle` no
-   * mxGraph não marca borda nenhuma: é o salto que uma aresta dá ao cruzar OUTRA
-   * ARESTA, para o leitor ver que as duas não se ligam.
+   * ⚠️ `jumpStyle` CAME OUT of this list in #23's recertification, and the
+   * reason is that it never belonged in it. #6's `E8` talks about a marker AT
+   * THE ACCOUNT BOUNDARY: "the line simply passes over the magenta border —
+   * there's no AWS convention for a port, gateway, diamond, or crossing
+   * marker". `jumpStyle` in mxGraph marks no border at all: it's the jump an
+   * edge makes when it crosses ANOTHER EDGE, so the reader sees the two
+   * don't connect.
    *
-   * Enquanto o motor nunca emitia `jumpStyle`, proibir a família inteira era o
-   * jeito barato de escrever "sem cerimônia" e não custava nada. O tema do #13
-   * tem o token `aresta.saltos` (default `arc`, "ganho de legibilidade alto,
-   * custo zero"), e a partir do momento em que os dois rodam juntos a regra larga
-   * passou a reprovar uma coisa que o `E8` não proíbe. Estreitar a checagem para
-   * o que o `E8` diz é a correção; afrouxar o token seria obedecer ao teste.
+   * As long as the engine never emitted `jumpStyle`, banning the whole family
+   * was the cheap way to write "no ceremony" and it cost nothing. #13's theme
+   * has the `edge.jumps` token (default `arc`, "high legibility gain, zero
+   * cost"), and from the moment the two run together the broad rule started
+   * failing something `E8` doesn't prohibit. Narrowing the check to what
+   * `E8` says is the fix; loosening the token would be obeying the test.
    */
   const CEREMONY = /startArrow=diamond|endArrow=diamond|startArrow=oval|endArrow=oval/;
-  ok('nenhuma cerimônia na borda da conta (E8)',
-    desenhadas.every(c => !CEREMONY.test(c.style)),
-    'sem losango nem marcador de travessia na ponta');
+  ok('no ceremony at the account border (E8)',
+    drawn.every(c => !CEREMONY.test(c.style)),
+    'no diamond or crossing marker at the tip');
   /**
-   * CONTROLE, nos dois sentidos. Sem ele, trocar a regex por `/$^/` deixaria a
-   * linha acima verde para sempre — e foi assim que a versão anterior ficou:
-   * ela também casava `shape=…gateway`, que NUNCA aparece numa aresta, e a
-   * alternativa morta passou despercebida porque nada exercitava a regra.
+   * CONTROL, in both directions. Without it, swapping the regex for `/$^/`
+   * would leave the line above green forever — and that's what the previous
+   * version had become: it also matched `shape=…gateway`, which NEVER
+   * appears on an edge, and the dead alternative went unnoticed because
+   * nothing exercised the rule.
    */
   const WITH_DIAMOND = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=diamond;endFill=1;';
   const CLEANED = 'edgeStyle=orthogonalEdgeStyle;html=1;endArrow=blockThin;endFill=1;jumpStyle=arc;';
-  ok('e a regra ACUSA um losango na ponta (controle)', CEREMONY.test(WITH_DIAMOND),
-    'a mesma regra, sobre um estilo com losango, reprova');
-  ok('e NÃO acusa `jumpStyle`, que é salto entre ARESTAS e não marcador de borda',
+  ok('and the rule FLAGS a diamond at the tip (control)', CEREMONY.test(WITH_DIAMOND),
+    'the same rule, over a style with a diamond, fails it');
+  ok('and does NOT flag `jumpStyle`, which is a jump between EDGES, not a border marker',
     !CEREMONY.test(CLEANED),
-    'o E8 do #6 fala de porta/losango na fronteira da conta, não de cruzamento de linha');
+    "#6's E8 talks about a port/diamond at the account boundary, not a line crossing");
 
-  // e o anti-espaguete: a linha não pode atravessar o INTERIOR de uma conta que
-  // não é a dela. É a checagem que separa "desenhei a aresta" de "desenhei bem".
-  const caixaDaConta = new Map();
-  for (const c of rInt.layoutPlan.celulas) {
+  // and the anti-spaghetti check: the line must not cross the INTERIOR of an
+  // account that isn't its own. It's the check that tells "I drew the edge"
+  // apart from "I drew it well".
+  const accountBox = new Map();
+  for (const c of rInt.layoutPlan.cells) {
     if (!/grIcon=mxgraph\.aws4\.group_account/.test(c.style || '')) continue;
-    const parent = rInt.layoutPlan.celulas.find(x => x.id === c.parent);
+    const parent = rInt.layoutPlan.cells.find(x => x.id === c.parent);
     const base = parent ? { x: parent.geo.x, y: parent.geo.y } : { x: 0, y: 0 };
-    caixaDaConta.set(c.id, { x: base.x + c.geo.x, y: base.y + c.geo.y, w: c.geo.w, h: c.geo.h });
+    accountBox.set(c.id, { x: base.x + c.geo.x, y: base.y + c.geo.y, w: c.geo.w, h: c.geo.h });
   }
-  const intrusions = countIntrusions(desenhadas, rInt.derived.travessias, caixaDaConta);
-  ok('nenhuma travessia corta o interior de uma conta alheia (A5.5)', intrusions === 0,
-    intrusions ? `${intrusions} invasão(ões)` : 'as calhas e a canaleta seguraram');
+  const intrusions = countIntrusions(drawn, rInt.derived.travessias, accountBox);
+  ok('no crossing cuts through the interior of an unrelated account (A5.5)', intrusions === 0,
+    intrusions ? `${intrusions} intrusion(s)` : 'the channels and the raceway held');
 
-  // EXPERIMENTO DE CONTROLE. Uma checagem geométrica que só sabe passar não
-  // prova nada — pode estar medindo a coisa errada e concordando consigo mesma.
-  // Aqui a mesma rotina recebe a rota INGÊNUA (linha reta de ponta a ponta, que
-  // é o que o motor fazia antes da canaleta) e tem de acusar.
+  // CONTROL EXPERIMENT. A geometric check that only knows how to pass proves
+  // nothing — it could be measuring the wrong thing and agreeing with itself.
+  // Here the same routine receives the NAIVE route (a straight line end to
+  // end, which is what the engine did before the raceway) and has to flag it.
   const first = rInt.derived.travessias[0];
-  const oAbs = rInt.layoutPlan.celulas.find(c => c.id === first.from);
-  const dAbs = rInt.layoutPlan.celulas.find(c => c.id === first.to);
-  if (oAbs && dAbs) {
-    const meio = [...caixaDaConta.entries()].find(([id]) =>
+  const originCell = rInt.layoutPlan.cells.find(c => c.id === first.from);
+  const destCell = rInt.layoutPlan.cells.find(c => c.id === first.to);
+  if (originCell && destCell) {
+    const middle = [...accountBox.entries()].find(([id]) =>
       id !== first.contaDe && id !== first.contaPara);
-    if (meio) {
-      const [, cx] = meio;
+    if (middle) {
+      const [, cx] = middle;
       const y = cx.y + cx.h / 2;
-      const reta = [{
+      const straightLine = [{
         id: first.id, kind: 'edge',
-        pontos: [{ x: cx.x - 60, y }, { x: cx.x + cx.w + 60, y }],
+        points: [{ x: cx.x - 60, y }, { x: cx.x + cx.w + 60, y }],
       }];
-      const acusou = countIntrusions(reta, rInt.derived.travessias, caixaDaConta);
-      ok('e a checagem ACUSA quando a rota é a ingênua (controle)', acusou > 0,
-        acusou ? `${acusou} invasão(ões) detectada(s) na reta` : 'a checagem não viu — ela não mede o que diz medir');
+      const flagged = countIntrusions(straightLine, rInt.derived.travessias, accountBox);
+      ok('and the check FLAGS it when the route is the naive one (control)', flagged > 0,
+        flagged ? `${flagged} intrusion(s) detected on the straight line` : "the check didn't see it — it isn't measuring what it claims to measure");
     }
   }
 
   // ---------------------------------------------------------------- #34
-  console.log('\n6. #34 — o relatório não pode anunciar faixa de OU que o desenho não tem');
-  // `platform-3-accounts` é o mesmo modelo da seção 5: 3 contas, `Workloads`
-  // com DUAS (c-workload e c-dados) e `c-rede` fora dela — o contraste que
-  // dispara `gatilhoOu` — e modo integração, onde `plan.cjs` suprime a
-  // faixa. É o caso do corpus com OU em integração que o #34 pediu.
-  ok('o gatilho de OU disparou (contraste real: Workloads×2 fora de Infrastructure)',
+  console.log("\n6. #34 — the report must not announce an OU band the drawing doesn't have");
+  // `platform-3-accounts` is the same model from section 5: 3 accounts,
+  // `Workloads` with TWO (c-workload and c-dados) and `c-rede` outside it —
+  // the contrast that fires `gatilhoOu` — and integration mode, where
+  // `plan.cjs` suppresses the band. It's the corpus case with an OU in
+  // integration that #34 asked for.
+  ok('the OU trigger fired (real contrast: Workloads×2 outside Infrastructure)',
     rInt.derived.ou.draw, rInt.derived.ou.because);
-  const ouNoXml = (rInt.xml.match(/OU – /g) || []).length;
-  ok('a faixa de OU não está no .drawio (modo integração suprime)', ouNoXml === 0,
-    `${ouNoXml} ocorrência(s) de "OU – " na saída`);
-  const avisoOu = rInt.relatorio.avisos.find(a => a.startsWith('faixas de OU'));
-  ok('existe aviso sobre a faixa de OU', Boolean(avisoOu), avisoOu);
-  ok('o aviso DIZ que o modo integração não desenha — não afirma o que o XML nega',
-    Boolean(avisoOu) && /não desenha faixa de OU/.test(avisoOu), avisoOu);
+  const ouInXml = (rInt.xml.match(/OU – /g) || []).length;
+  ok('the OU band is not in the .drawio (integration mode suppresses it)', ouInXml === 0,
+    `${ouInXml} occurrence(s) of "OU – " in the output`);
+  const ouWarning = rInt.relatorio.avisos.find(a => a.startsWith('OU bands'));
+  ok('there is a warning about the OU band', Boolean(ouWarning), ouWarning);
+  ok("the warning SAYS integration mode doesn't draw it — it doesn't assert what the XML denies",
+    Boolean(ouWarning) && /doesn't draw an OU band/.test(ouWarning), ouWarning);
 
   console.log();
-  if (falhas) { console.log(`${falhas} checagem(ns) falharam`); process.exit(1); }
-  console.log('as decisões do #12 estão no arquivo, não só no README.');
+  if (failures) { console.log(`${failures} check(s) failed`); process.exit(1); }
+  console.log("#12's decisions are in the file, not just in the README.");
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

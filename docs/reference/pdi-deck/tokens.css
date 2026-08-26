@@ -1,0 +1,48 @@
+/* Derivado por tools/build_reference.py. Não editar à mão. */
+:root {
+  /* superfície — os quatro papéis que a premissa 5 do mapa fixa */
+  --pdi-surface: #141415; /* 26 slides autorais */
+  --pdi-ink: #F3F3F3; /* 37 slides autorais */
+  --pdi-card: #2C2C2F; /* 17 slides autorais */
+  --pdi-ink-pure: #FFFFFF; /* 11 slides autorais */
+
+  /* acento — SEM nome semântico de propósito: o sistema de acento é a decisão
+     que #100 reabriu e que espera o olhar do dono. Ver README. */
+  --pdi-hex-c75000: #C75000; /* 18 slides */
+  --pdi-hex-cd1335: #CD1335; /* 17 slides */
+  --pdi-hex-7634d2: #7634D2; /* 16 slides */
+  --pdi-hex-4ea9d0: #4EA9D0; /* 16 slides */
+  --pdi-hex-ff6201: #FF6201; /* 7 slides */
+  --pdi-hex-5fab80: #5FAB80; /* 7 slides */
+  --pdi-hex-f0d02d: #F0D02D; /* 7 slides */
+  --pdi-hex-ca321b: #CA321B; /* 6 slides */
+  --pdi-hex-747474: #747474; /* 6 slides */
+  --pdi-hex-f5a300: #F5A300; /* 5 slides */
+  --pdi-hex-d1af87: #D1AF87; /* 2 slides */
+  --pdi-hex-9d8b80: #9D8B80; /* 1 slides */
+
+  /* escala tipográfica — a régua invariante é % da ALTURA DO SLIDE, que num
+     16:9 com letterbox não é a altura do viewport. Redefina --pdi-slide-h
+     para a altura real da caixa do slide e toda a escala acompanha. */
+  --pdi-slide-h: 100svh;
+  --pdi-size-135pt: calc(33.33 * var(--pdi-slide-h) / 100); /* 135.0pt, 20 chars */
+  --pdi-size-48_2pt: calc(11.9 * var(--pdi-slide-h) / 100); /* 48.2pt, 128 chars */
+  --pdi-size-48pt: calc(11.85 * var(--pdi-slide-h) / 100); /* 48.0pt, 8 chars */
+  --pdi-size-40pt: calc(9.88 * var(--pdi-slide-h) / 100); /* 40.0pt, 35 chars */
+  --pdi-size-36pt: calc(8.89 * var(--pdi-slide-h) / 100); /* 36.0pt, 129 chars */
+  --pdi-size-32pt: calc(7.9 * var(--pdi-slide-h) / 100); /* 32.0pt, 1919 chars */
+  --pdi-size-28pt: calc(6.91 * var(--pdi-slide-h) / 100); /* 28.0pt, 694 chars */
+  --pdi-size-24pt: calc(5.93 * var(--pdi-slide-h) / 100); /* 24.0pt, 466 chars */
+  --pdi-size-20pt: calc(4.94 * var(--pdi-slide-h) / 100); /* 20.0pt, 53 chars */
+  --pdi-size-18_29pt: calc(4.52 * var(--pdi-slide-h) / 100); /* 18.29pt, 71 chars */
+  --pdi-size-18pt: calc(4.44 * var(--pdi-slide-h) / 100); /* 18.0pt, 35 chars */
+  --pdi-size-16pt: calc(3.95 * var(--pdi-slide-h) / 100); /* 16.0pt, 2036 chars */
+
+  /* grade — as bordas em que as formas encostam */
+  --pdi-edge-7_874: 7.874%; /* 34 formas */
+  --pdi-edge-2_623: 2.623%; /* 28 formas */
+  --pdi-edge-3_434: 3.434%; /* 18 formas */
+
+  --pdi-stroke: 0.75pt;
+  --pdi-shadow: 0 1.5pt 4.5pt rgba(0,0,0,0.32);
+}

@@ -85,12 +85,7 @@ respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
 | `failure` | há qualquer falha |
 | `strict` | há qualquer falha **ou** aviso |
 
-`truthfulness` é o default recomendado de **publicação**, e publicar não é desenhar.
-Bloquear em `generate` faria o motor recusar por dívida conhecida, com dono e
-endereço. **Recusar desenhar é decisão de quem entrega, e ela tem hora** — por
-isso `engine/generate.cjs` nasce em `none` e quem nasce em `truthfulness` é
-`tools/case.cjs`, o verbo que grava no projeto de quem chamou. Escrever no
-repositório de outra pessoa é publicar.
+`truthfulness` é o default recomendado de **publicação**, e publicar não é desenhar. Bloquear em `generate` faria o motor recusar por dívida conhecida, com dono e endereço. **Recusar desenhar é decisão de quem entrega, e ela tem hora** — por isso `engine/generate.cjs` nasce em `none` e quem nasce em `truthfulness` é `tools/case.cjs`, o verbo que grava no projeto de quem chamou. Escrever no repositório de outra pessoa é publicar.
 
 Mas o laudo não fica calado: **uma falha semântica vira aviso mesmo sem ninguém
 pedir portão**. Um portão que só existe quando alguém pede é um portão que

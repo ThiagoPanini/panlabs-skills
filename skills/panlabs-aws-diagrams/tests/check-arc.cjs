@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * THE END-TO-END ARC — the `SKILL.md`'s seven steps, each closing on the
+ * THE END-TO-END ARC — the sequential arc's seven steps, each closing on the
  * condition ITS OWN text sets.
+ *
+ * #43 turned the front door into three turns and the seven steps into the
+ * SEQUENTIAL arc, reached by two triggers `SKILL.md` names. They did not stop
+ * existing — they stopped being seven gates — so this file keeps measuring
+ * them; what it no longer is, is a reading of the document's spine.
  *
  *   node tests/check-arc.cjs
  *

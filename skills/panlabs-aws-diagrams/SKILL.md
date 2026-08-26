@@ -11,7 +11,9 @@ A **fronteira** não é disciplina, é gramática: `schema.json` não tem nenhum
 
 E a razão de a skill existir não é bonita, é estrutural: **nenhuma checagem geométrica sabe se a arquitetura desenhada existe.** O validador guarda o **desenho**; a **pergunta** guarda o **fato**. É por isso que a jornada começa perguntando — e é por isso que ela pergunta **uma vez**, sobre o que a descrição não determinou, em vez de sabatinar até uma família de checagem fechar: a checagem mede o modelo, e antes do desenho não existe modelo para medir.
 
-Todo comando abaixo roda a partir da raiz da skill (`skills/panlabs-aws-diagrams/`). Node 18+, e nada além dele: o `elkjs` vai embarcado, nenhum `npm install`, nenhuma rede. **Nada é gravado dentro desta árvore** — o resultado nasce no projeto de quem chamou, e os arquivos de trabalho no temporário do sistema.
+Os comandos abaixo rodam a partir da raiz da skill (`skills/panlabs-aws-diagrams/`), com **uma exceção que decide onde o seu trabalho vai parar**: o verbo de caso resolve o destino subindo do **diretório corrente** até a raiz do repositório git, então ele roda de dentro do projeto que vai receber o diagrama. Rodá-lo da raiz da skill grava o resultado no repositório da própria skill — que é exatamente o defeito que a jornada nova existe para não repetir.
+
+Node 18+, e nada além dele: o `elkjs` vai embarcado, nenhum `npm install`, nenhuma rede. **Nada é gravado dentro desta árvore** — o resultado nasce no projeto de quem chamou, e os arquivos de trabalho no temporário do sistema.
 
 ## A jornada
 
@@ -54,10 +56,12 @@ Resolva todo nome de serviço pelo catálogo **antes** de escrevê-lo:
 node catalog/aws-shapes.cjs "kinesis data firehose" opensearch "availability zone"
 ```
 
-Escreva um `session@1` com `stage: "technical"` — um IR, dois casacos sobre os mesmos nós: o lógico diz a **capacidade**, o técnico diz o **serviço** e o `resource`. A forma está em [`guide/model.md`](guide/model.md) e o contrato em [`session/schema.json`](session/schema.json); os exemplos vivos estão em [`models/session/`](models/session/). Grave-o fora desta árvore, junto do descritivo original:
+Escreva um `session@1` com `stage: "technical"` — um IR, dois casacos sobre os mesmos nós: o lógico diz a **capacidade**, o técnico diz o **serviço** e o `resource`. **O contrato é [`session/schema.json`](session/schema.json)**, e é ele que descreve os dois casacos campo a campo; [`guide/model.md`](guide/model.md) traz o que o esquema não consegue dizer sobre si mesmo. Em [`models/session/`](models/session/) o corpus guarda o par do **arco sequencial** — a sessão lógica mais o delta —, e não um exemplo já no estágio técnico: para ver um, aplique o delta com o [one-liner de `elaborate`](#quando-o-arco-volta-a-ser-sequencial) e leia o resultado.
+
+Grave a sessão e o descritivo fora desta árvore, e rode o verbo **de dentro do projeto que vai receber o diagrama** — é o diretório corrente que decide o destino:
 
 ```bash
-node tools/case.cjs /tmp/<case-slug>.session.json <case-slug> --brief /tmp/<case-slug>.brief.txt
+node <raiz-da-skill>/tools/case.cjs /tmp/<case-slug>.session.json <case-slug> --brief /tmp/<case-slug>.brief.txt
 ```
 
 Sai um diretório em `docs/architecture/diagrams/<case-slug>/`, a partir da raiz do repositório git de quem chamou — criado quando não existe, e fora de repositório git cai no diretório corrente **com aviso**. Dentro dele, **um** `.drawio` de duas abas, lógica primeiro, com a sessão embutida uma cópia por página — apagar uma aba não impede retomar pela outra —, e um `case.md` de cinco seções fixas. Com `--image`, e existindo o binário do draw.io, sai também o PNG; não existindo, **avisa e segue**.
@@ -129,7 +133,7 @@ node -e "const {elaborate}=require('./session/elaborate.cjs');
 
 | | |
 |---|---|
-| `node tools/case.cjs <sessao.json> <slug> --brief <b.txt>` | o turno 2: as duas abas e o `case.md`, em `docs/architecture/diagrams/<slug>/` do projeto de quem chamou. `--gate` (padrão `truthfulness`) · `--image` |
+| `node tools/case.cjs <sessao.json> <slug> --brief <b.txt>` | o turno 2: as duas abas e o `case.md`, em `docs/architecture/diagrams/<slug>/` do projeto de quem chamou. **Rode do diretório desse projeto** — o destino sobe do diretório corrente. `--gate` (padrão `truthfulness`) · `--image` |
 | `node engine/generate.cjs <m.json> --output <x.drawio>` | desenha um `model@1` direto. `--theme light\|dark\|corporate` · `--flow solid\|dashed\|animated` · `--gate none\|truthfulness\|failure\|strict` · `--explain` |
 | `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda o corpus, `--json` para ler no código, `--theme` avalia o tema pedido (padrão `light`) |
 | `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas. `--corpus` roda a régua inteira |

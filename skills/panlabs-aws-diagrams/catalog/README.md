@@ -26,7 +26,7 @@ A matéria-prima foi a pesquisa de shapes do #17. Ela está cristalizada aqui:
 | `tools/check-catalog.cjs` | 24 checagens estáticas, incluindo o round-trip. | — |
 | `tools/render-sample.cjs` | Monta a amostra e o manifesto de posições. | — |
 | `tools/verify-render.py` | Verificação por pixel: cada shape mostra glifo, não caixa vazia. | — |
-| `tests/sample.drawio` · `.png` · `.manifesto.json` | A amostra renderizada e conferida. | **sim** |
+| `tests/sample.drawio` · `.png` · `.manifest.json` | A amostra renderizada e conferida. | **sim** |
 
 A separação entre as duas primeiras linhas é o ponto do desenho: **reextrair não
 apaga correção**, e dá para responder "isto é assim porque o draw.io é assim" ou
@@ -35,15 +35,15 @@ apaga correção**, e dá para responder "isto é assim porque o draw.io é assi
 ## Usar
 
 ```js
-const cat = require('./aws-shapes.cjs').carregar();
+const cat = require('./aws-shapes.cjs').load();
 
-cat.servico('lambda');
+cat.service('lambda');
 // { style: 'sketch=0;points=[...];fillColor=#ED7100;...resIcon=mxgraph.aws4.lambda;',
-//   via: 'servico', title: 'Lambda', stencil: 'lambda', fill: '#ED7100', w: 78, h: 78 }
+//   via: 'service', title: 'Lambda', stencil: 'lambda', fill: '#ED7100', w: 78, h: 78 }
 
-cat.servico('opensearch').stencil;   // 'elasticsearch_service'  (nome congelado)
-cat.servico('s3 tables').via;        // 'recurso'                (ícone plano, sem quadrado)
-cat.grupo('Availability Zone').correcoes;
+cat.service('opensearch').stencil;   // 'elasticsearch_service'  (nome congelado)
+cat.service('s3 tables').via;        // 'resource'               (ícone plano, sem quadrado)
+cat.group('Availability Zone').corrections;
 // [ '#147EBA->#00A4A6', 'container=1' ]
 ```
 
@@ -77,12 +77,12 @@ venceria o nome atual. Há checagem para isso.
 | **`container=1` ausente** | 4 grupos saem da sidebar como retângulo puro e **não aninham**: Availability Zone, Security group e os dois Generic group. O ticket nomeia os dois primeiros; os Generic entraram porque é o mesmo defeito. |
 | **Os dois caminhos de ícone** | `resourceIcon` (Service Icon, quadrado colorido) **e** `shape=mxgraph.aws4.<nome>` (Resource Icon plano). Buscar só o primeiro faz o gerador concluir que S3 Tables, EventBridge Pipes/Scheduler e Trainium não existem. |
 | **Renomes congelados** | 24 entradas. O título da paleta acompanha o rename de marketing; o nome do stencil nunca. |
-| **Títulos ambíguos** | 22 títulos existem em mais de uma paleta com cor divergente — e às vezes com **stencil** divergente, ou seja, ícone diferente. 17 resolvidos pelo deck oficial, 1 por coincidência stencil/título, 4 por desempate arbitrário marcado `revisar`. |
+| **Títulos ambíguos** | 22 títulos existem em mais de uma paleta com cor divergente — e às vezes com **stencil** divergente, ou seja, ícone diferente. 17 resolvidos pelo deck oficial, 1 por coincidência stencil/título, 4 por desempate arbitrário marcado `review`. |
 
 O que **não** foi corrigido, de propósito: cinco divergências de `fontColor` que
 são escolha de rótulo do draw.io, não paleta velha. Corrigi-las é decidir a
 camada de estilo — outro ticket. Estão listadas em `corrections.json`
-sob `divergenciasNaoCorrigidas`, para a decisão ser tomada com a lista na mão.
+sob `uncorrectedDivergences`, para a decisão ser tomada com a lista na mão.
 
 ## Compacto, e sem perder nada
 
@@ -157,8 +157,8 @@ node tools/extract-aws4-catalog.cjs /tmp/drawio
 ./tests/run.sh
 ```
 
-Ao dar bump no deck da AWS, reconferir `paletaLegada` e
-`divergenciasNaoCorrigidas` contra os SVGs novos de `Architecture-Group-Icons`.
+Ao dar bump no deck da AWS, reconferir `legacyPalette` e
+`uncorrectedDivergences` contra os SVGs novos de `Architecture-Group-Icons`.
 
 ## Bugs do upstream registrados
 
@@ -176,7 +176,7 @@ precisa saber. Estão em `corrections.json` sob `bugsUpstream`:
 - **4 desempates arbitrários** entre paletas: Compute Optimizer, Kinesis Video
   Streams, Quantum Ledger Database, Snowmobile. Nos dois primeiros a própria AWS
   lista o serviço em duas categorias; os dois últimos sumiram do deck por
-  descontinuação. Hoje vale a ordem da paleta, marcada `revisar: true`. Efeito
+  descontinuação. Hoje vale a ordem da paleta, marcada `review: true`. Efeito
   colateral visível: `snowmobile` cai em Migration enquanto Snowball e Snowball
   Edge caem em Storage pelo deck — os irmãos ficam inconsistentes.
 - **5 divergências de `fontColor`** não corrigidas (acima). A mais visível é o

@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * Extrai o catálogo de shapes AWS do draw.io para JSON compacto.
+ * Extracts the AWS shape catalog from draw.io into compact JSON.
  *
- * Uso: node extract-aws4-catalog.cjs <repo-drawio> [saida.json]
+ * Usage: node extract-aws4-catalog.cjs <drawio-repo> [output.json]
  *
- * As style strings NÃO existem literalmente em nenhum arquivo — o
- * `Sidebar-AWS4.js` as monta por concatenação em runtime. Grep recupera no
- * máximo o sufixo (`.lambda;`), nunca o prefixo com a cor. A única forma
- * correta é executar o arquivo: aqui num `vm` com stubs mínimos do mxGraph,
- * interceptando `createVertexTemplateEntry`.
+ * The style strings do NOT exist literally in any file — `Sidebar-AWS4.js`
+ * assembles them by concatenation at runtime. Grep recovers at most the
+ * suffix (`.lambda;`), never the prefix with the color. The only correct way
+ * is to execute the file: here, inside a `vm` with minimal mxGraph stubs,
+ * intercepting `createVertexTemplateEntry`.
  *
- * Referência: §4 da pesquisa de shapes do #17.
+ * Reference: §4 of the shape research from #17.
  */
 'use strict';
 
@@ -23,7 +23,7 @@ const repo = process.argv[2];
 const outPath = process.argv[3] || path.join(__dirname, '..', 'aws4.catalog.json');
 
 if (!repo || !fs.existsSync(repo)) {
-  console.error('uso: node extract-aws4-catalog.cjs <repo-drawio> [saida.json]');
+  console.error('usage: node extract-aws4-catalog.cjs <drawio-repo> [output.json]');
   process.exit(2);
 }
 
@@ -78,18 +78,18 @@ function runSidebar(file, entryFn) {
 
 const entries = runSidebar('Sidebar-AWS4.js', 'addAWS4Palette');
 
-// -------------------------------------------------- 2. estoque de stencils
+// -------------------------------------------------- 2. stencil inventory
 
 const stencilXml = fs.readFileSync(
   path.join(repo, 'src/main/webapp/stencils/aws4.xml'), 'utf8');
 
-// Normalização de nome, verbatim de mxStencilRegistry.parseStencilSet:
-//   name.replace(/ /g,"_")  e depois .toLowerCase()
+// Name normalization, verbatim from mxStencilRegistry.parseStencilSet:
+//   name.replace(/ /g,"_")  then .toLowerCase()
 const declaredStencils = new Set(
   [...stencilXml.matchAll(/<shape [^>]*name="([^"]*)"/g)]
     .map(m => m[1].replace(/ /g, '_').toLowerCase()));
 
-// ------------------------------------------------------- 3. parse de style
+// ------------------------------------------------------- 3. style parsing
 
 function styleToMap(style) {
   const map = new Map();
@@ -117,37 +117,37 @@ function classify(e) {
     return { kind: 'grp', shapeClass: cls,
              stencil: (m.get('grIcon') || '').replace(/^mxgraph\.aws4\./, ''), map: m };
   }
-  if (cls) {  // stencil desenhado direto = Resource Icon plano da AWS
+  if (cls) {  // stencil drawn directly = plain AWS Resource Icon
     return { kind: 'res', stencil: cls, fill: m.get('fillColor'), map: m };
   }
-  return { kind: 'plain', map: m };  // retângulo puro (grupos sem ícone) ou aresta
+  return { kind: 'plain', map: m };  // plain rectangle (icon-less groups) or edge
 }
 
-// ------------------------------------------------- 4. templates canônicos
+// ------------------------------------------------- 4. canonical templates
 
 const PH_FILL = '${FILL}';
 const PH_STENCIL = '${STENCIL}';
 
 /**
- * A paleta Management Governance repete `points=[...]` idêntico duas vezes em
- * 39 entradas — bug cosmético do Sidebar-AWS4.js (o mxGraph usa a última
- * ocorrência, então o efeito é nulo). Removendo a repetição, essas 39 caem
- * dentro do template canônico em vez de virarem style literal.
+ * The Management Governance palette repeats an identical `points=[...]` twice
+ * in 39 entries — a cosmetic Sidebar-AWS4.js bug (mxGraph uses the last
+ * occurrence, so the effect is null). Removing the repetition, those 39 fall
+ * inside the canonical template instead of becoming a literal style.
  */
-let pointsDeduplicados = 0;
+let pointsDeduplicated = 0;
 function dedupPoints(style) {
-  const partes = style.split(';');
-  const vistos = new Set();
+  const parts = style.split(';');
+  const seen = new Set();
   const output = [];
-  let mexeu = false;
-  for (const p of partes) {
+  let changed = false;
+  for (const p of parts) {
     if (p.startsWith('points=')) {
-      if (vistos.has(p)) { mexeu = true; continue; }
-      vistos.add(p);
+      if (seen.has(p)) { changed = true; continue; }
+      seen.add(p);
     }
     output.push(p);
   }
-  if (mexeu) pointsDeduplicados++;
+  if (changed) pointsDeduplicated++;
   return output.join(';');
 }
 
@@ -178,9 +178,9 @@ for (const { c, styleN } of classified) {
 const svcTpl = modeOf(svcCounts);
 const resTpl = modeOf(resCounts);
 
-// --------------------------------------------------- 5. cor por categoria
+// --------------------------------------------------- 5. color by category
 
-// fillColor é função da CATEGORIA, não do serviço (pesquisa §7.2).
+// fillColor is a function of the CATEGORY, not of the service (research §7.2).
 const paletteFill = new Map();   // palette -> Map(fill -> n)
 for (const { e, c } of classified) {
   if ((c.kind === 'svc' || c.kind === 'res') && c.fill) {
@@ -192,7 +192,7 @@ for (const { e, c } of classified) {
 
 function slug(s) {
   return s.replace(/^AWS \/ /, '').trim().toLowerCase()
-          .replace(/[&]/g, ' ').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+          .replace(/[&]/g, ' ').replace(/[^a-z0-9]+/g, ' ').replace(/^_|_$/g, '');
 }
 
 const categories = {};
@@ -207,24 +207,24 @@ for (const [palette, fills] of paletteFill) {
   };
 }
 
-// ------------------------------------------------------------ 6. entradas
+// ------------------------------------------------------------ 6. entries
 
 const services = [];   // Service Icons (resourceIcon)
-const resources = [];  // Resource Icons planos (stencil direto)
+const resources = [];  // plain Resource Icons (direct stencil)
 const groups = [];
 const other = [];
 
 for (const { e, c, styleN } of classified) {
-  const cat = slug(e.palette);
-  const base = { title: e.title, palette: cat, w: e.width, h: e.height };
+  const category = slug(e.palette);
+  const base = { title: e.title, palette: category, w: e.width, h: e.height };
 
   if (c.kind === 'svc' || c.kind === 'res') {
     const tpl = c.kind === 'svc' ? svcTpl.template : resTpl.template;
     const canon = canonicalize(styleN, c.stencil, c.fill);
     const rec = { ...base, stencil: c.stencil };
-    const catFill = categories[cat] && categories[cat].fill;
-    if (c.fill !== catFill) rec.fill = c.fill;          // exceção à cor da categoria
-    if (canon !== tpl) rec.style = styleN;              // fora do template: guarda literal
+    const categoryFill = categories[category] && categories[category].fill;
+    if (c.fill !== categoryFill) rec.fill = c.fill;      // exception to the category color
+    if (canon !== tpl) rec.style = styleN;              // outside the template: stores literal
     (c.kind === 'svc' ? services : resources).push(rec);
   } else if (c.kind === 'grp') {
     groups.push({ ...base, shapeClass: c.shapeClass, grIcon: c.stencil, style: styleN });
@@ -235,7 +235,7 @@ for (const { e, c, styleN } of classified) {
   }
 }
 
-// ---------------------------------------------- 7. validação de referência
+// ---------------------------------------------- 7. reference validation
 
 const referenced = new Set();
 for (const r of services) referenced.add(r.stencil);
@@ -243,7 +243,7 @@ for (const r of resources) referenced.add(r.stencil);
 for (const g of groups) if (g.grIcon) referenced.add(g.grIcon);
 const broken = [...referenced].filter(s => s && !declaredStencils.has(s));
 
-// -------------------------------------------------------- 8. proveniência
+// -------------------------------------------------------- 8. provenance
 
 function git(args) {
   try { return execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' }).trim(); }
@@ -254,8 +254,14 @@ try {
   const changelog = fs.readFileSync(path.join(repo, 'ChangeLog'), 'utf8');
   const m = changelog.match(/^\s*([0-9]{2}-[A-Z]{3}-[0-9]{4}):\s*([0-9.]+)/m);
   if (m) drawioVersion = { date: m[1], version: m[2] };
-} catch { /* sem ChangeLog */ }
+} catch { /* no ChangeLog */ }
 
+// NOTE: the `catalog` object below is written verbatim to aws4.catalog.json,
+// a file this tool does not own the schema of end to end — it mirrors what
+// draw.io ships. Its key names (including the Portuguese `meta.*` and
+// `templates.*.cobre` fields) and the `note` prose are frozen to match the
+// currently committed file; do not rename them here without regenerating
+// and re-committing aws4.catalog.json in the same change.
 const catalog = {
   meta: {
     fonte: 'jgraph/drawio — src/main/webapp/js/diagramly/sidebar/Sidebar-AWS4.js + stencils/aws4.xml',
@@ -265,7 +271,7 @@ const catalog = {
     family: 'mxgraph.aws4',
     stencilsDeclarados: declaredStencils.size,
     referenciasQuebradas: broken,
-    pointsDuplicadosNormalizados: pointsDeduplicados,
+    pointsDuplicadosNormalizados: pointsDeduplicated,
     extraidoPor: 'catalog/tools/extract-aws4-catalog.cjs'
   },
   templates: {
@@ -284,15 +290,15 @@ const catalog = {
 fs.writeFileSync(outPath, JSON.stringify(catalog, null, 1) + '\n');
 
 console.error([
-  `entradas          ${entries.length}`,
-  `  service icons   ${services.length}  (template cobre ${svcTpl.hits})`,
-  `  resource icons  ${resources.length}  (template cobre ${resTpl.hits})`,
-  `  grupos          ${groups.length}`,
-  `  outros          ${other.length}`,
-  `categorias        ${Object.keys(categories).length}`,
-  `points dedup      ${pointsDeduplicados}`,
-  `styles literais   ${services.filter(s => s.style).length + resources.filter(r => r.style).length}`,
-  `stencils no xml   ${declaredStencils.size}`,
-  `refs quebradas    ${broken.length}${broken.length ? ' -> ' + broken.join(', ') : ''}`,
-  `saida             ${outPath}`
+  `entries           ${entries.length}`,
+  `  service icons   ${services.length}  (template covers ${svcTpl.hits})`,
+  `  resource icons  ${resources.length}  (template covers ${resTpl.hits})`,
+  `  groups          ${groups.length}`,
+  `  other           ${other.length}`,
+  `categories        ${Object.keys(categories).length}`,
+  `points dedup      ${pointsDeduplicated}`,
+  `literal styles    ${services.filter(s => s.style).length + resources.filter(r => r.style).length}`,
+  `stencils in xml   ${declaredStencils.size}`,
+  `broken refs       ${broken.length}${broken.length ? ' -> ' + broken.join(', ') : ''}`,
+  `output            ${outPath}`
 ].join('\n'));

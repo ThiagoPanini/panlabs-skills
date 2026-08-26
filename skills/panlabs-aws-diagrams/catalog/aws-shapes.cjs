@@ -1,29 +1,29 @@
 #!/usr/bin/env node
 /**
- * Catálogo de shapes AWS — resolução de nome e montagem de style string.
+ * AWS shape catalog — name resolution and style string assembly.
  *
- * O catálogo é compacto de propósito: 403 service icons + 606 resource icons
- * não viram 1009 strings literais, e sim `template + (categoria, stencil)`.
- * A style só existe quando alguém pede.
+ * The catalog is deliberately compact: 403 service icons + 606 resource icons
+ * don't become 1009 literal strings, but `template + (category, stencil)`.
+ * The style only exists when someone asks for it.
  *
- *   const cat = require('./aws-shapes.cjs').carregar();
- *   cat.servico('lambda');   // -> { style, w, h, via: 'servico', ... }
- *   cat.grupo('vpc');        // -> { style, w, h, ... }  (já corrigido)
+ *   const cat = require('./aws-shapes.cjs').load();
+ *   cat.service('lambda');   // -> { style, w, h, via: 'service', ... }
+ *   cat.group('vpc');        // -> { style, w, h, ... }  (already corrected)
  *
- * Referência: a pesquisa de shapes do #17, cristalizada em `aws4.catalog.json`
- * e `corrections.json` — que são a única fonte que este arquivo lê.
+ * Reference: the shape research from #17, crystallized into `aws4.catalog.json`
+ * and `corrections.json` — the only source this file reads.
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-// ------------------------------------------------------------ normalização
+// ------------------------------------------------------------ normalization
 
 /**
- * Um nome de serviço chega de muitos jeitos: "Amazon S3", "s3",
- * "Simple Storage Service (S3)", "simple_storage_service". Todos precisam
- * cair no mesmo balde antes de qualquer comparação.
+ * A service name arrives in many shapes: "Amazon S3", "s3",
+ * "Simple Storage Service (S3)", "simple_storage_service". They all need
+ * to land in the same bucket before any comparison.
  */
 function normalize(name) {
   return String(name)
@@ -36,7 +36,7 @@ function normalize(name) {
     .trim();
 }
 
-/** "Simple Storage Service (S3)" indexa também como "s3" e como "simple storage service". */
+/** "Simple Storage Service (S3)" also indexes as "s3" and as "simple storage service". */
 function variants(title) {
   const out = new Set([normalize(title)]);
   const m = String(title).match(/^(.*?)\s*\(([^)]+)\)\s*$/);
@@ -55,116 +55,116 @@ function applyTemplate(tpl, { fill, stencil }) {
     .split('${STENCIL}').join(stencil);
 }
 
-/** Troca o valor de uma chave de style, preservando a ordem das demais. */
-function setKey(style, key, valor) {
-  const partes = style.split(';');
-  let achou = false;
-  const novas = partes.map(p => {
-    if (p.startsWith(key + '=')) { achou = true; return key + '=' + valor; }
+/** Replaces the value of a style key, preserving the order of the rest. */
+function setKey(style, key, value) {
+  const parts = style.split(';');
+  let found = false;
+  const next = parts.map(p => {
+    if (p.startsWith(key + '=')) { found = true; return key + '=' + value; }
     return p;
   });
-  if (!achou) {
-    // insere antes do terminador vazio final, se houver
-    const i = novas.length && novas[novas.length - 1] === '' ? novas.length - 1 : novas.length;
-    novas.splice(i, 0, key + '=' + valor);
+  if (!found) {
+    // insert before the final empty terminator, if there is one
+    const i = next.length && next[next.length - 1] === '' ? next.length - 1 : next.length;
+    next.splice(i, 0, key + '=' + value);
   }
-  return novas.join(';');
+  return next.join(';');
 }
 
-function temChave(style, key) {
+function hasKey(style, key) {
   return style.split(';').some(p => p === key || p.startsWith(key + '='));
 }
 
-// ---------------------------------------------------------------- correções
+// ---------------------------------------------------------------- corrections
 
 /**
- * Aplica ao grupo o delta "o que o draw.io entrega" -> "o que a AWS prescreve":
- * cores da paleta pré-2022, a falta de container=1 e o tingimento das duas
- * subnets. Ver corrections.json.
+ * Applies to the group the delta "what draw.io delivers" -> "what AWS prescribes":
+ * pre-2022 palette colors, the missing container=1, and the tint on the two
+ * subnets. See corrections.json.
  */
 function fixGroup(style, corrections, title) {
   let s = style;
-  const aplicadas = [];
+  const applied = [];
 
-  for (const [legado, info] of Object.entries(corrections.paletaLegada)) {
-    if (legado.startsWith('_')) continue;
-    if (s.includes(legado)) {
-      s = s.split(legado).join(info.to);
-      aplicadas.push(`${legado}->${info.to}`);
+  for (const [legacyHex, fix] of Object.entries(corrections.legacyPalette)) {
+    if (legacyHex.startsWith('_')) continue;
+    if (s.includes(legacyHex)) {
+      s = s.split(legacyHex).join(fix.to);
+      applied.push(`${legacyHex}->${fix.to}`);
     }
   }
 
-  if (!temChave(s, 'container')) {
-    const sufixo = corrections.container.sufixo;
-    s = (s.endsWith(';') ? s : s + ';') + sufixo;
-    aplicadas.push('container=1');
+  if (!hasKey(s, 'container')) {
+    const suffix = corrections.container.suffix;
+    s = (s.endsWith(';') ? s : s + ';') + suffix;
+    applied.push('container=1');
   }
 
-  // Duas subnets saem do draw.io TINGIDAS (#E6F6F7 / #F2F6E8) enquanto as outras
-  // 18 são `none`. O deck é `<a:noFill/>` em todos (A2), e o tingimento derruba
-  // #ED7100 de 3,02 para 2,71:1 em quem cai dentro. Ver preenchimentoDeGrupo.
-  const pg = corrections.preenchimentoDeGrupo;
-  if (pg && (pg.afeta || []).includes(title)) {
-    const antes = (/(?:^|;)fillColor=([^;]*)/.exec(s) || [])[1];
-    if (antes && antes !== pg.to) {
-      s = setKey(s, 'fillColor', pg.to);
-      aplicadas.push(`fillColor ${antes}->${pg.to}`);
+  // Two subnets leave draw.io TINTED (#E6F6F7 / #F2F6E8) while the other
+  // 18 are `none`. The deck is `<a:noFill/>` on all of them (A2), and the tint
+  // drags #ED7100 down from 3.02 to 2.71:1 for whatever falls inside. See groupFill.
+  const gf = corrections.groupFill;
+  if (gf && (gf.affects || []).includes(title)) {
+    const before = (/(?:^|;)fillColor=([^;]*)/.exec(s) || [])[1];
+    if (before && before !== gf.to) {
+      s = setKey(s, 'fillColor', gf.to);
+      applied.push(`fillColor ${before}->${gf.to}`);
     }
   }
 
-  return { style: s, corrections: aplicadas };
+  return { style: s, corrections: applied };
 }
 
-// ------------------------------------------------------------------ carga
+// ------------------------------------------------------------------ loading
 
 function load(dir) {
   const base = dir || __dirname;
   const catalog = JSON.parse(fs.readFileSync(path.join(base, 'aws4.catalog.json'), 'utf8'));
   const corrections = JSON.parse(fs.readFileSync(path.join(base, 'corrections.json'), 'utf8'));
 
-  const corDaCategoria = cat => (catalog.categories[cat] || {}).fill || '#232F3D';
+  const categoryColor = category => (catalog.categories[category] || {}).fill || '#232F3D';
 
-  // ---- índices -------------------------------------------------------
+  // ---- indexes ---------------------------------------------------------
 
-  const porNome = new Map();      // nome normalizado -> [entradas]
-  const porStencil = new Map();   // stencil -> entrada (service icon vence)
-  const gruposPorNome = new Map();
+  const byName = new Map();       // normalized name -> [entries]
+  const byStencil = new Map();    // stencil -> entry (service icon wins)
+  const groupsByName = new Map();
 
   function buildIndex(input, kind) {
     const rec = { ...input, kind };
     for (const v of variants(input.title)) {
-      if (!porNome.has(v)) porNome.set(v, []);
-      porNome.get(v).push(rec);
+      if (!byName.has(v)) byName.set(v, []);
+      byName.get(v).push(rec);
     }
     const sn = normalize(input.stencil);
-    if (sn && !porNome.has(sn)) porNome.set(sn, []);
-    if (sn) porNome.get(sn).push(rec);
+    if (sn && !byName.has(sn)) byName.set(sn, []);
+    if (sn) byName.get(sn).push(rec);
 
-    // service icon tem precedência sobre resource icon no mesmo stencil
-    if (!porStencil.has(input.stencil) || kind === 'service') {
-      if (!(porStencil.get(input.stencil) || {}).kind || kind === 'service') {
-        porStencil.set(input.stencil, rec);
+    // service icon takes precedence over resource icon on the same stencil
+    if (!byStencil.has(input.stencil) || kind === 'service') {
+      if (!(byStencil.get(input.stencil) || {}).kind || kind === 'service') {
+        byStencil.set(input.stencil, rec);
       }
     }
     return rec;
   }
 
   for (const s of catalog.services) buildIndex(s, 'service');
-  for (const r of catalog.resources) buildIndex(r, 'recurso');
+  for (const r of catalog.resources) buildIndex(r, 'resource');
   for (const g of catalog.groups) {
     for (const v of variants(g.title)) {
-      if (!gruposPorNome.has(v)) gruposPorNome.set(v, g);   // 1ª variante vence
+      if (!groupsByName.has(v)) groupsByName.set(v, g);   // 1st variant wins
     }
   }
 
-  // ---- montagem de style ---------------------------------------------
+  // ---- style assembly ---------------------------------------------------
 
   function build(rec) {
-    if (rec.style) {                       // fora do template: literal do upstream
+    if (rec.style) {                       // outside the template: upstream literal
       return { style: rec.style, literal: true };
     }
     const tpl = rec.kind === 'service' ? catalog.templates.svc.style : catalog.templates.res.style;
-    const fill = rec.fill || corDaCategoria(rec.palette);
+    const fill = rec.fill || categoryColor(rec.palette);
     return { style: applyTemplate(tpl, { fill, stencil: rec.stencil }), literal: false };
   }
 
@@ -173,105 +173,106 @@ function load(dir) {
     return {
       style, via, literal,
       title: rec.title, stencil: rec.stencil, palette: rec.palette,
-      fill: rec.fill || corDaCategoria(rec.palette),
+      fill: rec.fill || categoryColor(rec.palette),
       w: rec.w, h: rec.h
     };
   }
 
-  // ---- busca ----------------------------------------------------------
+  // ---- lookup -------------------------------------------------------------
 
   function lookup(name) {
     const n = normalize(name);
 
-    // 0. título que existe em mais de uma paleta com cor/ícone divergente.
-    //    Vem ANTES da busca por nome: é justamente o caso em que o nome sozinho
-    //    não decide, e "o primeiro que casar" faria a mesma arquitetura sair
-    //    com cores diferentes conforme a ordem da paleta.
-    const des = corrections.desambiguacao[n];
+    // 0. title that exists in more than one palette with a diverging color/icon.
+    //    Comes BEFORE the name lookup: this is exactly the case where the name
+    //    alone doesn't decide, and "the first one that matches" would make the
+    //    same architecture come out with different colors depending on palette
+    //    order.
+    const des = corrections.disambiguation[n];
     if (des && !n.startsWith('_')) {
-      const chosen = (porNome.get(n) || []).find(
+      const chosen = (byName.get(n) || []).find(
         c => c.stencil === des.stencil && c.palette === des.palette);
-      if (chosen) return { candidatos: [chosen], via: 'desambiguado:' + des.origin };
+      if (chosen) return { candidates: [chosen], via: 'disambiguated:' + des.origin };
     }
 
-    // 1. rename congelado (OpenSearch -> elasticsearch_service).
-    //    ANTES da busca por título, e não depois: o rename é um override
-    //    curado, e o caso que obriga a essa ordem é o SageMaker — pedir
-    //    "sagemaker" casa por título exato com 'Sagemaker' (sagemaker_2, roxo
-    //    de Analytics) e nunca chegaria em 'SageMaker AI' (sagemaker, teal).
-    //    O título que o upstream não atualizou venceria o nome atual.
-    const ren = corrections.renomes[n];
-    if (ren && porStencil.has(ren)) return { candidatos: [porStencil.get(ren)], via: 'renome' };
+    // 1. frozen rename (OpenSearch -> elasticsearch_service).
+    //    BEFORE the title lookup, not after: the rename is a curated override,
+    //    and the case that forces this order is SageMaker — asking for
+    //    "sagemaker" matches by exact title with 'Sagemaker' (sagemaker_2, purple
+    //    Analytics) and would never reach 'SageMaker AI' (sagemaker, teal).
+    //    The title upstream never updated would win over the current name.
+    const renamed = corrections.renames[n];
+    if (renamed && byStencil.has(renamed)) return { candidates: [byStencil.get(renamed)], via: 'rename' };
 
-    // 2. título ou nome de stencil, direto
-    if (porNome.has(n)) return { candidatos: porNome.get(n), via: 'name' };
+    // 2. title or stencil name, direct
+    if (byName.has(n)) return { candidates: byName.get(n), via: 'name' };
 
-    // 3. sigla / apelido — DEPOIS do título: conveniência nossa não derruba
-    //    um casamento real com o catálogo.
-    const sin = corrections.sinonimos[n];
-    if (sin && porStencil.has(sin)) return { candidatos: [porStencil.get(sin)], via: 'sinonimo' };
+    // 3. acronym / nickname — AFTER the title: our own convenience doesn't
+    //    override a real match against the catalog.
+    const synonym = corrections.synonyms[n];
+    if (synonym && byStencil.has(synonym)) return { candidates: [byStencil.get(synonym)], via: 'synonym' };
 
-    // 4. substring, e SÓ se for inequívoca. "trainium" acha "Trainium Instance";
-    //    "gateway" não acha nada, porque casa com dezenas — e adivinhar qual
-    //    seria pior que cair no fallback.
-    //    A fronteira de palavra não é preciosismo: sem ela "trainium" casa com
-    //    a chave "ai", porque a substring crua está lá dentro.
-    const contemPalavra = (hay, needle) => (' ' + hay + ' ').includes(' ' + needle + ' ');
-    const chaves = [...porNome.keys()].filter(
-      k => contemPalavra(k, n) || contemPalavra(n, k));
-    const alvos = new Set();
-    for (const k of chaves) for (const c of porNome.get(k)) alvos.add(c);
-    if (alvos.size === 1) return { candidatos: [...alvos], via: 'substring' };
-    if (alvos.size > 1) {
-      // desempate: um único service icon entre os candidatos ainda é inequívoco
-      const svcs = [...alvos].filter(c => c.kind === 'service');
+    // 4. substring, and ONLY if unambiguous. "trainium" finds "Trainium Instance";
+    //    "gateway" finds nothing, because it matches dozens — and guessing which
+    //    one would be worse than falling back.
+    //    The word boundary isn't fussiness: without it "trainium" matches the
+    //    key "ai", because the raw substring is in there.
+    const containsWord = (hay, needle) => (' ' + hay + ' ').includes(' ' + needle + ' ');
+    const keys = [...byName.keys()].filter(
+      k => containsWord(k, n) || containsWord(n, k));
+    const targets = new Set();
+    for (const k of keys) for (const c of byName.get(k)) targets.add(c);
+    if (targets.size === 1) return { candidates: [...targets], via: 'substring' };
+    if (targets.size > 1) {
+      // tie-break: a single service icon among the candidates is still unambiguous
+      const svcs = [...targets].filter(c => c.kind === 'service');
       const stencils = new Set(svcs.map(c => c.stencil));
-      if (stencils.size === 1) return { candidatos: svcs, via: 'substring' };
+      if (stencils.size === 1) return { candidates: svcs, via: 'substring' };
     }
 
     return null;
   }
 
   /**
-   * Escada de fallback (pesquisa §5.6):
-   *   service icon > resource icon > ícone da categoria > genérico > grupo genérico
+   * Fallback ladder (research §5.6):
+   *   service icon > resource icon > category icon > generic > generic group
    */
   function service(name, opts = {}) {
     const finding = lookup(name);
 
     if (finding) {
-      const svc = finding.candidatos.find(c => c.kind === 'service');
-      if (svc) return deliver(svc, finding.via === 'name' ? 'service' : 'servico:' + finding.via);
-      const res = finding.candidatos.find(c => c.kind === 'recurso');
-      if (res) return deliver(res, finding.via === 'name' ? 'recurso' : 'recurso:' + finding.via);
+      const svc = finding.candidates.find(c => c.kind === 'service');
+      if (svc) return deliver(svc, finding.via === 'name' ? 'service' : 'service:' + finding.via);
+      const res = finding.candidates.find(c => c.kind === 'resource');
+      if (res) return deliver(res, finding.via === 'name' ? 'resource' : 'resource:' + finding.via);
     }
 
-    if (opts.categoria) {
-      const cat = normalize(opts.categoria);
-      const porCategoria = catalog.services.find(
-        s => s.palette === cat.replace(/ /g, '_') && normalize(s.title) === cat);
-      if (porCategoria) return deliver({ ...porCategoria, kind: 'service' }, 'categoria');
-      const iconeCat = lookup(opts.categoria);
-      if (iconeCat) {
-        const c = iconeCat.candidatos.find(x => x.kind === 'service') || iconeCat.candidatos[0];
-        if (c) return deliver(c, 'categoria');
+    if (opts.category) {
+      const category = normalize(opts.category);
+      const byCategory = catalog.services.find(
+        s => s.palette === category.replace(/ /g, '_') && normalize(s.title) === category);
+      if (byCategory) return deliver({ ...byCategory, kind: 'service' }, 'category');
+      const categoryIcon = lookup(opts.category);
+      if (categoryIcon) {
+        const c = categoryIcon.candidates.find(x => x.kind === 'service') || categoryIcon.candidates[0];
+        if (c) return deliver(c, 'category');
       }
     }
 
-    const generic = porStencil.get('generic_application');
-    if (generic) return { ...deliver(generic, 'generic'), rotuloSugerido: String(name) };
+    const generic = byStencil.get('generic_application');
+    if (generic) return { ...deliver(generic, 'generic'), suggestedLabel: String(name) };
 
     return null;
   }
 
   function group(name) {
-    const g = gruposPorNome.get(normalize(name));
+    const g = groupsByName.get(normalize(name));
     if (!g) return null;
-    const { style, corrections: aplicadas } = fixGroup(g.style, corrections, g.title);
+    const { style, corrections: applied } = fixGroup(g.style, corrections, g.title);
     return {
       style, title: g.title, w: g.w, h: g.h,
       shapeClass: g.shapeClass, grIcon: g.grIcon,
-      corrections: aplicadas,
+      corrections: applied,
       styleUpstream: g.style
     };
   }
@@ -280,9 +281,9 @@ function load(dir) {
     catalog, corrections,
     meta: catalog.meta,
     service, group, lookup, normalize,
-    grupos: () => catalog.groups.map(g => g.title),
-    categorias: () => catalog.categories,
-    corDaCategoria
+    groups: () => catalog.groups.map(g => g.title),
+    categories: () => catalog.categories,
+    categoryColor
   };
 }
 
@@ -294,16 +295,16 @@ if (require.main === module) {
   const cat = load();
   const args = process.argv.slice(2);
   if (!args.length) {
-    console.log(`catálogo aws4 — draw.io ${cat.meta.drawio && cat.meta.drawio.version} (${cat.meta.commit && cat.meta.commit.slice(0, 8)})`);
-    console.log(`  ${cat.catalog.services.length} service icons · ${cat.catalog.resources.length} resource icons · ${cat.catalog.groups.length} grupos`);
-    console.log(`uso: node aws-shapes.cjs <nome do serviço|grupo> ...`);
+    console.log(`aws4 catalog — draw.io ${cat.meta.drawio && cat.meta.drawio.version} (${cat.meta.commit && cat.meta.commit.slice(0, 8)})`);
+    console.log(`  ${cat.catalog.services.length} service icons · ${cat.catalog.resources.length} resource icons · ${cat.catalog.groups.length} groups`);
+    console.log(`usage: node aws-shapes.cjs <service or group name> ...`);
     process.exit(0);
   }
   for (const a of args) {
     const s = cat.service(a);
     const g = cat.group(a);
-    if (g) console.log(`grupo   ${a} -> ${g.title} [${g.corrections.join(' ') || 'sem correção'}]\n  ${g.style}`);
-    else if (s) console.log(`serviço ${a} -> ${s.title} (${s.stencil}, ${s.via}, ${s.fill})\n  ${s.style}`);
-    else console.log(`?       ${a} -> não resolvido`);
+    if (g) console.log(`group   ${a} -> ${g.title} [${g.corrections.join(' ') || 'no correction'}]\n  ${g.style}`);
+    else if (s) console.log(`service ${a} -> ${s.title} (${s.stencil}, ${s.via}, ${s.fill})\n  ${s.style}`);
+    else console.log(`?       ${a} -> not resolved`);
   }
 }

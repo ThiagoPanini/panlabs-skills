@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""Verifica, shape a shape, que o PNG renderizado mostra o ícone — não caixa vazia.
+"""Verifies, shape by shape, that the rendered PNG shows the icon — not an empty box.
 
     python3 verify-render.py tests/sample.png tests/sample.manifest.json
 
-"Caixa vazia" tem uma definição mecânica, não visual:
+"Empty box" has a mechanical definition, not a visual one:
 
-  * Service Icon  — o quadrado é `fillColor` e o glifo é pintado em `strokeColor`
-    (#ffffff) com 10% de inset. Se `resIcon` apontar para um stencil que não
-    existe, o mxGraph pinta só o quadrado. Logo: dentro dos 80% centrais tem que
-    haver pixel branco. Zero branco = caixa vazia.
+  * Service Icon  — the square is `fillColor` and the glyph is painted in `strokeColor`
+    (#ffffff) with a 10% inset. If `resIcon` points to a stencil that doesn't
+    exist, mxGraph paints only the square. So: within the central 80% there must
+    be white pixels. Zero white = empty box.
 
-  * Resource Icon plano — não há quadrado; o glifo é `fillColor` sobre o fundo
-    da página. Stencil ausente não desenha nada. Logo: tem que haver pixel da
-    cor de preenchimento na região.
+  * Plain Resource Icon — there's no square; the glyph is `fillColor` over the
+    page background. A missing stencil draws nothing. So: there must be pixels
+    of the fill color in the region.
 
-  * Grupo — a borda em `strokeColor`, e o `grIcon` (25px) no canto superior
-    esquerdo, ou centralizado no `groupCenter`. O rótulo começa depois de
-    spacingLeft=30, então a janela do ícone não o alcança.
+  * Group — the border in `strokeColor`, and the `grIcon` (25px) in the top-left
+    corner, or centered in `groupCenter`. The label starts after
+    spacingLeft=30, so the icon window doesn't reach it.
 
-O mapeamento coordenada-do-diagrama -> pixel vem dos dois marcadores magenta,
-não de adivinhar margem e escala do exportador.
+The diagram-coordinate -> pixel mapping comes from the two magenta markers,
+not from guessing the exporter's margin and scale.
 """
 import json
 import sys
@@ -27,10 +27,10 @@ from collections import Counter
 
 from PIL import Image
 
-TOL = 14            # tolerância por canal, para o antialias do exportador
-MIN_GLIFO = 20      # pixels mínimos para chamar de "glifo desenhado"
-MIN_BORDA = 20
-TETO_SOLIDO = 0.90  # acima disto a caixa está preenchida, não desenhada
+TOL = 14            # per-channel tolerance, for the exporter's antialiasing
+MIN_GLYPH = 20       # minimum pixels to call it a "drawn glyph"
+MIN_EDGE = 20
+SOLID_CEILING = 0.90  # above this the box is filled, not drawn
 
 
 def hex2rgb(h):
@@ -38,36 +38,36 @@ def hex2rgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def perto(px, alvo, tol=TOL):
-    return all(abs(px[i] - alvo[i]) <= tol for i in range(3))
+def close_to(px, target, tol=TOL):
+    return all(abs(px[i] - target[i]) <= tol for i in range(3))
 
 
-def contar(img, caixa, cor, tol=TOL):
-    x0, y0, x1, y1 = [int(round(v)) for v in caixa]
+def count(img, box, color, tol=TOL):
+    x0, y0, x1, y1 = [int(round(v)) for v in box]
     x0, y0 = max(x0, 0), max(y0, 0)
     x1, y1 = min(x1, img.width), min(y1, img.height)
     if x1 <= x0 or y1 <= y0:
         return 0, 0
     b = img.crop((x0, y0, x1, y1)).convert('RGB').tobytes()
     n = sum(1 for i in range(0, len(b), 3)
-            if perto((b[i], b[i + 1], b[i + 2]), cor, tol))
+            if close_to((b[i], b[i + 1], b[i + 2]), color, tol))
     return n, len(b) // 3
 
 
-def calibrar(img, calib):
-    alvo = hex2rgb(calib['cor'])
+def calibrate(img, calib):
+    target = hex2rgb(calib['color'])
     rgb = img.convert('RGB')
-    pontos = [(x, y) for y in range(img.height) for x in range(img.width)
-              if perto(rgb.getpixel((x, y)), alvo, 6)]
-    if not pontos:
-        sys.exit('FALHA: nenhum marcador de calibração magenta encontrado no PNG')
+    points = [(x, y) for y in range(img.height) for x in range(img.width)
+              if close_to(rgb.getpixel((x, y)), target, 6)]
+    if not points:
+        sys.exit('FAIL: no magenta calibration marker found in the PNG')
 
-    meio_x = (min(p[0] for p in pontos) + max(p[0] for p in pontos)) / 2
-    meio_y = (min(p[1] for p in pontos) + max(p[1] for p in pontos)) / 2
-    a = [p for p in pontos if p[0] <= meio_x and p[1] <= meio_y]
-    b = [p for p in pontos if p[0] > meio_x and p[1] > meio_y]
+    mid_x = (min(p[0] for p in points) + max(p[0] for p in points)) / 2
+    mid_y = (min(p[1] for p in points) + max(p[1] for p in points)) / 2
+    a = [p for p in points if p[0] <= mid_x and p[1] <= mid_y]
+    b = [p for p in points if p[0] > mid_x and p[1] > mid_y]
     if not a or not b:
-        sys.exit('FALHA: marcadores de calibração não formam dois cantos distintos')
+        sys.exit('FAIL: calibration markers do not form two distinct corners')
 
     ax, ay = min(p[0] for p in a), min(p[1] for p in a)
     bx, by = min(p[0] for p in b), min(p[1] for p in b)
@@ -79,90 +79,91 @@ def calibrar(img, calib):
 
 
 def main():
-    png, man = sys.argv[1], sys.argv[2]
+    png, manifest_path = sys.argv[1], sys.argv[2]
     img = Image.open(png)
-    m = json.load(open(man))
+    m = json.load(open(manifest_path))
 
-    ox, oy, sx, sy = calibrar(img, m['calibracao'])
+    ox, oy, sx, sy = calibrate(img, m['calibration'])
     print(f'{png}  {img.width}x{img.height}px')
-    print(f'calibração: escala {sx:.3f}x{sy:.3f}, origem ({ox:.1f},{oy:.1f})')
+    print(f'calibration: scale {sx:.3f}x{sy:.3f}, origin ({ox:.1f},{oy:.1f})')
     print()
 
-    def caixa(x, y, w, h, inset=0.0):
+    def box(x, y, w, h, inset=0.0):
         return (ox + (x + w * inset) * sx, oy + (y + h * inset) * sy,
                 ox + (x + w * (1 - inset)) * sx, oy + (y + h * (1 - inset)) * sy)
 
-    falhas, ok = [], 0
+    failures, ok = [], 0
 
-    def julgar(nome, cond, detalhe):
+    def judge(name, passed, detail):
         nonlocal ok
-        if cond:
+        if passed:
             ok += 1
-            print(f'  ok    {nome:34s} {detalhe}')
+            print(f'  ok    {name:34s} {detail}')
         else:
-            falhas.append(f'  FALHA {nome:34s} {detalhe}')
-            print(f'  FALHA {nome:34s} {detalhe}')
+            failures.append(f'  FAIL  {name:34s} {detail}')
+            print(f'  FAIL  {name:34s} {detail}')
 
-    def checar_icone(rotulo, c, fill, glifo, tipo):
-        # glifo desenhado com 10% de inset -> olhar os 80% centrais
-        n_glifo, _ = contar(img, caixa(c['x'], c['y'], c['w'], c['h'], 0.16),
-                            hex2rgb(glifo))
-        n_fill, total = contar(img, caixa(c['x'], c['y'], c['w'], c['h']), hex2rgb(fill))
-        if tipo == 'svc':
-            julgar(rotulo, n_glifo >= MIN_GLIFO and n_fill >= MIN_GLIFO,
-                   f'glifo {n_glifo}px / quadrado {n_fill}px')
+    def check_icon(label, c, fill, glyph, kind):
+        # glyph drawn with a 10% inset -> look at the central 80%
+        n_glyph, _ = count(img, box(c['x'], c['y'], c['w'], c['h'], 0.16),
+                            hex2rgb(glyph))
+        n_fill, total = count(img, box(c['x'], c['y'], c['w'], c['h']), hex2rgb(fill))
+        if kind == 'svc':
+            judge(label, n_glyph >= MIN_GLYPH and n_fill >= MIN_GLYPH,
+                   f'glyph {n_glyph}px / square {n_fill}px')
         else:
-            # Um `shape=mxgraph.aws4.<inexistente>` NÃO desenha nada: o mxGraph
-            # cai no retângulo padrão, que sai preenchido de ponta a ponta com
-            # fillColor. Contar só "tem pixel da cor" aprovaria justamente o
-            # caso que se quer pegar — por isso o teto de densidade.
-            densidade = n_fill / total if total else 0
-            julgar(rotulo, n_fill >= MIN_GLIFO and densidade < TETO_SOLIDO,
-                   f'glifo {n_fill}px ({densidade:.0%} da caixa, cor {fill})'
-                   + ('  <- bloco sólido, não é glifo' if densidade >= TETO_SOLIDO else ''))
+            # A `shape=mxgraph.aws4.<nonexistent>` draws NOTHING: mxGraph
+            # falls back to the default rectangle, which comes out filled edge
+            # to edge with fillColor. Counting just "has a pixel of the color"
+            # would approve exactly the case we want to catch — hence the
+            # density ceiling.
+            density = n_fill / total if total else 0
+            judge(label, n_fill >= MIN_GLYPH and density < SOLID_CEILING,
+                   f'glyph {n_fill}px ({density:.0%} of the box, color {fill})'
+                   + ('  <- solid block, not a glyph' if density >= SOLID_CEILING else ''))
 
-    print('— ícones soltos —')
-    for c in m['celulas']:
-        if c['tipo'] in ('svc', 'res'):
-            checar_icone(f"{c['pedido']} [{c['via']}]", c, c['fill'], c['glifo'], c['tipo'])
+    print('— loose icons —')
+    for c in m['cells']:
+        if c['kind'] in ('svc', 'res'):
+            check_icon(f"{c['requested']} [{c['via']}]", c, c['fill'], c['glyph'], c['kind'])
 
     print()
-    print('— grupos —')
-    for c in m['celulas']:
-        if c['tipo'] != 'grupo':
+    print('— groups —')
+    for c in m['cells']:
+        if c['kind'] != 'group':
             continue
-        rot = c['pedido']
+        label = c['requested']
 
-        if c['borda']:
-            # anel externo: 4 faixas de 4px de espessura ao longo do perímetro
-            b = hex2rgb(c['borda'])
+        if c['edge']:
+            # outer ring: 4 bands 4px thick along the perimeter
+            b = hex2rgb(c['edge'])
             n = 0
-            for cx in (caixa(c['x'], c['y'], c['w'], 4),
-                       caixa(c['x'], c['y'] + c['h'] - 4, c['w'], 4),
-                       caixa(c['x'], c['y'], 4, c['h']),
-                       caixa(c['x'] + c['w'] - 4, c['y'], 4, c['h'])):
-                n += contar(img, cx, b)[0]
-            julgar(f'{rot} · borda', n >= MIN_BORDA, f'{n}px de {c["borda"]}')
+            for cx in (box(c['x'], c['y'], c['w'], 4),
+                       box(c['x'], c['y'] + c['h'] - 4, c['w'], 4),
+                       box(c['x'], c['y'], 4, c['h']),
+                       box(c['x'] + c['w'] - 4, c['y'], 4, c['h'])):
+                n += count(img, cx, b)[0]
+            judge(f'{label} · edge', n >= MIN_EDGE, f'{n}px of {c["edge"]}')
 
-        if c['grIcon'] and c['borda']:
-            # janela do grIcon: 25px, canto sup. esq. (ou centralizada no
-            # groupCenter), afastada 3px da borda e antes do spacingLeft=30
+        if c['grIcon'] and c['edge']:
+            # grIcon window: 25px, top-left corner (or centered in
+            # groupCenter), 3px off the edge and before spacingLeft=30
             if c['shapeClass'] == 'groupCenter':
                 gx = c['x'] + c['w'] / 2 - 12
             else:
                 gx = c['x'] + 3
-            n, _ = contar(img, caixa(gx, c['y'] + 3, 22, 21), hex2rgb(c['borda']))
-            julgar(f'{rot} · grIcon', n >= MIN_GLIFO,
-                   f'{n}px de {c["borda"]} em {c["grIcon"]}')
+            n, _ = count(img, box(gx, c['y'] + 3, 22, 21), hex2rgb(c['edge']))
+            judge(f'{label} · grIcon', n >= MIN_GLYPH,
+                   f'{n}px of {c["edge"]} in {c["grIcon"]}')
 
-        f = c['filho']
-        checar_icone(f'{rot} · filho aninhado', f, f['fill'], f['glifo'], 'svc')
+        f = c['child']
+        check_icon(f'{label} · nested child', f, f['fill'], f['glyph'], 'svc')
 
     print()
-    if falhas:
-        print(f'{len(falhas)} falha(s) de {ok + len(falhas)} checagens.')
+    if failures:
+        print(f'{len(failures)} failure(s) out of {ok + len(failures)} checks.')
         sys.exit(1)
-    print(f'todas as {ok} checagens de pixel passaram — nenhum shape saiu caixa vazia.')
+    print(f'all {ok} pixel checks passed — no shape came out as an empty box.')
 
 
 if __name__ == '__main__':

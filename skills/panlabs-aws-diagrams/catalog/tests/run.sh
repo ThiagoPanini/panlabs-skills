@@ -1,50 +1,51 @@
 #!/usr/bin/env bash
-# Suite do catálogo, ponta a ponta.
+# End-to-end catalog suite.
 #
-#   ./tests/run.sh [repo-drawio] [binario-drawio]
+#   ./tests/run.sh [drawio-repo] [drawio-binary]
 #
-# Duas camadas, e a diferença entre elas importa:
+# Two layers, and the difference between them matters:
 #
-#   1. check-catalog     — estática, sem renderizar. Roda em qualquer máquina.
-#   2. render + verificar — precisa do draw.io headless. É DEPENDÊNCIA DE
-#      DESENVOLVIMENTO: a skill publicada não renderiza nada. Se o binário não
-#      existir, a suite avisa e passa só a camada estática, em vez de falhar.
+#   1. check-catalog     — static, no rendering. Runs on any machine.
+#   2. render + verify    — needs draw.io headless. This is a DEVELOPMENT
+#      DEPENDENCY: the published skill doesn't render anything. If the binary
+#      doesn't exist, the suite warns and passes only the static layer, instead
+#      of failing.
 set -uo pipefail
 
-AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CAT="$(dirname "$AQUI")"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CATALOG_DIR="$(dirname "$HERE")"
 REPO="${1:-/tmp/drawio}"
 DRAWIO="${2:-$HOME/.local/opt/drawio/squashfs-root/drawio}"
 
-falhou=0
+failed=0
 
-echo "== 1. checagens estáticas =="
+echo "== 1. static checks =="
 if [ -d "$REPO" ]; then
-  node "$CAT/tools/check-catalog.cjs" "$REPO" || falhou=1
+  node "$CATALOG_DIR/tools/check-catalog.cjs" "$REPO" || failed=1
 else
-  echo "   (repo do draw.io ausente em $REPO — round-trip pulado)"
-  node "$CAT/tools/check-catalog.cjs" || falhou=1
+  echo "   (draw.io repo missing at $REPO — round-trip skipped)"
+  node "$CATALOG_DIR/tools/check-catalog.cjs" || failed=1
 fi
 
 echo
-echo "== 2. amostra =="
-node "$CAT/tools/render-sample.cjs" || falhou=1
+echo "== 2. sample =="
+node "$CATALOG_DIR/tools/render-sample.cjs" || failed=1
 
 echo
-echo "== 3. render + verificação por pixel =="
+echo "== 3. render + pixel verification =="
 if [ ! -x "$DRAWIO" ]; then
-  echo "   draw.io headless não encontrado em $DRAWIO — render pulado."
-  echo "   (dependência de desenvolvimento: draw.io Desktop AppImage + xvfb;"
-  echo "    tools/drawio.cjs é quem sabe onde o binário mora)"
+  echo "   draw.io headless not found at $DRAWIO — render skipped."
+  echo "   (development dependency: draw.io Desktop AppImage + xvfb;"
+  echo "    tools/drawio.cjs is the one that knows where the binary lives)"
 else
   xvfb-run -a "$DRAWIO" -x -f png -s 2 --no-sandbox --disable-gpu \
-    -o "$AQUI/sample.png" "$AQUI/sample.drawio" 2>/dev/null
-  python3 "$CAT/tools/verify-render.py" "$AQUI/sample.png" "$AQUI/sample.manifest.json" || falhou=1
+    -o "$HERE/sample.png" "$HERE/sample.drawio" 2>/dev/null
+  python3 "$CATALOG_DIR/tools/verify-render.py" "$HERE/sample.png" "$HERE/sample.manifest.json" || failed=1
 fi
 
 echo
-if [ "$falhou" -ne 0 ]; then
-  echo "SUITE VERMELHA"
+if [ "$failed" -ne 0 ]; then
+  echo "SUITE RED"
   exit 1
 fi
-echo "suite verde"
+echo "suite green"

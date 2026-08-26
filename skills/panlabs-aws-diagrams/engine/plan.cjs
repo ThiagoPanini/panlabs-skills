@@ -366,6 +366,221 @@ function swallowsNonMember(model, gridPos, f, x1, y1, x2, y2) {
   return false;
 }
 
+/**
+ * #30 — every outsider root's and descendant's box, in the SAME grid-space
+ * `gridPositions` uses (the cloud's own top-left is the origin). An outsider
+ * sits at a negative x by construction — see `layout.cjs`'s `layoutOutsiders`
+ * — so no extra bookkeeping is needed to tell the two apart.
+ */
+function outsiderPositions(g) {
+  const abs = new Map();
+  if (!g.outsiders) return abs;
+  for (const n of g.outsiders.order) {
+    const p = g.outsiders.pos.get(n.id);
+    abs.set(n.id, p);
+    const r = g.outsiders.interno.get(n.id);
+    if (!r.children) continue;             // a leaf — no descendants to place
+    (function tier(node, base) {
+      for (const c of node.children || []) {
+        const a = { x: base.x + c.x, y: base.y + c.y, w: c.width, h: c.height };
+        abs.set(c.id, a);
+        if (c.children && c.children.length) tier(c, a);
+      }
+    })(r, p);
+  }
+  return abs;
+}
+
+/**
+ * #30 — the outsiders' own cells. Root tier at the page level (`parent: '1'`,
+ * same as an account in `accountPlan`); a container outsider's isolated ELK
+ * result recurses exactly like `elkPlan`/`accountPlan`'s own `tier()`, and its
+ * INTERNAL edges (both ends inside the same outsider) come straight from that
+ * ELK result — everything that crosses OUT of an outsider is `outsiderEdges`'s
+ * job, drawn after this.
+ */
+function drawOutsiders(layoutPlan, model, d, res, g, mo) {
+  const fromGridToPage = toPage({ x: mo.x + g.outsiders.leftMargin, y: mo.topo });
+  const gridSpace = outsiderPositions(g);
+
+  for (const n of g.outsiders.order) {
+    const p = gridSpace.get(n.id);
+    const page = fromGridToPage(p);
+    const meta = g.outsiders.boxes.get(n.id);
+    layoutPlan.cells.push({
+      kind: 'vertice', id: n.id, parent: '1',
+      label: meta.container ? (n.label || '') : meta.label,
+      style: meta.style,
+      geo: { x: page.x, y: page.y, w: p.w, h: p.h },
+    });
+
+    const r = g.outsiders.interno.get(n.id);
+    if (!r.children) continue;             // a leaf — nothing further to draw
+
+    (function tier(node, parentId) {
+      for (const c of node.children || []) {
+        const m = g.outsiders.boxes.get(c.id);
+        const modelNode = d.t.byId.get(c.id);
+        layoutPlan.cells.push({
+          kind: 'vertice', id: c.id, parent: parentId,
+          label: m.container ? (modelNode.label || '') : m.label,
+          style: m.style,
+          geo: { x: c.x, y: c.y, w: c.width, h: c.height },
+        });
+        if (c.children && c.children.length) tier(c, c.id);
+      }
+    })(r, n.id);
+
+    const boxPage = id => { const b = gridSpace.get(id); return { ...fromGridToPage(b), w: b.w, h: b.h }; };
+    for (const e of r.edges || []) {
+      const edge = d.edges.find(x => x.id === e.id);
+      const sec = (e.sections || [])[0];
+      if (!edge || !sec) continue;
+      const eshift = toPage({ x: page.x, y: page.y });
+      const anc = {
+        output: anchor(boxPage(edge.from), eshift(sec.startPoint)),
+        input: anchor(boxPage(edge.to), eshift(sec.endPoint)),
+      };
+      layoutPlan.cells.push({
+        kind: 'edge', id: e.id, parent: '1', from: edge.from, to: edge.to,
+        label: edgeLabel(edge), style: edgeStyle(edge, anc, res.tema),
+        points: (sec.bendPoints || []).map(eshift),
+      });
+    }
+  }
+}
+
+/**
+ * #30 — edges that touch an outsider: outsider↔outsider, or outsider↔grid.
+ * An edge fully inside ONE outsider's own subtree was already drawn by
+ * `drawOutsiders`, straight from that outsider's own ELK result.
+ *
+ * A LOCAL detour (a short jog around whichever subnet is "in the way") isn't
+ * enough here — measured on `outside-vpc-services`: the jog clears the first
+ * blocking subnet, but the segment from there to the target's own anchor
+ * still runs straight through it, because that segment was never checked.
+ * `gridEdges` never hits this: its own detours stay inside the grid, where
+ * the SAME two ends bound every segment.
+ *
+ * The route that actually works is the one #24 already measured for the
+ * grid's own cross-zone edges (`tools/measure-fan.cjs`): don't cut through
+ * the middle, go around the OUTSIDE. In column mode a band is a full-HEIGHT
+ * strip, so "outside" means a row below every band — north was measured too
+ * and rejected: it runs into the title block, which owns everything above
+ * y=0 that isn't the grid's own `HEAD`/`AZ_LANE` reserve. In raia mode a
+ * band is a full-WIDTH strip, so "outside" means a column past every VPC —
+ * which, for an outsider, is simply the side it already lives on (#5's O19).
+ * A leg bound by the SAME axis as its own end never crosses anything that
+ * isn't its own: the leg at the outsider's own coordinate only ever touches
+ * what's already west of the grid, and the leg at the target's own center
+ * only ever touches its own column/lane, because columns and lanes don't
+ * overlap each other by construction.
+ *
+ * KNOWN GAP: entering a column from the south assumes the target is the
+ * BOTTOM-most role sharing that column — true whenever a zone holds one role
+ * (every case #30 was asked to unblock), but a role stacked ABOVE another in
+ * the same zone would need the same free-side search `accountPlan` already
+ * has for a sibling account. Not measured to occur anywhere in the corpus;
+ * left named rather than guessed at.
+ */
+function outsiderEdges(layoutPlan, model, d, res, g, mo) {
+  if (!d.edges.length) return;
+  const fromGridToPage = toPage({ x: mo.x + g.outsiders.leftMargin, y: mo.topo });
+
+  const rootOf = new Map();
+  for (const n of g.outsiders.order) {
+    rootOf.set(n.id, n.id);
+    (function walk(id) { for (const k of d.t.filhos.get(id)) { rootOf.set(k.id, n.id); walk(k.id); } })(n.id);
+  }
+
+  const outAbs = outsiderPositions(g);
+  const gridAbs = gridPositions(model, g);
+  const west = Math.min(...g.outsiders.order.map(n => outAbs.get(n.id).x)) - 40;
+  const south = g.fim + 40;
+
+  const crossing = d.edges.filter(a => {
+    const rootA = rootOf.get(a.from), rootB = rootOf.get(a.to);
+    return (rootA || rootB) && !(rootA && rootB && rootA === rootB);
+  });
+
+  // #30's own A6.1 — more than one of these edges leaving the SAME outsider
+  // exits at the exact same point (its box center) unless spread apart, and
+  // two edges from one point are indistinguishable. Grouped by whichever
+  // outsider each edge touches, spread evenly along that box's own side.
+  const fanKey = a => rootOf.get(a.from) || rootOf.get(a.to);
+  const groups = new Map();
+  for (const a of crossing) {
+    const k = fanKey(a);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(a);
+  }
+  const fanOf = new Map();
+  for (const list of groups.values()) {
+    list.sort((x, y) => String(x.id).localeCompare(String(y.id)));
+    for (const [i, a] of list.entries())
+      fanOf.set(a.id, list.length > 1 ? 0.3 + 0.4 * i / (list.length - 1) : 0.5);
+  }
+
+  const push = (a, anc, points) => layoutPlan.cells.push({
+    kind: 'edge', id: a.id, parent: '1', from: a.from, to: a.to,
+    label: edgeLabel(a), style: edgeStyle(a, anc, res.tema),
+    points: points.map(fromGridToPage),
+  });
+
+  for (const a of crossing) {
+    const rootA = rootOf.get(a.from), rootB = rootOf.get(a.to);
+    const o = rootA ? outAbs.get(a.from) : gridAbs.get(a.from);
+    const dst = rootB ? outAbs.get(a.to) : gridAbs.get(a.to);
+    if (!o || !dst) continue;
+    const fy = fanOf.get(a.id);
+
+    if (rootA && rootB) {   // both outsiders: the column they're stacked in is already clear
+      const forward = dst.x >= o.x;
+      const anc = { output: { x: forward ? 1 : 0, y: fy }, input: { x: forward ? 0 : 1, y: fy } };
+      const y0 = o.y + o.h * fy, y1 = dst.y + dst.h * fy;
+      push(a, anc, Math.abs(y0 - y1) > 0.5 ? [{ x: west, y: y0 }, { x: west, y: y1 }] : []);
+      continue;
+    }
+
+    const outsiderIsOrigin = !!rootA;
+    const outEnd = outsiderIsOrigin ? o : dst;
+    const gridEnd = outsiderIsOrigin ? dst : o;
+    const outExitX = outsiderIsOrigin ? outEnd.x + outEnd.w : outEnd.x;
+
+    // Every chain below is built OUTSIDER-FIRST (the shape when the
+    // outsider is `a.from`) and reversed when it's `a.to` instead — the
+    // waypoints have to walk from `a.from` to `a.to`, in that order, or the
+    // implicit final segment connects the wrong pair of ends.
+    if (g.raia) {
+      // zones are Y-stacked, full WIDTH — "outside" is west, same side the
+      // outsider already lives on: drop/rise straight there, at ITS x, then
+      // enter the target horizontally at ITS own y (its own lane's only).
+      const outY = outEnd.y + outEnd.h * fy, gridY = gridEnd.y + gridEnd.h / 2;
+      const chain = [{ x: outExitX, y: outY }, { x: west, y: outY }, { x: west, y: gridY }];
+      const anc = outsiderIsOrigin
+        ? { output: { x: 1, y: fy }, input: { x: 0, y: 0.5 } }
+        : { output: { x: 0, y: 0.5 }, input: { x: 1, y: fy } };
+      push(a, anc, outsiderIsOrigin ? chain : [...chain].reverse());
+    } else {
+      // zones are X-columns, full HEIGHT — "outside" is south of every band
+      // (never north — see the header), then straight up into the target's
+      // OWN column center: no other column shares that x. The Y-adjustment
+      // down to the safe row happens at `west`, NOT at the outsider's own
+      // edge — two outsiders share a column, and a sibling can sit between
+      // one of them and the safe row (measured: banlist's own "checks"
+      // edges crossed agent's box before this, same shape as raia's own
+      // west-first adjustment above).
+      const outY = outEnd.y + outEnd.h * fy;
+      const targetCenterX = gridEnd.x + gridEnd.w / 2;
+      const chain = [{ x: west, y: outY }, { x: west, y: south }, { x: targetCenterX, y: south }];
+      const anc = outsiderIsOrigin
+        ? { output: { x: 1, y: fy }, input: { x: 0.5, y: 1 } }
+        : { output: { x: 0.5, y: 1 }, input: { x: 1, y: fy } };
+      push(a, anc, outsiderIsOrigin ? chain : [...chain].reverse());
+    }
+  }
+}
+
 function gridPlan(model, d, res, g, opts = {}) {
   const mo = frame(res);
   const p = paint(res);
@@ -378,12 +593,18 @@ function gridPlan(model, d, res, g, opts = {}) {
   const cloudWidth = g.larguraGrade + 4 * f.PAD;
   const cN = res.container(cloud || { id: 'cloud', kind: 'cloud' });
   const cloudId = cloud ? cloud.id : 'aws-cloud';
+  // #30: a column of outsiders shifts the cloud right to make room, but
+  // doesn't touch a single coordinate inside it — see `layoutOutsiders`.
+  const leftMargin = g.outsiders ? g.outsiders.leftMargin : 0;
+  const cloudX = mo.x + leftMargin;
 
   layoutPlan.cells.push({
     kind: 'vertice', id: cloudId, parent: '1',
     label: (cloud && cloud.label) || 'AWS Cloud', style: cN.style,
-    geo: { x: mo.x, y: mo.topo, w: cloudWidth, h: g.fim + f.PAD },
+    geo: { x: cloudX, y: mo.topo, w: cloudWidth, h: g.fim + f.PAD },
   });
+
+  if (g.outsiders) drawOutsiders(layoutPlan, model, d, res, g, mo);
 
   const top = Math.min(...[...g.vpcBox.values()].map(b => b.y));
   const left = Math.min(...[...g.vpcBox.values()].map(b => b.x));
@@ -498,8 +719,9 @@ function gridPlan(model, d, res, g, opts = {}) {
   // path C: whoever knows where the grid's lanes are is whoever built the
   // grid.
   gridEdges(layoutPlan, model, d, res, g, opts);
+  if (g.outsiders) outsiderEdges(layoutPlan, model, d, res, g, mo);
 
-  const widthOf = mo.x * 2 + cloudWidth;
+  const widthOf = mo.x * 2 + leftMargin + cloudWidth;
   const end = footer(layoutPlan, model, widthOf - 2 * mo.x, res, mo.topo + g.fim + f.PAD);
   layoutPlan.width = widthOf;
   layoutPlan.height = end + mo.rodape;

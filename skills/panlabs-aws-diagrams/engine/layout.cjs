@@ -1336,10 +1336,84 @@ async function porContas(model, d, res) {
   };
 }
 
+/**
+ * Path B extension (#30) — outsiders around the grid's cloud box.
+ *
+ * Same division of labor as path C: whoever has no zone or subnet doesn't
+ * fit the grid's own layout, so each outsider ROOT is laid out on its own —
+ * `res.leaf` for a leaf, `layoutDaConta` for a container (it reads only
+ * `no.id` and `d.t.filhos`, nothing account-specific, so it works unchanged
+ * for a `region`/`security-group`/`group` root too) — then stacked in a
+ * column to the LEFT of the cloud, the entry side by #5's O19.
+ *
+ * The cloud's own math doesn't change: `porGrade` still owns every VPC/subnet
+ * coordinate, in the SAME space it always has (the cloud's own top-left is
+ * still (0,0)). What moves is where that box gets DRAWN — `plan.cjs` shifts
+ * it right by `leftMargin` — so an outsider's position is just as valid a
+ * negative-x offset from that same origin, and every existing grid-internal
+ * coordinate stays byte-identical when there are no outsiders to draw.
+ */
+async function layoutOutsiders(model, d, res, g, outsiders) {
+  const elk = new ELK();
+  const boxes = new Map();
+  const metrica = metricaDeRotulo(model, d, res);
+  const notes = notasPorPai(model, d, res, boxes);
+
+  const order = [...outsiders]
+    .sort((a, b) => String(a.label || a.id).localeCompare(String(b.label || b.id), 'pt'));
+
+  const interno = new Map();
+  for (const n of order) {
+    if (LEAVES.has(n.kind)) {
+      const f = res.leaf(n);
+      boxes.set(n.id, { container: false, ...f });
+      interno.set(n.id, { width: f.boxW || f.shapeW, height: f.shapeH });
+      continue;
+    }
+    let measure = new Map(), r = null;
+    for (let pass = 0; pass < 2; pass++) {
+      r = await layoutDaConta(elk, n, d, res, boxes, metrica, measure, notes);
+      const next = new Map();
+      const def = deficitDeTitulo(n, boxes.get(n.id), r.width, res);
+      if (def > 0) next.set(n.id, def);
+      (function measureTitles(node) {
+        for (const child of node.children || []) {
+          const no = d.t.byId.get(child.id);
+          const dd = deficitDeTitulo(no, boxes.get(child.id), child.width, res);
+          if (dd > 0) next.set(child.id, dd);
+          measureTitles(child);
+        }
+      })(r);
+      if (!next.size) break;
+      measure = next;
+    }
+    interno.set(n.id, r);
+  }
+
+  const GAP = folgas(res.tema);
+  const ROW_GAP = 40;   // same vertical rhythm as the accounts path's outsider column
+  const columnWidth = Math.max(...order.map(n => interno.get(n.id).width));
+  const totalHeight = order.reduce((s, n) => s + interno.get(n.id).height, 0) +
+    Math.max(0, order.length - 1) * ROW_GAP;
+
+  const pos = new Map();
+  let y = (g.fim - totalHeight) / 2;
+  for (const n of order) {
+    const box = interno.get(n.id);
+    // right-aligned: whichever edge faces the cloud sits the same distance
+    // away regardless of the outsider's own width
+    pos.set(n.id, { x: -GAP.COL_GAP - box.width, y, w: box.width, h: box.height });
+    y += box.height + ROW_GAP;
+  }
+
+  return { pos, interno, boxes, order, leftMargin: GAP.COL_GAP + columnWidth, notes };
+}
+
 module.exports = {
   porElk, porGrade, porContas, ordemDeContas, ordemDeRaias, eixoDaGrade, calhaDaLinha,
   rankOu, metricaDeRotulo,
   textoDaAresta, calhaDaFaixa, ROOT_OPTIONS, corredorLivre, sentidoDeLeitura,
   notasPorPai, idDaNota, NOTE_W, NOTE_MIN_H,
   AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, GAP_IRMA, GAP_OU, LANE, OU_LANE, clean, folgas,
+  layoutOutsiders,
 };

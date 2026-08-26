@@ -182,19 +182,31 @@ async function generate(model, opts = {}) {
   } else if (d.az.draw) {
     layoutPath = 'grade';
     // The grid path is a NETWORK view: it knows how to draw cloud › VPC ›
-    // subnet › content and nothing else. Silencing a container it doesn't
-    // model would produce a diagram that omits part of the architecture with
-    // no warning — exactly the kind of silent lie the rubric (#8) calls A4.2.
+    // subnet › content, plus — since #30 — a COLUMN of outsiders around the
+    // cloud's own box (`dispor.layoutOutsiders`): any top-level node besides
+    // the cloud/VPC/subnet tree itself, leaf or container, laid out on its
+    // own and stacked to the cloud's left, the entry side by #5's O19. What
+    // still refuses is a node the grid genuinely can't place anywhere: not
+    // inside a subnet, and not inside one of those outsiders either —
+    // silencing it would produce a diagram that omits part of the
+    // architecture with no warning, exactly the kind of silent lie the
+    // rubric (#8) calls A4.2.
     const outsiders = model.nodes.filter(n =>
-      ['account', 'region', 'security-group', 'group'].includes(n.kind) ||
-      (['service', 'block', 'actor'].includes(n.kind) &&
-        !(n.inside && d.t.byId.get(n.inside) && d.t.byId.get(n.inside).kind === 'subnet')));
-    if (outsiders.length) {
+      !['cloud', 'vpc', 'subnet'].includes(n.kind) && n.inside === undefined);
+    const outsiderIds = new Set(outsiders.map(n => n.id));
+    const unsupported = model.nodes.filter(n => {
+      if (['cloud', 'vpc', 'subnet'].includes(n.kind) || n.inside === undefined) return false;
+      const parent = d.t.byId.get(n.inside);
+      if (parent && parent.kind === 'subnet') return false;               // the grid's own tree
+      return !d.t.ancestrais(n).some(a => outsiderIds.has(a.id));          // nested inside an outsider
+    });
+    if (unsupported.length) {
       const e = new Error('the grid path cannot yet draw these nodes');
-      e.erros = outsiders.map(n => `"${n.id}" (${n.kind}) — the AZ grid only models cloud › VPC › subnet › content`);
+      e.erros = unsupported.map(n => `"${n.id}" (${n.kind}) — the AZ grid only models cloud › VPC › subnet › content, plus a column of standalone outsiders (#30)`);
       throw e;
     }
     const g = await dispor.porGrade(model, d, res);
+    if (outsiders.length) g.outsiders = await dispor.layoutOutsiders(model, d, res, g, outsiders);
     layoutPlan = plan.gridPlan(model, d, res, g, opts);
     milestone('dispor', {
       eixo: g.eixo,
@@ -202,6 +214,7 @@ async function generate(model, opts = {}) {
       varredura: g.varreduraRaias.varridas
         ? `${g.varreduraRaias.varridas} permutations, cost ${g.varreduraRaias.custo}`
         : 'declared order',
+      ...(outsiders.length ? { outsiders: outsiders.map(n => n.id).join(',') } : {}),
     });
     report.avisos.push(`grid axis "${g.eixo}": ${g.whyAxis}`);
   } else {

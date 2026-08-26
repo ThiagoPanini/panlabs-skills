@@ -1,0 +1,29 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "outside-vpc-services",
+  "title": "Guardrails · managed agent and table outside the VPC",
+  "subtitle": "The grid path composes a column of outsiders around the cloud box (#30).",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "Guardrails VPC · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
+
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "inside": "vpc" },
+
+    { "id": "guardrail-a", "kind": "service", "service": "fargate", "label": "Guardrail task", "inside": "app-a" },
+    { "id": "guardrail-b", "kind": "service", "service": "fargate", "label": "Guardrail task", "inside": "app-b" },
+
+    { "id": "agent", "kind": "service", "service": "bedrock", "label": "Managed agent" },
+    { "id": "banlist", "kind": "service", "service": "dynamodb", "label": "Banlist table" }
+  ],
+
+  "edges": [
+    { "from": "agent", "to": "guardrail-a", "label": "invokes" },
+    { "from": "agent", "to": "guardrail-b", "label": "invokes" },
+    { "from": "guardrail-a", "to": "banlist", "label": "checks" },
+    { "from": "guardrail-b", "to": "banlist", "label": "checks" }
+  ]
+}

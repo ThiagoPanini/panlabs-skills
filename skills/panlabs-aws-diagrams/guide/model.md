@@ -15,7 +15,7 @@ coordenada.
 
 A escolha é deliberada: regra que depende de disciplina se perde na terceira
 sessão; **ausência de palavra, não**. É o mesmo movimento do vocabulário de tema,
-e é conferido mecanicamente por `tests/check-model-boundary.cjs`, validado com
+e é conferido mecanicamente por `check-model-boundary.cjs`, validado com
 experimento de controle — injetando `x` no esquema, tirando um
 `additionalProperties: false` e pondo `posicao` num modelo, a checagem acusa as
 três e sai vermelha.
@@ -41,7 +41,7 @@ mesmos nós, mais os nós que só a camada técnica tem.
 `elaboration@1` tem esquema próprio —
 [`../session/elaboration.schema.json`](../session/elaboration.schema.json) — desde o
 #37. `elaborar()` valida a FORMA do delta contra ele antes de aplicar qualquer
-regra de domínio, e `tests/check-single-schema.cjs` o varre junto dos outros três.
+regra de domínio, e `check-single-schema.cjs` o varre junto dos outros três.
 Os mapas (`casacos`, `dentro`, `refina`, `arestasCasaco`) ficam com valor solto no
 esquema — as chaves são ids imprevisíveis aqui, e a forma de cada valor (em
 particular a de um casaco técnico) é conferida de novo, já fundida no modelo

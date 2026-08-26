@@ -123,7 +123,7 @@ node tools/check-geometry.cjs <modelo.json>
 ```bash
 node -e "const {project}=require('./session/project.cjs');
   require('fs').writeFileSync('/tmp/proj.json',
-    JSON.stringify(project(require('./models/session/<caso>-logical.json'),'logical').model));"
+    JSON.stringify(project(require('./examples/session/<caso>-logical.json'),'logical').model));"
 node tools/check-geometry.cjs /tmp/proj.json
 ```
 
@@ -214,8 +214,11 @@ Roda **depois do desenho**, porque estas não são respostas a perguntas — sã
 
 ```bash
 node tools/review-gaps.cjs <modelo.json>       # o laudo
-node tools/review-gaps.cjs --corpus            # a régua contra o corpus
 ```
+
+A régua contra o corpus inteiro — `--corpus` — saiu com ele no #44: mora em
+`workbench/panlabs-aws-diagrams/tests/check-gaps.cjs`, e é lá que o L2/L3
+roda.
 
 São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura que o
 modelo precisa afirmar para a regra ter o que dizer. Onde o modelo não afirma, a
@@ -278,7 +281,7 @@ e cada um matou um falso positivo concreto:
 | egresso conta **ligado**, não só contido | no `hub-tgw-3-accounts` o Transit Gateway **é** a saída controlada e mora fora das VPCs que serve. A regra reprovava as duas spokes pelo motivo que as torna certas |
 | `spof` **só os maximais** | numa cadeia toda ligação é ponto de articulação, com os órfãos encaixados. A `predictive-fleet` acusava **seis** num modelo de 11 nós — pior que o protótipo que motivou esta calibração inteira |
 
-A régua está em `tests/check-gaps.cjs`, e ela cobra dos **dois lados**: toda
+A régua está em `check-gaps.cjs`, na régua do workspace irmão, e ela cobra dos **dois lados**: toda
 regra tem de disparar em ≥1 modelo do corpus **e** calar em ≥1. Regra que dispara
 em todos não está medindo nada — está afirmando uma constante.
 

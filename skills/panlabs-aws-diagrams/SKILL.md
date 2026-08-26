@@ -56,7 +56,7 @@ Resolva todo nome de serviço pelo catálogo **antes** de escrevê-lo:
 node catalog/aws-shapes.cjs "kinesis data firehose" opensearch "availability zone"
 ```
 
-Escreva um `session@1` com `stage: "technical"` — um IR, dois casacos sobre os mesmos nós: o lógico diz a **capacidade**, o técnico diz o **serviço** e o `resource`. **O contrato é [`session/schema.json`](session/schema.json)**, e é ele que descreve os dois casacos campo a campo; [`guide/model.md`](guide/model.md) traz o que o esquema não consegue dizer sobre si mesmo. Em [`models/session/`](models/session/) o corpus guarda o par do **arco sequencial** — a sessão lógica mais o delta —, e não um exemplo já no estágio técnico: para ver um, aplique o delta com o [one-liner de `elaborate`](#quando-o-arco-volta-a-ser-sequencial) e leia o resultado.
+Escreva um `session@1` com `stage: "technical"` — um IR, dois casacos sobre os mesmos nós: o lógico diz a **capacidade**, o técnico diz o **serviço** e o `resource`. **O contrato é [`session/schema.json`](session/schema.json)**, e é ele que descreve os dois casacos campo a campo; [`guide/model.md`](guide/model.md) traz o que o esquema não consegue dizer sobre si mesmo. Em [`examples/session/`](examples/session/) fica o único par já pronto — a sessão lógica mais o delta do **arco sequencial** —, e não um exemplo já no estágio técnico: para ver um, aplique o delta com o [one-liner de `elaborate`](#quando-o-arco-volta-a-ser-sequencial) e leia o resultado.
 
 Grave a sessão e o descritivo fora desta árvore, e rode o verbo **de dentro do projeto que vai receber o diagrama** — é o diretório corrente que decide o destino:
 
@@ -135,13 +135,12 @@ node -e "const {elaborate}=require('./session/elaborate.cjs');
 |---|---|
 | `node tools/case.cjs <sessao.json> <slug> --brief <b.txt>` | o turno 2: as duas abas e o `case.md`, em `docs/architecture/diagrams/<slug>/` do projeto de quem chamou. **Rode do diretório desse projeto** — o destino sobe do diretório corrente. `--gate` (padrão `truthfulness`) · `--image` |
 | `node engine/generate.cjs <m.json> --output <x.drawio>` | desenha um `model@1` direto. `--theme light\|dark\|corporate` · `--flow solid\|dashed\|animated` · `--gate none\|truthfulness\|failure\|strict` · `--explain` |
-| `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda o corpus, `--json` para ler no código, `--theme` avalia o tema pedido (padrão `light`) |
-| `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas. `--corpus` roda a régua inteira |
+| `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda os exemplos que a skill embarca, `--json` para ler no código, `--theme` avalia o tema pedido (padrão `light`) |
+| `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas |
 | `node catalog/aws-shapes.cjs <nome>...` | resolve nome → shape, com as correções aplicadas |
 | `node tools/approve.cjs <sessao.json>` | o arco sequencial: aprova a vista lógica e grava o `.drawio` que retoma. `--by` · `--candidate` · `--at` · `--output` |
 | `node tools/resume.cjs <arq.drawio>` | reconhece o arquivo, classifica as páginas e imprime o briefing. Com `--delta <d.json>`, elabora a vista técnica e grava as duas |
 | `node session/publish.cjs <arq.drawio>` | a cópia que sai de casa: poda o que é sobre **pessoas** e sobre **caminhos não tomados**, e mantém o que é sobre a arquitetura desenhada |
-| `./tests/run.sh` | a régua inteira, em 8 camadas |
 
 O `.drawio` do caso carrega a deliberação — candidatas descartadas com o motivo, achados recusados, quem aprovou —, tudo legível em *Extras › Editar diagrama*. **O arquivo que retoma e o arquivo que circula não são o mesmo arquivo**: para mandar para fora, gere a cópia publicada.
 
@@ -163,7 +162,7 @@ Recusa é **para o agente, não para o humano**: é ida e volta de máquina, nã
 
 ## A régua
 
-`./tests/run.sh` — 8 camadas. As sete primeiras rodam em qualquer máquina; só o render precisa do draw.io headless e, sem o binário, avisa e segue. O render é dependência de **desenvolvimento**; a skill publicada não carrega nenhuma.
+A suíte de testes e o corpus de modelos que ela come não são lidos nem rodados por quem executa a skill — moram no workspace irmão, fora desta árvore, e apontam para dentro dela: `workbench/panlabs-aws-diagrams/tests/run.sh`, 8 camadas. As sete primeiras rodam em qualquer máquina; só o render precisa do draw.io headless e, sem o binário, avisa e segue. O render é dependência de **desenvolvimento**; a skill publicada não carrega nenhuma.
 
 Uma suíte verde sobre a semântica **não substitui** o portão sobre a geometria, e nenhum dos dois substitui olhar o PNG — o corpus tem caso de 24 checagens estáticas verdes com o ícone errado no desenho.
 
@@ -177,4 +176,4 @@ Uma suíte verde sobre a semântica **não substitui** o portão sobre a geometr
 | o laudo acusar, ou o portão barrar | [`guide/report.md`](guide/report.md) |
 | pedirem fundo escuro, cor da casa, fluxo animado ou uma cópia para circular | [`guide/visual.md`](guide/visual.md) |
 
-Os contratos são a fonte da verdade e estão versionados — leia o arquivo, não uma cópia dele: [`schema.json`](schema.json) (`model@1`, o que o motor come), [`session/schema.json`](session/schema.json) (`session@1`, o que persiste entre conversas e o que o verbo de caso lê), [`theme/schema.json`](theme/schema.json) (`theme@1`, o vocabulário fechado de estilo) e [`session/elaboration.schema.json`](session/elaboration.schema.json) (`elaboration@1`, o delta da fase técnica). Os quatro são varridos por `tests/check-single-schema.cjs`, e `model@1` e o casaco técnico de `session@1` têm paridade de campo conferida por `tests/check-technical-parity.cjs`.
+Os contratos são a fonte da verdade e estão versionados — leia o arquivo, não uma cópia dele: [`schema.json`](schema.json) (`model@1`, o que o motor come), [`session/schema.json`](session/schema.json) (`session@1`, o que persiste entre conversas e o que o verbo de caso lê), [`theme/schema.json`](theme/schema.json) (`theme@1`, o vocabulário fechado de estilo) e [`session/elaboration.schema.json`](session/elaboration.schema.json) (`elaboration@1`, o delta da fase técnica). Os quatro são varridos por `check-single-schema.cjs`, e `model@1` e o casaco técnico de `session@1` têm paridade de campo conferida por `check-technical-parity.cjs` — os dois na régua do workspace irmão.

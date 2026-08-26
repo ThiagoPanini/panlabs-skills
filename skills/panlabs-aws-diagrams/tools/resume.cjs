@@ -56,8 +56,8 @@ const HELP = `
                                  Without it, the command only prints the briefing (step 1).
     --output <y.drawio>         where to save both views   (default: the file itself)
 
-  With no argument at all, runs the corpus case (output/retail.drawio with
-  models/session/retail-elaboration.json).
+  With no argument at all, runs the shipped example (output/retail.drawio with
+  examples/session/retail-elaboration.json).
 
   Exit codes:
     0  all good
@@ -89,7 +89,7 @@ async function main() {
   // and `elaborate` would refuse it via `about`, but with a message that does not
   // explain the cause. Better not to get there.
   const delta = opts.delta
-    || (positional.length === 0 ? path.join(ROOT, 'models', 'session', 'retail-elaboration.json') : null);
+    || (positional.length === 0 ? path.join(ROOT, 'examples', 'session', 'retail-elaboration.json') : null);
 
   if (!fs.existsSync(input)) {
     console.error(`\n  ✗ could not find ${input}`);

@@ -404,9 +404,11 @@ const NAMES = ['spof', 'single-az', 'egress-sem-controle', 'dado-em-subnet-publi
 /**
  * The corpus models, in order — and it lives here, alongside the rules, for a
  * reason of correctness, not tidiness: the criterion's `L2`/`L3` (*every rule
- * fires in ≥1 model AND stays mute in ≥1*) only means something if the ruler
- * and the CLI sweep **the same corpus**. Two directory listings is the door
- * through which the ruler goes green against half of it.
+ * fires in ≥1 model AND stays mute in ≥1*) only means something if whoever
+ * measures it sweeps **the whole corpus**, not a hand-copied subset. Until
+ * #44 this was shared with `tools/review-gaps.cjs --corpus`, which moved out
+ * with the corpus itself; the one caller left is the workbench ruler
+ * (`check-gaps.cjs`), and this stays the single list either way.
  */
 const CORPUS_DIRS = ['models', 'models/refusal'];
 

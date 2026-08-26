@@ -21,6 +21,9 @@ const { generate } = require('../engine/generate.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, 'output', 'themes');
+// The corpus moved to the workbench sibling in #44; MODELS_DIR is how the
+// ruler (which knows where that is) tells this tool where to read from.
+const MODELS_DIR = process.env.MODELS_DIR || path.join(ROOT, 'models');
 
 const VARIANTS = [
   { name: 'a-light', model: 'orders-serverless.json', theme: 'light' },
@@ -36,7 +39,7 @@ const VARIANTS = [
 async function main() {
   fs.mkdirSync(DIR, { recursive: true });
   for (const v of VARIANTS) {
-    const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', v.model), 'utf8'));
+    const m = JSON.parse(fs.readFileSync(path.join(MODELS_DIR, v.model), 'utf8'));
     const r = await generate(m, { tema: v.theme, flow: v.flow });
     fs.writeFileSync(path.join(DIR, v.name + '.drawio'), r.xml);
     console.log(`  ${v.name.padEnd(18)} theme=${v.theme}${v.flow ? ` flow=${v.flow}` : ''}  ${r.xml.length} bytes`);

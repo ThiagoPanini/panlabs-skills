@@ -28,7 +28,10 @@ const contrast = require('../engine/contrast.cjs');
 
 const ROOT = path.join(__dirname, '..');
 fs.mkdirSync(path.join(ROOT, 'output', 'themes'), { recursive: true });
-const MODEL = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'orders-serverless.json'), 'utf8'));
+// The corpus moved to the workbench sibling in #44; MODELS_DIR is how the
+// ruler (which knows where that is) tells this tool where to read from.
+const MODELS_DIR = process.env.MODELS_DIR || path.join(ROOT, 'models');
+const MODEL = JSON.parse(fs.readFileSync(path.join(MODELS_DIR, 'orders-serverless.json'), 'utf8'));
 
 /** Raw patch: what the vocabulary does not allow saying, said by force. */
 function patch(xml) {

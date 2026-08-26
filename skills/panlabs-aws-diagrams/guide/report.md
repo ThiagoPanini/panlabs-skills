@@ -6,7 +6,7 @@ O laudo sai **sempre**, em `relatorio.geometria` e no `--explain`. Bloquear é q
 ```bash
 node tools/check-geometry.cjs <modelo.json>          # o laudo, legível
 node tools/check-geometry.cjs <modelo.json> --json    # para ler no código
-node tools/check-geometry.cjs --examples              # o corpus inteiro
+node tools/check-geometry.cjs --examples              # os exemplos que a skill embarca
 node engine/generate.cjs <modelo.json> --gate truthfulness # bloqueia se o desenho mentir
 ```
 
@@ -142,7 +142,7 @@ nota de rodapé (sem sobre)  → limpo
 nota presa a nó (com sobre) → A1.5 e A1.12 acusam
 ```
 
-Nenhum modelo de `models/*.json` usa `sobre`, e por isso o corpus não pega — só o
+Nenhum modelo do corpus de desenvolvimento usa `sobre`, e por isso ele não pega — só o
 corpus de sessão usa, e o laudo dele não é asserido checagem a checagem. **É
 defeito das duas checagens, não do seu modelo**: a nota é objeto desenhado
 legítimo, e as duas precisam aprender a classe. Até lá, entra no piso.

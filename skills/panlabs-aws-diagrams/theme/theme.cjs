@@ -1,25 +1,26 @@
 'use strict';
 /**
- * Camada de tema — tokens FECHADOS -> style string por célula.
+ * Theme layer — CLOSED tokens -> style string per cell.
  *
- * Três fatos de pesquisa decidem a forma deste módulo:
+ * Three research facts decide this module's shape:
  *
- *  1. #4 §7 mediu os quatro níveis onde um estilo pode morar no draw.io e só
- *     DOIS viajam no arquivo: a style string por célula (nível D) e os atributos
- *     do `<mxGraphModel>` (nível D'). Folha `mxStylesheet` por nome, `defaultVertexStyle`
- *     e `currentVertexStyle` dependem da instalação de QUEM ABRE. Logo: tema é
- *     assado célula a célula, e não há alternativa.
+ *  1. #4 §7 measured the four levels where a style can live in draw.io and only
+ *     TWO travel with the file: the style string per cell (level D) and the
+ *     `<mxGraphModel>` attributes (level D'). A named `mxStylesheet` sheet,
+ *     `defaultVertexStyle`, and `currentVertexStyle` depend on the installation
+ *     of WHOEVER OPENS the file. So: theme is baked cell by cell, and there is
+ *     no alternative.
  *
- *  2. #5 mediu a camada normativa: cor de grupo, traço de grupo, cor de categoria
- *     e tamanho de ícone são preset da AWS, e mudá-los faz o diagrama LER ERRADO
- *     (a cor do grupo É a legenda — #5 §6.4). Então o tema não pode nomeá-los.
- *     Aqui isso não é regra de runtime: é ausência de palavra no esquema, o mesmo
- *     truque que o #11 usou para a fronteira de coordenadas.
+ *  2. #5 measured the normative layer: group color, group stroke, category
+ *     color, and icon size are AWS presets, and changing them makes the diagram
+ *     READ WRONG (the group's color IS the legend — #5 §6.4). So the theme
+ *     cannot name them. Here that's not a runtime rule: it's the absence of a
+ *     word in the schema, the same trick #11 used for the coordinate boundary.
  *
- *  3. A régua (tools/measure-ruler.cjs) mostrou que a paleta AWS é calibrada para
- *     branco puro: `#ED7100` só alcança 3:1 contra `#FFFFFF`. Portanto `fundo` é
- *     um INTERRUPTOR de dois estados, não um seletor de cor — e o segundo estado
- *     é o deck escuro que a própria AWS publica (#5 F3).
+ *  3. The ruler (tools/measure-ruler.cjs) showed that the AWS palette is
+ *     calibrated for pure white: `#ED7100` only reaches 3:1 against `#FFFFFF`.
+ *     So `background` is a two-state SWITCH, not a color picker — and the
+ *     second state is the dark deck that AWS itself publishes (#5 F3).
  */
 
 const fs = require('fs');
@@ -32,34 +33,35 @@ const SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'schema.json'), '
 const DIR = __dirname;
 
 /**
- * As paletas que a AWS entrega em variante Light/Dark — e SÓ elas.
+ * The palettes AWS ships in a Light/Dark variant — and ONLY those.
  *
- * #5 §3.2: no pacote oficial só os `Res_General-Icons` têm `_Light`/`_Dark`,
- * porque só eles são monocromáticos; os demais usam a cor da categoria, "designed
- * to be used on both light and dark backgrounds" (slide 15). A medição confirma
- * o desenho: `#232F3D` dá 1,23:1 num fundo escuro — some — enquanto toda cor de
- * categoria fica acima de 3:1 nos dois fundos. O draw.io tem uma variante só,
- * então quem inverte é o tema.
+ * #5 §3.2: in the official package only the `Res_General-Icons` have
+ * `_Light`/`_Dark`, because only they are monochrome; the rest use the
+ * category color, "designed to be used on both light and dark backgrounds"
+ * (slide 15). The measurement confirms the design: `#232F3D` gives 1.23:1 on
+ * a dark background — it vanishes — while every category color stays above
+ * 3:1 on both backgrounds. draw.io ships a single variant, so it's the theme
+ * that inverts.
  */
 const MONO_PALETTES = new Set(['general_resources', 'illustrations']);
 
 /**
- * O que o deck escuro da AWS muda, e nada além disso (#5 tabela 2.1 + N15):
- * a borda/ícone do `AWS Cloud` inverte, e os callouts invertem. As cores de
- * grupo são IDÊNTICAS nos dois decks.
+ * What the AWS dark deck changes, and nothing beyond that (#5 table 2.1 + N15):
+ * the `AWS Cloud` border/icon inverts, and the callouts invert. Group colors
+ * are IDENTICAL in both decks.
  */
 const NORMATIVE = {
   light:  { cloud: '#232F3E', mono: '#232F3E', callout: { background: '#232F3E', ink: '#FFFFFF' } },
   dark: { cloud: '#FFFFFF', mono: '#FFFFFF', callout: { background: '#FFFFFF', ink: '#232F3E' } },
 };
 
-/** Quanto da cor normativa do grupo entra no tingimento derivado. */
+/** How much of the group's normative color enters the derived tint. */
 const TINT = 0.10;
 
-/** Mistura linear em sRGB — não é composição perceptual; é o que o draw.io faz. */
+/** Linear mix in sRGB — not perceptual compositing; it's what draw.io does. */
 function mix(color, background, p) {
-  const canais = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-  const [a, b] = [canais(color), canais(background)];
+  const channels = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const [a, b] = [channels(color), channels(background)];
   return '#' + [0, 1, 2]
     .map(i => Math.round(a[i] * p + b[i] * (1 - p)).toString(16).padStart(2, '0'))
     .join('').toUpperCase();
@@ -78,19 +80,20 @@ const DEFAULT = {
     card: { revision: null },
   },
   dark: {
-    // `#1C1C1C` e não `#161E2D`: o retorno do #13 pediu um tom mais escuro e mais
-    // neutro, "próximo a #222222". Medido, `#222222` é 24% MAIS CLARO em luminância
-    // que o azul-noite que estava aqui — ele lê como mais escuro por ser neutro, não
-    // por ser escuro — e derruba a borda do Generic group para 2,97:1, um triz abaixo
-    // do piso de 3:1. `#1C1C1C` entrega o neutro pedido, é de fato mais escuro que os
-    // dois, e passa com 3,18:1.
+    // `#1C1C1C`, not `#161E2D`: #13's feedback asked for a darker, more neutral
+    // tone, "close to #222222". Measured, `#222222` is 24% LIGHTER in luminance
+    // than the night-blue that was here — it reads as darker only because it's
+    // neutral, not because it's dark — and it drops the Generic group border to
+    // 2.97:1, a hair below the 3:1 floor. `#1C1C1C` delivers the requested
+    // neutral, is genuinely darker than both, and passes at 3.18:1.
     page: { color: '#1C1C1C', margin: 32 },
     group:  { tint: 'derived' },
-    // `#AEB9C6` e não `#AAB7B8`: o segundo é literalmente o cinza que o draw.io usa
-    // como `fontColor` do VPC e que este ticket condenou por 2,06:1 no fundo claro.
-    // Reaproveitá-lo como tinta secundária do tema escuro (onde ele mede 8,09:1 e
-    // passaria) confunde duas coisas diferentes no mesmo hex — e torna impossível
-    // afirmar no pixel que o rótulo cinza do VPC não sobrou em lugar nenhum.
+    // `#AEB9C6`, not `#AAB7B8`: the second is literally the gray draw.io uses as
+    // the VPC's `fontColor`, which this ticket condemned at 2.06:1 on the light
+    // background. Reusing it as the dark theme's secondary ink (where it
+    // measures 8.09:1 and would pass) conflates two different things under the
+    // same hex — and makes it impossible to prove on the pixel that the VPC's
+    // gray label didn't survive anywhere.
     ink:  { strong: '#FFFFFF', weak: '#B4B4B4', halo: '#1C1C1C' },
     text:  { family: 'Arial,Helvetica', label: 12, group: 12, edge: 10, title: 19, subtitle: 12, qualifier: false },
     edge: { color: '#EDEDED', thickness: 1.6, tip: 'blockThin', corners: 12, jumps: 'arc', flow: 'solid' },
@@ -101,7 +104,7 @@ const DEFAULT = {
   },
 };
 
-// ------------------------------------------------------------------ carga
+// ------------------------------------------------------------------ load
 
 function merge(base, about) {
   const out = {};
@@ -112,166 +115,173 @@ function merge(base, about) {
   return out;
 }
 
-function readFile(idOuCaminho) {
-  const p = idOuCaminho.endsWith('.json') ? idOuCaminho : path.join(DIR, idOuCaminho + '.json');
+function readFile(idOrPath) {
+  const p = idOrPath.endsWith('.json') ? idOrPath : path.join(DIR, idOrPath + '.json');
   if (!fs.existsSync(p)) {
     const available = fs.readdirSync(DIR).filter(f => f.endsWith('.json') && f !== 'schema.json')
       .map(f => f.replace(/\.json$/, ''));
-    const e = new Error(`tema "${idOuCaminho}" não existe`);
-    e.erros = [`temas disponíveis: ${available.join(', ')}`];
+    const e = new Error(`theme "${idOrPath}" does not exist`);
+    e.erros = [`available themes: ${available.join(', ')}`];
     throw e;
   }
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
 /**
- * Carrega, valida contra o vocabulário fechado e funde com o padrão do `fundo`.
- * `herda` permite um tema dizer só o delta — a mesma lógica de "espelho + delta"
- * que o #17 usou no catálogo, para que mexer no padrão não apague a variação.
+ * Loads, validates against the closed vocabulary, and merges with the default
+ * for `background`. `inherits` lets a theme state only the delta — the same
+ * "mirror + delta" logic #17 used in the catalog, so that changing the
+ * default doesn't erase the variation.
  */
-function load(idOuCaminho = 'light', vistos = []) {
-  const bruto = readFile(idOuCaminho);
+function load(idOrPath = 'light', seen = []) {
+  const raw = readFile(idOrPath);
 
-  const erros = againstSchema(bruto, SCHEMA, SCHEMA);
-  if (erros.length) { const e = new Error(`tema "${idOuCaminho}" inválido`); e.erros = erros; throw e; }
+  const errors = againstSchema(raw, SCHEMA, SCHEMA);
+  if (errors.length) { const e = new Error(`theme "${idOrPath}" is invalid`); e.erros = errors; throw e; }
 
-  if (vistos.includes(bruto.id)) {
-    const e = new Error('ciclo de herança entre temas');
-    e.erros = [[...vistos, bruto.id].join(' -> ')];
+  if (seen.includes(raw.id)) {
+    const e = new Error('inheritance cycle between themes');
+    e.erros = [[...seen, raw.id].join(' -> ')];
     throw e;
   }
 
-  let base = DEFAULT[bruto.background];
-  if (bruto.inherits) {
-    const parent = load(bruto.inherits, [...vistos, bruto.id]);
-    if (parent.background !== bruto.background) {
-      const e = new Error(`tema "${bruto.id}" herda de "${bruto.inherits}", que tem outro fundo`);
-      e.erros = [`${bruto.background} != ${parent.background} — herdar através do interruptor normativo carregaria a tinta errada`];
+  let base = DEFAULT[raw.background];
+  if (raw.inherits) {
+    const parent = load(raw.inherits, [...seen, raw.id]);
+    if (parent.background !== raw.background) {
+      const e = new Error(`theme "${raw.id}" inherits from "${raw.inherits}", which has a different background`);
+      e.erros = [`${raw.background} != ${parent.background} — inheriting across the normative switch would carry over the wrong ink`];
       throw e;
     }
     base = parent.tokens;
   }
 
-  // `fundir` traz junto as chaves de identidade do arquivo; elas não são token e
-  // não devem viajar dentro de `panlabsTema` fingindo que são. `fundo` fica: é o
-  // interruptor normativo, e sem ele o payload não se reconstrói.
-  const { schema, id, label, because, inherits, ...tokens } = merge(base, bruto);
-  return build(bruto, tokens);
+  // `merge` pulls in the file's identity keys too; they aren't tokens and must
+  // not travel inside the theme's token payload pretending to be one.
+  // `background` stays: it's the normative switch, and without it the payload
+  // can't rebuild itself.
+  const { schema, id, label, because, inherits, ...tokens } = merge(base, raw);
+  return build(raw, tokens);
 }
 
 // -------------------------------------------------------- tokens -> style
 
-/** Aplica um mapa de chaves a uma style string preservando a ordem das demais. */
-function apply(style, chaves) {
+/** Applies a map of keys to a style string, preserving the order of the rest. */
+function apply(style, keys) {
   let s = style;
-  for (const [k, v] of Object.entries(chaves)) if (v !== undefined && v !== null) s = setKey(s, k, v);
+  for (const [k, v] of Object.entries(keys)) if (v !== undefined && v !== null) s = setKey(s, k, v);
   return s;
 }
 
 const FLOW = {
   solid: {},
   dashed: { dashed: 1, dashPattern: '8 5' },
-  // #4 §2.6 mediu e o #11 confirmou: `flowAnimation` sobrevive a SVG e HTML,
-  // NUNCA a PNG — lá vira um tracejado estático, sem erro nenhum.
+  // #4 §2.6 measured it and #11 confirmed it: `flowAnimation` survives SVG and
+  // HTML, NEVER PNG — there it becomes a static dash, with no error at all.
   animated: { dashed: 1, dashPattern: '8 5', flowAnimation: 1 },
 };
 
-function build(bruto, t) {
+function build(raw, t) {
   const norm = NORMATIVE[t.background];
   const g = n => Math.round(n * t.gap.base * t.gap.density);
 
   /**
-   * MÉTRICA DE TEXTO — e é aqui que fica claro que o tema NÃO é downstream do
-   * layout. `resolve.cjs` calibrou 6,7 px/caractere e 17 px/linha contra
-   * `fontSize=12`; mudar o corpo muda a caixa reservada, que muda o vão, que
-   * muda a geometria. Ver tools/check-partition.cjs, que separa os tokens que
-   * movem coordenada dos que só pintam — e prova a separação gerando.
+   * TEXT METRIC — and this is where it becomes clear the theme is NOT
+   * downstream of layout. `resolve.cjs` calibrated 6.7 px/character and
+   * 17 px/line against `fontSize=12`; changing the body changes the reserved
+   * box, which changes the gap, which changes the geometry. See
+   * tools/check-partition.cjs, which separates the tokens that move a
+   * coordinate from the ones that only paint — and proves the separation by
+   * generating.
    */
-  const porPt = pt => 6.7 * (pt / 12);
-  const metrica = {
-    largCar: porPt(t.text.label),
+  const perPt = pt => 6.7 * (pt / 12);
+  const metric = {
+    largCar: perPt(t.text.label),
     altLinha: 17 * (t.text.label / 12),
-    largCarAresta: porPt(t.text.edge),
-    largCarGrupo: porPt(t.text.group),
+    largCarAresta: perPt(t.text.edge),
+    largCarGrupo: perPt(t.text.group),
   };
 
   const api = {
-    id: bruto.id, label: bruto.label, because: bruto.because || '',
-    background: t.background, tokens: t, normativo: norm, metrica,
-    /** Folga em degraus da grade base, já com a densidade aplicada. */
+    id: raw.id, label: raw.label, because: raw.because || '',
+    background: t.background, tokens: t, normativo: norm, metrica: metric,
+    /** Slack in steps of the base grid, with density already applied. */
     g,
-    /** Calha: reserva de rótulo. NÃO leva densidade — ver o esquema. */
+    /** Lane: label reservation. Does NOT carry density — see the schema. */
     lane: n => Math.round(n * t.gap.base),
 
     /**
-     * Grupo (container). O tema pinta APENAS a tinta do rótulo e a fonte.
-     * `strokeColor`, `dashed` e o ícone continuam sendo do catálogo, porque são
-     * a camada normativa — e por isso não existe token para eles.
+     * Group (container). The theme paints ONLY the label's ink and the font.
+     * `strokeColor`, `dashed`, and the icon remain the catalog's, because they
+     * are the normative layer — and that's why no token exists for them.
      *
-     * A tinta do rótulo é a decisão que o #17 empurrou para cá, e ela se resolve
-     * por medição, não por gosto: borda de grupo é grafismo (WCAG 1.4.11, 3:1) e
-     * rótulo é texto (1.4.3, 4,5:1). Dois limiares diferentes não cabem na mesma
-     * cor. "Rótulo herda a cor da borda" é a leitura que não sobrevive a nenhuma
-     * troca de fundo; "rótulo é tinta neutra" é a do deck (#5 §2.1: 12 pt Arial,
-     * cor `tx1`).
+     * The label's ink is the decision #17 pushed here, and it resolves by
+     * measurement, not by taste: a group's border is graphic (WCAG 1.4.11,
+     * 3:1) and a label is text (1.4.3, 4.5:1). Two different thresholds don't
+     * fit the same color. "The label inherits the border's color" is the
+     * reading that doesn't survive any background swap; "the label is neutral
+     * ink" is the deck's own reading (#5 §2.1: 12pt Arial, color `tx1`).
      */
     group(style, title) {
-      const chaves = {
+      const keys = {
         fontColor: t.ink.strong,
         fontFamily: t.text.family,
         fontSize: t.text.group,
       };
       /**
-       * TINGIMENTO — e note de onde vem cada metade da decisão.
+       * TINTING — and note where each half of the decision comes from.
        *
-       * QUAIS grupos são tingidos é fato do CATÁLOGO: o draw.io entrega duas subnets
-       * com fill e as outras 18 com `none`, e o tema não tem palavra para mudar esse
-       * conjunto. O VALOR é derivado da própria cor normativa daquele grupo sobre o
-       * fundo da página — então o tingimento não pode inventar significado: ele é a
-       * cor que já estava lá, a 10%.
+       * WHICH groups get tinted is a fact of the CATALOG: draw.io ships two
+       * subnets with a fill and the other 18 with `none`, and the theme has
+       * no word to change that set. The VALUE is derived from that group's
+       * own normative color over the page background — so the tint can't
+       * invent meaning: it's the color that was already there, at 10%.
        *
-       * Que essa derivação é MESMO a do produto, e não uma invenção nossa, está
-       * medido: 10% de `#00A4A6` sobre branco dá `#E6F6F6` contra o `#E6F6F7` que o
-       * draw.io entrega, e 10% de `#7AA116` dá `#F2F6E8` exato.
+       * That this derivation is REALLY the product's own, and not something
+       * we invented, is measured: 10% of `#00A4A6` over white gives `#E6F6F6`
+       * against the `#E6F6F7` that draw.io ships, and 10% of `#7AA116` gives
+       * exactly `#F2F6E8`.
        *
-       * Sem derivar, o tema escuro quebra: o `#E6F6F7` fixo do produto vira um bloco
-       * luminoso no fundo escuro, e o rótulo branco de quem cai dentro dele some.
+       * Without deriving it, the dark theme breaks: the product's fixed
+       * `#E6F6F7` becomes a luminous block on the dark background, and the
+       * white label of whoever falls inside it disappears.
        */
       const fill = (/(?:^|;)fillColor=([^;]*)/.exec(style) || [])[1];
       if (fill && fill !== 'none') {
-        chaves.fillColor = t.group.tint === 'none' ? 'none'
+        keys.fillColor = t.group.tint === 'none' ? 'none'
           : mix((/(?:^|;)strokeColor=(#[0-9A-Fa-f]{6})/.exec(style) || [])[1] || t.ink.strong,
                      t.page.color, TINT);
       }
-      // a única cor de grupo que o deck escuro inverte (#5 §2.1 leitura 2)
-      if (/^AWS Cloud/i.test(title || '')) { chaves.strokeColor = norm.cloud; chaves.fontColor = norm.cloud; }
-      return apply(style, chaves);
+      // the only group color the dark deck inverts (#5 §2.1 reading 2)
+      if (/^AWS Cloud/i.test(title || '')) { keys.strokeColor = norm.cloud; keys.fontColor = norm.cloud; }
+      return apply(style, keys);
     },
 
-    /** Folha AWS: fonte e tinta. A cor do quadrado é da categoria — intocável. */
+    /** AWS leaf: font and ink. The square's color belongs to the category — untouchable. */
     service(style, input) {
-      const chaves = { fontColor: t.ink.strong, fontFamily: t.text.family, fontSize: t.text.label };
+      const keys = { fontColor: t.ink.strong, fontFamily: t.text.family, fontSize: t.text.label };
       /**
-       * `strokeColor` num shape aws4 pinta o GLIFO, não a borda (#4 §3.2). Nos
-       * ícones monocromáticos é o `fillColor` que carrega o traço, e é ele que a
-       * AWS entrega em duas variantes.
+       * `strokeColor` on an aws4 shape paints the GLYPH, not the border
+       * (#4 §3.2). On monochrome icons it's `fillColor` that carries the
+       * stroke, and that's the one AWS ships in two variants.
        *
-       * ⚠️ E o tema INVERTE, não reafirma. No deck claro o catálogo já é a
-       * variante clara: reescrever o `fillColor` com a nossa constante repinta o
-       * ícone por nada — e "por nada" aqui foi literalmente um dígito. O
-       * `A2.3` do validador (#18) pegou na recertificação do #23: o "Users" do
-       * catálogo pinta `#232F3D` e a constante `NORMATIVO.claro.mono` diz
-       * `#232F3E`. Na tela é a mesma tinta; na checagem é o tema alterando cor
-       * de ícone, que é exatamente o que o `A2.3` existe para proibir.
+       * ⚠️ And the theme INVERTS, it does not reaffirm. In the light deck the
+       * catalog is already the light variant: rewriting `fillColor` with our
+       * own constant repaints the icon for nothing — and "for nothing" here
+       * was literally one digit. The validator's `A2.3` (#18) caught it during
+       * #23's recertification: the catalog's "Users" paints `#232F3D` and the
+       * constant `NORMATIVE.light.mono` says `#232F3E`. On screen it's the
+       * same ink; in the check it's the theme changing an icon's color, which
+       * is exactly what `A2.3` exists to forbid.
        *
-       * Enquanto o motor e o validador rodavam separados, ninguém tinha visto.
+       * While the engine and the validator ran separately, nobody had seen it.
        */
       if (input && MONO_PALETTES.has(input.palette) && t.background === 'dark')
-        chaves.fillColor = norm.mono;
-      return apply(style, chaves);
+        keys.fillColor = norm.mono;
+      return apply(style, keys);
     },
 
-    /** Faixa derivada (AZ, Auto Scaling): halo no rótulo, que nasce sobre borda alheia. */
+    /** Derived band (AZ, Auto Scaling): halo on the label, since it lands on someone else's border. */
     band(style) {
       return apply(style, {
         fontColor: t.ink.strong, fontFamily: t.text.family, fontSize: t.text.group,
@@ -280,16 +290,17 @@ function build(bruto, t) {
     },
 
     /**
-     * Faixa DEGRADADA (#31): quando a caixa da união abraçaria um não-membro
-     * junto dos membros, a faixa para de afirmar contenção — não existe caixa
-     * que abrace só quem é dela sem também abraçar quem não é. Mesmo recurso
-     * do rótulo de OU (`ou()`, algumas linhas abaixo): par texto solto, sem
-     * forma, no lugar onde a caixa desenharia a borda.
+     * DEGRADED band (#31): when the union's box would embrace a non-member
+     * along with the members, the band stops asserting containment — there is
+     * no box that embraces only its own members without also embracing
+     * whoever isn't. Same device as the OU label (`ou()`, a few lines below):
+     * a loose text-only pair, with no shape, where the box would have drawn
+     * the border.
      */
     faixaRotulo: () => `text;html=1;fontSize=${t.text.group};fontStyle=1;fontColor=${t.ink.strong};` +
       `fontFamily=${t.text.family};align=left;verticalAlign=middle;`,
 
-    /** Aresta. N9/A11 do #5: a seta oficial é SEMPRE sólida — tracejado paga dívida. */
+    /** Edge. N9/A11 from #5: the official arrow is ALWAYS solid — dashed pays down debt. */
     edge(extra = {}) {
       const base = {
         edgeStyle: 'orthogonalEdgeStyle', html: 1, jettySize: 'auto', orthogonalLoop: 1,
@@ -320,56 +331,58 @@ function build(bruto, t) {
       `fontFamily=${t.text.family};fontSize=${t.text.label};verticalAlign=middle;align=center;strokeWidth=1.5;`,
 
     /**
-     * As QUATRO CÉLULAS DO #12 — e elas entram aqui sem abrir uma palavra nova
-     * no vocabulário. É a régua do próprio #13: só se abre um token quando ele
-     * comprova que o vocabulário existente não alcança o significado. Aqui
-     * alcança, e a prova é aritmética — no tema `claro` os quatro literais que o
-     * #12 escreveu à mão reconstroem token a token:
+     * THE FOUR CELLS FROM #12 — and they fit here without opening a single new
+     * word in the vocabulary. It's #13's own ruler: a token only opens once it
+     * proves the existing vocabulary can't reach the meaning. Here it reaches,
+     * and the proof is arithmetic — in the `light` theme the four literals #12
+     * wrote by hand reconstruct, token by token:
      *
-     *   S_OU          #232F3E = tinta.forte    · 13 pt = texto.grupo + 1
-     *   S_BARRAMENTO  #232F3E = aresta.cor     · 1.6 = aresta.espessura
-     *   S_STUB        #FFFFFF = tinta.halo     · 10 pt = texto.aresta
-     *   S_HABILITA    #5A6C86 = tinta.fraca
+     *   S_OU      #232F3E = ink.strong  · 13 pt = text.group + 1
+     *   S_BUS     #232F3E = edge.color  · 1.6 = edge.thickness
+     *   S_STUB    #FFFFFF = ink.halo    · 10 pt = text.edge
+     *   S_ENABLES #5A6C86 = ink.weak
      *
-     * Ou seja: o #12 já estava usando os tokens do #13 sem saber — escrevendo os
-     * valores deles. Isso não é coincidência, é a mesma paleta normativa nas
-     * duas pontas. Quem confere é `tests/check-tokens-of-12.cjs`.
+     * In other words: #12 was already using #13's tokens without knowing it —
+     * writing out their values. That's not coincidence, it's the same
+     * normative palette on both ends. `tests/check-tokens-of-12.cjs` checks it.
      *
-     * E é por isso que fica aqui e não em `plan.cjs`: com o hex lá dentro, o
-     * deck escuro desenhava um barramento `#232F3E` sobre um fundo `#1C1C1C`.
+     * And that's why it lives here and not in `plan.cjs`: with the hex in
+     * there, the dark deck would draw a `#232F3E` bus over a `#1C1C1C`
+     * background.
      */
 
     /**
-     * Rótulo de OU. Não é caixa — o deck não tem shape de Organizational unit
-     * (#6 G1), então é par ícone+rótulo flutuando acima do primeiro membro. Um
-     * degrau acima do rótulo de grupo, que é a relação que o #12 escreveu.
+     * OU label. Not a box — the deck has no Organizational unit shape (#6 G1),
+     * so it's an icon+label pair floating above the first member. One step up
+     * from the group label, which is the relationship #12 wrote.
      */
     ou: () => `text;html=1;fontSize=${t.text.group + 1};fontStyle=1;fontColor=${t.ink.strong};` +
       `fontFamily=${t.text.family};align=left;verticalAlign=middle;`,
 
-    /** `E4`/`X3`: a linha do barramento. Sem ponta — quem tem ponta é o stub. */
+    /** `E4`/`X3`: the bus line. No tip — the stub carries the tip. */
     bus: () => `endArrow=none;html=1;strokeColor=${t.edge.color};` +
       `strokeWidth=${t.edge.thickness};`,
 
-    /** O stub perpendicular que entra na conta, e a aresta agregada do `E3`. */
+    /** The perpendicular stub that factors into the count, and `E3`'s aggregated edge. */
     stub: () => `edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=${t.edge.color};` +
       `strokeWidth=${t.edge.thickness};endArrow=${t.edge.tip};` +
       `endFill=${t.edge.tip === 'open' ? 0 : 1};endSize=6;fontSize=${t.text.edge};` +
       `fontFamily=${t.text.family};fontColor=${t.ink.strong};labelBackgroundColor=${t.ink.halo};`,
 
     /**
-     * `E9`: habilitador de permissão é seta CURTA para dentro de quem autoriza,
-     * nunca rótulo de aresta. Tinta fraca porque é anexo, não fluxo — a mesma
-     * distinção que o subtítulo faz no bloco de título.
+     * `E9`: a permission enabler is a SHORT arrow pointing into whoever
+     * authorizes, never an edge label. Weak ink because it's an annex, not a
+     * flow — the same distinction the subtitle makes in the title block.
      */
     habilitador: () => `edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=${t.ink.weak};` +
       `strokeWidth=1.4;dashed=1;dashPattern=6 4;endArrow=${t.edge.tip};` +
       `endFill=${t.edge.tip === 'open' ? 0 : 1};endSize=6;`,
 
     /**
-     * O rótulo da folha. `qualificador` é o O21 do #5 — "Amazon Route 53 /
-     * *DNS service*" —, forte em 4 corpora: o nome diz o que É, o itálico diz o
-     * que faz ALI. Custa uma segunda linha, e a linha é métrica, não pintura.
+     * The leaf's label. `qualifier` is #5's O21 — "Amazon Route 53 /
+     * *DNS service*" —, backed by 4 corpora: the name says what it IS, the
+     * italics say what it does THERE. It costs a second line, and the line is
+     * metric, not paint.
      */
     rotuloDeFolha(name, qualifier) {
       if (!t.text.qualifier || !qualifier) return name;
@@ -380,10 +393,10 @@ function build(bruto, t) {
 }
 
 /**
- * Um tema com um token trocado, sem passar por arquivo. Existe para
- * `tools/check-partition.cjs` poder perturbar um token de cada vez e medir se a
- * geometria se mexe — que é como a partição pintura/métrica deixa de ser
- * afirmação e vira checagem.
+ * A theme with one token swapped, without going through a file. Exists so
+ * `tools/check-partition.cjs` can perturb one token at a time and measure
+ * whether the geometry moves — which is how the paint/metric partition stops
+ * being an assertion and becomes a check.
  */
 function withPatch(base, patch) {
   const b = typeof base === 'string' ? load(base) : base;

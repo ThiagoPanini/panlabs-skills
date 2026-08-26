@@ -166,7 +166,7 @@ EXCLUDE_FILES = {".DS_Store"}
 ROOT_EXCLUDE_DIRS = {"evals"}   # só exclui evals/ na raiz da skill, não em subpastas
 ```
 
-Isso confirma **exatamente** o que a auditoria interna deste repo (`docs/aws-diagrams/auditoria.md`, linha 54–55) já descrevia. **Achado novo: o código de `package_skill.py` não contém nenhuma checagem de tamanho.** Ele zipa tudo que sobra depois das exclusões acima, sem medir o resultado contra 30 MB nem contra qualquer outro número — o teto de 30 MB é inteiramente uma exigência da Skills API no momento do upload (C.1), não algo que o empacotador oficial impede de gerar. Ver "Onde as fontes divergem", item 5.
+Isso confirma **exatamente** o que a auditoria interna deste repo (`docs/aws-diagrams/auditoria.md` em `5e39516~1`, linha 54–55) já descrevia. **Achado novo: o código de `package_skill.py` não contém nenhuma checagem de tamanho.** Ele zipa tudo que sobra depois das exclusões acima, sem medir o resultado contra 30 MB nem contra qualquer outro número — o teto de 30 MB é inteiramente uma exigência da Skills API no momento do upload (C.1), não algo que o empacotador oficial impede de gerar. Ver "Onde as fontes divergem", item 5.
 
 **`quick_validate.py` — o pré-validador.** Regex-based, sem `strictyaml`, sem normalização Unicode:
 
@@ -337,7 +337,7 @@ Encontrados por busca mas **não confirmados em fonte primária própria** — c
 
 5. **Obrigatoriedade de `name`/`description`.** MUST na spec aberta (1–64 / 1–1024, non-empty; B.1) — mas o próprio carregador do Claude Code (C.1) trata os dois como opcionais, e frontmatter quebrado não é rejeitado, só degrada (a skill perde a `description` para *matching*, mas continua invocável por nome). O mesmo campo é "obrigatório e validado" num lugar da pilha Anthropic e "best-effort, falha graciosamente" em outro.
 
-6. **Proveniência do teto de 30 MB.** Não está em nenhuma frase do texto da especificação aberta (B.2 — busquei e não achei). Não é checado por nenhuma linha de código em `package_skill.py` (C.2 — li o arquivo inteiro, não há checagem de tamanho). É unicamente uma exigência declarada da Skills API (`platform.claude.com`, C.1), repetida duas vezes idênticas no mesmo documento. A auditoria interna deste repo (`docs/aws-diagrams/auditoria.md`, linha 6–9) atribui o teto à combinação "especificação aberta... e empacotador oficial" — impreciso pela leitura feita aqui: nenhum dos dois impõe o número; só a doc da API o declara, e o empacotador oficial deixaria passar um pacote de 200 MB sem reclamar (só falharia depois, no upload). O número em si (30 MB) está correto e confirmado; a atribuição de fonte é que merece esta nota.
+6. **Proveniência do teto de 30 MB.** Não está em nenhuma frase do texto da especificação aberta (B.2 — busquei e não achei). Não é checado por nenhuma linha de código em `package_skill.py` (C.2 — li o arquivo inteiro, não há checagem de tamanho). É unicamente uma exigência declarada da Skills API (`platform.claude.com`, C.1), repetida duas vezes idênticas no mesmo documento. A auditoria interna deste repo (`docs/aws-diagrams/auditoria.md` em `5e39516~1`, linha 6–9) atribui o teto à combinação "especificação aberta... e empacotador oficial" — impreciso pela leitura feita aqui: nenhum dos dois impõe o número; só a doc da API o declara, e o empacotador oficial deixaria passar um pacote de 200 MB sem reclamar (só falharia depois, no upload). O número em si (30 MB) está correto e confirmado; a atribuição de fonte é que merece esta nota.
 
 7. **500 linhas / 5000 tokens.** Cinco fontes independentes repetem o mesmo número como recomendação — spec (B.2), `best-practices.md` (B.3), o `SKILL.md` do próprio `skill-creator` (C.2), `skill-validator` (D.1) e `skill-lint` (D.2) — e em **nenhuma delas** isso é um MUST nem um erro bloqueante por padrão. É a regra mais citada do campo inteiro e, consistentemente, a mais fraca em severidade.
 
@@ -400,6 +400,6 @@ Duas skills, um autor, sem cadeia de suprimentos, sem terceiro instalando de fon
 - OWASP. *Skill Security Assessment Checklist*. https://owasp.org/www-project-agentic-skills-top-10/checklist.html
 
 ### Deste repositório
-- `docs/aws-diagrams/auditoria.md` — auditoria de 2026-08-23, origem da citação do teto de 30 MB que este documento confirma e reatribui à fonte correta (item 6 de "Onde as fontes divergem").
-- `docs/aws-diagrams/README.md`
+- `docs/aws-diagrams/auditoria.md` em `5e39516~1` — auditoria de 2026-08-23, origem da citação do teto de 30 MB que este documento confirma e reatribui à fonte correta (item 6 de "Onde as fontes divergem").
+- `docs/aws-diagrams/README.md` em `5e39516~1`
 - `skills/panlabs-aws-diagrams/SKILL.md`, `skills/panlabs-python-standards/SKILL.md` — medidos para a seção final.

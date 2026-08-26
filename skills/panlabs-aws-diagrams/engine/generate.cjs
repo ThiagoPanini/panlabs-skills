@@ -1,58 +1,61 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Motor de geração — IR › layout › mxGraph XML.
+ * Generation engine — IR › layout › mxGraph XML.
  *
- *   node engine/generate.cjs modelo.json --output diagrama.drawio
- *   node engine/generate.cjs modelo.json --explain        # só o relatório, sem escrever
+ *   node engine/generate.cjs model.json --output diagram.drawio
+ *   node engine/generate.cjs model.json --explain        # report only, writes nothing
  *
- * O pipeline inteiro, e a fronteira que ele defende:
+ * The whole pipeline, and the boundary it defends:
  *
- *   carregar › VALIDAR › resolver › derivar › dispor › planejar › emitir › CONFERIR
- *              ^^^^^^^                        ^^^^^^                        ^^^^^^^^
- *              o agente para aqui             1º número                     XML + contraste
+ *   load › VALIDATE › resolve › derive › lay-out › plan › emit › CHECK
+ *          ^^^^^^^^                                                ^^^^^^^^
+ *          the agent stops here                                    XML + contrast
  *
- * O tema (#13) entra em `resolver` — ANTES do layout, não depois. Dez dos seus
- * tokens são métrica (corpo do rótulo, densidade da grade, qualificador em duas
- * linhas) e movem coordenada; os outros dezessete são pintura pura. A partição
- * está provada em `tests/check-partition.cjs`.
+ * The theme (#13) enters at `resolve` — BEFORE the layout, not after. Ten of
+ * its tokens are metric (label body, grid density, two-line qualifier) and
+ * move coordinates; the other seventeen are pure paint. The split is proved in
+ * `tests/check-partition.cjs`.
  *
- * Nada entre `dispor` e `conferir` tem como ser influenciado pelo modelo a não
- * ser pela semântica. Não é disciplina: o esquema não tem onde escrever uma
- * coordenada. Ver `tools/check-fronteira.cjs`.
+ * Nothing between `lay-out` and `check` can be influenced by the model except
+ * through semantics. It isn't discipline: the schema has nowhere to write a
+ * coordinate. See `tools/check-fronteira.cjs`.
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const { validate } = require('./validate.cjs');
-const resolverMod = require('./resolve.cjs');
+const resolveMod = require('./resolve.cjs');
 const { derive } = require('./derive.cjs');
-const camadasMod = require('./layers.cjs');
+const layersMod = require('./layers.cjs');
 const dispor = require('./layout.cjs');
 const plan = require('./plan.cjs');
 const { emit, checkXml } = require('./emit.cjs');
-const temaMod = require('../theme/theme.cjs');
-const contraste = require('./contrast.cjs');
+const themeMod = require('../theme/theme.cjs');
+const contrast = require('./contrast.cjs');
 const { gate, LEVELS } = require('../validator/gate.cjs');
 
-// O esquema é ÚNICO e mora na raiz da skill, não dentro do motor: ele é o
-// contrato de quem escreve o modelo, e o motor é só o primeiro consumidor dele.
+// The schema is UNIQUE and lives at the skill's root, not inside the engine:
+// it's the contract for whoever writes the model, and the engine is only its
+// first consumer.
 const SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'schema.json'), 'utf8'));
 
 /**
- * As vistas de detalhe, uma por conta — e elas NÃO são plano B.
+ * The detail views, one per account — and they are NOT a plan B.
  *
- * O #6 `D2` é explícito, e a estrutura do PPTX oficial do SRA prova: slide 3 é
- * a consolidada (6 contas, ZERO conectores) e os slides 7–12 são uma conta cada,
- * com 2 a 7 conectores intra-conta. As duas coisas são publicadas ao mesmo
- * tempo. O corte não acontece "quando fica cheio demais" — é estrutural.
+ * #6's `D2` is explicit, and the official SRA PPTX's structure proves it:
+ * slide 3 is the consolidated one (6 accounts, ZERO connectors) and slides
+ * 7–12 are one account each, with 2 to 7 intra-account connectors. Both are
+ * published at the same time. The split doesn't happen "when it gets too
+ * full" — it's structural.
  *
- * O jeito de construí-las é a melhor prova de que a fronteira do motor está no
- * lugar: a vista de detalhe é O MESMO motor rodando num SUBMODELO. Nada aqui
- * sabe desenhar; recorta semântica e chama o pipeline de novo.
+ * How they're built is the best proof that the engine's boundary is in the
+ * right place: the detail view is the SAME engine running on a SUB-MODEL.
+ * Nothing here knows how to draw; it slices out semantics and calls the
+ * pipeline again.
  */
-async function paginasDeDetalhe(model, d, res, opts, relatorio) {
+async function detailPages(model, d, res, opts, report) {
   const plan = require('./plan.cjs');
   const dispor = require('./layout.cjs');
   const pages = [];
@@ -61,25 +64,25 @@ async function paginasDeDetalhe(model, d, res, opts, relatorio) {
     const inside = new Set();
     (function mark(id) { inside.add(id); for (const k of d.t.filhos.get(id)) mark(k.id); })(account.id);
 
-    // as travessias viram TEXTO, não geometria — `E3`: "o texto substitui a
-    // cardinalidade". A vista de detalhe carrega só aresta intra-conta.
-    const entram = d.travessias.filter(a => a.contaPara === account.id);
-    const saem = d.travessias.filter(a => a.contaDe === account.id);
-    const nomeDaConta = id => {
+    // crossings become TEXT, not geometry — `E3`: "the text replaces the
+    // cardinality". The detail view only carries intra-account edges.
+    const incoming = d.travessias.filter(a => a.contaPara === account.id);
+    const outgoing = d.travessias.filter(a => a.contaDe === account.id);
+    const accountName = id => {
       const c = d.t.byId.get(id);
       return (c && c.label) || id;
     };
     const notes = [];
-    for (const a of saem)
-      notes.push({ text: `Sai desta conta: ${a.label || 'ligação'} → ${nomeDaConta(a.contaPara)}`, origin: 'legend' });
-    for (const a of entram)
-      notes.push({ text: `Entra nesta conta: ${a.label || 'ligação'} ← ${nomeDaConta(a.contaDe)}`, origin: 'legend' });
+    for (const a of outgoing)
+      notes.push({ text: `Leaves this account: ${a.label || 'link'} → ${accountName(a.contaPara)}`, origin: 'legend' });
+    for (const a of incoming)
+      notes.push({ text: `Enters this account: ${a.label || 'link'} ← ${accountName(a.contaDe)}`, origin: 'legend' });
 
     const sub = {
       schema: model.schema,
       id: `${model.id}-${account.id}`,
       title: `${account.label || account.id}`,
-      subtitle: `Vista de detalhe · ${model.title}`,
+      subtitle: `Detail view · ${model.title}`,
       view: model.view,
       ...(model.genre ? { genre: model.genre } : {}),
       nodes: model.nodes
@@ -93,19 +96,20 @@ async function paginasDeDetalhe(model, d, res, opts, relatorio) {
 
     try {
       const v = validate(sub, SCHEMA);
-      if (!v.ok) throw Object.assign(new Error(`submodelo inválido (${v.fase})`), { erros: v.erros });
+      if (!v.ok) throw Object.assign(new Error(`invalid submodel (${v.fase})`), { erros: v.erros });
       const ds = derive(sub, { cat: res.cat });
       if (ds.az.draw) {
-        // a grade de AZ ainda não desenha a caixa de conta como raiz — ver o
-        // README. Recusar alto é melhor que desenhar a conta fora do lugar.
-        throw new Error('a grade de AZ não desenha conta como container raiz');
+        // the AZ grid still doesn't draw the account box as its root
+        // container — see the README. Refusing loudly beats drawing the
+        // account in the wrong place.
+        throw new Error('the AZ grid does not draw an account as its root container');
       }
       const layout = await dispor.porElk(sub, ds, res);
       const p = plan.elkPlan(sub, ds, res, layout, opts);
       pages.push(p);
     } catch (e) {
-      relatorio.avisos.push(
-        `vista de detalhe de "${account.id}" não saiu: ${e.message}` +
+      report.avisos.push(
+        `detail view of "${account.id}" didn't come out: ${e.message}` +
         (e.erros ? ` — ${e.erros[0]}` : ''));
     }
   }
@@ -113,77 +117,80 @@ async function paginasDeDetalhe(model, d, res, opts, relatorio) {
 }
 
 async function generate(model, opts = {}) {
-  const relatorio = { avisos: [], passos: [] };
-  const milestone = (name, extra) => relatorio.passos.push({ name, ...extra });
+  const report = { avisos: [], passos: [] };
+  const milestone = (name, extra) => report.passos.push({ name, ...extra });
 
   const v = validate(model, SCHEMA);
-  if (!v.ok) { const e = new Error(`modelo inválido (${v.fase})`); e.erros = v.erros; throw e; }
-  relatorio.avisos.push(...v.avisos);
+  if (!v.ok) { const e = new Error(`invalid model (${v.fase})`); e.erros = v.erros; throw e; }
+  report.avisos.push(...v.avisos);
   milestone('validate', { nodes: model.nodes.length, edges: (model.edges || []).length });
 
-  // `--flow` é override de invocação sobre o token do tema: a mesma arquitetura
-  // com o mesmo tema pode querer marcar o caminho quente numa entrega e não na
-  // outra. Sobrescreve o token, e NÃO mutando o objeto de quem chamou — um tema
-  // é um valor, e `comPatch` devolve outro.
+  // `--flow` overrides the theme token at invocation time: the same
+  // architecture with the same theme may want the hot path marked in one
+  // delivery and not in another. It overrides the token, and does NOT mutate
+  // the caller's object — a theme is a value, and `withPatch` returns another
+  // one.
   const base = (opts.tema && typeof opts.tema === 'object') ? opts.tema
-    : temaMod.load(opts.tema || 'light');
-  const tema = opts.flow ? temaMod.withPatch(base, { edge: { flow: opts.flow } }) : base;
-  milestone('theme', { id: tema.id, background: tema.background, density: tema.tokens.gap.density, flow: tema.tokens.edge.flow });
+    : themeMod.load(opts.tema || 'light');
+  const theme = opts.flow ? themeMod.withPatch(base, { edge: { flow: opts.flow } }) : base;
+  milestone('theme', { id: theme.id, background: theme.background, density: theme.tokens.gap.density, flow: theme.tokens.edge.flow });
 
-  const res = resolverMod.create(tema, opts.catalog);
+  const res = resolveMod.create(theme, opts.catalog);
 
   const d = derive(model, { cat: res.cat });
   milestone('derive', { faixasAz: d.az.draw, because: d.az.because, azs: d.az.azs });
 
-  // A camada de rede que o motor leu do conteúdo (#22). O agente não escreveu
-  // nenhuma delas, salvo onde declarou o escape — e é justamente por isso que
-  // vale contar: a ordem das linhas passou a depender desta leitura.
+  // The network layer the engine read from the content (#22). The agent
+  // didn't write any of it, except where it declared the escape hatch — and
+  // that's exactly why it's worth reporting: the row order now depends on
+  // this reading.
   for (const [id, c] of d.camadas)
     if (c.diverge)
-      relatorio.avisos.push(`subnet "${id}": declarada como camada "${c.layer}", ` +
-        `mas o que ela guarda é "${c.diverge}" (${c.evidence.map(e => e.service).join(', ')}). ` +
-        `O motor obedece à declaração.`);
+      report.avisos.push(`subnet "${id}": declared as layer "${c.layer}", ` +
+        `but what it holds is "${c.diverge}" (${c.evidence.map(e => e.service).join(', ')}). ` +
+        `The engine obeys the declaration.`);
 
-  let layoutPlan, caminho;
+  let layoutPlan, layoutPath;
   const pages = [];
   if (d.modo.modo !== 'none') {
-    // multi-conta manda no caminho, mesmo com faixa de AZ possível: a conta é o
-    // nível mais externo da árvore, e quem escolhe a grade é o container mais
-    // externo que precisa de grade. A faixa de AZ dentro de uma conta é
-    // trabalho da vista de detalhe daquela conta (D2).
-    caminho = 'accounts';
+    // multi-account decides the path, even where an AZ band is possible: the
+    // account is the outermost level of the tree, and whoever picks the grid
+    // is the outermost container that needs one. An AZ band inside an account
+    // is that account's detail view's job (D2).
+    layoutPath = 'accounts';
     const g = await dispor.porContas(model, d, res);
     layoutPlan = plan.accountPlan(model, d, res, g, opts);
     milestone('dispor', {
       modo: d.modo.modo, accounts: d.modo.accounts, travessias: d.modo.travessias,
       order: g.order.map(c => c.id).join('→'),
-      varredura: g.varredura.varridas ? `${g.varredura.varridas} permutações, custo ${g.varredura.custo}` : 'canônica',
+      varredura: g.varredura.varridas ? `${g.varredura.varridas} permutations, cost ${g.varredura.custo}` : 'canonical',
     });
-    relatorio.avisos.push(`modo "${d.modo.modo}": ${d.modo.because}`);
-    relatorio.avisos.push(`travessia nível ${d.policy.level} (${d.policy.mecanismo}): ${d.policy.because}`);
-    // O gatilho (`d.ou.desenhar`) só sabe da CONTA — não do modo. `plan.cjs`
-    // (§3) suprime a faixa em integração, e o aviso tinha ficado cego a essa
-    // segunda condição: anunciava a faixa mesmo quando o `.drawio` saía sem
-    // nenhuma. O aviso só afirma o que o desenho de fato tem.
+    report.avisos.push(`mode "${d.modo.modo}": ${d.modo.because}`);
+    report.avisos.push(`crossing level ${d.policy.level} (${d.policy.mecanismo}): ${d.policy.because}`);
+    // The trigger (`d.ou.draw`) only knows about the ACCOUNT — not the mode.
+    // `plan.cjs` (§3) suppresses the band in integration mode, and the warning
+    // used to be blind to that second condition: it announced the band even
+    // when the `.drawio` came out with none. The warning now only asserts what
+    // the drawing actually has.
     if (d.ou.draw) {
-      relatorio.avisos.push(d.modo.modo === 'integracao'
-        ? `faixas de OU: ${d.ou.because}, mas o modo integração não desenha faixa de OU`
-        : `faixas de OU: ${d.ou.because}`);
+      report.avisos.push(d.modo.modo === 'integracao'
+        ? `OU bands: ${d.ou.because}, but integration mode doesn't draw an OU band`
+        : `OU bands: ${d.ou.because}`);
     }
-    pages.push(...await paginasDeDetalhe(model, d, res, opts, relatorio));
+    pages.push(...await detailPages(model, d, res, opts, report));
   } else if (d.az.draw) {
-    caminho = 'grade';
-    // O caminho da grade é uma vista de REDE: ele sabe desenhar nuvem › VPC ›
-    // subnet › conteúdo e nada mais. Silenciar um container que ele não modela
-    // seria produzir um diagrama que omite parte da arquitetura sem avisar —
-    // exatamente o tipo de mentira calada que a rubrica (#8) chama de A4.2.
+    layoutPath = 'grade';
+    // The grid path is a NETWORK view: it knows how to draw cloud › VPC ›
+    // subnet › content and nothing else. Silencing a container it doesn't
+    // model would produce a diagram that omits part of the architecture with
+    // no warning — exactly the kind of silent lie the rubric (#8) calls A4.2.
     const outsiders = model.nodes.filter(n =>
       ['account', 'region', 'security-group', 'group'].includes(n.kind) ||
       (['service', 'block', 'actor'].includes(n.kind) &&
         !(n.inside && d.t.byId.get(n.inside) && d.t.byId.get(n.inside).kind === 'subnet')));
     if (outsiders.length) {
-      const e = new Error('o caminho da grade ainda não desenha estes nós');
-      e.erros = outsiders.map(n => `"${n.id}" (${n.kind}) — a grade de AZ modela só nuvem › VPC › subnet › conteúdo`);
+      const e = new Error('the grid path cannot yet draw these nodes');
+      e.erros = outsiders.map(n => `"${n.id}" (${n.kind}) — the AZ grid only models cloud › VPC › subnet › content`);
       throw e;
     }
     const g = await dispor.porGrade(model, d, res);
@@ -192,141 +199,145 @@ async function generate(model, opts = {}) {
       eixo: g.eixo,
       raias: g.zonas.join('/'),
       varredura: g.varreduraRaias.varridas
-        ? `${g.varreduraRaias.varridas} permutações, custo ${g.varreduraRaias.custo}`
-        : 'ordem declarada',
+        ? `${g.varreduraRaias.varridas} permutations, cost ${g.varreduraRaias.custo}`
+        : 'declared order',
     });
-    relatorio.avisos.push(`eixo da grade "${g.eixo}": ${g.porqueEixo}`);
+    report.avisos.push(`grid axis "${g.eixo}": ${g.whyAxis}`);
   } else {
-    caminho = 'elk';
+    layoutPath = 'elk';
     /**
-     * Aqui a camada que falta AVISA, não recusa — e a assimetria com a grade é
-     * a decisão do #22, não descuido.
+     * Here the missing layer WARNS, not refuses — and the asymmetry with the
+     * grid is #22's decision, not an oversight.
      *
-     * O motor exige o fato onde o fato É o desenho, e avisa onde ele é só
-     * desempate. Na grade a chave de papel manda sozinha na ordem das linhas;
-     * no ELK ela só decide entre irmãos que nenhuma aresta ordena, e o ELK tem
-     * o grafo inteiro para mandar nele. Recusar aqui bloquearia o caso comum
-     * por uma ambiguidade que quase nunca chega ao desenho.
+     * The engine demands the fact where the fact IS the drawing, and warns
+     * where it's only a tiebreak. In the grid, the role key alone drives the
+     * row order; in ELK it only decides between siblings that no edge orders,
+     * and ELK has the whole graph to drive it. Refusing here would block the
+     * common case over an ambiguity that almost never reaches the drawing.
      */
     if (d.gaps.length)
-      relatorio.avisos.push('camada de rede ausente onde a ordem dos irmãos depende dela — ' +
-        'o ELK decide pelo grafo, o alfabeto desempata o resto:\n      ' +
-        camadasMod.textoDaLacuna(d.gaps).join('\n      '));
+      report.avisos.push('network layer missing where sibling order depends on it — ' +
+        'ELK decides from the graph, the alphabet breaks the rest of the ties:\n      ' +
+        layersMod.textoDaLacuna(d.gaps).join('\n      '));
     const layout = await dispor.porElk(model, d, res);
     layoutPlan = plan.elkPlan(model, d, res, layout, opts);
     milestone('dispor', { passadas: layout.passadas });
-    if (layout.encaixe) {
-      for (const a of layout.encaixe.aplicados)
-        relatorio.avisos.push(`encaixe: "${a.edge}" alinhada movendo ${a.moveu.join('+')} em ${a.delta}px`);
-      for (const x of layout.encaixe.desfeitos)
-        relatorio.avisos.push(`encaixe DESFEITO em "${x.edge}" (${x.delta}px): ${x.because}`);
+    if (layout.snap) {
+      for (const a of layout.snap.applied)
+        report.avisos.push(`snap: "${a.edge}" aligned by moving ${a.moved.join('+')} by ${a.delta}px`);
+      for (const x of layout.snap.undone)
+        report.avisos.push(`snap UNDONE on "${x.edge}" (${x.delta}px): ${x.because}`);
     }
   }
   milestone('plan', {
-    caminho, celulas: layoutPlan.celulas.length, page: `${layoutPlan.larg}×${layoutPlan.alt}`,
+    caminho: layoutPath, celulas: layoutPlan.cells.length, page: `${layoutPlan.width}×${layoutPlan.height}`,
     ...(pages.length ? { pages: 1 + pages.length } : {}),
   });
 
   /**
-   * O PORTÃO GEOMÉTRICO (#18) — entre `planejar` e `emitir`, que é o único ponto
-   * onde a geometria já existe e o XML ainda não.
+   * THE GEOMETRIC GATE (#18) — between `plan` and `emit`, the only point where
+   * the geometry already exists and the XML doesn't yet.
    *
-   * O #18 escreveu a decisão e deixou o enxerto por fazer de propósito ("o motor
-   * é protótipo de outro ticket"). A consolidação do #23 aplica, e escolhe o
-   * default com cuidado:
+   * #18 wrote the decision and left the graft undone on purpose ("the engine
+   * is another ticket's prototype"). #23's consolidation applies it, and picks
+   * the default with care:
    *
-   *   O LAUDO SAI SEMPRE. Ele viaja em `relatorio.geometria` e o `--explain` o
-   *   imprime. Um portão que só existe quando alguém pede é um portão que
-   *   ninguém sabe que existe.
+   *   THE REPORT ALWAYS COMES OUT. It travels in `report.geometry` and
+   *   `--explain` prints it. A gate that only exists when someone asks for it
+   *   is a gate nobody knows exists.
    *
-   *   BLOQUEAR É OPT-IN (`--gate`). O próprio #18 chama `veracidade` de
-   *   "default recomendado para um portão de PUBLICAÇÃO" — publicar, não
-   *   desenhar. Bloquear em `gerar` faria o motor recusar `web-flow-3-az`, que
-   *   é dívida real, nomeada e de dono conhecido (#24): a geração pararia por um
-   *   defeito de roteamento que este ticket decidiu não consertar. Recusar
-   *   desenhar é decisão de quem entrega, e ela tem hora.
+   *   BLOCKING IS OPT-IN (`--gate`). #18 itself calls `veracidade` (truthfulness)
+   *   the "recommended default for a PUBLISHING gate" — publishing, not
+   *   drawing. Blocking inside `generate` would make the engine refuse
+   *   `web-flow-3-az`, which is real debt, named and with a known owner (#24):
+   *   generation would stop over a routing defect this ticket decided not to
+   *   fix. Refusing to draw is a decision for whoever is delivering it, and it
+   *   has its own moment.
    *
-   *   ⚠️ E QUEM DECIDE SE BARRA É O `portao()`, NÃO ESTE ARQUIVO. A primeira
-   *   versão desta seção chamava `portao(p, {nivel:'nenhum'})` dentro de um
-   *   `try` e reimplementava o `NIVEIS[nivel](laudo)` aqui fora — e com isso
-   *   engolia a garantia mais importante do #18: *"um laudo incompleto nunca
-   *   passa, EM NENHUM NÍVEL"*. Uma família de checagem quebrada virava
-   *   `{erro: ...}`, o `if (!laudo) continue` pulava a página, e o portão saía
-   *   verde sobre um laudo que não mediu nada. Chamar `portao()` com o nível
-   *   pedido e deixar ele lançar é ao mesmo tempo a correção e a simplificação.
+   *   WARNING: AND WHO DECIDES WHETHER TO BLOCK IS `gate()`, NOT THIS FILE.
+   *   This section's first version called `gate(p, {level:'none'})` inside a
+   *   `try` and reimplemented `LEVELS[level](report)` out here — and by doing
+   *   that it swallowed #18's most important guarantee: *"an incomplete report
+   *   never passes, AT NO LEVEL"*. A broken check family would turn into
+   *   `{error: ...}`, the `if (!report) continue` would skip the page, and the
+   *   gate would come out green over a report that measured nothing. Calling
+   *   `gate()` with the requested level and letting it throw is, at the same
+   *   time, the fix and the simplification.
    */
   const level = opts.gate || 'none';
   if (!(level in LEVELS)) {
     const e = new Error(`unknown gate level: "${level}"`);
-    e.erros = [`níveis: ${Object.keys(LEVELS).join(', ')}`];
+    e.erros = [`levels: ${Object.keys(LEVELS).join(', ')}`];
     throw e;
   }
-  const laudos = [];
+  const reports = [];
   for (const [i, p] of [layoutPlan, ...pages].entries()) {
     const page = p.id || `p${i}`;
     try {
-      laudos.push({ page, report: gate(p, { level }) });
+      reports.push({ page, report: gate(p, { level }) });
     } catch (e) {
-      e.message = `a página "${page}": ${e.message}`;
+      e.message = `page "${page}": ${e.message}`;
       throw e;
     }
   }
-  relatorio.geometry = laudos;
-  const semanticas = laudos.flatMap(l => l.report.semanticas);
-  const falhas = laudos.flatMap(l => l.report.falhas);
+  report.geometry = reports;
+  const semantic = reports.flatMap(l => l.report.semanticas);
+  const failures = reports.flatMap(l => l.report.falhas);
   milestone('geometry', {
-    pages: laudos.length,
-    failure: falhas.length,
-    semanticas: semanticas.length,
+    pages: reports.length,
+    failure: failures.length,
+    semanticas: semantic.length,
     gate: level,
   });
-  // uma falha SEMÂNTICA é o desenho mentindo, e isso vale um aviso mesmo quando
-  // ninguém pediu portão — senão o motor entrega em silêncio o que a rubrica
-  // chama de "a falha de maior gravidade de todo o validador"
-  for (const f of semanticas)
-    relatorio.avisos.push(`⛔ ${f.id} ${f.name}: ${f.mensagem} — o desenho afirma o que o modelo nega`);
+  // a SEMANTIC failure is the drawing lying, and that's worth a warning even
+  // when nobody asked for a gate — otherwise the engine would silently
+  // deliver what the rubric calls "the validator's most severe failure family"
+  for (const f of semantic)
+    report.avisos.push(`⛔ ${f.id} ${f.name}: ${f.mensagem} — the drawing asserts what the model denies`);
 
   const xml = emit([layoutPlan, ...pages]);
 
-  // O #19 achou isto do jeito caro: XML inválido faz o draw.io renderizar
-  // truncado e sair com código 0. Se o gerador não conferir, ninguém confere.
+  // #19 found this the expensive way: invalid XML makes draw.io render
+  // truncated and exit with code 0. If the generator doesn't check, nobody
+  // does.
   const malformed = checkXml(xml);
-  if (malformed.length) { const e = new Error('XML mal formado — o draw.io renderizaria truncado em silêncio'); e.erros = malformed; throw e; }
+  if (malformed.length) { const e = new Error('malformed XML — draw.io would render it truncated in silence'); e.erros = malformed; throw e; }
   /**
-   * PORTÃO DE CONTRASTE (#13) — e ele REPROVA, não avisa.
+   * CONTRAST GATE (#13) — and it FAILS, it doesn't just warn.
    *
-   * A razão é a mesma do XML truncado logo acima: rótulo que some não dá erro
-   * em lugar nenhum. O arquivo abre, o PNG sai, e o diagrama passa a omitir
-   * informação em silêncio — que é a família A4.2 da rubrica (#8), o diagrama
-   * que mente por ausência. Um tema é hipótese; aqui ela vira número.
+   * Same reason as the truncated XML above: a label that disappears throws no
+   * error anywhere. The file opens, the PNG comes out, and the diagram starts
+   * silently omitting information — which is rubric family A4.2 (#8), the
+   * diagram lying by omission. A theme is a hypothesis; here it becomes a
+   * number.
    *
-   * Roda sobre TODAS as páginas (`medirTodos`), não só a consolidada: com o #12
-   * o arquivo passou a ter 1+N páginas, e um portão que olhasse só a primeira
-   * deixaria as vistas de detalhe sem guarda nenhuma.
+   * Runs over ALL pages (`measureAll`), not just the consolidated one: with
+   * #12 the file started carrying 1+N pages, and a gate that only looked at
+   * the first would leave the detail views with no guard at all.
    */
-  const c = contraste.measureAll([layoutPlan, ...pages]);
-  relatorio.contraste = c;
+  const c = contrast.measureAll([layoutPlan, ...pages]);
+  report.contraste = c;
   if (!c.ok && !opts.force) {
-    const e = new Error(`o tema "${tema.id}" reprova no portão de contraste (A7 da rubrica #8)`);
-    e.erros = [...contraste.summarize(c), '', 'para gerar assim mesmo e VER o estrago: --force'];
+    const e = new Error(`theme "${theme.id}" fails the contrast gate (rubric #8's A7)`);
+    e.erros = [...contrast.summarize(c), '', 'to generate anyway and SEE the damage: --force'];
     throw e;
   }
-  if (!c.ok) relatorio.avisos.push(`--force: ${c.falhas.length} par(es) abaixo do limiar WCAG, gerado assim mesmo`);
-  // A7.2a é ÁREA: avisa e não reprova (ver o cabeçalho de contrast.cjs)
-  for (const l of contraste.summarize(c, c.avisos)) relatorio.avisos.push(l);
+  if (!c.ok) report.avisos.push(`--force: ${c.falhas.length} pair(s) below the WCAG threshold, generated anyway`);
+  // A7.2a is AREA: it warns and doesn't fail (see contrast.cjs's header)
+  for (const l of contrast.summarize(c, c.avisos)) report.avisos.push(l);
   const n = v => Number.isFinite(v) ? v.toFixed(2) : '-';
   milestone('check', { ok: true, bytes: xml.length,
-    contraste: c.ok ? 'passa' : 'FORÇADO',
+    contraste: c.ok ? 'passes' : 'FORCED',
     piorTexto: n(c.piorTexto), piorTraco: n(c.piorGrafismo), piorArea: n(c.piorArea) });
 
-  // as folhas que caíram no ícone genérico são o sintoma de nome que o
-  // catálogo não conhece — vale avisar, não vale falhar
-  const genericos = res.usados.filter(u => u.via === 'generic');
-  if (genericos.length)
-    relatorio.avisos.push(`${genericos.length} nó(s) caíram no ícone genérico: ` +
-      genericos.map(u => `${u.id}("${u.pediu}")`).join(', '));
+  // leaves that fell back to the generic icon are the symptom of a name the
+  // catalog doesn't know — worth a warning, not worth failing
+  const generic = res.usados.filter(u => u.via === 'generic');
+  if (generic.length)
+    report.avisos.push(`${generic.length} node(s) fell back to the generic icon: ` +
+      generic.map(u => `${u.id}("${u.pediu}")`).join(', '));
 
-  return { xml, layoutPlan, pages, relatorio, resolucoes: res.usados, derived: d, caminho, tema };
+  return { xml, layoutPlan, pages, relatorio: report, resolucoes: res.usados, derived: d, caminho: layoutPath, tema: theme };
 }
 
 // ------------------------------------------------------------------- CLI
@@ -335,32 +346,32 @@ async function main() {
   const args = process.argv.slice(2);
   const input = args.find(a => !a.startsWith('--'));
   if (!input) {
-    console.error('uso: node engine/generate.cjs <modelo.json> [--output arquivo.drawio] [--theme ' +
-      temaMod.listAll().join('|') + '] [--flow solido|tracejado|animado] [--force]\n' +
+    console.error('usage: node engine/generate.cjs <model.json> [--output file.drawio] [--theme ' +
+      themeMod.listAll().join('|') + '] [--flow solid|dashed|animated] [--force]\n' +
       '                            [--gate ' + Object.keys(LEVELS).join('|') + '] [--explain]');
     process.exit(2);
   }
   const iOutput = args.indexOf('--output');
   const output = iOutput >= 0 ? args[iOutput + 1] : input.replace(/\.json$/, '.drawio');
   const explain = args.includes('--explain');
-  const iFluxo = args.indexOf('--flow');
-  const flow = iFluxo >= 0 ? args[iFluxo + 1] : null;
+  const iFlow = args.indexOf('--flow');
+  const flow = iFlow >= 0 ? args[iFlow + 1] : null;
   if (flow && !['solid', 'dashed', 'animated'].includes(flow)) {
-    console.error(`--flow aceita solido | tracejado | animado (veio "${flow}")`);
+    console.error(`--flow accepts solid | dashed | animated (got "${flow}")`);
     process.exit(2);
   }
-  const iTema = args.indexOf('--theme');
-  const nomeTema = iTema >= 0 ? args[iTema + 1] : 'light';
+  const iTheme = args.indexOf('--theme');
+  const themeName = iTheme >= 0 ? args[iTheme + 1] : 'light';
   const force = args.includes('--force');
   const iGate = args.indexOf('--gate');
   const gateLevel = iGate >= 0 ? args[iGate + 1] : 'none';
 
   let model;
   try { model = JSON.parse(fs.readFileSync(input, 'utf8')); }
-  catch (e) { console.error(`não consegui ler ${input}: ${e.message}`); process.exit(1); }
+  catch (e) { console.error(`could not read ${input}: ${e.message}`); process.exit(1); }
 
   let r;
-  try { r = await generate(model, { flow: flow || undefined, tema: nomeTema, force, gate: gateLevel }); }
+  try { r = await generate(model, { flow: flow || undefined, tema: themeName, force, gate: gateLevel }); }
   catch (e) {
     console.error(`\n✗ ${e.message}`);
     for (const row of e.erros || []) console.error(`    · ${row}`);
@@ -372,47 +383,48 @@ async function main() {
       .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('/') : v}`).join('  ')}`);
   for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
   if (r.tema.tokens.edge.flow === 'animated')
-    console.log('  ⚠ fluxo "animado" só se vê em SVG ou HTML. O #4 mediu e este motor confirmou: ' +
-      'exportado para PNG vira um tracejado ESTÁTICO, sem erro nenhum. Exporte com -f svg.');
+    console.log('  ⚠ "animated" flow is only visible in SVG or HTML. #4 measured it and this engine confirms: ' +
+      'exported to PNG it becomes a STATIC dashed line, with no error at all. Export with -f svg.');
 
   if (explain) {
-    console.log('\n  resolução de nomes pelo catálogo:');
-    // o motor resolve o mesmo nó mais de uma vez (pré-medição + layout);
-    // a trilha de auditoria interessa por nó, não por chamada
-    const vistos = new Set();
-    for (const u of r.resolucoes.filter(u => !vistos.has(u.id) && vistos.add(u.id)))
+    console.log('\n  name resolution through the catalog:');
+    // the engine resolves the same node more than once (pre-measurement +
+    // layout); the audit trail matters per node, not per call
+    const seen = new Set();
+    for (const u of r.resolucoes.filter(u => !seen.has(u.id) && seen.add(u.id)))
       console.log(`    ${String(u.id).padEnd(20)} "${u.pediu}" → ${u.virou}  [${u.via}]` +
-        (u.corrections && u.corrections.length ? `  correções: ${u.corrections.join(', ')}` : ''));
+        (u.corrections && u.corrections.length ? `  corrections: ${u.corrections.join(', ')}` : ''));
 
-    // A camada de rede é derivada mas invisível no desenho — só a ORDEM a
-    // denuncia. Sem uma trilha, "por que a Data subnet ficou embaixo?" só se
-    // responde relendo o código.
+    // The network layer is derived but invisible in the drawing — only the
+    // ORDER gives it away. Without a trail, "why did the Data subnet end up at
+    // the bottom?" can only be answered by rereading the code.
     if (r.derived.camadas.size) {
-      console.log('\n  camada de rede das subnets (#22):');
+      console.log('\n  subnet network layer (#22):');
       for (const [id, c] of r.derived.camadas)
-        console.log(`    ${String(id).padEnd(20)} ${String(c.layer || '—').padEnd(11)} [${c.via || 'sem evidência'}]` +
+        console.log(`    ${String(id).padEnd(20)} ${String(c.layer || '—').padEnd(11)} [${c.via || 'no evidence'}]` +
           (c.evidence.length ? `  ← ${c.evidence.map(e => `${e.service}(${e.categoria})`).join(', ')}` : ''));
     }
 
-    // O laudo geométrico (#18), pagina a pagina. Sai aqui porque o `--explain`
-    // e a trilha de auditoria do motor: quem quer saber POR QUE o desenho ficou
-    // assim quer as duas listas, a do catalogo e a da rubrica.
-    console.log('\n  laudo geométrico (#18):');
+    // The geometric report (#18), page by page. It shows up here because
+    // `--explain` is the engine's audit trail: whoever wants to know WHY the
+    // drawing came out this way wants both lists, the catalog's and the
+    // rubric's.
+    console.log('\n  geometric report (#18):');
     for (const { page, report } of r.relatorio.geometry) {
       const s = report.resumo;
-      console.log(`    ${String(page).padEnd(38)} ${s.ok} ok · ${s.warning} aviso · ${s.failure} falha · ` +
-        `${s.notApplicable} inaplicável · ${s.skipped} do render`);
+      console.log(`    ${String(page).padEnd(38)} ${s.ok} ok · ${s.warning} warning · ${s.failure} failure · ` +
+        `${s.notApplicable} n/a · ${s.skipped} from the render`);
       for (const f of report.semanticas)
         console.log(`      ⛔ ${f.id} ${f.name}: ${f.mensagem}`);
       if (report.falhas.length)
-        console.log(`      achados: ${report.falhas.map(f => f.id).join(', ')}`);
+        console.log(`      findings: ${report.falhas.map(f => f.id).join(', ')}`);
     }
     return;
   }
 
   fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
   fs.writeFileSync(output, r.xml);
-  console.log(`\n  → ${output}  (${r.xml.length} bytes, caminho "${r.caminho}")`);
+  console.log(`\n  → ${output}  (${r.xml.length} bytes, path "${r.caminho}")`);
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });

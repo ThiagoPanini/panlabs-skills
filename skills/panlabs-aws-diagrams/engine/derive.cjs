@@ -1,12 +1,13 @@
 'use strict';
 /**
- * Derivação: o que o motor descobre sozinho a partir do modelo.
+ * Derivation: what the engine figures out on its own from the model.
  *
- * Tudo aqui existe para que o agente NÃO tenha de decidir. A faixa de AZ é o
- * caso exemplar: o #19 decidiu que a AZ é dimensão da subnet, nunca container,
- * e que ela vira faixa desenhada só quando a arquitetura de fato afirma
- * redundância zonal. Essa é uma regra executável — então é do motor, e o
- * modelo não tem onde escrevê-la nem como forçá-la.
+ * Everything here exists so the agent does NOT have to decide it. The AZ band
+ * is the exemplary case: #19 decided that the AZ is a dimension of the subnet,
+ * never a container, and that it becomes a drawn band only when the
+ * architecture actually asserts zonal redundancy. That's an executable rule —
+ * so it belongs to the engine, and the model has nowhere to write it and no
+ * way to force it.
  */
 
 const path = require('path');
@@ -15,83 +16,87 @@ const {
 } = require('./layers.cjs');
 
 const CATALOG_PATH = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
-let _catalogo = null;
+let _catalog = null;
 
 /**
- * A derivação passou a depender do catálogo por causa do #22.
+ * Derivation started depending on the catalog because of #22.
  *
- * Até aqui `derivar` era função só da semântica do modelo. A camada de rede de
- * uma subnet sai da CATEGORIA AWS do que ela guarda, e quem sabe categoria é o
- * catálogo (#17) — então ele entra aqui. A dependência é injetável (`opts.cat`)
- * para que a régua possa rodar contra um catálogo de teste, e memoizada porque
- * o `require` já é, mas a montagem do índice não.
+ * Until now `derive` was a function of the model's semantics alone. A
+ * subnet's network layer comes from the AWS CATEGORY of what it holds, and the
+ * catalog (#17) is who knows the category — so it enters here. The dependency
+ * is injectable (`opts.cat`) so the ruler suite can run against a test
+ * catalog, and memoized because `require` already is, but building the index
+ * is not.
  */
 function defaultCatalog() {
-  if (!_catalogo) _catalogo = require(CATALOG_PATH).load();
-  return _catalogo;
+  if (!_catalog) _catalog = require(CATALOG_PATH).load();
+  return _catalog;
 }
 
 /**
- * A ordem dos IRMÃOS é derivada, não herdada do arquivo.
+ * SIBLING order is derived, not inherited from the file.
  *
- * O #11 derivou a ordem das LINHAS da grade por este motivo (incerteza 4 do #7:
- * quem escreve o modelo é um agente, e nenhum LLM emite a mesma lista duas
- * vezes na mesma ordem). O que passou batido lá é que a lista de FILHOS tem o
- * mesmo problema, e ele só aparece quando um container tem irmãos que nenhuma
- * aresta liga: o ELK layouta por camada a partir das arestas, e onde não há
- * aresta o desempate é a ordem de entrada.
+ * #11 derived the grid ROW order for this same reason (uncertainty 4 of #7:
+ * whoever writes the model is an agent, and no LLM emits the same list twice
+ * in the same order). What went unnoticed there is that the CHILDREN list has
+ * the same problem, and it only shows up when a container has siblings that no
+ * edge connects: ELK lays out layer by layer starting from the edges, and
+ * where there's no edge the tiebreak is entry order.
  *
- * Medido no modelo de landing zone: a conta Org Management tem Organizations e
- * Control Tower sem aresta entre eles, e embaralhar `nos` trocava os dois de
- * lugar. Com aresta, o ELK decide e este critério só desempata.
+ * Measured in the landing-zone model: the Org Management account has
+ * Organizations and Control Tower with no edge between them, and shuffling
+ * `nodes` swapped the two. With an edge, ELK decides and this criterion only
+ * breaks ties.
  *
- * Critério: exposição primeiro (pública antes da privada, o sentido de leitura
- * do deck), depois a CAMADA DE REDE, depois o que está escrito na caixa.
+ * Criterion: exposure first (public before private, the deck's reading
+ * order), then the NETWORK LAYER, then what's written in the box.
  *
- * O #22 tirou daqui o placeholder: o desempate do meio era alfabético e
- * derrubava `Web · Data` e `Ingest · Core`. Agora quem desempata é a camada
- * que a subnet ocupa, lida do que ela guarda (`layers.cjs`). O alfabeto
- * sobreviveu como ÚLTIMO desempate, e mudou de função: ele não carrega mais
- * significado nenhum, só garante ordem total entre coisas que a semântica
- * empatou — que é o que o determinismo precisa.
+ * #22 removed the placeholder that used to live here: the middle tiebreak was
+ * alphabetical and it broke `Web · Data` and `Ingest · Core`. Now what
+ * tiebreaks is the layer the subnet occupies, read from what it holds
+ * (`layers.cjs`). The alphabet survived as the LAST tiebreak, and its role
+ * changed: it no longer carries any meaning, it just guarantees a total order
+ * among things semantics tied — which is what determinism needs.
  *
- * A exposição continua na frente, e isso é decisão, não inércia: uma subnet
- * PÚBLICA que só hospeda compute continua acima de uma subnet PRIVADA que
- * hospeda um Transit Gateway. Público em cima é o sentido de leitura do deck, e
- * a camada ordena dentro dele.
+ * Exposure stays in front, and that's a decision, not inertia: a PUBLIC subnet
+ * that only hosts compute still sits above a PRIVATE subnet that hosts a
+ * Transit Gateway. Public on top is the deck's reading order, and the layer
+ * orders within it.
  *
- * ⚠️ Efeito colateral que vale dizer em voz alta: como só subnet tem camada, a
- * segunda chave vale `SEM_CAMADA` para todo o resto, e isso faz as subnets de
- * um container virem ANTES dos serviços soltos que dividem o container com
- * elas. É consequência, não pedido do #22 — mas é boa (numa VPC, ler a rede
- * antes do avulso), é determinística, e mantém o comparador uma ordem TOTAL.
- * Pular a chave quando um dos dois não é subnet deixaria o comparador
- * intransitivo, que é pior que a assimetria.
+ * WARNING, worth saying out loud: since only a subnet has a layer, the second
+ * key defaults to `NO_LAYER` for everything else, and that makes a
+ * container's subnets come BEFORE the loose services that share the container
+ * with them. It's a consequence, not something #22 asked for — but it's a
+ * good one (in a VPC, reading the network before the loose stuff), it's
+ * deterministic, and it keeps the comparator a TOTAL order. Skipping the key
+ * when one of the two isn't a subnet would leave the comparator intransitive,
+ * which is worse than the asymmetry.
  */
-function siblingKey(n, camadaDe) {
+function siblingKey(n, layerOf) {
   return [
     ordemDeAcesso(n.access),
-    layerOrder(camadaDe(n.id)),      // só subnet tem camada; o resto cai no piso
+    layerOrder(layerOf(n.id)),      // only a subnet has a layer; everything else falls to the floor
     String(n.label || n.service || n.id),
     String(n.id),
   ];
 }
 
-function compararIrmaos(a, b, camadaDe) {
-  const ka = siblingKey(a, camadaDe), kb = siblingKey(b, camadaDe);
+function compareSiblings(a, b, layerOf) {
+  const ka = siblingKey(a, layerOf), kb = siblingKey(b, layerOf);
   return ka[0] - kb[0] || ka[1] - kb[1] ||
     ka[2].localeCompare(kb[2], 'pt') || ka[3].localeCompare(kb[3]);
 }
 
 /**
- * Árvore de contenção a partir da lista plana.
+ * Containment tree from the flat list.
  *
- * `camadaDe` é opcional porque a árvore é construída DUAS vezes: a primeira
- * sem camada nenhuma, só para poder navegar até os descendentes de cada subnet
- * (é deles que a camada sai); a segunda já sabendo ordenar. A primeira passada
- * só é usada para consultar ancestralidade, que não depende de ordem.
+ * `layerOf` is optional because the tree is built TWICE: the first time with
+ * no layer at all, just so it can navigate down to each subnet's descendants
+ * (that's where the layer comes from); the second time already knowing the
+ * layer, which is what orders the siblings. The first pass is only used to
+ * query ancestry, which doesn't depend on order.
  */
-function arvore(model, camadaDe = () => null) {
+function arvore(model, layerOf = () => null) {
   const byId = new Map(model.nodes.map(n => [n.id, n]));
   const filhos = new Map(model.nodes.map(n => [n.id, []]));
   const raizes = [];
@@ -99,7 +104,7 @@ function arvore(model, camadaDe = () => null) {
     if (n.inside === undefined) raizes.push(n);
     else filhos.get(n.inside).push(n);
   }
-  const cmp = (a, b) => compararIrmaos(a, b, camadaDe);
+  const cmp = (a, b) => compareSiblings(a, b, layerOf);
   raizes.sort(cmp);
   for (const list of filhos.values()) list.sort(cmp);
   const parent = n => n.inside === undefined ? null : byId.get(n.inside);
@@ -109,47 +114,48 @@ function arvore(model, camadaDe = () => null) {
 }
 
 /**
- * O gatilho do #19, portado para o IR plano.
+ * #19's trigger, ported to the flat IR.
  *
- *   desenhar = ≥2 AZs distintas E algum PAPEL de subnet presente em ≥2 AZs
+ *   draw = ≥2 distinct AZs AND some subnet ROLE present in ≥2 AZs
  *
- * O papel é escopado por VPC: "private subnet" na VPC A e na VPC B são redes
- * diferentes, e a repetição entre elas não afirma redundância zonal nenhuma.
+ * The role is scoped by VPC: "private subnet" in VPC A and in VPC B are
+ * different networks, and the repetition between them asserts no zonal
+ * redundancy at all.
  */
 function gatilhoAz(model, t) {
   const subnets = model.nodes.filter(n => n.kind === 'subnet');
   const azs = [...new Set(subnets.map(s => s.az).filter(Boolean))].sort();
   if (azs.length < 2)
-    return { draw: false, azs, because: `só ${azs.length} AZ distinta declarada` };
+    return { draw: false, azs, because: `only ${azs.length} distinct AZ declared` };
 
-  // a chave de papel é a do `layers.cjs` — a mesma que vira LINHA da grade.
-  // Ela estava escrita à mão aqui também, e papel é conceito de um dono só.
-  const porPapel = new Map();
+  // the role key is `layers.cjs`'s — the same one that becomes a grid ROW. It
+  // used to be written here by hand too, and a role is a concept with one owner.
+  const byRole = new Map();
   for (const s of subnets) {
     if (!s.az) continue;
     const k = chaveDePapel(s, t);
-    if (!porPapel.has(k))
-      porPapel.set(k, {
+    if (!byRole.has(k))
+      byRole.set(k, {
         vpc: (t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id,
         access: s.access || '?',
-        zonas: new Set(),
+        zones: new Set(),
       });
-    porPapel.get(k).zonas.add(s.az);
+    byRole.get(k).zones.add(s.az);
   }
-  const redundantes = [...porPapel.values()].filter(p => p.zonas.size >= 2);
-  if (!redundantes.length)
-    return { draw: false, azs, because: `${azs.length} AZs, mas nenhum papel de subnet se repete entre elas` };
+  const redundant = [...byRole.values()].filter(p => p.zones.size >= 2);
+  if (!redundant.length)
+    return { draw: false, azs, because: `${azs.length} AZs, but no subnet role repeats across them` };
 
   return {
     draw: true, azs,
-    because: `${redundantes.length} papel(is) em ≥2 AZs: ` +
-      redundantes.map(p => `${p.vpc}/${p.access}×${p.zonas.size}`).join(', '),
+    because: `${redundant.length} role(s) in ≥2 AZs: ` +
+      redundant.map(p => `${p.vpc}/${p.access}×${p.zones.size}`).join(', '),
   };
 }
 
-// ------------------------------------------------------------------ multi-conta
+// ------------------------------------------------------------------ multi-account
 
-/** Conta mais próxima na linha de ancestrais. `null` = o nó não mora em conta nenhuma. */
+/** Nearest account in the ancestor chain. `null` = the node lives in no account at all. */
 function contaDe(no, t) {
   if (!no) return null;
   if (no.kind === 'account') return no;
@@ -157,71 +163,75 @@ function contaDe(no, t) {
 }
 
 /**
- * O gatilho de OU — irmão exato do gatilho de AZ, e pela mesma razão.
+ * The OU trigger — the exact sibling of the AZ trigger, and for the same
+ * reason.
  *
- * O #19 decidiu que a AZ é DIMENSÃO da subnet, nunca container, e que ela vira
- * faixa desenhada só quando a arquitetura de fato afirma redundância zonal. A
- * medição do #6 diz a mesma coisa da OU por outro caminho: `AWS account` é um
- * group icon oficial, `Organizational unit` NÃO é — a OU aparece como par
- * ícone+rótulo flutuando acima do primeiro membro, sem caixa nenhuma (G2).
+ * #19 decided that the AZ is a DIMENSION of the subnet, never a container, and
+ * that it becomes a drawn band only when the architecture actually asserts
+ * zonal redundancy. #6's measurement says the same thing about the OU by a
+ * different route: `AWS account` is an official group icon, `Organizational
+ * unit` is NOT — the OU shows up as an icon+label pair floating above the
+ * first member, with no box at all (G2).
  *
- * Então a OU é dimensão da conta, e o gatilho pergunta a mesma coisa: a
- * declaração AGRUPA alguma coisa, ou só repete o que o rótulo da conta já diz?
+ * So the OU is a dimension of the account, and the trigger asks the same
+ * question: does the declaration GROUP something, or does it just repeat what
+ * the account's own label already says?
  *
- *   desenhar = alguma OU com ≥2 contas   E   alguma conta FORA dessa OU
+ *   draw = some OU with ≥2 accounts   AND   some account OUTSIDE that OU
  *
- * As duas cláusulas são o eco exato das duas do #19 (≥2 zonas E papel repetido
- * entre elas), e cada uma mata um caso concreto:
+ * The two clauses echo #19's exactly (≥2 zones AND a role repeated between
+ * them), and each one kills a concrete case:
  *
- *   sem a 1ª  duas OUs de uma conta cada ganhariam dois rótulos que não
- *             agrupam nada — o nome da conta já separa as duas.
- *   sem a 2ª  um diagrama inteiro dentro de uma OU só ganharia um rótulo
- *             constante, que é subtítulo, não agrupamento. Faixa sem
- *             contraste não é faixa.
+ *   without the 1st   two OUs with one account each would get two labels that
+ *                     group nothing — the account's name already tells them
+ *                     apart.
+ *   without the 2nd   a whole diagram inside a single OU would get one
+ *                     constant label, which is a subtitle, not grouping. A
+ *                     band with no contrast isn't a band.
  *
- * A conta SEM OU não vira uma OU anônima, mas CONTA como contraste: é o caso
- * da Management, que o `P2` põe no topo e fora de qualquer OU, e é justamente
- * contra ela que "OU – Security" significa alguma coisa.
+ * An account with NO OU doesn't become an anonymous OU, but it COUNTS as
+ * contrast: it's the Management case, which `P2` puts on top and outside any
+ * OU, and it's exactly against it that "OU – Security" means something.
  */
 function gatilhoOu(model, t) {
   const accounts = model.nodes.filter(n => n.kind === 'account');
-  const porOu = new Map();
+  const byOu = new Map();
   for (const c of accounts) {
     if (!c.ou) continue;
-    if (!porOu.has(c.ou)) porOu.set(c.ou, []);
-    porOu.get(c.ou).push(c.id);
+    if (!byOu.has(c.ou)) byOu.set(c.ou, []);
+    byOu.get(c.ou).push(c.id);
   }
-  const ous = [...porOu.keys()].sort();
-  const agrupam = ous.filter(o => porOu.get(o).length >= 2);
+  const ous = [...byOu.keys()].sort();
+  const group = ous.filter(o => byOu.get(o).length >= 2);
 
-  if (!agrupam.length)
+  if (!group.length)
     return {
       draw: false, ous,
       because: ous.length
-        ? `${ous.length} OU(s), nenhuma com ≥2 contas — o rótulo da conta já separa`
-        : 'nenhuma OU declarada',
+        ? `${ous.length} OU(s), none with ≥2 accounts — the account's label already tells them apart`
+        : 'no OU declared',
     };
 
-  const foraDaMaior = accounts.filter(c => !agrupam.includes(c.ou));
-  if (!foraDaMaior.length && agrupam.length < 2)
+  const outsideTheLargest = accounts.filter(c => !group.includes(c.ou));
+  if (!outsideTheLargest.length && group.length < 2)
     return {
       draw: false, ous,
-      because: `todas as contas estão em "${agrupam[0]}" — rótulo constante é subtítulo, não faixa`,
+      because: `every account is in "${group[0]}" — a constant label is a subtitle, not a band`,
     };
 
-  // O GATILHO é decidido pelas OUs que agrupam; o DESENHO cobre todas as
-  // declaradas. Rotular "Security" e deixar "Workloads" nua leria como se a
-  // segunda não fosse uma OU — e a SRA rotula `OU – Workloads` mesmo com uma
-  // conta membro só. Uma vez que a dimensão vira desenho, ela vira desenho
-  // inteira.
+  // The TRIGGER is decided by the OUs that group; the DRAWING covers all the
+  // declared ones. Labeling "Security" and leaving "Workloads" bare would read
+  // as if the second weren't an OU — and the SRA labels `OU – Workloads` even
+  // with a single member account. Once the dimension becomes a drawing, it
+  // becomes the whole drawing.
   return {
-    draw: true, ous, agrupam, porOu,
-    because: `${agrupam.length} OU(s) com ≥2 contas: ` +
-      agrupam.map(o => `${o}×${porOu.get(o).length}`).join(', '),
+    draw: true, ous, agrupam: group, porOu: byOu,
+    because: `${group.length} OU(s) with ≥2 accounts: ` +
+      group.map(o => `${o}×${byOu.get(o).length}`).join(', '),
   };
 }
 
-/** As arestas cujas duas pontas moram em contas DIFERENTES. Entrar da rua não conta. */
+/** Edges whose two ends live in DIFFERENT accounts. Coming in from outside doesn't count. */
 function travessias(edges, t) {
   return edges.filter(a => {
     const ca = contaDe(t.byId.get(a.from), t);
@@ -235,22 +245,24 @@ function travessias(edges, t) {
 }
 
 /**
- * Em qual dos dois modos o desenho está — e isto NÃO se pergunta ao agente.
+ * Which of the two modes the drawing is in — and this is NOT asked of the
+ * agent.
  *
- * O #6 §6.7 é explícito: a vista de INTEGRAÇÃO (2–4 contas, o assunto é a
- * travessia) obedece a regras diferentes da vista de INVENTÁRIO (o mapa de
- * colocação, "que serviço mora em que conta"). Um gerador precisa saber em qual
- * está, porque as duas se contradizem: a de inventário suprime toda aresta
- * cross-account (`E1`, a regra soberana — o diagrama carro-chefe da AWS tem
- * ZERO conectores), e a de integração existe para desenhá-la.
+ * #6 §6.7 is explicit: the INTEGRATION view (2–4 accounts, the subject is the
+ * crossing) obeys different rules than the INVENTORY view (the placement map,
+ * "which service lives in which account"). A generator needs to know which one
+ * it's in, because the two contradict each other: the inventory one suppresses
+ * every cross-account edge (`E1`, the sovereign rule — AWS's flagship diagram
+ * has ZERO connectors), and the integration one exists to draw it.
  *
- * Os dois limites são medidos, não escolhidos:
+ * Both limits are measured, not chosen:
  *
- *   contas 2..4   `X1` — a vista de integração do corpus é sempre desse tamanho.
- *   travessias ≤7 as vistas por-conta oficiais carregam de 2 a 7 conectores
- *                 (§4.3). Acima disso não há exemplo oficial nenhum, e `D1` diz
- *                 que o que estoura a página é a contagem de ARESTAS, não a de
- *                 contas. Então o motor volta para inventário e decompõe.
+ *   accounts 2..4  `X1` — the corpus's integration view is always this size.
+ *   crossings ≤7   the official per-account views carry 2 to 7 connectors
+ *                  (§4.3). Above that there's no official example, and `D1`
+ *                  says what overflows the page is the EDGE count, not the
+ *                  account count. So the engine falls back to inventory and
+ *                  decomposes.
  */
 const MAX_INTEGRATION_ACCOUNTS = 4;
 const MAX_TRAVERSALS = 7;
@@ -258,124 +270,126 @@ const MAX_TRAVERSALS = 7;
 function modoDeContas(model, t, edges) {
   const accounts = model.nodes.filter(n => n.kind === 'account');
   if (accounts.length < 2)
-    return { modo: 'none', accounts: accounts.length, travessias: 0, because: `${accounts.length} conta no modelo` };
+    return { modo: 'none', accounts: accounts.length, travessias: 0, because: `${accounts.length} account in the model` };
 
-  const cruz = travessias(edges || model.edges || [], t);
-  if (!cruz.length)
+  const cross = travessias(edges || model.edges || [], t);
+  if (!cross.length)
     return {
       modo: 'inventario', accounts: accounts.length, travessias: 0,
-      because: `${accounts.length} contas, nenhuma travessia — é mapa de colocação`,
+      because: `${accounts.length} accounts, no crossing — this is a placement map`,
     };
   if (accounts.length > MAX_INTEGRATION_ACCOUNTS)
     return {
-      modo: 'inventario', accounts: accounts.length, travessias: cruz.length,
-      because: `${accounts.length} contas passam das ${MAX_INTEGRATION_ACCOUNTS} que a vista de integração comporta (X1)`,
+      modo: 'inventario', accounts: accounts.length, travessias: cross.length,
+      because: `${accounts.length} accounts is above the ${MAX_INTEGRATION_ACCOUNTS} the integration view holds (X1)`,
     };
-  if (cruz.length > MAX_TRAVERSALS)
+  if (cross.length > MAX_TRAVERSALS)
     return {
-      modo: 'inventario', accounts: accounts.length, travessias: cruz.length,
-      because: `${cruz.length} travessias passam das ${MAX_TRAVERSALS} que o corpus oficial mostra (D1)`,
+      modo: 'inventario', accounts: accounts.length, travessias: cross.length,
+      because: `${cross.length} crossings is above the ${MAX_TRAVERSALS} the official corpus shows (D1)`,
     };
   return {
-    modo: 'integracao', accounts: accounts.length, travessias: cruz.length,
-    because: `${accounts.length} contas e ${cruz.length} travessia(s) — a travessia é o assunto`,
+    modo: 'integracao', accounts: accounts.length, travessias: cross.length,
+    because: `${accounts.length} accounts and ${cross.length} crossing(s) — the crossing is the subject`,
   };
 }
 
 /**
- * A hierarquia de fallback de 6 níveis do #6 §6.4, aplicada na ordem, parando
- * na primeira que serve. É a resposta medida à pergunta do ticket — "canaleta
- * dedicada? jumpStyle no cruzamento? barramento central?".
+ * #6 §6.4's 6-level fallback hierarchy, applied in order, stopping at the
+ * first one that fits. It's the measured answer to the ticket's question —
+ * "dedicated lane? jumpStyle at the crossing? central bus?".
  *
- *   1. não desenhe                    vista consolidada (E1)
- *   2. callout numerado, sem linha    relação sequencial e narrável (E2)
- *   3. aresta agregada + rótulo       fan-in N→1 (E3)
- *   4. canaleta / barramento          N irmãs recebem o mesmo vínculo (E4)
- *   5. hub central + raios            N→M com entidade central real
- *   6. aresta direta com nó na calha  exatamente 2 contas (E10)
+ *   1. don't draw                    consolidated view (E1)
+ *   2. numbered callout, no line     sequential, narratable relationship (E2)
+ *   3. aggregated edge + label       N→1 fan-in (E3)
+ *   4. lane / bus                    N siblings receiving the same link (E4)
+ *   5. central hub + spokes          N→M with a real central entity
+ *   6. direct edge with a lane node  exactly 2 accounts (E10)
  *
- * O nível 2 fica de fora da escolha automática de propósito: "narrável" não é
- * um fato do modelo, é um julgamento sobre a prosa que acompanha a figura, e o
- * IR não tem — nem deveria ter — onde afirmá-lo.
+ * Level 2 is left out of the automatic choice on purpose: "narratable" isn't a
+ * fact of the model, it's a judgment about the prose that goes with the
+ * figure, and the IR doesn't have — and shouldn't have — anywhere to assert it.
  */
 /**
- * MESMA ORIGEM NÃO BASTA — as arestas têm de ser a MESMA RELAÇÃO.
+ * SAME ORIGIN ISN'T ENOUGH — the edges have to be the SAME RELATIONSHIP.
  *
- * Esta condição não estava na leitura inicial do #6 e apareceu na primeira
- * rodada de casos, com o modelo de três contas: o ECS fala com o Transit
- * Gateway (atracamento de VPC) e com o event bus (PutEvents). Mesma origem,
- * duas contas de destino — a regra ingênua disparava barramento.
+ * This condition wasn't in #6's initial reading and showed up in the first
+ * round of cases, with the three-account model: ECS talks to the Transit
+ * Gateway (VPC attachment) and to the event bus (PutEvents). Same origin, two
+ * destination accounts — the naive rule would fire a bus.
  *
- * E um barramento MENTE aqui. `E4` sai do MALZ, onde a barra carrega um
- * vínculo só ("estas contas pertencem a esta OU"), e 1 linha + N stubs é fiel
- * porque o vínculo é literalmente o mesmo. Desenhar uma barra ligando
- * atracamento e PutEvents afirmaria que as duas contas recebem a mesma coisa.
- * `E3` tem o mesmo problema pelo outro lado: colapsar um fan-in em uma aresta
- * rotulada só é honesto se o texto do rótulo valer para todas as origens.
+ * And a bus LIES here. `E4` comes from the MALZ, where the bar carries a
+ * single link ("these accounts belong to this OU"), and 1 line + N stubs is
+ * faithful because the link really is the same thing. Drawing a bar
+ * connecting a VPC attachment and PutEvents would assert that both accounts
+ * receive the same thing. `E3` has the same problem from the other side:
+ * collapsing a fan-in into one labeled edge is only honest if the label's text
+ * holds for every origin.
  *
- * O que o IR já tem para responder isso é o par (rótulo, protocolo) — que é
- * semântica, não geometria.
+ * What the IR already has to answer this is the (label, protocol) pair — which
+ * is semantics, not geometry.
  */
 function sameRelation(edges) {
   const key = a => `${a.label || ''}|${a.protocol || ''}`;
   return new Set(edges.map(key)).size === 1;
 }
 
-function politicaDeTravessia(modo, cruz, t) {
+function politicaDeTravessia(modo, cross, t) {
   if (modo !== 'integracao')
-    return { level: 1, mecanismo: 'suprimir', grupos: [], because: 'vista de inventário — E1 suprime toda travessia' };
+    return { level: 1, mecanismo: 'suprimir', grupos: [], because: 'inventory view — E1 suppresses every crossing' };
 
-  // fan-in: ≥2 contas de origem levando A MESMA COISA ao mesmo nó de destino
-  const porDestino = new Map();
-  for (const a of cruz) {
-    if (!porDestino.has(a.to)) porDestino.set(a.to, []);
-    porDestino.get(a.to).push(a);
+  // fan-in: ≥2 origin accounts carrying THE SAME THING to the same destination node
+  const byDestination = new Map();
+  for (const a of cross) {
+    if (!byDestination.has(a.to)) byDestination.set(a.to, []);
+    byDestination.get(a.to).push(a);
   }
-  const fanIn = [...porDestino.entries()]
+  const fanIn = [...byDestination.entries()]
     .filter(([, as]) => new Set(as.map(a => a.contaDe)).size >= 2 && sameRelation(as));
   if (fanIn.length)
     return {
       level: 3, mecanismo: 'agregada',
       grupos: fanIn.map(([to, as]) => ({ to, accounts: [...new Set(as.map(a => a.contaDe))].sort() })),
-      because: `fan-in de ${new Set(fanIn[0][1].map(a => a.contaDe)).size} contas em "${fanIn[0][0]}" ` +
-        `com a mesma relação — E3 colapsa numa aresta rotulada`,
+      because: `fan-in of ${new Set(fanIn[0][1].map(a => a.contaDe)).size} accounts into "${fanIn[0][0]}" ` +
+        `with the same relationship — E3 collapses into one labeled edge`,
     };
 
-  // barramento: a MESMA origem levando O MESMO VÍNCULO a ≥2 contas irmãs
-  const porOrigem = new Map();
-  for (const a of cruz) {
-    if (!porOrigem.has(a.from)) porOrigem.set(a.from, []);
-    porOrigem.get(a.from).push(a);
+  // bus: the SAME origin carrying THE SAME LINK to ≥2 sibling accounts
+  const byOrigin = new Map();
+  for (const a of cross) {
+    if (!byOrigin.has(a.from)) byOrigin.set(a.from, []);
+    byOrigin.get(a.from).push(a);
   }
-  const bus = [...porOrigem.entries()]
+  const bus = [...byOrigin.entries()]
     .filter(([, as]) => new Set(as.map(a => a.contaPara)).size >= 2 && sameRelation(as));
   if (bus.length)
     return {
       level: 4, mecanismo: 'bus',
       grupos: bus.map(([from, as]) => ({ from, accounts: [...new Set(as.map(a => a.contaPara))].sort() })),
-      because: `"${bus[0][0]}" leva o mesmo vínculo a ` +
-        `${new Set(bus[0][1].map(a => a.contaPara)).size} contas — E4 roteia por barramento, 1 linha + N stubs`,
+      because: `"${bus[0][0]}" carries the same link to ` +
+        `${new Set(bus[0][1].map(a => a.contaPara)).size} accounts — E4 routes through a bus, 1 line + N stubs`,
     };
 
   return {
-    level: 6, mecanismo: 'direta', grupos: cruz.map(a => ({ edge: a.id })),
-    because: `${cruz.length} travessia(s) entre pares distintos — E10 desenha direto, sem cerimônia na borda (E8)`,
+    level: 6, mecanismo: 'direta', grupos: cross.map(a => ({ edge: a.id })),
+    because: `${cross.length} crossing(s) between distinct pairs — E10 draws direct, no ceremony at the border (E8)`,
   };
 }
 
 /**
- * Onde pendurar cada aresta.
+ * Where to hang each edge.
  *
- * O #2 provou que waypoint vive no espaço do PAI da aresta e que o XSD oficial
- * erra ao chamá-lo de absoluto. Há duas saídas coerentes: parentear no ancestral
- * comum e emitir no espaço dele, ou pendurar tudo na camada raiz e emitir
- * absoluto. Escolho a segunda — com `elk.json.edgeCoords: ROOT` o próprio ELK já
- * devolve absoluto, e o #2 diz explicitamente que aí a divergência do XSD é
- * inócua. Uma regra, um sistema de coordenadas, nenhuma conversão.
+ * #2 proved that a waypoint lives in the space of the edge's PARENT and that
+ * the official XSD is wrong to call it absolute. There are two coherent ways
+ * out: parent it to the common ancestor and emit in that space, or hang
+ * everything off the root layer and emit absolute. I pick the second — with
+ * `elk.json.edgeCoords: ROOT`, ELK itself already returns absolute, and #2
+ * says explicitly that there the XSD's divergence is harmless. One rule, one
+ * coordinate system, no conversion.
  */
-function paiDaAresta() { return '1'; }
+function edgeParent() { return '1'; }
 
-/** Ancestral comum mais próximo — não usado para parentear, mas o layout precisa saber. */
+/** Nearest common ancestor — not used for parenting, but the layout needs to know it. */
 function ancestralComum(a, b, t) {
   const ca = new Set([a.id, ...t.ancestrais(a).map(n => n.id)]);
   for (const n of [b, ...t.ancestrais(b)]) if (ca.has(n.id)) return n;
@@ -386,23 +400,24 @@ function derive(model, opts = {}) {
   const cat = opts.cat || defaultCatalog();
 
   /**
-   * A camada de rede das subnets, e onde a falta dela muda o desenho (#22).
+   * The subnets' network layer, and where its absence changes the drawing
+   * (#22).
    *
-   * Duas passadas na árvore: a primeira só para navegar (a camada sai dos
-   * DESCENDENTES da subnet, então a árvore tem de existir antes), a segunda já
-   * com a camada na mão, que é o que ordena os irmãos.
+   * Two passes over the tree: the first just to navigate (the layer comes from
+   * the subnet's DESCENDANTS, so the tree has to exist first), the second
+   * already holding the layer, which is what orders the siblings.
    */
   const nav = arvore(model);
   const camadas = camadasDeSubnets(model, nav, cat);
   const gaps = layerGaps(model, nav, camadas);
-  const camadaDe = id => (camadas.get(id) || {}).layer || null;
+  const layerOf = id => (camadas.get(id) || {}).layer || null;
 
-  const t = arvore(model, camadaDe);
+  const t = arvore(model, layerOf);
   const az = gatilhoAz(model, t);
 
-  // Faixas de AZ nunca vêm do modelo — são construídas aqui, uma por zona,
-  // e a caixa de cada uma é a união dos membros (o #19 mostrou a assimetria
-  // se resolver sozinha: a zona que tem menos membros encolhe).
+  // AZ bands never come from the model — they're built here, one per zone, and
+  // each one's box is the union of its members (#19 showed the asymmetry
+  // resolving itself: the zone with fewer members shrinks).
   const faixasAz = az.draw
     ? az.azs.map(z => ({
         id: `az-${z}`,
@@ -413,44 +428,45 @@ function derive(model, opts = {}) {
     : [];
 
   /**
-   * A ORDEM DAS ARESTAS TAMBÉM É DERIVADA — e isto foi achado medindo.
+   * EDGE ORDER IS ALSO DERIVED — and this was found by measuring.
    *
-   * O #11 já tinha derivado a ordem das LINHAS da grade pela mesma razão
-   * (incerteza 4 do #7): quem escreve o modelo é um agente, e nenhum LLM emite
-   * a mesma lista duas vezes na mesma ordem. O que passou batido lá é que a
-   * lista de arestas tem o mesmo problema, e ele só aparece nos caminhos que
-   * emitem aresta iterando o modelo — o do ELK escapava porque quem devolve a
-   * lista de arestas é o ELK, em ordem própria.
+   * #11 had already derived the grid ROW order for the same reason
+   * (uncertainty 4 of #7): whoever writes the model is an agent, and no LLM
+   * emits the same list twice in the same order. What went unnoticed there is
+   * that the edge list has the same problem, and it only shows up on the paths
+   * that emit edges by iterating the model — the ELK path escaped it because
+   * the one returning the edge list is ELK, in its own order.
    *
-   * A geometria não muda; o que muda é a ORDEM DAS CÉLULAS no arquivo. E isso
-   * custa duas coisas concretas: o diff do `.drawio` fica sujo sem nenhum pixel
-   * ter se mexido, e a ordem do documento é a ordem Z — duas arestas que se
-   * cruzam trocam de "quem passa por cima" entre execuções.
+   * The geometry doesn't change; what changes is the ORDER OF THE CELLS in the
+   * file. And that costs two concrete things: the `.drawio` diff comes out
+   * dirty with not a single pixel having moved, and document order is Z order
+   * — two edges that cross swap "who's drawn on top" between runs.
    *
-   * Critério: o passo numerado primeiro (é a ordem que o leitor vê), depois as
-   * pontas. Semântica pura, como tudo mais que o motor deriva.
+   * Criterion: the numbered step first (it's the order the reader sees), then
+   * the endpoints. Pure semantics, like everything else the engine derives.
    */
   const edges = (model.edges || []).map((a, i) => ({
     ...a,
     id: a.id || `e-${a.from}-${a.to}${i}`,
-    parent: paiDaAresta(),
+    parent: edgeParent(),
     comum: ancestralComum(t.byId.get(a.from), t.byId.get(a.to), t),
   })).sort((a, b) =>
     (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER) ||
     String(a.from).localeCompare(String(b.from)) ||
     String(a.to).localeCompare(String(b.to)));
 
-  // multi-conta (#12) — mesma forma da AZ: gatilho derivado, faixa construída
+  // multi-account (#12) — same shape as the AZ: derived trigger, built band
   const ou = gatilhoOu(model, t);
   const modo = modoDeContas(model, t, edges);
-  const cruz = travessias(edges, t);
-  const policy = politicaDeTravessia(modo.modo, cruz, t);
+  const cross = travessias(edges, t);
+  const policy = politicaDeTravessia(modo.modo, cross, t);
 
-  // A faixa de OU sai do MESMO construtor da faixa de AZ — união dos membros —
-  // e difere num campo só: `render`. O #6 G2 mediu que a OU não ganha caixa em
-  // diagrama de arquitetura (não existe shape oficial), então ela é rótulo
-  // flutuante acima do primeiro membro. O construtor é agnóstico; quem decide
-  // se a união vira retângulo ou só âncora de rótulo é esta linha.
+  // The OU band comes from the SAME constructor as the AZ band — union of the
+  // members — and differs in one field: `render`. #6 G2 measured that the OU
+  // gets no box in an architecture diagram (there's no official shape for it),
+  // so it's a label floating above the first member. The constructor is
+  // agnostic; this line is what decides whether the union becomes a rectangle
+  // or just a label anchor.
   const faixasOu = ou.draw
     ? ou.ous.map(o => ({
         id: `ou-${o.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
@@ -461,20 +477,20 @@ function derive(model, opts = {}) {
       }))
     : [];
 
-  // habilitador de permissão (E9): nó anexado, seta curta para DENTRO de quem
-  // ele autoriza — nunca rótulo de aresta
+  // permission enabler (E9): attached node, short arrow pointing INTO whoever
+  // it authorizes — never an edge label
   const habilitadores = model.nodes
     .filter(n => n.enables)
     .map(n => ({ id: n.id, target: n.enables }));
 
-  // mesma razão para as faixas (a ordem delas é ordem Z entre bandas) e para os
-  // habilitadores (viram aresta)
+  // same reason for the bands (their order is the Z order between bands) and
+  // for the enablers (they become edges)
   const bands = [...(model.bands || [])].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   habilitadores.sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
   return {
     t, az, faixasAz, edges, bands,
-    ou, faixasOu, modo, travessias: cruz, policy, habilitadores,
+    ou, faixasOu, modo, travessias: cross, policy, habilitadores,
     camadas, gaps,
   };
 }

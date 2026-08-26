@@ -1,36 +1,38 @@
 'use strict';
 /**
- * Alinhamento — o passe que tira o "quase".
+ * Alignment — the pass that removes the "almost".
  *
- * Um desalinhamento de 13 px entre dois nós ligados por uma aresta não lê como
- * escolha: lê como erro. Ou os dois estão na mesma faixa, ou estão claramente
- * em faixas diferentes; o meio-termo é o que faz um desenho parecer descuidado.
+ * A 13 px misalignment between two nodes joined by an edge doesn't read as a
+ * choice: it reads as a mistake. Either the two sit in the same lane, or they
+ * are clearly in different lanes; the middle ground is what makes a drawing
+ * look careless.
  *
- * Por que aqui e não no ELK: **não achei alavanca no ELK que faça isso.**
- * Medidos e inertes em `elkjs` 0.12.0 — `priority.straightness` (por aresta),
- * `elk.margins` (por nó), `nodePlacement.favorStraightEdges`. As variantes de
- * `nodePlacement.bk.fixedAlignment` funcionam mas escolhem OUTRO vizinho para
- * alinhar; nenhuma zera a diferença. Como o motor já é dono de 100% da
- * geometria (#2 §8 — é por isso que `childLayout` é proibido), fazer o encaixe
- * aqui é coerente com o contrato, não uma gambiarra em volta dele.
+ * Why here and not in ELK: **I found no lever in ELK that does this.** Measured
+ * and inert in `elkjs` 0.12.0 — `priority.straightness` (per edge), `elk.margins`
+ * (per node), `nodePlacement.favorStraightEdges`. The `nodePlacement.bk.fixedAlignment`
+ * variants work but pick a DIFFERENT neighbor to align to; none zero out the
+ * difference. Since the engine already owns 100% of the geometry (#2 §8 — that's
+ * why `childLayout` is forbidden), doing the snap here is consistent with the
+ * contract, not a workaround around it.
  *
- * O passe é conservador de propósito:
- *   - só encosta em desalinhamento PEQUENO (≤ SNAP). Grande é intencional.
- *   - move a COLUNA inteira, nunca um nó solto, para não comer o vão do vizinho.
- *   - se o resultado sobrepõe qualquer coisa, DESFAZ. Melhor um "quase" do que
- *     um diagrama errado.
+ * The pass is deliberately conservative:
+ *   - it only touches SMALL misalignment (≤ SNAP). Large is intentional.
+ *   - it moves the whole COLUMN, never a single loose node, so it doesn't eat
+ *     the neighbor's gap.
+ *   - if the result overlaps anything, it UNDOES. A "almost" is better than a
+ *     wrong diagram.
  */
 
-const SNAP = 30;         // acima disso o desalinhamento é deliberado
+const SNAP = 30;         // above this, the misalignment is deliberate
 const MAX_PASSES = 4;
 
-/** Índice plano da saída do ELK, com posição absoluta e ponteiro para o pai. */
+/** Flat index of the ELK output, with absolute position and a pointer to the parent. */
 function buildIndex(output) {
   const nodes = new Map();
-  (function tier(n, paiId, ox, oy) {
+  (function tier(n, parentId, ox, oy) {
     for (const c of n.children || []) {
       nodes.set(c.id, {
-        no: c, paiId,
+        node: c, parentId,
         x: ox + c.x, y: oy + c.y, w: c.width, h: c.height,
         leaf: !(c.children && c.children.length),
       });
@@ -42,151 +44,154 @@ function buildIndex(output) {
 
 const cy = r => r.y + r.h / 2;
 
-/** Irmãos que compartilham a mesma coluna (mesmo x) dentro do mesmo pai. */
+/** Siblings that share the same column (same x) within the same parent. */
 function column(nodes, target) {
   const a = nodes.get(target);
   const out = [];
-  for (const [id, r] of nodes) if (r.paiId === a.paiId && r.leaf && Math.abs(r.x - a.x) < 1) out.push(id);
+  for (const [id, r] of nodes) if (r.parentId === a.parentId && r.leaf && Math.abs(r.x - a.x) < 1) out.push(id);
   return out;
 }
 
 /**
- * Qualquer par de irmãos se sobrepondo, ou filho estourando o pai.
+ * Any pair of siblings overlapping, or a child overflowing its parent.
  *
- * ⚠️ AS QUATRO BORDAS, e as duas de cima chegaram no #26 — o corpus achou.
+ * WARNING: ALL FOUR EDGES, and the top two only arrived in #26 — the corpus
+ * found them.
  *
- * A versão anterior media só `bottom` e `right`, e a assimetria não era decisão:
- * o passe nasceu movendo coluna para BAIXO (o `delta` do primeiro caso medido
- * era positivo), e um filho que desce só pode sair pelo pé do pai. Mas `delta` é
- * `cy(u) − cy(v)` e é negativo com a mesma frequência — aí a coluna sobe, e
- * subir sem guarda passa por cima da faixa de título do container.
+ * The previous version only measured `bottom` and `right`, and the asymmetry
+ * was not a decision: the pass was born moving a column DOWN (the `delta` of
+ * the first measured case was positive), and a child that goes down can only
+ * overflow through the parent's bottom. But `delta` is `cy(u) − cy(v)` and it is
+ * negative just as often — then the column goes up, and going up unguarded
+ * overflows the container's title band.
  *
- * O `events-fanout` do corpus do #26 faz exatamente isso: três encaixes
- * seguidos de −13, −27 e −6 px empurram a coluna das filas mortas 46 px acima do
- * lugar dela, e `dlq-estoque` acaba 7 px ACIMA do topo da própria região. O
- * desenho passa a afirmar que a fila morta não está na região — que é `A4.4`,
- * falha SEMÂNTICA, o desenho afirmando o que o modelo nega.
+ * The `events-fanout` case in the #26 corpus does exactly that: three snaps in
+ * a row of −13, −27 and −6 px push the dead-letter-queue column 46 px above its
+ * proper spot, and `dlq-estoque` ends up 7 px ABOVE the top of its own region.
+ * The drawing ends up asserting that the dead-letter queue is not in the
+ * region — which is `A4.4`, a SEMANTIC failure, the drawing asserting what the
+ * model denies.
  *
- * É o padrão que o #23 nomeou uma volta acima: **a checagem que não sabe
- * falhar**. O cabeçalho deste arquivo promete "se o resultado sobrepõe qualquer
- * coisa, DESFAZ", e a promessa era cega em dois dos quatro lados. `refitar` não
- * cobre a diferença nem por acidente: ele só CRESCE o container (`Math.max`), e
- * crescer resolve quem passa do pé, nunca quem sai pelo topo.
+ * It's the pattern #23 named a round earlier: **the check that doesn't know
+ * how to fail**. This file's header promises "if the result overlaps anything,
+ * UNDO", and the promise was blind on two of the four sides. `refit` doesn't
+ * cover the gap even by accident: it only GROWS the container (`Math.max`), and
+ * growing fixes whoever overflows the foot, never whoever exits through the top.
  */
 function hasOverlap(output, paddings) {
   const nodes = buildIndex(output);
-  const porPai = new Map();
+  const byParent = new Map();
   for (const [id, r] of nodes) {
-    if (!porPai.has(r.paiId)) porPai.set(r.paiId, []);
-    porPai.get(r.paiId).push({ id, ...r });
+    if (!byParent.has(r.parentId)) byParent.set(r.parentId, []);
+    byParent.get(r.parentId).push({ id, ...r });
   }
-  for (const [paiId, irmaos] of porPai) {
-    for (let i = 0; i < irmaos.length; i++)
-      for (let j = i + 1; j < irmaos.length; j++) {
-        const a = irmaos[i], b = irmaos[j];
+  for (const [parentId, siblings] of byParent) {
+    for (let i = 0; i < siblings.length; i++)
+      for (let j = i + 1; j < siblings.length; j++) {
+        const a = siblings[i], b = siblings[j];
         if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) return `${a.id}×${b.id}`;
       }
-    if (paiId === null) continue;
-    const p = nodes.get(paiId);
-    const pad = paddings.get(paiId) || { top: 0, left: 0, bottom: 0, right: 0 };
-    for (const c of irmaos) {
-      if (c.y + c.h > p.y + p.h - pad.bottom + 0.5) return `${c.id} estoura ${paiId}`;
-      if (c.x + c.w > p.x + p.w - pad.right + 0.5) return `${c.id} estoura ${paiId} (x)`;
-      if (c.y < p.y + pad.top - 0.5) return `${c.id} sai pelo topo de ${paiId}`;
-      if (c.x < p.x + pad.left - 0.5) return `${c.id} sai pela esquerda de ${paiId}`;
+    if (parentId === null) continue;
+    const p = nodes.get(parentId);
+    const pad = paddings.get(parentId) || { top: 0, left: 0, bottom: 0, right: 0 };
+    for (const c of siblings) {
+      if (c.y + c.h > p.y + p.h - pad.bottom + 0.5) return `${c.id} overflows ${parentId}`;
+      if (c.x + c.w > p.x + p.w - pad.right + 0.5) return `${c.id} overflows ${parentId} (x)`;
+      if (c.y < p.y + pad.top - 0.5) return `${c.id} exits through the top of ${parentId}`;
+      if (c.x < p.x + pad.left - 0.5) return `${c.id} exits through the left of ${parentId}`;
     }
   }
   return null;
 }
 
-/** Cresce cada container para caber os filhos, de baixo para cima. */
+/** Grows each container to fit its children, bottom-up. */
 function refit(output, paddings) {
-  (function sobe(n) {
-    for (const c of n.children || []) sobe(c);
+  (function up(n) {
+    for (const c of n.children || []) up(c);
     if (!n.children || !n.children.length || n.id === 'root') return;
     const pad = paddings.get(n.id) || { bottom: 0, right: 0 };
-    const precisaH = Math.max(...n.children.map(c => c.y + c.height)) + pad.bottom;
-    const precisaW = Math.max(...n.children.map(c => c.x + c.width)) + pad.right;
-    n.height = Math.max(n.height, precisaH);
-    n.width = Math.max(n.width, precisaW);
+    const neededH = Math.max(...n.children.map(c => c.y + c.height)) + pad.bottom;
+    const neededW = Math.max(...n.children.map(c => c.x + c.width)) + pad.right;
+    n.height = Math.max(n.height, neededH);
+    n.width = Math.max(n.width, neededW);
   })(output);
 }
 
 /**
- * Reescreve o traçado de uma aresta cujos extremos deixaram de estar onde o ELK
- * os deixou. Só dois casos, e ambos ortogonais por construção:
- * reto quando os centros coincidem, Z no meio do vão quando não.
+ * Rewrites the route of an edge whose endpoints are no longer where ELK left
+ * them. Only two cases, and both orthogonal by construction: straight when the
+ * centers coincide, a Z in the middle of the gap when they don't.
  */
 function reroute(sec, u, v) {
   const uy = cy(u), vy = cy(v);
-  const paraDireita = u.x + u.w <= v.x;
-  const xs = paraDireita ? u.x + u.w : u.x;
-  const xe = paraDireita ? v.x : v.x + v.w;
+  const towardRight = u.x + u.w <= v.x;
+  const xs = towardRight ? u.x + u.w : u.x;
+  const xe = towardRight ? v.x : v.x + v.w;
   sec.startPoint = { x: xs, y: uy };
   sec.endPoint = { x: xe, y: vy };
   sec.bendPoints = Math.abs(uy - vy) < 0.5 ? [] : [{ x: (xs + xe) / 2, y: uy }, { x: (xs + xe) / 2, y: vy }];
 }
 
 /**
- * @returns {{aplicados: Array, desfeitos: Array}}
+ * @returns {{applied: Array, undone: Array}}
  */
 function align(output, paddings) {
-  const aplicados = [], desfeitos = [];
+  const applied = [], undone = [];
 
-  for (let passe = 0; passe < MAX_PASSES; passe++) {
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
     const nodes = buildIndex(output);
 
-    // candidatos: aresta entre duas folhas, quase alinhadas, em colunas distintas
+    // candidates: an edge between two leaves, nearly aligned, in distinct columns
     const cands = [];
     for (const e of output.edges || []) {
       const u = nodes.get(e.sources[0]), v = nodes.get(e.targets[0]);
       if (!u || !v || !u.leaf || !v.leaf) continue;
-      if (Math.abs(u.x - v.x) < 1) continue;                 // mesma coluna: não é faixa
+      if (Math.abs(u.x - v.x) < 1) continue;                 // same column: not a lane
       const delta = cy(u) - cy(v);
       if (Math.abs(delta) > 0.5 && Math.abs(delta) <= SNAP) cands.push({ e, delta });
     }
     if (!cands.length) break;
-    cands.sort((a, b) => a.e.id < b.e.id ? -1 : 1);          // determinismo
+    cands.sort((a, b) => a.e.id < b.e.id ? -1 : 1);          // determinism
     const { e, delta } = cands[0];
 
-    // mover a coluna inteira do alvo, preservando os vãos internos dela
-    const alvos = column(nodes, e.targets[0]);
-    const antes = alvos.map(id => ({ id, y: nodes.get(id).no.y }));
-    for (const id of alvos) nodes.get(id).no.y += delta;
+    // move the target's whole column, preserving its internal gaps
+    const targets = column(nodes, e.targets[0]);
+    const before = targets.map(id => ({ id, y: nodes.get(id).node.y }));
+    for (const id of targets) nodes.get(id).node.y += delta;
 
-    const alturasAntes = [];
-    (function guarda(n) { alturasAntes.push([n, n.width, n.height]); for (const c of n.children || []) guarda(c); })(output);
+    const heightsBefore = [];
+    (function guard(n) { heightsBefore.push([n, n.width, n.height]); for (const c of n.children || []) guard(c); })(output);
     refit(output, paddings);
 
-    const problema = hasOverlap(output, paddings);
-    if (problema) {
-      for (const a of antes) nodes.get(a.id).no.y = a.y;
-      for (const [n, w, h] of alturasAntes) { n.width = w; n.height = h; }
-      desfeitos.push({ edge: e.id, delta: Math.round(delta), because: problema });
-      break;                       // um encaixe que não cabe encerra o passe
+    const problem = hasOverlap(output, paddings);
+    if (problem) {
+      for (const b of before) nodes.get(b.id).node.y = b.y;
+      for (const [n, w, h] of heightsBefore) { n.width = w; n.height = h; }
+      undone.push({ edge: e.id, delta: Math.round(delta), because: problem });
+      break;                       // a snap that doesn't fit ends the pass
     }
 
-    // as pontas mudaram de lugar: o traçado do ELK não vale mais para quem tocou
-    const movidos = new Set(alvos);
-    const depois = buildIndex(output);
-    for (const outra of output.edges || []) {
-      const su = outra.sources[0], sv = outra.targets[0];
-      if (!movidos.has(su) && !movidos.has(sv)) continue;
-      const u = depois.get(su), v = depois.get(sv);
+    // the endpoints moved: ELK's original route no longer holds for whoever moved
+    const moved = new Set(targets);
+    const after = buildIndex(output);
+    for (const other of output.edges || []) {
+      const su = other.sources[0], sv = other.targets[0];
+      if (!moved.has(su) && !moved.has(sv)) continue;
+      const u = after.get(su), v = after.get(sv);
       if (!u || !v) continue;
-      const sec = (outra.sections || [])[0];
+      const sec = (other.sections || [])[0];
       if (!sec) continue;
-      if (movidos.has(su) && movidos.has(sv)) {              // a aresta inteira desceu junto
+      if (moved.has(su) && moved.has(sv)) {              // the whole edge moved down together
         sec.startPoint.y += delta; sec.endPoint.y += delta;
         for (const p of sec.bendPoints || []) p.y += delta;
       } else {
         reroute(sec, u, v);
       }
     }
-    aplicados.push({ edge: e.id, delta: Math.round(delta), moveu: alvos });
+    applied.push({ edge: e.id, delta: Math.round(delta), moved: targets });
   }
 
-  return { aplicados, desfeitos };
+  return { applied, undone };
 }
 
 module.exports = { align, SNAP, buildIndex };

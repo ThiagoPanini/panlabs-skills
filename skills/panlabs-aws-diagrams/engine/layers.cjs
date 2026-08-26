@@ -1,74 +1,77 @@
 'use strict';
 /**
- * A camada de rede de uma subnet — o fato que faltava no IR (#22).
+ * A subnet's network layer — the fact the IR was missing (#22).
  *
- * A pergunta do ticket: o que decide que a "Data subnet" fica ABAIXO da "App
- * subnet"? Até aqui a ordem caía de exposição + rótulo, e a metade alfabética
- * era placeholder assumido: acertava `App · Data` por coincidência do alfabeto
- * e errava `Web · Data` e `Ingest · Core`, jogando a camada de dados para cima
- * — exatamente a leitura que a convenção de rede não quer.
+ * The ticket's question: what decides that the "Data subnet" sits BELOW the
+ * "App subnet"? Until now the order fell out of exposure + label, and the
+ * alphabetical tiebreak was an assumed placeholder: it got `App · Data` right
+ * by coincidence of the alphabet and got `Web · Data` and `Ingest · Core`
+ * wrong, pushing the data layer up top — exactly the reading the network
+ * convention doesn't want.
  *
- * A resposta:
+ * The answer:
  *
- *   > O que põe a subnet de dados embaixo é O QUE ELA GUARDA.
+ *   > What puts the data subnet at the bottom is WHAT IT HOLDS.
  *
- * Não é fato novo pedido ao agente: o catálogo (#17) já sabe a CATEGORIA AWS de
- * cada serviço, e a categoria já diz o andar. `rds` é `database`, `ecs` é
- * `containers`, `nat gateway` é `network_content_delivery`. A camada é uma
- * leitura do conteúdo, e o agente não responde nada a mais — a premissa 11 do
- * mapa (máximo AFK) fica intacta.
+ * It isn't a new fact asked of the agent: the catalog (#17) already knows the
+ * AWS CATEGORY of every service, and the category already tells the floor.
+ * `rds` is `database`, `ecs` is `containers`, `nat gateway` is
+ * `network_content_delivery`. The layer is a reading of the content, and the
+ * agent doesn't answer anything extra — map premise 11 (maximum AFK) stays
+ * intact.
  *
- * O campo `camada` existe no esquema, mas como ESCAPE, não como pergunta: ele
- * cobre o que o conteúdo não sabe dizer (subnet vazia) e o que ele diria
- * errado. É semântico — nomeia um andar de rede, não uma posição —, então a
- * fronteira do #11 continua de pé e o `check-fronteira` continua verde.
+ * The `layer` field exists in the schema, but as an ESCAPE HATCH, not as a
+ * question: it covers what the content can't say (an empty subnet) and what it
+ * would say wrong. It's semantic — it names a network floor, not a position —
+ * so #11's boundary stays standing and `check-fronteira` stays green.
  *
- * O que este módulo NÃO faz é adivinhar. Sem evidência ele devolve `null`, e
- * quem decide o que fazer com o `null` é quem está desenhando: a grade recusa
- * (lá a ordem das linhas É o desenho), o caminho do ELK avisa (lá ela é só
- * desempate, e o ELK tem aresta para mandar nele).
+ * What this module does NOT do is guess. With no evidence it returns `null`,
+ * and whoever is drawing decides what to do with the `null`: the grid refuses
+ * (there, the row order IS the drawing), the ELK path warns (there it's only a
+ * tiebreak, and ELK has the edges to decide on its own).
  */
 
 /**
- * Categoria do catálogo -> andar da rede.
+ * Catalog category -> network floor.
  *
- * A tabela é curta de propósito. Ela mapeia as categorias que TÊM significado
- * de andar quando o recurso está dentro de uma subnet, e cala nas outras 21 —
- * `management_governance`, `artificial_intelligence`, `internet_of_things` e
- * companhia não dizem se a caixa é borda ou fundo, e fingir que dizem seria
- * trocar um placeholder alfabético por um placeholder taxonômico.
+ * The table is short on purpose. It maps the categories that DO carry floor
+ * meaning when the resource sits inside a subnet, and stays silent on the
+ * other 21 — `management_governance`, `artificial_intelligence`,
+ * `internet_of_things` and friends don't say whether the box is edge or
+ * back-end, and pretending they do would trade an alphabetical placeholder for
+ * a taxonomic one.
  *
- * Quem cala não vota. Uma subnet cujos membros todos calam fica sem camada, e
- * isso é o mesmo estado da subnet vazia — que é o caso que o ticket mandou
- * mostrar.
+ * Whoever stays silent doesn't vote. A subnet whose members all stay silent
+ * ends up with no layer, and that's the same state as an empty subnet — which
+ * is the case the ticket asked to surface.
  *
- * A linha mais frouxa é `security_identity_compliance`, e vale dizer por quê:
- * a categoria inteira não é borda (IAM, KMS e Secrets Manager estão nela), mas
- * o recorte deste módulo é o que mora DENTRO de uma subnet, e ali o que
- * aparece é appliance de inspeção — Network Firewall, WAF. Serviço regional
- * não entra em subnet.
+ * The loosest line is `security_identity_compliance`, and it's worth saying
+ * why: the category as a whole isn't edge (IAM, KMS and Secrets Manager are in
+ * it), but this module's scope is what lives INSIDE a subnet, and there what
+ * shows up is inspection appliances — Network Firewall, WAF. A regional
+ * service doesn't go inside a subnet.
  */
 const CATEGORY_LAYER = {
-  // borda — o andar que encara alguma coisa de fora da subnet
+  // edge — the floor that faces something from outside the subnet
   network_content_delivery: 'edge',
   security_identity_compliance: 'edge',
 
-  // aplicação — o andar que computa
+  // application — the floor that computes
   compute: 'application',
   containers: 'application',
   application_integration: 'application',
   front_end_web_mobile: 'application',
 
-  // dados — o andar que guarda
+  // data — the floor that stores
   database: 'data',
   storage: 'data',
   analytics: 'data',
 };
 
-/** Cima para baixo. É a ordem de leitura da vista de rede, e é só ela. */
+/** Top to bottom. This is the network view's reading order, and only that. */
 const LAYERS = ['edge', 'application', 'data'];
 
-/** Sem camada vai para o fim do grupo de exposição — ver `chaveDeIrmao`. */
+/** No layer goes to the end of the exposure group — see `siblingKey` in derive.cjs. */
 const NO_LAYER = 9;
 
 function layerOrder(c) {
@@ -77,14 +80,14 @@ function layerOrder(c) {
 }
 
 /**
- * A exposição, que continua sendo a PRIMEIRA chave — pública em cima, que é o
- * sentido de leitura do deck (#5 `O1`). A camada ordena dentro dela.
+ * Exposure, which remains the FIRST key — public on top, which is the deck's
+ * reading order (#5 `O1`). The layer orders within it.
  *
- * Mora aqui junto com a camada porque as duas são a mesma chave de ordenação
- * partida em duas metades, e ela estava escrita em três lugares — `derivar`,
- * `dispor` e as réguas —, com um deles mapeando o ausente para 2 e os outros
- * para 9. Empatavam na prática (os dois vão depois de `privada`), mas duas
- * tabelas para uma regra é uma a mais.
+ * It lives here together with the layer because the two are the same ordering
+ * key split in half, and it used to be written in three places — `derive`,
+ * `layout` and the rulers —, with one of them mapping "absent" to 2 and the
+ * others to 9. They tied in practice (both go after `private`), but two tables
+ * for one rule is one too many.
  */
 const ACCESS_ORDER = { public: 0, private: 1 };
 
@@ -93,16 +96,16 @@ function ordemDeAcesso(a) {
 }
 
 /**
- * A camada de um conjunto: a MAIS FUNDA das que ele contém; quem não tem, não
- * vota. É a regra de mistura, e ela vale nos dois níveis em que agregamos —
- * os membros dentro de uma subnet, e as subnets dentro de uma linha da grade.
+ * The layer of a set: the DEEPEST one it contains; whoever has none doesn't
+ * vote. This is the blending rule, and it applies at both levels where we
+ * aggregate — the members inside a subnet, and the subnets inside a grid row.
  */
 function camadaDeGrupo(list) {
   const idx = list.map(c => LAYERS.indexOf(c)).filter(i => i >= 0);
   return idx.length ? LAYERS[Math.max(...idx)] : null;
 }
 
-/** Categoria AWS de um nó folha, ou null se ele não resolve para serviço. */
+/** AWS category of a leaf node, or null if it doesn't resolve to a service. */
 function categoriaDoNo(no, cat) {
   const key = no.service || (no.kind === 'actor' ? 'users' : null);
   if (!key) return null;
@@ -111,25 +114,25 @@ function categoriaDoNo(no, cat) {
 }
 
 /**
- * A camada de uma subnet, a partir do que ela guarda.
+ * The layer of a subnet, from what it holds.
  *
- * REGRA DE MISTURA: vence o membro MAIS FUNDO. Uma subnet que guarda um ALB e
- * um RDS é lida como camada de dados.
+ * BLENDING RULE: the DEEPEST member wins. A subnet holding both an ALB and an
+ * RDS reads as the data layer.
  *
- * Não é gosto — é a regra protegendo o invariante que ela existe para
- * proteger. O que a convenção de rede proíbe é subnet com banco ficando acima
- * de subnet sem banco; tomar o membro mais RASO permitiria exatamente isso
- * (bastava pendurar um load balancer na subnet do banco para ela subir). Tomar
- * o mais fundo torna o invariante impossível de violar: se guarda dado, não
- * sobe.
+ * It isn't taste — it's the rule protecting the invariant it exists to
+ * protect. What the network convention forbids is a subnet with a database
+ * ending up above a subnet without one; taking the SHALLOWEST member would
+ * allow exactly that (just hang a load balancer off the database's subnet and
+ * it would float up). Taking the deepest makes the invariant impossible to
+ * violate: if it holds data, it doesn't rise.
  *
- * O preço é conhecido e está no README: uma subnet de ingestão que hospeda os
- * brokers (MSK é `analytics`) é lida como dados, e o arquiteto que a quiser em
- * cima declara `camada: "borda"`. O escape existe para isto.
+ * The price is known and it's in the README: an ingestion subnet that hosts
+ * the brokers (MSK is `analytics`) reads as data, and the architect who wants
+ * it on top declares `layer: "edge"`. The escape hatch exists for this.
  */
-function camadaDaSubnet(subnet, descendentes, cat) {
+function camadaDaSubnet(subnet, descendants, cat) {
   const evidence = [];
-  for (const n of descendentes) {
+  for (const n of descendants) {
     const categoria = categoriaDoNo(n, cat);
     const layer = categoria ? (CATEGORY_LAYER[categoria] || null) : null;
     if (layer) evidence.push({ id: n.id, service: n.service || n.kind, categoria, layer });
@@ -144,9 +147,10 @@ function camadaDaSubnet(subnet, descendentes, cat) {
       via: 'declared',
       derived,
       evidence,
-      // Declarar contra o próprio conteúdo é afirmação sobre a arquitetura, não
-      // erro de digitação — o motor obedece e conta. Mesma política do #16 para
-      // conflito com premissa corporativa: obedece e sinaliza, nunca calado.
+      // Declaring against the content itself is a statement about the
+      // architecture, not a typo — the engine obeys and reports it. Same
+      // policy #16 uses for a conflict with a corporate premise: obey and
+      // flag, never stay silent.
       diverge: derived && derived !== declared ? derived : null,
     };
   }
@@ -154,39 +158,39 @@ function camadaDaSubnet(subnet, descendentes, cat) {
 }
 
 /**
- * A camada de toda subnet do modelo, indexada por id.
+ * The layer of every subnet in the model, indexed by id.
  *
- * `t` é a árvore do `derive.cjs`. DESCENDENTE, não filho direto: um serviço
- * dentro de um security group dentro da subnet continua sendo o que a subnet
- * guarda.
+ * `t` is `derive.cjs`'s tree. DESCENDANT, not direct child: a service inside a
+ * security group inside the subnet still counts as something the subnet holds.
  */
 function camadasDeSubnets(model, t, cat) {
-  const porSubnet = new Map();
-  const descendentesDe = new Map();
+  const bySubnet = new Map();
+  const descendantsOf = new Map();
 
   for (const n of model.nodes) {
     const sub = t.ancestrais(n).find(a => a.kind === 'subnet');
     if (!sub) continue;
-    if (!descendentesDe.has(sub.id)) descendentesDe.set(sub.id, []);
-    descendentesDe.get(sub.id).push(n);
+    if (!descendantsOf.has(sub.id)) descendantsOf.set(sub.id, []);
+    descendantsOf.get(sub.id).push(n);
   }
 
   for (const s of model.nodes.filter(n => n.kind === 'subnet'))
-    porSubnet.set(s.id, camadaDaSubnet(s, descendentesDe.get(s.id) || [], cat));
+    bySubnet.set(s.id, camadaDaSubnet(s, descendantsOf.get(s.id) || [], cat));
 
-  return porSubnet;
+  return bySubnet;
 }
 
 /**
- * O PAPEL — a unidade que a grade empilha, e portanto a unidade que se ordena.
+ * THE ROLE — the unit the grid stacks, and therefore the unit that gets
+ * ordered.
  *
- * Duas subnets com o mesmo rótulo, na mesma VPC e mesma exposição, viram UMA
- * linha da grade, uma célula por zona (#11). Então a camada que ordena é a do
- * papel, não a da subnet: se `dado-a` guarda um RDS e `dado-b` está vazia, a
- * linha guarda um RDS.
+ * Two subnets with the same label, in the same VPC and the same exposure,
+ * become ONE grid row, one cell per zone (#11). So the layer that orders is
+ * the role's, not the subnet's: if `data-a` holds an RDS and `data-b` is
+ * empty, the row holds an RDS.
  *
- * A chave é a mesma que o `layout.cjs` usa para virar linha — de propósito. Ter
- * duas definições de "papel" seria ter duas grades.
+ * The key is the same one `layout.cjs` uses to turn a role into a row — on
+ * purpose. Having two definitions of "role" would mean having two grids.
  */
 function chaveDePapel(subnet, t) {
   const vpc = (t.ancestrais(subnet).find(a => a.kind === 'vpc') || {}).id;
@@ -198,9 +202,9 @@ function papeisDeSubnet(model, t, camadas) {
   for (const s of model.nodes.filter(n => n.kind === 'subnet')) {
     const key = chaveDePapel(s, t);
     if (!papeis.has(key))
-      // os campos vêm da SUBNET, não de fatiar a chave de volta: a chave é um
-      // identificador, e ler dado de dentro dela é o que quebra quando um
-      // rótulo tem `|`
+      // the fields come from the SUBNET, not from slicing the key back apart:
+      // the key is an identifier, and reading data out of it is what breaks
+      // silently the day a label contains `|`
       papeis.set(key, {
         key,
         vpc: (t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id,
@@ -216,31 +220,32 @@ function papeisDeSubnet(model, t, camadas) {
 }
 
 /**
- * Onde a falta do fato muda o desenho.
+ * Where the missing fact changes the drawing.
  *
- * A ordem só é o desenho quando há mais de um PAPEL para empilhar dentro da
- * mesma exposição, na mesma VPC. Papel único não tem contra quem ser ordenado,
- * e aí a subnet sem camada não custa nada — a recusa não dispara.
+ * The order only IS the drawing when there's more than one ROLE to stack
+ * within the same exposure, in the same VPC. A single role has nothing to be
+ * ordered against, and then a subnet with no layer costs nothing — the refusal
+ * doesn't fire.
  *
- * Devolve uma lacuna por grupo (vpc × exposição), com os papéis órfãos.
+ * Returns one gap per group (vpc × exposure), with the orphaned roles.
  */
 function layerGaps(model, t, camadas) {
-  const grupos = new Map();
+  const groups = new Map();
   for (const p of papeisDeSubnet(model, t, camadas).values()) {
     const key = `${p.vpc}|${p.access}`;
-    if (!grupos.has(key)) grupos.set(key, { vpc: p.vpc, access: p.access, papeis: [] });
-    grupos.get(key).papeis.push(p);
+    if (!groups.has(key)) groups.set(key, { vpc: p.vpc, access: p.access, papeis: [] });
+    groups.get(key).papeis.push(p);
   }
 
   const gaps = [];
-  for (const { vpc, access, papeis } of grupos.values()) {
-    if (papeis.length < 2) continue;                     // nada a ordenar
+  for (const { vpc, access, papeis } of groups.values()) {
+    if (papeis.length < 2) continue;                     // nothing to order
     const orfaos = papeis.filter(p => !p.layer);
     if (!orfaos.length) continue;
     gaps.push({
-      vpc, access: access || 'sem exposição declarada', papeis: papeis.length,
+      vpc, access: access || 'no declared exposure', papeis: papeis.length,
       orfaos: orfaos.map(o => ({
-        papel: o.label || `(sem rótulo: ${o.subnets.join(', ')})`,
+        papel: o.label || `(no label: ${o.subnets.join(', ')})`,
         subnets: o.subnets,
         vazio: o.subnets.every(id => !((camadas.get(id) || {}).evidence || []).length),
       })).sort((a, b) => a.papel.localeCompare(b.papel, 'pt')),
@@ -250,21 +255,21 @@ function layerGaps(model, t, camadas) {
 }
 
 /**
- * O que o motor diz quando a ordem depende do fato que falta.
+ * What the engine says when the order depends on the fact that's missing.
  *
- * Devolve LINHAS, sem marcador nenhum: quem apresenta decide o marcador. A CLI
- * põe `· ` em cada erro; o aviso do caminho do ELK indenta. Embutir o bullet
- * aqui dava bullet dobrado num dos dois.
+ * Returns LINES, with no marker at all: whoever presents them decides the
+ * marker. The CLI puts `· ` on each error; the ELK path's warning indents.
+ * Baking the bullet in here would double it in one of the two.
  */
 function textoDaLacuna(gaps) {
-  const linhas = [];
+  const lines = [];
   for (const l of gaps)
     for (const o of l.orfaos)
-      linhas.push(`VPC "${l.vpc}" · ${l.access}s: "${o.papel}" (${o.subnets.join(', ')}) ` +
-        `não diz que camada de rede ocupa — ${o.vazio ? 'vazia, nada a inferir' : 'o que ela guarda não tem andar de rede'}` +
-        ` (são ${l.papeis} papéis para empilhar)`);
-  linhas.push('declare `camada` ("borda" | "aplicacao" | "dados") nessas subnets, ou ponha dentro delas o serviço que elas hospedam');
-  return linhas;
+      lines.push(`VPC "${l.vpc}" · ${l.access}s: "${o.papel}" (${o.subnets.join(', ')}) ` +
+        `doesn't say which network layer it occupies — ${o.vazio ? 'empty, nothing to infer' : 'what it holds has no network floor'}` +
+        ` (${l.papeis} roles to stack)`);
+  lines.push('declare `layer` ("edge" | "application" | "data") on those subnets, or put inside them the service they host');
+  return lines;
 }
 
 module.exports = {

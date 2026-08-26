@@ -1,137 +1,145 @@
 'use strict';
 /**
- * Layout — o único lugar do motor onde nasce um número de posição.
+ * Layout — the only place in the engine where a position number is born.
  *
- * Dois caminhos, e quem escolhe é o modelo, não o agente:
+ * Two paths, and the model chooses, not the agent:
  *
- *   A · ELK manda em tudo.  Sem faixa de AZ, o `elkjs` layouta a hierarquia
- *       inteira numa passada. `shapeCoords: PARENT` devolve coordenada já
- *       relativa ao pai — a semântica exata do `mxGeometry` (#7).
+ *   A · ELK runs everything.  Without an AZ band, `elkjs` lays out the whole
+ *       hierarchy in one pass. `shapeCoords: PARENT` returns a coordinate
+ *       already relative to the parent — the exact semantics of `mxGeometry`
+ *       (#7).
  *
- *   B · o motor manda na grade.  Com faixa de AZ, as subnets da mesma zona
- *       precisam ficar alinhadas ENTRE VPCs para a faixa ler como coluna, e o
- *       ELK layoutando cada VPC isolada não garante isso (#19). Então o motor
- *       fica com o `x` das colunas e o ELK com o conteúdo DENTRO da célula.
+ *   B · the engine runs the grid.  With an AZ band, the subnets of the same
+ *       zone need to line up ACROSS VPCs for the band to read as a column, and
+ *       ELK laying out each VPC in isolation doesn't guarantee that (#19). So
+ *       the engine keeps the columns' `x` and ELK keeps the content INSIDE
+ *       each cell.
  *
- * O preço do caminho B é exatamente o que o #19 mediu: quatro constantes de
- * calha. Não é um motor novo.
+ * Path B's price is exactly what #19 measured: four lane constants. It isn't
+ * a new engine.
  */
 
 const ELK = require('./vendor/elk.bundled.js');
 const { align } = require('./align.cjs');
-const camadasMod = require('./layers.cjs');
+const layersMod = require('./layers.cjs');
 const { CONTAINERS, LEAVES } = require('./validate.cjs');
 
-// ---- as quatro calhas do #19 -------------------------------------------------
+// ---- #19's four lanes ---------------------------------------------------
 //
-// ⚠️ CALHA NÃO É FOLGA, e a densidade do tema (#13) não toca nelas.
+// WARNING: A LANE ISN'T A GAP, and the theme's density (#13) doesn't touch
+// them.
 //
-// Folga é respiro: o vão entre dois nós, o padding de um container. Encolher
-// aperta o desenho e nada mais. Calha é RESERVA DE RÓTULO — derivada de métrica
-// de fonte e do `spacingTop` do próprio estilo (#11 achado 6). Encolher calha
-// não aperta: derruba texto em cima de borda. Por isso a densidade multiplica
-// `folga()` e nunca `calha()`.
-const AZ_LANE = 36;    // linha de rótulo das colunas de AZ
-const BAND_LANE = 24;  // piso do rótulo de uma faixa de membros — ver calhaDaFaixa
-const CROSS_OUT = 24;  // transbordo que faz o cruzamento SE VER
-const HEAD = 34;       // faixa de título de qualquer container — recursiva (#2 §3.2)
+// A gap is breathing room: the space between two nodes, a container's
+// padding. Shrinking it tightens the drawing and nothing else. A lane is a
+// LABEL RESERVE — derived from font metrics and from the style's own
+// `spacingTop` (#11 finding 6). Shrinking a lane doesn't tighten: it drops
+// text on top of a border. That's why density multiplies `folgas()` and never
+// a lane constant.
+const AZ_LANE = 36;    // label row for AZ columns
+const BAND_LANE = 24;  // floor for a member band's label — see calhaDaFaixa
+const CROSS_OUT = 24;  // overflow that makes the crossing VISIBLE
+const HEAD = 34;       // title band of any container — recursive (#2 §3.2)
 
 /**
- * A quinta calha, e ela é do #12: a linha onde o rótulo da OU mora.
+ * The fifth lane, and it's #12's: the row where the OU's label lives.
  *
- * Sai da mesma medição das outras: no PPTX do SRA o ícone da OU tem 0,50" de
- * altura e a primeira conta membro começa ≈0,12" abaixo dele (#6 §1.4/§2.2).
- * Com as caixas de conta deste motor girando em 250–550 px de largura contra
- * as 2,5–4" do SRA, a escala é ≈100 px por polegada, então 0,50" + 0,12" ≈ 62.
+ * It comes from the same measurement as the others: in the SRA's PPTX the OU
+ * icon is 0.50" tall and the first member account starts ≈0.12" below it (#6
+ * §1.4/§2.2). With this engine's account boxes running 250–550 px wide against
+ * the SRA's 2.5–4", the scale is ≈100 px per inch, so 0.50" + 0.12" ≈ 62.
  *
- * Ela é irmã da `AZ_LANE` e existe pelo mesmo motivo: a faixa é desenhada FORA
- * da árvore, então ninguém reserva espaço para o rótulo dela a não ser o motor.
+ * It's a sibling of `AZ_LANE` and exists for the same reason: the band is
+ * drawn OUTSIDE the tree, so nobody reserves space for its label except the
+ * engine.
  */
 const OU_LANE = 62;
 
 /**
- * A caixa de um container VAZIO — e ela existe porque o #22 tropeçou nela.
+ * The box of an EMPTY container — and it exists because #22 tripped over it.
  *
- * Container é quem o ESQUEMA diz que é container, não quem tem filho. Os dois
- * caminhos do ELK decidiam por `kids.length`, e uma subnet sem nada dentro caía
- * no ramo de folha: o motor morria em `res.folha()` com "nó sem chave de
- * serviço" — mensagem que fala de serviço para quem escreveu uma subnet. O
- * caminho da grade nunca teve o problema, porque lá o container vazio já
- * ganhava caixa mínima (200×90); era só o ELK.
+ * A container is whoever the SCHEMA says is a container, not whoever has a
+ * child. Both ELK paths used to decide by `kids.length`, and an empty subnet
+ * fell into the leaf branch: the engine died in `res.leaf()` with "node with
+ * no service key" — a message that talks about a service to whoever wrote a
+ * subnet. The grid path never had the problem, because there an empty
+ * container already got a minimum box (200×90); it was only ELK.
  *
- * Subnet vazia não é erro de modelo: é o range reservado para o que ainda não
- * existe, e um diagrama de rede a desenha.
+ * An empty subnet isn't a model error: it's the range reserved for what
+ * doesn't exist yet, and a network diagram draws it.
  */
 const EMPTY_W = 200;
 const EMPTY_H = 56;
 
 /**
- * Caixa de um container sem filho — uma definição só, para os dois `paraElk`.
+ * The box of a container with no child — a single definition, for both
+ * `paraElk`s.
  *
- * A largura já sai com o título medido, porque a passada de `deficitDeTitulo`
- * compra folga via `padding.right`, e padding não alarga um nó que não tem
- * conteúdo para empurrar contra a borda.
+ * The width already comes out with the title measured, because the
+ * `deficitDeTitulo` pass buys slack through `padding.right`, and padding
+ * doesn't widen a node with no content to push against the border.
  */
-function caixaVazia(no, c, res) {
-  const precisaTitulo = res.larguraDoRotuloDeGrupo(no.label || '') + (c.recuoTitulo || 8) + 16;
+function emptyBox(no, c, res) {
+  const needsTitle = res.larguraDoRotuloDeGrupo(no.label || '') + (c.titleIndent || 8) + 16;
   return {
     id: no.id,
-    width: Math.max(EMPTY_W, Math.ceil(precisaTitulo)),
-    height: c.tituloH + EMPTY_H,
+    width: Math.max(EMPTY_W, Math.ceil(needsTitle)),
+    height: c.titleH + EMPTY_H,
   };
 }
 
 /**
- * E a sexta: a faixa de rótulo de uma RAIA de zona.
+ * And the sixth: a zone SWIMLANE's label strip.
  *
- * Com a AZ em coluna, o rótulo das zonas fica todo numa tira só, acima da
- * grade — é a `AZ_LANE`. Transposta, cada raia precisa da própria tira, porque
- * o rótulo é desenhado no canto superior esquerdo da banda e há uma banda por
- * linha. Então a reserva deixa de ser global e passa a viver no vão ENTRE as
- * raias. 26 px é o que o rótulo de 12 px ocupa com folga.
+ * With the AZ in a column, every zone's label sits in a single strip above the
+ * grid — that's `AZ_LANE`. Transposed, each swimlane needs its own strip,
+ * because the label is drawn at the band's top-left corner and there's one
+ * band per row. So the reserve stops being global and starts living in the
+ * gap BETWEEN swimlanes. 26 px is comfortably what a 12 px label takes.
  */
 const SWIMLANE_LANE = 26;
 
 /**
- * `BAND_LANE` não pode ser constante — descoberto ao ligar o motor no catálogo.
+ * `BAND_LANE` can't be a constant — discovered when the engine was wired to
+ * the catalog.
  *
- * O #19 calibrou 24 px contra um estilo de faixa escrito à mão. O estilo REAL
- * do Auto Scaling group no catálogo (#17) é `groupCenter` com `spacingTop=25`:
- * o rótulo é desenhado 25 px abaixo do topo da caixa, para caber o ícone que
- * essa forma põe ali. Com calha de 24 px o rótulo da faixa cai exatamente na
- * linha de título da subnet que ela cruza.
+ * #19 calibrated 24 px against a hand-written band style. The REAL Auto
+ * Scaling group style in the catalog (#17) is `groupCenter` with
+ * `spacingTop=25`: the label is drawn 25 px below the box's top, to fit the
+ * icon that shape puts there. With a 24 px lane, the band's label lands
+ * exactly on the title line of the subnet it crosses.
  *
- * A calha, então, é lida do estilo — quem sabe onde o rótulo vai parar é a
- * forma, não uma constante nossa.
+ * So the lane is read from the style — whoever knows where the label will
+ * land is the shape, not a constant of ours.
  */
 function calhaDaFaixa(style) {
   const m = /(?:^|;)spacingTop=(-?\d+)/.exec(style || '');
-  const recuo = m ? Number(m[1]) : 0;
-  return Math.max(BAND_LANE, recuo + 18 + 6);
+  const indent = m ? Number(m[1]) : 0;
+  return Math.max(BAND_LANE, indent + 18 + 6);
 }
 
-// Os valores do #11, guardados como referência histórica da escala anterior.
-// Nenhum deles é lido: quem manda é `folgas(tema)`.
-//   PAD 12 · COL_GAP 30 · ROW_GAP 14 · nodeNode 30 · entreCamadas 46
+// #11's values, kept as a historical reference of the previous scale. None of
+// them is read: `folgas(theme)` is what governs it now.
+//   PAD 12 · COL_GAP 30 · ROW_GAP 14 · nodeNode 30 · betweenLayers 46
 //
-// ⚠️ E é por causa desta linha que o `web-multi-az` deixou de sair byte a byte
-// igual ao do #11/#12: a escala mudou de "números chegados um a um" para
-// "múltiplos de 8".
+// WARNING: and it's because of this line that `web-multi-az` stopped coming
+// out byte-for-byte identical to #11/#12's: the scale moved from "numbers
+// arrived at one by one" to "multiples of 8".
 
 /**
- * A escala de folga, derivada da grade base do tema (#13).
+ * The gap scale, derived from the theme's base grid (#13).
  *
- * Os valores do #11 acima ficam como o que eram — números sem denominador comum,
- * chegados um a um. A camada da casa os reancora numa escala de base 8, e 8 não é
- * gosto: o ícone de serviço é 48 px e o de grupo 40 px (A9/A6 do #5, travados no
- * preset), ambos múltiplos de 8, e a folga mínima entre grupos aninhados
- * (N7: 0.05") é 4,8 px, cujo degrau imediatamente acima é 8.
+ * #11's values above stay what they were — numbers with no common
+ * denominator, arrived at one by one. The house layer re-anchors them on a
+ * base-8 scale, and 8 isn't taste: the service icon is 48 px and the group
+ * icon 40 px (A9/A6 in #5, locked in the preset), both multiples of 8, and the
+ * minimum gap between nested groups (N7: 0.05") is 4.8 px, whose next step up
+ * is 8.
  *
- * Não existe caminho sem tema. A primeira versão do protótipo do #13 carregava um
- * ramo de fábrica para "manter o #11 rodando idêntico", e ele **não mantinha**:
- * um literal `+10` virou `+PAD` e o `web-multi-az` saiu 6 px mais alto sem que
- * ninguém percebesse. Compatibilidade que ninguém exercita não é compatibilidade,
- * é peso.
+ * There's no path with no theme. #13's prototype's first version carried a
+ * factory branch to "keep #11 running identically", and it **did not keep
+ * it**: a `+10` literal became `+PAD` and `web-multi-az` came out 6 px taller
+ * with nobody noticing. Compatibility nobody exercises isn't compatibility,
+ * it's weight.
  */
 function folgas(tema) {
   const g = tema.g;
@@ -142,35 +150,35 @@ function folgas(tema) {
 }
 
 /**
- * `O1` do #5 é a tendência observada mais forte do corpus — 17 de 24 diagramas
- * oficiais correm esquerda→direita. `RIGHT` também desvia do bug do #7 em que
- * `nodeSize.minimum` troca os eixos em nó compound sob `DOWN`/`UP`.
+ * #5's `O1` is the strongest observed trend in the corpus — 17 of 24 official
+ * diagrams run left→right. `RIGHT` also steers clear of #7's bug, where
+ * `nodeSize.minimum` swaps axes on a compound node under `DOWN`/`UP`.
  */
 /**
- * ⚠️ OPÇÃO DE ESPAÇAMENTO NÃO DESCE PARA CONTAINER.
+ * WARNING: A SPACING OPTION DOESN'T DESCEND INTO A CONTAINER.
  *
- * Descoberto medindo, e é a armadilha mais cara deste módulo: com
- * `hierarchyHandling: INCLUDE_CHILDREN` a documentação dá a entender que o
- * grafo inteiro é layoutado numa passada — mas as opções de espaçamento são
- * lidas **por container**, não herdadas da raiz. Setá-las só na raiz não é erro
- * silencioso de digitação: é configuração INERTE. O que vale lá dentro é o
- * default do ELK (`nodeNode` = 20).
+ * Found by measuring, and it's this module's most expensive trap: with
+ * `hierarchyHandling: INCLUDE_CHILDREN` the documentation implies the whole
+ * graph is laid out in one pass — but spacing options are read **per
+ * container**, not inherited from the root. Setting them only at the root
+ * isn't a silent typo: it's INERT configuration. What applies inside is ELK's
+ * default (`nodeNode` = 20).
  *
- * Prova: com as opções só na raiz, `spacing.nodeNode` de 38, 50 ou 90 produz
- * exatamente a mesma geometria — vão de 20 px, o default. Repetidas por
- * container, o vão passa a obedecer o valor pedido. Mesma coisa para
- * `nodePlacement.strategy`, que era inerte na raiz e muda o desenho quando
- * repetida.
+ * Proof: with the options only at the root, `spacing.nodeNode` of 38, 50 or 90
+ * all produce exactly the same geometry — a 20 px gap, the default. Repeated
+ * per container, the gap starts obeying the requested value. Same for
+ * `nodePlacement.strategy`, which was inert at the root and changes the
+ * drawing when repeated.
  *
- * Por isso `espalhar()` existe e por isso todo container recebe o bloco
- * inteiro. Quem acrescentar uma opção de espaçamento aqui precisa acrescentar
- * em `espacamentoDe`, nunca só em OPCOES_RAIZ.
+ * That's why `spacingOf()` exists and why every container gets the whole
+ * block. Whoever adds a spacing option here needs to add it in `spacingOf`
+ * too, never only in ROOT_OPTIONS.
  */
 /**
- * ⚠️ QUEM ACRESCENTAR UMA OPÇÃO DE ESPAÇAMENTO mexe em DOIS lugares: `folgas()`,
- * que dá o valor, e aqui, que dá o nome do ELK. Duas metades da mesma decisão —
- * e o aviso de OPCOES_RAIZ acima continua valendo, porque o bloco inteiro tem
- * de ser repetido por container.
+ * WARNING: WHOEVER ADDS A SPACING OPTION touches TWO places: `folgas()`, which
+ * gives the value, and here, which gives ELK's name for it. Two halves of the
+ * same decision — and the warning above about ROOT_OPTIONS still holds,
+ * because the whole block has to be repeated per container.
  */
 function spacingOf(fg) {
   return {
@@ -186,15 +194,15 @@ function spacingOf(fg) {
 const ROOT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  'elk.hierarchyHandling': 'INCLUDE_CHILDREN',   // sem isto cada container é layoutado sozinho
+  'elk.hierarchyHandling': 'INCLUDE_CHILDREN',   // without this every container is laid out on its own
   'elk.edgeRouting': 'ORTHOGONAL',
   'elk.layered.crossingMinimization.semiInteractive': 'true',
-  'elk.randomSeed': '1',                          // 0 == semente do relógio
-  'elk.json.shapeCoords': 'PARENT',               // == semântica do mxGeometry
-  'elk.json.edgeCoords': 'ROOT',                  // default na raiz é CONTAINER, não ROOT
+  'elk.randomSeed': '1',                          // 0 == the clock's seed
+  'elk.json.shapeCoords': 'PARENT',               // == mxGeometry's semantics
+  'elk.json.edgeCoords': 'ROOT',                  // the root's default is CONTAINER, not ROOT
 };
 
-/** O texto que a aresta vai de fato mostrar — é dele que sai a largura reservada. */
+/** The text the edge will actually show — the reserved width comes from it. */
 function textoDaAresta(a) {
   const base = a.label || '';
   if (a.order === undefined) return base;
@@ -202,25 +210,25 @@ function textoDaAresta(a) {
 }
 
 /**
- * O SENTIDO QUE O LAYOUT LÊ — o dado, não a seta.
+ * THE DIRECTION THE LAYOUT READS — the data, not the arrow.
  *
- * `de` no esquema é *quem inicia a conversa*, e isso é decisão de modelagem
- * (B3 da rubrica: o diagrama tem de responder quem chama quem). O `dados`
- * existe justamente para os casos em que quem inicia não é de onde o dado sai:
- * polling é `de: consumidor` com `dados: "volta"`.
+ * `from` in the schema is *whoever starts the conversation*, and that's a
+ * modeling decision (rubric B3: the diagram has to answer who calls whom).
+ * `data` exists exactly for the cases where whoever starts isn't where the
+ * data flows from: polling is `from: consumer` with `data: "back"`.
  *
- * O LAYOUT quer a outra pergunta. O `O1` do #5 mediu 17 de 24 diagramas
- * oficiais com o fluxo primário em esquerda→direita, e o `X5` do #6 repete a
- * regra para a fileira de contas. Quem tem de andar para a direita é o DADO.
+ * The LAYOUT wants the other question. #5's `O1` measured 17 of 24 official
+ * diagrams with the primary flow left→right, and #6's `X5` repeats the rule
+ * for the row of accounts. Whoever has to move right is the DATA.
  *
- * O #14 deixou isso escrito como dívida e o #24 é o ticket dela: *"`dados:
- * volta` é semântico, mas o layout ordena pela seta"*. Aqui a dívida é paga —
- * o layout passa a ordenar pelo dado, e a SETA continua desenhada como o
- * modelo mandou. São duas perguntas diferentes, e agora cada uma é respondida
- * pelo campo que a responde.
+ * #14 left this written down as debt and #24 is its ticket: *"`data: back` is
+ * semantic, but the layout orders by the arrow"*. Here the debt is paid — the
+ * layout now orders by the data, and the ARROW keeps being drawn the way the
+ * model said. They're two different questions, and now each one is answered
+ * by the field that answers it.
  *
- * ⚠️ `ambos` NÃO reverte: dois sentidos não elegem um, e reverter na moeda
- * seria layout que muda por gosto do gerador.
+ * WARNING: `both` does NOT reverse: two directions don't elect one, and
+ * flipping a coin would be a layout that changes on the generator's whim.
  */
 function sentidoDeLeitura(a) {
   return a.data === 'back'
@@ -229,16 +237,16 @@ function sentidoDeLeitura(a) {
 }
 
 /**
- * E a volta: o ELK devolve a aresta no sentido em que a recebeu.
+ * And the way back: ELK returns the edge in the direction it was given.
  *
- * Reverter na entrada e esquecer de desreverter na saída seria trocar um
- * defeito por outro pior — a seta apontaria para o lado errado, que é `A2.x`
- * inteira e é o desenho mentindo sobre quem chama quem. Então a reversão é um
- * par fechado: entra aqui, sai aqui, e nada entre `porElk` e `planejar`
- * precisa saber que ela existiu.
+ * Reversing on the way in and forgetting to reverse back on the way out would
+ * trade one defect for a worse one — the arrow would point the wrong way,
+ * which is all of `A2.x`, the drawing lying about who calls whom. So the
+ * reversal is a closed pair: it goes in here, comes out here, and nothing
+ * between `porElk` and `plan` needs to know it ever happened.
  *
- * Desreverter é trocar as pontas e virar a lista de dobras. O traçado é o
- * mesmo — uma polilinha não tem sentido, só a leitura dela tem.
+ * Un-reversing means swapping the ends and flipping the bend list. The route
+ * is the same — a polyline has no direction, only its reading does.
  */
 function unrevert(output, revertidas) {
   if (!revertidas || !revertidas.size) return output;
@@ -248,8 +256,8 @@ function unrevert(output, revertidas) {
     for (const sec of e.sections || []) {
       [sec.startPoint, sec.endPoint] = [sec.endPoint, sec.startPoint];
       if (sec.bendPoints) sec.bendPoints.reverse();
-      // `incomingShape`/`outgoingShape` são o par simétrico do ELK; trocar um
-      // sem o outro deixa a seção descrevendo uma aresta que não existe.
+      // `incomingShape`/`outgoingShape` are ELK's symmetric pair; swapping one
+      // without the other leaves the section describing an edge that doesn't exist
       if ('incomingShape' in sec || 'outgoingShape' in sec)
         [sec.incomingShape, sec.outgoingShape] = [sec.outgoingShape, sec.incomingShape];
     }
@@ -258,181 +266,186 @@ function unrevert(output, revertidas) {
 }
 
 /**
- * O CORREDOR LIVRE — onde a perna perpendicular de um desvio pode passar.
+ * THE FREE CORRIDOR — where a detour's perpendicular leg is allowed to pass.
  *
- * Todo desvio ortogonal deste motor tem a mesma forma: sai da origem por um
- * eixo, ANDA UM PEDAÇO NO OUTRO, e entra no destino pelo primeiro de novo. O
- * pedaço do meio é uma perna que atravessa uma faixa inteira do desenho, e é
- * ela que corta o que não devia.
+ * Every orthogonal detour in this engine has the same shape: it leaves the
+ * origin along one axis, WALKS A STRETCH ON THE OTHER, and enters the
+ * destination along the first one again. The stretch in the middle is a leg
+ * that crosses a whole band of the drawing, and it's the one that cuts through
+ * what it shouldn't.
  *
- * O #21 já tinha a regra — *"aresta que pula etapa desvia pela margem mais
- * próxima da origem; desviar pelo lado errado atravessa exatamente as faixas
- * que o desvio existia para evitar"* — e o motor a implementava com uma conta
- * que não conhecia obstáculo nenhum:
+ * #21 already had the rule — *"an edge that skips a step detours along the
+ * margin closest to the origin; detouring on the wrong side crosses exactly
+ * the bands the detour existed to avoid"* — and the engine implemented it with
+ * an account that knew no obstacle at all:
  *
- *     const meio = (o.x + o.w + dst.x) / 2;     // ← entre os ÍCONES
+ *     const mid = (o.x + o.w + dst.x) / 2;     // ← between the ICONS
  *
- * `o` e `dst` são as caixas do ÍCONE, não as do container. Num grid 3×3 o
- * ponto médio entre dois ícones de colunas vizinhas cai DENTRO de uma das
- * colunas, e a perna desce por dentro da subnet da linha do meio. Foi assim
- * que o `web-flow-3-az` acumulou `A5.5` ×2: duas gravações de EC2 em raias
- * diferentes descendo por dentro do grupo "app-a", de onde não saem nem para
- * onde vão. Medido, não deduzido — a perna estava em x=538 e "app-a" ia até
- * x=539.
+ * `o` and `dst` are the ICON's boxes, not the container's. On a 3×3 grid, the
+ * midpoint between two icons in neighboring columns falls INSIDE one of the
+ * columns, and the leg goes down through the middle row's subnet. That's how
+ * `web-flow-3-az` racked up `A5.5` ×2: two EC2 recordings in different
+ * swimlanes going down through the "app-a" group, which they neither leave
+ * from nor go to. Measured, not guessed — the leg was at x=538 and "app-a"
+ * went up to x=539.
  *
- * A conta certa não é uma média: é procurar um VÃO. Os obstáculos que a perna
- * atravessaria são os que se sobrepõem à faixa dela; o que sobra entre eles são
- * os corredores; e entre os corredores ganha o mais perto do lado da origem,
- * que é a regra do #21 escrita em geometria em vez de em prosa.
+ * The right account isn't an average: it's searching for a GAP. The obstacles
+ * the leg would cross are whichever ones overlap its band; what's left between
+ * them are the corridors; and among the corridors the one closest to the
+ * origin's side wins, which is #21's rule written in geometry instead of prose.
  *
- * ⚠️ ELA SEMPRE ACHA, e isso não é otimismo — é geometria: os obstáculos são
- * um conjunto FINITO de caixas, então as duas margens externas (`primeiro −
- * margem` e `último + margem`) estão livres por construção. Uma primeira versão
- * devolvia `{ onde, livre }` para o chamador propagar a falha; `livre: false`
- * era inalcançável, nenhum chamador lia o campo, e o aviso no cabeçalho
- * descrevia um comportamento que não existia. Um contrato que ninguém executa é
- * uma intenção — o campo saiu.
+ * WARNING: IT ALWAYS FINDS ONE, and that isn't optimism — it's geometry: the
+ * obstacles are a FINITE set of boxes, so the two outer margins (`first −
+ * margin` and `last + margin`) are free by construction. An earlier version
+ * returned `{ where, free }` for the caller to propagate the failure;
+ * `free: false` was unreachable, no caller read the field, and the header's
+ * warning described a behavior that didn't exist. A contract nobody runs is an
+ * intention — the field came out.
  *
- * O que ela NÃO promete é que o corredor fique ENTRE as duas pontas: quando
- * tudo entre elas está ocupado, a perna sai por fora. É o preço de não mentir
- * sobre o caminho, e é a escolha do #21 (desviar pela margem) levada a sério.
+ * What it does NOT promise is that the corridor stays BETWEEN the two ends:
+ * when everything between them is taken, the leg goes outside. That's the
+ * price of not lying about the path, and it's #21's choice (detour along the
+ * margin) taken seriously.
  *
- * @param {[number,number]} faixa    o trecho do OUTRO eixo que a perna cruza
- * @param {Array<{ini,fim,lo,hi}>} obstaculos  caixas: `ini..fim` no eixo da perna,
- *                                             `lo..hi` no eixo da faixa
- * @param {number} perto             a coordenada que a perna gostaria de ter
- * @param {number} [margem]          quanto respirar ao sair para fora de tudo
- * @returns {number} a coordenada da perna
+ * @param {[number,number]} band          the stretch of the OTHER axis the leg crosses
+ * @param {Array<{ini,fim,lo,hi}>} obstacles  boxes: `ini..fim` on the leg's axis,
+ *                                             `lo..hi` on the band's axis
+ * @param {number} near             the coordinate the leg would like to have
+ * @param {number} [margin]         how much to breathe when going outside everything
+ * @returns {number} the leg's coordinate
  */
 function corredorLivre(band, obstaculos, perto, margin = 24) {
   const lo = Math.min(band[0], band[1]);
   const hi = Math.max(band[0], band[1]);
 
-  const barram = obstaculos
-    .filter(b => b.lo < hi && b.hi > lo)         // só quem a perna de fato atravessaria
+  const blocking = obstaculos
+    .filter(b => b.lo < hi && b.hi > lo)         // only whoever the leg would actually cross
     .map(b => [Math.min(b.ini, b.fim), Math.max(b.ini, b.fim)])
     .sort((a, b) => a[0] - b[0]);
 
-  const unidos = [];
-  for (const [i, f] of barram) {
-    const u = unidos[unidos.length - 1];
+  const merged = [];
+  for (const [i, f] of blocking) {
+    const u = merged[merged.length - 1];
     if (u && i <= u[1]) u[1] = Math.max(u[1], f);
-    else unidos.push([i, f]);
+    else merged.push([i, f]);
   }
-  // encostar na borda não é atravessar: a perna que corre RENTE à caixa não
-  // entra nela, e é exatamente isso que uma calha é
-  const inside = c => unidos.some(([i, f]) => c > i && c < f);
+  // touching the border isn't crossing it: a leg that runs FLUSH against the
+  // box doesn't enter it, and that's exactly what a lane is
+  const inside = c => merged.some(([i, f]) => c > i && c < f);
   if (!inside(perto)) return perto;
 
-  // Os candidatos: as duas margens externas e o meio de cada vão. Como os
-  // bloqueios já vêm unidos, dois vizinhos nunca se tocam — todo meio de vão é
-  // estritamente livre, e por isso a busca sempre termina com resposta.
-  const vaos = [unidos[0][0] - margin];
-  for (let k = 0; k + 1 < unidos.length; k++) vaos.push((unidos[k][1] + unidos[k + 1][0]) / 2);
-  vaos.push(unidos[unidos.length - 1][1] + margin);
+  // The candidates: the two outer margins and the middle of each gap. Since
+  // the blockers already come merged, no two neighbors ever touch — every
+  // gap's middle is strictly free, and that's why the search always ends with
+  // an answer.
+  const gaps = [merged[0][0] - margin];
+  for (let k = 0; k + 1 < merged.length; k++) gaps.push((merged[k][1] + merged[k + 1][0]) / 2);
+  gaps.push(merged[merged.length - 1][1] + margin);
 
-  return vaos.reduce((a, b) => (Math.abs(b - perto) < Math.abs(a - perto) ? b : a));
+  return gaps.reduce((a, b) => (Math.abs(b - perto) < Math.abs(a - perto) ? b : a));
 }
 
 /**
- * A CAIXA DA FOLHA VAI PARA O ELK COM O RÓTULO DECLARADO, E ELE FICA FORA.
+ * THE LEAF'S BOX GOES TO ELK WITH ITS DECLARED LABEL, AND IT STAYS OUTSIDE.
  *
- * O rótulo de uma folha é desenhado por FORA da caixa dela — centrado abaixo do
- * ícone. O cabeçalho de `montarElk` explica por que a caixa não pode ser
- * inflada para caber o texto: o ELK roteia até o CENTRO, e um centro deslocado
- * faz a seta sair de dentro das letras.
+ * A leaf's label is drawn OUTSIDE its box — centered below the icon.
+ * `montarElk`'s (now `buildElkGraph`'s) header explains why the box can't be
+ * inflated to fit the text: ELK routes to the CENTER, and an offset center
+ * sends the arrow out from inside the letters.
  *
- * Até o #24 a saída era o motor COMPRAR o espaço por fora: `spacing.nodeNode`
- * ganhava `rotuloMax` e o `padding.bottom` do container também. Isso separa
- * VIZINHOS e não faz mais nada — o roteador de aresta do ELK continuava sem
- * saber que existe texto ali, e passava por cima dele. Era `A3.4` (aresta sobre
- * rótulo) e metade do `A3.2` (rótulo sobre rótulo): na vista técnica do #14, a
- * aresta "dispara" cortando o rótulo do VPC endpoint, nas duas páginas em que
- * ele aparece.
+ * Until #24 the fix was for the engine to BUY the space from outside:
+ * `spacing.nodeNode` got `rotuloMax` added and so did the container's
+ * `padding.bottom`. That only separates NEIGHBORS and does nothing else — ELK's
+ * edge router still didn't know text was there, and ran right over it. It was
+ * `A3.4` (edge over label) and half of `A3.2` (label over label): in #14's
+ * technical view, the edge "fires" cutting through the VPC endpoint's label,
+ * on both pages where it appears.
  *
- * `elk.nodeLabels.placement = [H_CENTER,V_BOTTOM,OUTSIDE]` é a alavanca certa e
- * ela sempre esteve ali: o ELK reserva o rótulo FORA da caixa, então o centro
- * continua sendo o do ícone (a âncora não se mexe) e o roteador passa a desviar
- * do texto.
+ * `elk.nodeLabels.placement = [H_CENTER,V_BOTTOM,OUTSIDE]` is the right lever
+ * and it was always there: ELK reserves the label OUTSIDE the box, so the
+ * center stays the icon's (the anchor doesn't move) and the router starts
+ * steering around the text.
  *
- * ⚠️ E A RESERVA MANUAL SAIU JUNTO — as duas juntas pagariam o mesmo espaço
- * duas vezes. Medido: com as duas, a `landing-zone` sai 1903×997; só com o ELK,
- * 1903×861 — 136 px mais baixa que com as duas, e 41 mais baixa que os 1864×902
- * de antes de tudo (39 mais larga, porque o rótulo passou a entrar na conta da
- * largura em vez de vazar). O ganho não é só de altura:
- * `A4.5` (padding de grupo uniforme) melhora em seis páginas, porque quem
- * calcula o padding passou a ser quem sabe de que tamanho é o conteúdo.
+ * WARNING: AND THE MANUAL RESERVE CAME OUT WITH IT — both together would pay
+ * for the same space twice. Measured: with both, `landing-zone` comes out
+ * 1903×997; with only ELK's, 1903×861 — 136 px shorter than with both, and 41
+ * shorter than the 1864×902 from before any of this. The gain isn't only in
+ * height: `A4.5` (uniform group padding) improves on six pages, because
+ * whoever computes the padding now knows how big the content actually is.
  *
- * O que NÃO saiu: `rotuloMax` continua sendo somado no rodapé da faixa e na
- * altura da página em `planejar`, e continua certo — a caixa que a faixa abraça
- * é a do ÍCONE, então o texto dos membros ainda precisa caber embaixo dela.
+ * What did NOT come out: `rotuloMax` is still added to the band's footer and
+ * to the page height in `plan.cjs`, and it's still right — the box the band
+ * hugs is the ICON's, so the members' text still needs to fit below it.
  */
 function folhaComRotulo(id, f) {
   return {
-    id, width: f.caixaW || f.formaW, height: f.formaH,
-    labels: [{ id: `${id}-rot`, text: f.label || '', width: f.rotuloW || 0, height: f.rotuloH || 0 }],
+    id, width: f.boxW || f.shapeW, height: f.shapeH,
+    labels: [{ id: `${id}-rot`, text: f.label || '', width: f.labelW || 0, height: f.labelH || 0 }],
     layoutOptions: { 'elk.nodeLabels.placement': '[H_CENTER,V_BOTTOM,OUTSIDE]' },
   };
 }
 
 /**
- * A NOTA PRESA A UM NÓ É UM NÓ DO LAYOUT — e antes do #24 ela não era nada.
+ * A NOTE ATTACHED TO A NODE IS A LAYOUT NODE — and before #24 it was nothing.
  *
- * O motor a desenhava DEPOIS de tudo, num offset fixo à direita do sujeito:
+ * The engine used to draw it AFTER everything else, at a fixed offset to the
+ * subject's right:
  *
- *     geo: { x: a.x + a.w + 14, y: a.y, w: 190, h: 46 }     // ← chute
+ *     geo: { x: a.x + a.w + 14, y: a.y, w: 190, h: 46 }     // ← a guess
  *
- * Ninguém tinha reservado aquele espaço, então a caixa caía em cima do que
- * estivesse ali. Na vista técnica do #14 a conta foi: `A4.2` ×3 e `A4.4` ×1 —
- * as duas SEMÂNTICAS, a nota afirmando pertencer a uma conta e a uma nuvem de
- * que ela não é membro —, mais `A3.5`, `A3.4` e `A3.2` porque a aresta que
- * ninguém avisou passava por dentro dela. O #14 já tinha visto o sintoma a olho
- * nu: *"nota presa a nó encosta em borda de container (visível nos dois PNGs)"*.
+ * Nobody had reserved that space, so the box landed on top of whatever was
+ * there. In #14's technical view the toll was: `A4.2` ×3 and `A4.4` ×1 — both
+ * SEMANTIC, the note asserting it belongs to an account and a cloud it isn't a
+ * member of —, plus `A3.5`, `A3.4` and `A3.2` because the edge nobody warned
+ * about passed right through it. #14 had already seen the symptom with the
+ * naked eye: *"a note attached to a node touches the container's border
+ * (visible in both PNGs)"*.
  *
- * A correção é a mesma frase que o #18 usa para tudo: quem corrige é o passo que
- * tem as alavancas. Entregando a nota ao ELK como um nó de verdade, as cinco
- * checagens caem por CONSTRUÇÃO e não por conserto — o ELK não sobrepõe nós, não
- * tira filho de dentro do pai, e roteia desviando do que ele conhece. Nenhuma
- * delas precisou ser mirada.
+ * The fix is the same sentence #18 uses for everything: whoever has the
+ * levers is whoever fixes it. Handing the note to ELK as a real node, all five
+ * checks fall by CONSTRUCTION, not by patch — ELK doesn't overlap nodes,
+ * doesn't pull a child out of its parent, and routes around what it knows
+ * about. None of them needed to be aimed at.
  *
- * O pai é o pai do SUJEITO, e isso é a parte semântica: uma nota sobre a zona
- * curada mora dentro da conta em que a zona curada mora. Aí o que o desenho
- * afirma e o que o modelo declara passam a ser a mesma coisa, que é literalmente
- * o enunciado de `A4.4`.
+ * The parent is the SUBJECT's parent, and that's the semantic part: a note
+ * about the cured zone lives inside the account the cured zone lives in. Then
+ * what the drawing asserts and what the model declares become the same thing,
+ * which is literally `A4.4`'s statement.
  */
 const NOTE_W = 190;
 const NOTE_MIN_H = 46;
 
 /**
- * O id de uma nota tem UM dono, e a razão é dura: `planejar.notasPresas` decide
- * se desenha pelo `abs.has(id)`. Se os dois lados derivassem o id por conta
- * própria e discordassem num caractere, a nota sairia DUAS VEZES no mesmo
- * desenho — uma pelo layout e outra pelo offset de resgate —, e o sintoma seria
- * uma caixa amarela sobre outra, que nenhuma das 62 chama de erro.
+ * A note's id has ONE owner, and the reason is hard: `plan.cjs`'s
+ * `attachedNotes` decides whether to draw it by `abs.has(id)`. If both sides
+ * derived the id on their own and disagreed by one character, the note would
+ * come out TWICE in the same drawing — once from the layout and once from the
+ * rescue offset —, and the symptom would be one yellow box on top of another,
+ * which none of the 62 calls an error.
  */
 function idDaNota(n, i) { return n.id || `nota-${i}`; }
 
 function notasPorPai(model, d, res, boxes) {
-  const porPai = new Map();
+  const byParent = new Map();
   for (const [i, n] of (model.notes || []).entries()) {
     if (n.about === undefined) continue;
     const target = d.t.byId.get(n.about);
-    if (!target) continue;                        // nota órfã — `validate.cjs` já reclama dela
+    if (!target) continue;                        // orphaned note — `validate.cjs` already complains about it
     const id = idDaNota(n, i);
-    const linhas = res.labelLines(n.text, NOTE_W - 16);
+    const lines = res.labelLines(n.text, NOTE_W - 16);
     const cellBox = {
       container: false, note: true, label: n.text, style: res.tema.note(),
-      formaW: NOTE_W, formaH: Math.max(NOTE_MIN_H, 12 + linhas * 16),
+      shapeW: NOTE_W, shapeH: Math.max(NOTE_MIN_H, 12 + lines * 16),
     };
     boxes.set(id, cellBox);
     const parent = target.inside || null;
-    if (!porPai.has(parent)) porPai.set(parent, []);
-    porPai.get(parent).push({ id, width: cellBox.formaW, height: cellBox.formaH });
+    if (!byParent.has(parent)) byParent.set(parent, []);
+    byParent.get(parent).push({ id, width: cellBox.shapeW, height: cellBox.shapeH });
   }
-  return porPai;
+  return byParent;
 }
 
-/** O `$H` do GWT vaza no JSON e muda a cada execução sem mover uma coordenada (#7). */
+/** GWT's `$H` leaks into the JSON and changes on every run without moving a single coordinate (#7). */
 function clean(o) {
   if (Array.isArray(o)) return o.map(clean);
   if (o && typeof o === 'object') {
@@ -443,69 +456,70 @@ function clean(o) {
   return o;
 }
 
-// ------------------------------------------------------------------ caminho A
+// ------------------------------------------------------------------ path A
 
 /**
- * A caixa que o ELK enxerga é a caixa do ÍCONE, não a do ícone mais o rótulo.
+ * The box ELK sees is the ICON's box, not the icon plus the label.
  *
- * O caminho óbvio — inflar a altura para caber o rótulo — parece certo e é
- * errado: o ELK roteia até o CENTRO da caixa, e uma caixa inflada para baixo
- * tem centro abaixo do ícone. A seta passaria a sair de dentro do texto. Então
- * a caixa é o ícone (centro = centro do ícone, âncora exata) e o espaço do
- * rótulo é comprado onde ele de fato é consumido:
+ * The obvious path — inflating the height to fit the label — looks right and
+ * is wrong: ELK routes to the box's CENTER, and a box inflated downward has
+ * its center below the icon. The arrow would start coming out from inside the
+ * text. So the box is the icon (center = icon's center, exact anchor) and the
+ * label's space is bought where it's actually spent:
  *
- *   - na vertical, por `spacing.nodeNode`, que separa vizinhos da mesma camada;
- *   - na horizontal, alargando a caixa até a largura do rótulo, com o ícone
- *     centrado — assim o transbordo do texto fica DENTRO da caixa e nenhum
- *     vizinho encosta nele;
- *   - no rodapé do container, por `padding.bottom`.
+ *   - vertically, through `spacing.nodeNode`, which separates neighbors in the
+ *     same layer;
+ *   - horizontally, by widening the box to the label's width, with the icon
+ *     centered — that way the text's overflow stays INSIDE the box and no
+ *     neighbor touches it;
+ *   - at the container's foot, through `padding.bottom`.
  */
-function montarElk(model, d, res, measure) {
+function buildElkGraph(model, d, res, measure) {
   const GAP = folgas(res.tema);
   const boxes = new Map();
-  const paddings = new Map();     // o passe de alinhamento precisa saber o limite de cada caixa
+  const paddings = new Map();     // the alignment pass needs to know each box's limit
 
-  // pré-resolve as folhas para saber de quanto rótulo o layout precisa fugir
-  let rotuloMax = 0, transbordo = 0;
+  // pre-resolve the leaves to know how much label the layout needs to steer clear of
+  let rotuloMax = 0, overflow = 0;
   for (const no of model.nodes) {
-    // FOLHA é o tipo, não "quem não tem filho" — ver `caixaVazia`. O teste por
-    // contagem de filhos mandava toda subnet vazia para `res.folha()`.
+    // LEAF is the type, not "whoever has no child" — see `emptyBox`. Testing by
+    // child count used to send every empty subnet to `res.leaf()`.
     if (!LEAVES.has(no.kind)) continue;
     const f = res.leaf(no);
-    rotuloMax = Math.max(rotuloMax, f.rotuloH);
-    // quanto o texto passa de cada lado do ícone — é isso que precisa caber no
-    // vão entre camadas, já que a caixa do layout é a do ícone
-    transbordo = Math.max(transbordo, Math.max(0, ((f.rotuloW || 0) - f.formaW) / 2));
+    rotuloMax = Math.max(rotuloMax, f.labelH);
+    // how much the text overflows each side of the icon — that's what needs to
+    // fit in the gap between layers, since the layout's box is the icon's
+    overflow = Math.max(overflow, Math.max(0, ((f.labelW || 0) - f.shapeW) / 2));
   }
 
-  // O espaçamento efetivo depende do rótulo, e precisa ser IDÊNTICO na raiz e
-  // em cada container — ver o aviso acima de OPCOES_RAIZ.
+  // The effective spacing depends on the label, and it needs to be IDENTICAL
+  // at the root and in every container — see the ROOT_OPTIONS warning above.
   const spacing = {
     ...spacingOf(GAP),
-    // o vão entre vizinhos é só respiro: o rótulo é reservado pelo ELK, que
-    // agora o conhece (`folhaComRotulo`). Somar `rotuloMax` aqui pagaria duas
-    // vezes pelo mesmo espaço.
+    // the gap between neighbors is just breathing room: the label is reserved
+    // by ELK, which now knows about it (`folhaComRotulo`). Adding `rotuloMax`
+    // here would pay for the same space twice.
     'elk.spacing.nodeNode': String(GAP.ROW_GAP),
-    // e o vizinho de lado tem de caber o transbordo do texto pelos dois lados
-    'elk.layered.spacing.nodeNodeBetweenLayers': String(GAP.PAD + Math.ceil(2 * transbordo)),
+    // and the side neighbor has to fit the text's overflow on both sides
+    'elk.layered.spacing.nodeNodeBetweenLayers': String(GAP.PAD + Math.ceil(2 * overflow)),
   };
 
   const notes = notasPorPai(model, d, res, boxes);
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
-    // a nota presa a um filho deste container é filha DELE — ver `notasPorPai`
-    const minhasNotas = notes.get(no.id) || [];
+    // a note attached to a child of this container is ITS child — see `notasPorPai`
+    const myNotes = notes.get(no.id) || [];
     if (CONTAINERS.has(no.kind)) {
       const c = res.container(no);
       boxes.set(no.id, { container: true, ...c });
-      if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
-      // o rótulo da folha transborda a caixa dela PARA OS LADOS, e o container
-      // tem de reservar isso — a reserva de BAIXO passou a ser do ELK
-      // (`folhaComRotulo`). "tem folha" é sobre TIPO, igual a `caixaVazia`.
-      const temFolha = kids.some(k => LEAVES.has(k.kind));
-      const gap = temFolha ? Math.ceil(transbordo) : 0;
+      if (!kids.length && !myNotes.length) return emptyBox(no, c, res);
+      // a leaf's label overflows its box SIDEWAYS, and the container has to
+      // reserve for it — the reserve at the BOTTOM is now ELK's
+      // (`folhaComRotulo`). "has a leaf" is about TYPE, same as `emptyBox`.
+      const hasLeaf = kids.some(k => LEAVES.has(k.kind));
+      const gap = hasLeaf ? Math.ceil(overflow) : 0;
       const pad = {
-        top: c.tituloH + GAP.PAD, left: GAP.PAD + gap,
+        top: c.titleH + GAP.PAD, left: GAP.PAD + gap,
         bottom: GAP.PAD, right: GAP.PAD + gap + (measure.get(no.id) || 0),
       };
       paddings.set(no.id, pad);
@@ -513,9 +527,9 @@ function montarElk(model, d, res, measure) {
         id: no.id,
         layoutOptions: {
           'elk.padding': `[top=${pad.top},left=${pad.left},bottom=${pad.bottom},right=${pad.right}]`,
-          ...spacing,          // sem isto, o container usa os defaults do ELK — ver o aviso acima
+          ...spacing,          // without this, the container uses ELK's defaults — see the warning above
         },
-        children: [...kids.map(paraElk), ...minhasNotas],
+        children: [...kids.map(paraElk), ...myNotes],
       };
     }
     const f = res.leaf(no);
@@ -524,19 +538,20 @@ function montarElk(model, d, res, measure) {
   };
 
   const revertidas = new Set();
-  const grafo = {
+  const graph = {
     id: 'root',
     layoutOptions: { ...ROOT_OPTIONS, ...spacing },
     children: [...d.t.raizes.map(paraElk), ...(notes.get(null) || [])],
-    // O rótulo da aresta vai JUNTO. Sem ele o ELK aproxima os nós até o vão
-    // ficar menor que o texto, e o texto cai em cima do ícone vizinho — que é
-    // `A3.2` da rubrica (#8), a falha que ela prevê para gerador automático.
-    // Entregando o rótulo, o vão passa a ser calculado para caber nele.
+    // The edge's label travels WITH it. Without it, ELK pulls the nodes
+    // together until the gap is smaller than the text, and the text lands on
+    // top of the neighboring icon — which is `A3.2` of the rubric (#8), the
+    // failure it predicts for an automatic generator. Handing over the label,
+    // the gap gets computed to fit it.
     edges: d.edges.map(a => {
       const txt = textoDaAresta(a);
-      // o LAYOUT lê o dado (`sentidoDeLeitura`); a SETA continua a do modelo,
-      // e `desreverter` devolve a aresta ao sentido dela antes de qualquer
-      // consumidor a ver
+      // the LAYOUT reads the data (`sentidoDeLeitura`); the ARROW keeps being
+      // the model's, and `unrevert` returns the edge to its own direction
+      // before any consumer sees it
       const s = sentidoDeLeitura(a);
       if (s.revertida) revertidas.add(a.id);
       return {
@@ -545,22 +560,23 @@ function montarElk(model, d, res, measure) {
       };
     }),
   };
-  return { grafo, boxes, paddings, rotuloMax, transbordo, revertidas };
+  return { grafo: graph, boxes, paddings, rotuloMax, overflow, revertidas };
 }
 
 /**
- * Largura mínima que o título exige. O contorno que o #7 propõe — alargar o
- * container DEPOIS do layout — pode encostar num irmão (incerteza 7 de lá).
- * Aqui a folga entra como `padding.right` e o ELK relayouta com ela, então os
- * irmãos se afastam sozinhos. Duas passadas, ~180 ms cada no pior caso medido.
+ * The minimum width the title requires. The workaround #7 proposes — widening
+ * the container AFTER the layout — can touch a sibling (uncertainty 7 there).
+ * Here the slack goes in as `padding.right`, and ELK relayouts with it, so
+ * siblings move apart on their own. Two passes, ~180 ms each in the worst
+ * measured case.
  */
-function deficitDeTitulo(no, cellBox, larguraObtida, res) {
+function deficitDeTitulo(no, cellBox, obtainedWidth, res) {
   if (!cellBox || !cellBox.container) return 0;
   const text = no.label || '';
   if (!text) return 0;
-  // o rótulo de grupo tem corpo próprio (`texto.grupo`), que pode diferir do de folha
-  const precisa = res.larguraDoRotuloDeGrupo(text) + (cellBox.recuoTitulo || 8) + 16;
-  return Math.max(0, Math.ceil(precisa - larguraObtida));
+  // a group's label has its own body (`text.group`), which can differ from a leaf's
+  const needed = res.larguraDoRotuloDeGrupo(text) + (cellBox.titleIndent || 8) + 16;
+  return Math.max(0, Math.ceil(needed - obtainedWidth));
 }
 
 async function porElk(model, d, res) {
@@ -569,158 +585,164 @@ async function porElk(model, d, res) {
   let output = null;
 
   for (let pass = 0; pass < 2; pass++) {
-    const { grafo, boxes, paddings, rotuloMax, revertidas } = montarElk(model, d, res, measure);
+    const { grafo, boxes, paddings, rotuloMax, revertidas } = buildElkGraph(model, d, res, measure);
     output = unrevert(clean(await elk.layout(structuredClone(grafo))), revertidas);
-    if (pass === 1) return { output, boxes, rotuloMax, passadas: 2, encaixe: align(output, paddings) };
+    if (pass === 1) return { output, boxes, rotuloMax, passadas: 2, snap: align(output, paddings) };
 
-    const proximo = new Map();
-    (function medirTitulos(n) {
+    const next = new Map();
+    (function measureTitles(n) {
       for (const c of n.children || []) {
         const no = d.t.byId.get(c.id);
         const def = deficitDeTitulo(no, boxes.get(c.id), c.width, res);
-        if (def > 0) proximo.set(c.id, def);
-        medirTitulos(c);
+        if (def > 0) next.set(c.id, def);
+        measureTitles(c);
       }
     })(output);
-    if (!proximo.size) return { output, boxes, rotuloMax, passadas: 1, encaixe: align(output, paddings) };
-    measure = proximo;
+    if (!next.size) return { output, boxes, rotuloMax, passadas: 1, snap: align(output, paddings) };
+    measure = next;
   }
 }
 
-// ------------------------------------------------------------------ caminho B
+// ------------------------------------------------------------------ path B
 
 /**
- * Grade de AZ, nos DOIS eixos — e quem escolhe é o modelo, não o agente.
+ * The AZ grid, on BOTH axes — and the model chooses, not the agent.
  *
- * O #11 escreveu esta grade com a AZ em COLUNAS, que era a orientação do
- * protótipo do #19. O #21 fechou depois e decidiu o contrário — mas com uma
- * condição que é fácil perder ao ler só a manchete:
+ * #11 wrote this grid with the AZ in COLUMNS, which was #19's prototype's
+ * orientation. #21 closed it later and decided the opposite — but with a
+ * condition that's easy to miss if you only read the headline:
  *
- *   > Quando as DUAS dimensões estão presentes, a dimensão ORDENADA fica com a
- *   > horizontal; a paralela vira raia empilhada na vertical. Passo numerado é
- *   > ordenado; réplica zonal é intercambiável — é isso que "redundância" quer
- *   > dizer. **Sem fluxo numerado, a AZ pode ficar com a coluna, como no deck.**
+ *   > When BOTH dimensions are present, the ORDERED one takes the horizontal;
+ *   > the parallel one becomes a swimlane stacked vertically. A numbered step
+ *   > is ordered; a zonal replica is interchangeable — that's what
+ *   > "redundancy" means. **With no numbered flow, the AZ can stay in the
+ *   > column, like the deck.**
  *
- * Então a dívida herdada não era "transponha tudo": era "o motor tem de saber
- * os dois eixos, e a escolha é regra". A régua do #21 mediu por quê — 24
- * combinações realistas, fluxo na horizontal vencendo em 24 de 24 QUANDO há
- * passo numerado, porque aí a dimensão ordenada tem 5–11 posições e a paralela
- * tem 2–4, e a dimensão longa vai no lado longo do papel. Sem passo numerado o
- * regime muda e a coluna do deck volta a empatar.
+ * So the inherited debt wasn't "transpose everything": it was "the engine has
+ * to know both axes, and the choice is a rule". #21's ruler measured why — 24
+ * realistic combinations, flow on the horizontal winning 24 of 24 WHEN there's
+ * a numbered step, because then the ordered dimension has 5–11 positions and
+ * the parallel one has 2–4, and the long dimension goes on the paper's long
+ * side. With no numbered step the regime changes and the deck's column ties
+ * again.
  *
- * A grade é escrita em coordenadas ABSTRATAS — `principal` (papéis de subnet, o
- * eixo do fluxo) e `transversal` (as zonas) — e só no fim é mapeada para (x,y).
- * Transpor é trocar o mapeamento, não reescrever a grade. As VPCs empilham ao
- * longo do PRINCIPAL, porque a faixa de zona atravessa todas elas e ela corre
- * nessa direção.
+ * The grid is written in ABSTRACT coordinates — `principal` (subnet roles, the
+ * flow axis) and `transversal` (the zones) — and only at the end mapped to
+ * (x,y). Transposing means swapping the mapping, not rewriting the grid. VPCs
+ * stack along the PRINCIPAL axis, because the zone band crosses all of them
+ * and runs in that direction.
  */
 function eixoDaGrade(model) {
   const numbered = (model.edges || []).some(a => a.order !== undefined);
   return {
     eixo: numbered ? 'raia' : 'column',
     because: numbered
-      ? 'há passo numerado — a dimensão ordenada fica com a horizontal (#21)'
-      : 'sem passo numerado — a AZ fica com a coluna, como no deck (#21)',
+      ? 'there is a numbered step — the ordered dimension takes the horizontal (#21)'
+      : 'no numbered step — the AZ stays in the column, like the deck (#21)',
   };
 }
 
 /**
- * A ordem das raias — VARREDURA, não heurística.
+ * Swimlane order — a SWEEP, not a heuristic.
  *
- * O #21 mediu as 6 permutações de 3 zonas nos dois eixos e achou piso ZERO de
- * `A5.5` em duas delas; mediu também que a heurística óbvia ("põe o alvo da
- * convergência no meio") apenas TROCA um cruzamento por outro. Com 2 a 4 zonas
- * são 2 a 24 permutações: varrer é exato e barato.
+ * #21 measured the 6 permutations of 3 zones on both axes and found a ZERO
+ * floor for `A5.5` in two of them; it also measured that the obvious heuristic
+ * ("put the convergence target in the middle") only TRADES one crossing for
+ * another. With 2 to 4 zones that's 2 to 24 permutations: sweeping is exact
+ * and cheap.
  *
- * O custo é o do #21: aresta entre zonas não vizinhas cruza a faixa de quem
- * está no meio, que é `A5.5` da rubrica (#8).
+ * The cost is #21's: an edge between non-neighboring zones crosses whoever is
+ * in the middle's band, which is `A5.5` of the rubric (#8).
  */
 function ordemDeRaias(model, d, subnets) {
   const zonas = [...new Set(subnets.map(s => s.az).filter(Boolean))].sort();
   if (zonas.length < 3) return { zonas, custo: 0, varridas: 0 };
 
-  const zonaDo = id => {
+  const zoneOf = id => {
     const n = d.t.byId.get(id);
     if (!n) return null;
     const s = n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet');
     return s ? s.az : null;
   };
-  const cruzam = (model.edges || [])
-    .map(a => [zonaDo(a.from), zonaDo(a.to)])
+  const crossing = (model.edges || [])
+    .map(a => [zoneOf(a.from), zoneOf(a.to)])
     .filter(([x, y]) => x && y && x !== y);
-  if (!cruzam.length) return { zonas, custo: 0, varridas: 0 };
+  if (!crossing.length) return { zonas, custo: 0, varridas: 0 };
 
-  let melhor = null;
-  const todas = permute(zonas);
-  for (const perm of todas) {
+  let best = null;
+  const all = permute(zonas);
+  for (const perm of all) {
     const idx = new Map(perm.map((z, i) => [z, i]));
-    let custo = 0;
-    for (const [x, y] of cruzam) custo += Math.max(0, Math.abs(idx.get(x) - idx.get(y)) - 1);
-    if (!melhor || custo < melhor.custo) melhor = { perm, custo };
+    let cost = 0;
+    for (const [x, y] of crossing) cost += Math.max(0, Math.abs(idx.get(x) - idx.get(y)) - 1);
+    if (!best || cost < best.custo) best = { perm, custo: cost };
   }
-  return { zonas: melhor.perm, custo: melhor.custo, varridas: todas.length };
+  return { zonas: best.perm, custo: best.custo, varridas: all.length };
 }
 
 /**
- * A QUINTA CALHA — a que o #21 achou e o #11 não tinha.
+ * THE FIFTH LANE — the one #21 found and #19 didn't have.
  *
- *   > A calha só empilha se as bandas SE SOBREPÕEM no eixo transversal; lado a
- *   > lado dividem. Sem essa correção as três faixas de AZ saem em escada.
+ *   > A lane only stacks if the bands OVERLAP on the transversal axis; side by
+ *   > side, they share. Without this fix the three AZ bands come out
+ *   > staircased.
  *
- * A regra do #19 cobrava a calha na primeira linha que a faixa toca e ficava no
- * MÁXIMO entre as faixas daquela linha — certo para faixas lado a lado, errado
- * para faixas que se sobrepõem, porque essas precisam de espaço uma DEPOIS da
- * outra.
+ * #19's rule charged the lane on the first row the band touches and took the
+ * MAX among that row's bands — right for side-by-side bands, wrong for
+ * overlapping ones, because those need space one AFTER the other.
  *
- * Vira um máximo de somas: para cada posição transversal, some as calhas das
- * faixas que começam naquela linha E cobrem aquela posição; a calha da linha é
- * o maior desses totais. Lado a lado, cada posição só vê uma faixa e a soma
- * degenera no máximo de antes — a regra velha é o caso particular desta, e é
- * por isso que trocar uma pela outra não mexe em nenhum desenho existente.
+ * It becomes a max of sums: for each transversal position, sum the lanes of
+ * the bands that start on that row AND cover that position; the row's lane is
+ * the largest of those totals. Side by side, each position only sees one band
+ * and the sum degenerates into the old max — the old rule is this one's
+ * special case, which is why swapping one for the other doesn't move any
+ * existing drawing.
  */
 function calhaDaLinha(faixasDaLinha, zonas) {
-  let maior = 0;
+  let max = 0;
   for (const z of zonas) {
-    let soma = 0;
-    for (const f of faixasDaLinha) if (f.zonas.has(z)) soma += f.lane;
-    maior = Math.max(maior, soma);
+    let sum = 0;
+    for (const f of faixasDaLinha) if (f.zonas.has(z)) sum += f.lane;
+    max = Math.max(max, sum);
   }
-  for (const f of faixasDaLinha) if (!f.zonas.size) maior = Math.max(maior, f.lane);
-  return maior;
+  for (const f of faixasDaLinha) if (!f.zonas.size) max = Math.max(max, f.lane);
+  return max;
 }
 
 async function porGrade(model, d, res) {
   const GAP = folgas(res.tema);
   /**
-   * A grade RECUSA quando a ordem depende de um fato que o modelo não tem (#22),
-   * e recusa ANTES de layoutar coisa nenhuma.
+   * The grid REFUSES when the order depends on a fact the model doesn't have
+   * (#22), and refuses BEFORE laying out anything.
    *
-   * Aqui a ordem das linhas é o desenho: a chave de papel manda, sem aresta e
-   * sem ELK para desempatar. Uma subnet sem camada de rede, num grupo com mais
-   * de um papel para empilhar, é ordem inventada — e ordem inventada põe a
-   * camada de dados em cima, que é a leitura que a convenção de rede não quer.
+   * Here the row order IS the drawing: the role key alone drives it, with no
+   * edge and no ELK to break ties. A subnet with no network layer, in a group
+   * with more than one role to stack, is an invented order — and an invented
+   * order puts the data layer on top, which is the reading the network
+   * convention doesn't want.
    *
-   * Mesma política do resto do caminho da grade: falha com a LISTA, em vez de
-   * omitir em silêncio (o A4.2 da rubrica). E a recusa é precisa — só dispara
-   * onde a falta muda o desenho, nunca por subnet vazia que não disputa linha
-   * com ninguém. O agente lê a mensagem e conserta o modelo; o humano não é
-   * chamado, e a premissa 11 continua de pé.
+   * Same policy as the rest of the grid path: fail with the LIST, instead of
+   * silently omitting (the rubric's A4.2). And the refusal is precise — it
+   * only fires where the missing fact changes the drawing, never for an empty
+   * subnet that competes with nobody for a row. The agent reads the message
+   * and fixes the model; the human isn't called in, and premise 11 stays
+   * standing.
    */
   if (d.gaps.length) {
-    const e = new Error('a grade não sabe empilhar estas linhas — falta a camada de rede das subnets');
-    e.erros = camadasMod.textoDaLacuna(d.gaps);
+    const e = new Error("the grid doesn't know how to stack these rows — the subnets' network layer is missing");
+    e.erros = layersMod.textoDaLacuna(d.gaps);
     throw e;
   }
 
   const elk = new ELK();
   const boxes = new Map();
-  const { eixo, because: porqueEixo } = eixoDaGrade(model);
+  const { eixo, because: whyAxis } = eixoDaGrade(model);
   const raia = eixo === 'raia';
 
   const vpcs = model.nodes.filter(n => n.kind === 'vpc');
   const subnets = model.nodes.filter(n => n.kind === 'subnet');
 
-  // 1. cada subnet é layoutada isolada, para saber de que tamanho ela precisa
+  // 1. each subnet is laid out in isolation, to know what size it needs
   const intra = new Map();
   for (const s of subnets) {
     const kids = d.t.filhos.get(s.id);
@@ -733,90 +755,93 @@ async function porGrade(model, d, res) {
         'elk.algorithm': 'layered', 'elk.direction': 'RIGHT',
         'elk.spacing.nodeNode': '30', 'elk.randomSeed': '1',
         'elk.json.shapeCoords': 'PARENT',
-        'elk.padding': `[top=${c.tituloH + 10},left=14,bottom=14,right=14]`,
+        'elk.padding': `[top=${c.titleH + 10},left=14,bottom=14,right=14]`,
       },
       children: kids.map(k => {
         const f = res.leaf(k);
         boxes.set(k.id, { container: false, ...f });
-        return { id: k.id, width: f.caixaW || f.formaW, height: f.formaH + f.rotuloH };
+        return { id: k.id, width: f.boxW || f.shapeW, height: f.shapeH + f.labelH };
       }),
     };
     const r = clean(await elk.layout(g));
     intra.set(s.id, { w: r.width, h: r.height, filhos: r.children });
   }
 
-  // A chave de papel é UMA — a do `layers.cjs`. Ela era construída aqui e lá,
-  // com a mesma expressão escrita duas vezes; duas definições de "papel" seriam
-  // duas grades, e a que decide a camada tem de ser a mesma que vira linha.
-  const papel = s => camadasMod.chaveDePapel(s, d.t);
-  const vpcDe = s => (d.t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id;
+  // The role key is ONE — `layers.cjs`'s. It used to be built here and there,
+  // with the same expression written twice; two definitions of "role" would
+  // be two grids, and whoever decides the layer has to be the same one that
+  // becomes a row.
+  const role = s => layersMod.chaveDePapel(s, d.t);
+  const vpcOf = s => (d.t.ancestrais(s).find(a => a.kind === 'vpc') || {}).id;
 
   const varreduraRaias = ordemDeRaias(model, d, subnets);
   const zonas = varreduraRaias.zonas;
 
-  const papeisPorVpc = new Map();
-  for (const v of vpcs) papeisPorVpc.set(v.id, []);
+  const rolesByVpc = new Map();
+  for (const v of vpcs) rolesByVpc.set(v.id, []);
   for (const s of subnets) {
-    const list = papeisPorVpc.get(vpcDe(s));
-    if (list && !list.includes(papel(s))) list.push(papel(s));
+    const list = rolesByVpc.get(vpcOf(s));
+    if (list && !list.includes(role(s))) list.push(role(s));
   }
   /**
-   * A ORDEM DOS PAPÉIS É DERIVADA, não herdada da ordem do arquivo.
+   * ROLE ORDER IS DERIVED, not inherited from the file's order.
    *
-   * A primeira versão empilhava as linhas na ordem em que as subnets apareciam
-   * em `nos`. Reordenar a lista reordenava o desenho — exatamente a incerteza 4
-   * do #7, e ela se confirmou: `check-determinismo` acusou geometria diferente
-   * em 2 de 3 embaralhamentos. Importa porque quem escreve o modelo é um
-   * agente, e nenhum LLM emite a mesma lista na mesma ordem duas vezes; sem
-   * ordem derivada, regerar o mesmo diagrama produz um diff inteiro.
+   * The first version stacked rows in the order subnets appeared in `nodes`.
+   * Reordering the list reordered the drawing — exactly #7's uncertainty 4,
+   * and it was confirmed: `check-determinismo` flagged different geometry in
+   * 2 of 3 shufflings. It matters because whoever writes the model is an
+   * agent, and no LLM emits the same list in the same order twice; without a
+   * derived order, regenerating the same diagram produces a whole diff.
    *
-   * Critério: exposição primeiro (pública antes, que é o sentido de leitura do
-   * deck), CAMADA DE REDE depois, rótulo como último desempate.
+   * Criterion: exposure first (public before, the deck's reading order),
+   * NETWORK LAYER next, label as the last tiebreak.
    *
-   * O #22 fechou o placeholder que ficou aberto aqui. O desempate do meio era
-   * alfabético e acertava `App · Data` por coincidência; agora quem manda é a
-   * camada que o papel ocupa, lida do que as subnets dele guardam
-   * (`layers.cjs`). O alfabeto continua no fim e mudou de função: não carrega
-   * mais significado, só fecha a ordem total que o determinismo exige.
+   * #22 closed the placeholder that was left open here. The middle tiebreak
+   * used to be alphabetical and it got `App · Data` right by coincidence; now
+   * what drives it is the layer the role occupies, read from what its subnets
+   * hold (`layers.cjs`). The alphabet stays at the end and changed role: it no
+   * longer carries meaning, it only closes the total order determinism
+   * requires.
    *
-   * Nenhum papel chega aqui sem camada — a recusa lá em cima já barrou.
+   * No role reaches here with no layer — the refusal above already blocked
+   * that.
    */
   /**
-   * O comparador lê CAMPOS, não pedaços da chave.
+   * The comparator reads FIELDS, not pieces of the key.
    *
-   * A versão anterior fazia `a.split('|')` e pegava a exposição e o rótulo por
-   * posição — o que quebra em silêncio no dia em que um rótulo tiver `|`
-   * dentro: a chave ganha um quarto pedaço e o desempate passa a comparar o
-   * lado errado do texto. O `papeisDeSubnet` já devolve o papel como objeto;
-   * basta consultá-lo.
+   * The previous version did `a.split('|')` and picked out exposure and label
+   * by position — which breaks silently the day a label contains a `|`: the
+   * key gains a fourth piece and the tiebreak starts comparing the wrong slice
+   * of text. `papeisDeSubnet` already returns the role as an object; it's just
+   * a matter of querying it.
    */
-  const porChave = camadasMod.papeisDeSubnet(model, d.t, d.camadas);
-  const ordemDe = key => {
-    const p = porChave.get(key) || {};
-    return [camadasMod.ordemDeAcesso(p.access), camadasMod.layerOrder(p.layer), p.label || ''];
+  const byRole = layersMod.papeisDeSubnet(model, d.t, d.camadas);
+  const orderOf = key => {
+    const p = byRole.get(key) || {};
+    return [layersMod.ordemDeAcesso(p.access), layersMod.layerOrder(p.layer), p.label || ''];
   };
-  for (const list of papeisPorVpc.values())
+  for (const list of rolesByVpc.values())
     list.sort((a, b) => {
-      const ka = ordemDe(a), kb = ordemDe(b);
+      const ka = orderOf(a), kb = orderOf(b);
       return ka[0] - kb[0] || ka[1] - kb[1] || ka[2].localeCompare(kb[2], 'pt');
     });
 
-  // 2. a extensão TRANSVERSAL de cada zona: largura com AZ em coluna, altura
-  //    com AZ em raia. É aqui, e só aqui, que a transposição encosta na medida.
+  // 2. each zone's TRANSVERSAL extent: width with AZ in a column, height with
+  //    AZ in a swimlane. This is the only place the transposition touches the measurement.
   const extT = s => raia ? intra.get(s.id).h : intra.get(s.id).w;
   const extP = s => raia ? intra.get(s.id).w : intra.get(s.id).h;
   const minT = raia ? 90 : 200;
   const minP = raia ? 200 : 90;
 
   /**
-   * O gap PRINCIPAL com a grade transposta tem de caber o rótulo da aresta.
+   * The PRINCIPAL gap, with the grid transposed, has to fit the edge's label.
    *
-   * Com a AZ em coluna, o principal é o Y e o vão entre papéis só separa
-   * caixas — 14 px bastam. Transposta, o principal é o X e é exatamente ali que
-   * o rótulo do passo numerado é desenhado. É o mesmo achado do #11 no caminho
-   * do ELK ("entregue o rótulo ao layout, senão ele aproxima os nós até o texto
-   * cair em cima do ícone vizinho"), só que aqui não há ELK para entregar: quem
-   * reserva é a grade.
+   * With the AZ in a column, the principal axis is Y and the gap between roles
+   * only separates boxes — 14 px is enough. Transposed, the principal axis is
+   * X and that's exactly where the numbered step's label is drawn. It's the
+   * same finding as #11's on the ELK path ("hand the label to the layout, or
+   * it pulls the nodes together until the text lands on the neighboring
+   * icon"), except here there's no ELK to hand it to: the grid itself reserves it.
    */
   const larguraDoRotulo = Math.max(0, ...d.edges.map(a => res.larguraDaAresta(textoDaAresta(a))));
   const GAP_T = raia ? GAP.ROW_GAP : GAP.COL_GAP;
@@ -826,30 +851,30 @@ async function porGrade(model, d, res) {
     [z, Math.max(minT, ...subnets.filter(s => s.az === z).map(extT))]));
 
   /**
-   * 3. as faixas de membros, e em QUE EIXO a calha delas é cobrada.
+   * 3. member bands, and on WHICH AXIS their lane is charged.
    *
-   * A calha existe para o RÓTULO da faixa, e o rótulo da faixa é desenhado no
-   * topo dela — em -Y, sempre, porque é onde o `verticalAlign=top` do estilo o
-   * põe. Então a calha é cobrada no eixo que estiver mapeado em Y:
+   * The lane exists for the band's LABEL, and the band's label is drawn at its
+   * top — at -Y, always, because that's where the style's `verticalAlign=top`
+   * puts it. So the lane is charged on whichever axis is mapped to Y:
    *
-   *   AZ em coluna  Y é o PRINCIPAL     → cobra na linha de papel onde a faixa começa
-   *   AZ em raia    Y é o TRANSVERSAL   → cobra na raia onde a faixa começa
+   *   AZ in a column  Y is the PRINCIPAL     → charged on the role row where the band starts
+   *   AZ in a swimlane  Y is the TRANSVERSAL   → charged on the swimlane where the band starts
    *
-   * O #19 só viu o primeiro caso, porque lá só havia um eixo. Ignorar isso na
-   * grade transposta foi visível no primeiro render: o Auto Scaling group subiu
-   * o próprio rótulo para dentro da faixa de título da VPC, e o gap entre as
-   * colunas de papel ganhou 49 px que ninguém pediu.
+   * #19 only saw the first case, because there was only one axis back then.
+   * Ignoring this on the transposed grid was visible in the first render: the
+   * Auto Scaling group's own label rose into the VPC's title band, and the gap
+   * between role columns gained 49 px nobody asked for.
    */
   const calhas = new Map();
-  const porLinha = new Map();      // vpc -> Map(linha de papel -> [{calha, zonas}])
-  const porRaia = new Map();       // índice da raia -> calha acumulada
+  const porLinha = new Map();      // vpc -> Map(role row -> [{lane, zonas}])
+  const porRaia = new Map();       // swimlane index -> accumulated lane
   for (const f of (model.bands || [])) {
     const lane = calhaDaFaixa(res.band(f).style);
     calhas.set(f.id, lane);
     const members = f.members.map(m => {
       const s = d.t.ancestrais(d.t.byId.get(m)).find(a => a.kind === 'subnet') || d.t.byId.get(m);
-      const v = vpcDe(s);
-      return { v, az: s.az, idx: papeisPorVpc.get(v) ? papeisPorVpc.get(v).indexOf(papel(s)) : -1 };
+      const v = vpcOf(s);
+      return { v, az: s.az, idx: rolesByVpc.get(v) ? rolesByVpc.get(v).indexOf(role(s)) : -1 };
     }).filter(x => x.idx >= 0);
 
     if (raia) {
@@ -860,82 +885,78 @@ async function porGrade(model, d, res) {
       continue;
     }
     for (const v of new Set(members.map(l => l.v))) {
-      const meus = members.filter(l => l.v === v);
-      const first = Math.min(...meus.map(l => l.idx));
+      const mine = members.filter(l => l.v === v);
+      const first = Math.min(...mine.map(l => l.idx));
       if (!porLinha.has(v)) porLinha.set(v, new Map());
-      const mapa = porLinha.get(v);
-      if (!mapa.has(first)) mapa.set(first, []);
-      mapa.get(first).push({ lane, zonas: new Set(meus.map(l => l.az).filter(Boolean)) });
+      const map = porLinha.get(v);
+      if (!map.has(first)) map.set(first, []);
+      map.get(first).push({ lane, zonas: new Set(mine.map(l => l.az).filter(Boolean)) });
     }
   }
 
   /**
-   * A reserva de cada raia é a SOMA de duas tiras, não o máximo.
+   * Each swimlane's reserve is the SUM of two strips, not the max.
    *
-   * Empilhar em vez de compartilhar é a mesma regra que o #21 achou para duas
-   * bandas na mesma linha, aplicada entre uma banda DERIVADA (a raia de zona) e
-   * uma banda de MEMBROS (o Auto Scaling group): elas se sobrepõem no eixo
-   * transversal — o ASG está dentro da raia — então precisam de espaço uma
-   * depois da outra.
-   *
-   * Sem isso os dois rótulos caem na mesma linha. Visto no render: o
-   * "Auto Scaling group" laranja em cima do "Availability Zone · us-east-1b"
-   * ciano, porque o estilo `groupCenter` desenha o rótulo 25 px abaixo do topo
-   * da banda — exatamente onde o rótulo da raia estava.
+   * Stacking instead of sharing is the same rule #21 found for two bands on
+   * the same row, applied between a DERIVED band (the zone swimlane) and a
+   * MEMBER band (the Auto Scaling group): they overlap on the transversal axis
+   * — the ASG sits inside the swimlane — so they need space one after the other.
    */
   const posT = new Map();
   const reservaDaRaia = new Map();
   let t = 0;
   for (const [i, z] of zonas.entries()) {
     if (i > 0) t += GAP_T;
-    const reserva = raia ? SWIMLANE_LANE + (porRaia.get(i) || 0) : 0;
-    reservaDaRaia.set(z, reserva);
-    t += reserva;
+    const reserve = raia ? SWIMLANE_LANE + (porRaia.get(i) || 0) : 0;
+    reservaDaRaia.set(z, reserve);
+    t += reserve;
     posT.set(z, t);
     t += tamT.get(z);
   }
   const extensaoT = t;
 
-  // 4. empilhar as VPCs ao longo do eixo PRINCIPAL
+  // 4. stack the VPCs along the PRINCIPAL axis
   const pos = new Map();
   const vpcBox = new Map();
-  // regras 1+4 do #19: a calha da zona nasce sempre ABAIXO da faixa de título de
-  // quem a contém. Em coluna, isso é um deslocamento no principal (o Y); em
-  // raia, o rótulo da zona vive na calha ENTRE as raias, então o principal
-  // começa na margem e é o transversal que carrega a reserva.
+  // #19's rules 1+4: the zone's lane is always born BELOW its container's
+  // title band. In a column, that's an offset on the principal axis (Y); in a
+  // swimlane, the zone's label lives in the lane BETWEEN swimlanes, so the
+  // principal axis starts at the margin and it's the transversal one that
+  // carries the reserve.
   let p = raia ? GAP.PAD : HEAD + AZ_LANE;
   for (const v of vpcs) {
-    const papeis = papeisPorVpc.get(v.id);
-    const doVpc = porLinha.get(v.id) || new Map();
+    const roles = rolesByVpc.get(v.id);
+    const ofVpc = porLinha.get(v.id) || new Map();
     const cV = res.container(v);
     boxes.set(v.id, { container: true, ...cV });
 
-    // a faixa de título do container consome o PRINCIPAL quando o principal é o
-    // Y; com a grade transposta ela consome o transversal, não o principal
-    let race = raia ? GAP.PAD : cV.tituloH + GAP.PAD;
+    // the container's title band consumes the PRINCIPAL axis when the
+    // principal is Y; with the grid transposed it consumes the transversal,
+    // not the principal
+    let run = raia ? GAP.PAD : cV.titleH + GAP.PAD;
     const posP = [], tamP = [];
-    papeis.forEach((pa, i) => {
-      if (i > 0) race += GAP_P + calhaDaLinha(doVpc.get(i) || [], zonas);
-      const ext = Math.max(minP, ...subnets.filter(s => papel(s) === pa).map(extP));
-      posP.push(race); tamP.push(ext); race += ext;
+    roles.forEach((pa, i) => {
+      if (i > 0) run += GAP_P + calhaDaLinha(ofVpc.get(i) || [], zonas);
+      const ext = Math.max(minP, ...subnets.filter(s => role(s) === pa).map(extP));
+      posP.push(run); tamP.push(ext); run += ext;
     });
-    race += GAP.PAD;
+    run += GAP.PAD;
 
-    // o topo do conteúdo dentro da VPC: título + padding, mais a faixa de
-    // rótulo da primeira raia quando a grade está transposta
-    const desloT = raia ? HEAD + cV.tituloH + GAP.PAD : 2 * GAP.PAD;
+    // the top of the content inside the VPC: title + padding, plus the first
+    // swimlane's label lane when the grid is transposed
+    const shiftT = raia ? HEAD + cV.titleH + GAP.PAD : 2 * GAP.PAD;
     vpcBox.set(v.id, raia
-      ? { x: p, y: HEAD, w: race, h: cV.tituloH + GAP.PAD + extensaoT + GAP.PAD }
-      : { x: GAP.PAD, y: p, w: extensaoT + 2 * GAP.PAD, h: race });
+      ? { x: p, y: HEAD, w: run, h: cV.titleH + GAP.PAD + extensaoT + GAP.PAD }
+      : { x: GAP.PAD, y: p, w: extensaoT + 2 * GAP.PAD, h: run });
 
     for (const s of subnets) {
-      if (vpcDe(s) !== v.id) continue;
-      const i = papeis.indexOf(papel(s));
+      if (vpcOf(s) !== v.id) continue;
+      const i = roles.indexOf(role(s));
       pos.set(s.id, raia
-        ? { x: p + posP[i], y: desloT + posT.get(s.az), w: tamP[i], h: tamT.get(s.az) }
+        ? { x: p + posP[i], y: shiftT + posT.get(s.az), w: tamP[i], h: tamT.get(s.az) }
         : { x: 2 * GAP.PAD + posT.get(s.az), y: p + posP[i], w: tamT.get(s.az), h: tamP[i] });
     }
-    p += race + GAP.COL_GAP + GAP.ROW_GAP;
+    p += run + GAP.COL_GAP + GAP.ROW_GAP;
   }
 
   const fimP = p - GAP.COL_GAP - GAP.ROW_GAP;
@@ -944,7 +965,7 @@ async function porGrade(model, d, res) {
     : HEAD;
 
   return {
-    pos, vpcBox, intra, boxes, calhas, zonas, azs: zonas, eixo, raia, porqueEixo,
+    pos, vpcBox, intra, boxes, calhas, zonas, azs: zonas, eixo, raia, whyAxis,
     varreduraRaias, SWIMLANE_LANE, reservaDaRaia,
     colX: posT, colW: tamT, posT, tamT, extensaoT,
     larguraGrade: raia ? fimP : extensaoT,
@@ -953,149 +974,151 @@ async function porGrade(model, d, res) {
   };
 }
 
-// ------------------------------------------------------------------ caminho C
+// ------------------------------------------------------------------ path C
 
 /**
- * Multi-conta (#12). Terceiro caminho, mesma divisão de trabalho dos outros
- * dois: o motor fica com a grade, o ELK fica com o conteúdo de cada célula —
- * só que aqui a célula é uma CONTA.
+ * Multi-account (#12). Third path, same division of labor as the other two:
+ * the engine keeps the grid, ELK keeps each cell's content — except here the
+ * cell is an ACCOUNT.
  *
- * Por que a conta não pode ser deixada com o ELK: `antes-elk-sem-politica.png`
- * mostra o custo. O ELK dispõe as contas pelo grafo de arestas, então elas
- * saem espalhadas na diagonal, de tamanhos díspares, sem ordem de leitura e
- * com metade da nuvem vazia. Nenhuma das regras medidas no #6 — ordem
- * canônica `P1`, alinhamento `S5`, calha `X1`, contraste de gap 1:4 `S3` — tem
- * como ser expressa em opção de ELK: elas falam de CONTAS, e o ELK não sabe o
- * que é uma conta.
+ * Why the account can't be left to ELK: `antes-elk-sem-politica.png` shows the
+ * cost. ELK arranges the accounts by the edge graph, so they come out
+ * scattered diagonally, uneven in size, with no reading order and half the
+ * cloud empty. None of the rules #6 measured — canonical order `P1`, alignment
+ * `S5`, lane `X1`, 1:4 gap contrast `S3` — can be expressed as an ELK option:
+ * they talk about ACCOUNTS, and ELK doesn't know what an account is.
  */
 
-// Os gaps saem da geometria medida no PPTX do SRA (#6 §2.2), e o que carrega
-// peso é a RAZÃO, não o valor: gap entre irmãs da mesma OU 0,11–0,15";
-// gap entre grupos de OU ≈0,51". O contraste de 1:4 é o que faz o agrupamento
-// por OU ser legível SEM desenhar caixa nenhuma (`S3`) — e como a AWS não tem
-// shape de OU (`G2`), é ele que faz o trabalho todo.
+// The gaps come from the geometry measured in the SRA's PPTX (#6 §2.2), and
+// what carries weight is the RATIO, not the value: gap between siblings in the
+// same OU 0.11–0.15"; gap between OU groups ≈0.51". The 1:4 contrast is what
+// makes OU grouping legible with NO box drawn at all (`S3`) — and since AWS
+// has no OU shape (`G2`), it does all the work.
 const GAP_IRMA = 22;
 const GAP_OU = 4 * GAP_IRMA;
-// `X1`/`X2`: na vista de integração as contas ficam lado a lado com uma calha
-// LARGA, porque é nela que mora o elemento compartilhado (peering, PrivateLink,
-// TGW) e é por ela que a travessia respira.
+// `X1`/`X2`: in the integration view accounts sit side by side with a WIDE
+// lane, because that's where the shared element lives (peering, PrivateLink,
+// TGW) and it's through it that the crossing breathes.
 const LANE = 130;
 
 /**
- * `P1` — a ordem de leitura canônica, medida em três diagramas oficiais
- * independentes (SRA, MALZ, phase-1): governança → segurança → infraestrutura
- * → workload. A conta sem OU vem primeiro porque é a Management, que o `P2`
- * põe no topo e fora de qualquer OU.
+ * `P1` — the canonical reading order, measured across three independent
+ * official diagrams (SRA, MALZ, phase-1): governance → security →
+ * infrastructure → workload. The account with no OU comes first because it's
+ * Management, which `P2` puts on top and outside any OU.
  */
 const RANK_OU = ['management', 'security', 'infrastructure', 'infra', 'network',
   'shared services', 'shared', 'workloads', 'workload', 'application', 'sandbox'];
 
 function rankOu(ou) {
-  if (!ou) return -1;                       // sem OU = Management, e ela vem antes de tudo (P2)
+  if (!ou) return -1;                       // no OU = Management, and it comes before everything (P2)
   const k = String(ou).toLowerCase();
   const i = RANK_OU.findIndex(r => k.includes(r));
-  return i >= 0 ? i : RANK_OU.length;       // OU que a AWS não nomeia vai depois das que ela nomeia
+  return i >= 0 ? i : RANK_OU.length;       // an OU AWS doesn't name goes after the ones it does
 }
 
-/** Permutações de uma lista curta. Só é chamada com n ≤ 4 — ver `ordemDeContas`. */
+/** Permutations of a short list. Only ever called with n ≤ 4 — see `ordemDeContas`. */
 function permute(xs) {
   if (xs.length <= 1) return [xs];
   const out = [];
   for (let i = 0; i < xs.length; i++)
-    for (const resto of permute([...xs.slice(0, i), ...xs.slice(i + 1)]))
-      out.push([xs[i], ...resto]);
+    for (const rest of permute([...xs.slice(0, i), ...xs.slice(i + 1)]))
+      out.push([xs[i], ...rest]);
   return out;
 }
 
 /**
- * A ordem das contas ao longo do eixo.
+ * The order of the accounts along the axis.
  *
- * VARREDURA, NÃO HEURÍSTICA — a lição do #21, que mediu que "põe o alvo da
- * convergência no meio" apenas TROCA um cruzamento por outro. Lá as raias eram
- * AZs; aqui são contas, e a aritmética é a mesma: `X1` limita a vista de
- * integração a 4 contas, então são no máximo 24 permutações. Varrer é barato e
- * exato; adivinhar é barato e errado.
+ * A SWEEP, NOT A HEURISTIC — #21's lesson, which measured that "put the
+ * convergence target in the middle" only TRADES one crossing for another.
+ * There the swimlanes were AZs; here they're accounts, and the arithmetic is
+ * the same: `X1` caps the integration view at 4 accounts, so it's at most 24
+ * permutations. Sweeping is cheap and exact; guessing is cheap and wrong.
  *
- * O custo tem dois termos, e a ordem entre eles é o que importa:
+ * The cost has two terms, and the order between them is what matters:
  *
- *   PULO (peso 10)  travessia entre contas não adjacentes — a aresta atravessa
- *                   a caixa de uma terceira conta. É `A5.5` da rubrica (#8),
- *                   aresta cortando faixa alheia, e é o que faz o desenho
- *                   virar espaguete.
- *   CONTRAMÃO (1)   travessia apontando para trás. `X5` diz que o eixo
- *                   esquerda→direita segue o fluxo primário; uma aresta contra
- *                   o eixo não mente, só lê pior.
+ *   JUMP (weight 10)      crossing between non-adjacent accounts — the edge
+ *                         crosses a third account's box. It's `A5.5` of the
+ *                         rubric (#8), an edge cutting through a band that
+ *                         isn't its own, and it's what turns the drawing into
+ *                         spaghetti.
+ *   AGAINST-FLOW (1)      a crossing pointing backward. `X5` says the
+ *                         left→right axis follows the primary flow; an edge
+ *                         against the axis doesn't lie, it just reads worse.
  *
- * O desempate final é a ordem canônica `P1`, para que dois layouts de mesmo
- * custo não dependam da ordem em que o agente escreveu a lista (#11 mediu que
- * nenhum LLM emite a mesma lista duas vezes).
+ * The final tiebreak is the canonical order `P1`, so two layouts of equal cost
+ * don't depend on the order the agent happened to write the list in (#11
+ * measured that no LLM emits the same list twice).
  */
 function ordemDeContas(accounts, cruz, modo) {
-  const canonica = [...accounts].sort((a, b) =>
+  const canonical = [...accounts].sort((a, b) =>
     rankOu(a.ou) - rankOu(b.ou) ||
     String(a.label || a.id).localeCompare(String(b.label || b.id), 'pt'));
 
-  if (modo !== 'integracao' || !cruz.length) return { order: canonica, custo: null, varridas: 0 };
+  if (modo !== 'integracao' || !cruz.length) return { order: canonical, custo: null, varridas: 0 };
 
-  const custoDe = (perm) => {
+  const costOf = (perm) => {
     const pos = new Map(perm.map((c, i) => [c.id, i]));
-    let pulo = 0, contramao = 0;
+    let jump = 0, againstFlow = 0;
     for (const a of cruz) {
-      // A CONTRAMÃO É DO DADO, NÃO DA SETA — `sentidoDeLeitura`. `X5` fala do
-      // fluxo primário, e numa travessia de polling quem flui é a resposta:
-      // `de` é só quem abriu a conversa. Medindo pela seta, a fileira do retail
-      // saía `analytics | dados | lojas` — o desenho inteiro lido de trás para
-      // frente porque duas consultas apontam para a origem do dado.
+      // AGAINST-FLOW IS ABOUT THE DATA, NOT THE ARROW — `sentidoDeLeitura`.
+      // `X5` talks about the primary flow, and in a polling crossing what
+      // flows is the response: `from` is only whoever opened the
+      // conversation. Measuring by the arrow, the retail row came out
+      // `analytics | data | stores` — the whole drawing read backward because
+      // two queries point back at the data's origin.
       const rev = a.data === 'back';
       const i = pos.get(rev ? a.contaPara : a.contaDe);
       const j = pos.get(rev ? a.contaDe : a.contaPara);
       if (i === undefined || j === undefined) continue;
-      if (Math.abs(i - j) > 1) pulo += Math.abs(i - j) - 1;
-      if (j < i) contramao++;
+      if (Math.abs(i - j) > 1) jump += Math.abs(i - j) - 1;
+      if (j < i) againstFlow++;
     }
-    return 10 * pulo + contramao;
+    return 10 * jump + againstFlow;
   };
 
   /**
-   * O desempate é INVERSÕES contra a ordem canônica, e isso não é detalhe.
+   * The tiebreak is INVERSIONS against the canonical order, and that isn't a
+   * detail.
    *
-   * Neste modelo de três contas duas permutações empatam em custo 1 — as duas
-   * que põem o workload no meio — e a diferença entre elas é ler
-   * `Network | Workload | Data` ou `Data | Workload | Network`. "A primeira que
-   * a enumeração achar" é determinística e arbitrária; contar inversões contra
-   * `P1` é determinística e SIGNIFICATIVA: entre dois layouts igualmente bons
-   * para a aresta, ganha o que estiver mais perto da ordem de leitura que a AWS
-   * usa.
+   * In this three-account model, two permutations tie at cost 1 — the two that
+   * put the workload in the middle — and the difference between them is
+   * reading `Network | Workload | Data` or `Data | Workload | Network`. "The
+   * first one enumeration finds" is deterministic and arbitrary; counting
+   * inversions against `P1` is deterministic and MEANINGFUL: between two
+   * layouts equally good for the edge, the one closer to AWS's reading order
+   * wins.
    */
-  const idxCanonico = new Map(canonica.map((c, i) => [c.id, i]));
+  const canonicalIdx = new Map(canonical.map((c, i) => [c.id, i]));
   const inversions = (perm) => {
     let n = 0;
     for (let i = 0; i < perm.length; i++)
       for (let j = i + 1; j < perm.length; j++)
-        if (idxCanonico.get(perm[i].id) > idxCanonico.get(perm[j].id)) n++;
+        if (canonicalIdx.get(perm[i].id) > canonicalIdx.get(perm[j].id)) n++;
     return n;
   };
 
-  let melhor = null;
-  const todas = permute(canonica);
-  for (const perm of todas) {
-    const c = custoDe(perm), inv = inversions(perm);
-    if (!melhor || c < melhor.custo || (c === melhor.custo && inv < melhor.inv))
-      melhor = { perm, custo: c, inv };
+  let best = null;
+  const all = permute(canonical);
+  for (const perm of all) {
+    const c = costOf(perm), inv = inversions(perm);
+    if (!best || c < best.custo || (c === best.custo && inv < best.inv))
+      best = { perm, custo: c, inv };
   }
-  return { order: melhor.perm, custo: melhor.custo, inversions: melhor.inv, varridas: todas.length };
+  return { order: best.perm, custo: best.custo, inversions: best.inv, varridas: all.length };
 }
 
 /**
- * Layout do INTERIOR de uma conta: o ELK arruma a subárvore e as arestas internas.
+ * Layout of an account's INTERIOR: ELK arranges the subtree and the internal edges.
  *
- * Duas passadas, pelo mesmo motivo do caminho A: uma conta cujo conteúdo é
- * estreito sai mais estreita que o próprio título, e o rótulo vaza por baixo da
- * caixa. Foi o que aconteceu com "Org Management" e "Shared Services" no
- * primeiro render da landing zone — duas linhas de texto pendurdas fora da
- * borda magenta. A folga entra como `padding.right` e o ELK relayouta com ela,
- * então nada precisa ser esticado depois (que é o contorno que o #7 propõe e
- * que pode encostar num irmão).
+ * Two passes, for the same reason as path A: an account whose content is
+ * narrow comes out narrower than its own title, and the label spills below
+ * the box. That's what happened to "Org Management" and "Shared Services" in
+ * the landing zone's first render — two lines of text hanging outside the
+ * magenta border. The slack goes in as `padding.right` and ELK relayouts with
+ * it, so nothing needs stretching afterward (which is the workaround #7
+ * proposes and which can touch a sibling).
  */
 async function layoutDaConta(elk, account, d, res, boxes, metrica, measure = new Map(), notes = new Map()) {
   const GAP = folgas(res.tema);
@@ -1107,21 +1130,21 @@ async function layoutDaConta(elk, account, d, res, boxes, metrica, measure = new
 
   const paraElk = (no) => {
     const kids = d.t.filhos.get(no.id);
-    const minhasNotas = notes.get(no.id) || [];              // ver `notasPorPai`
+    const myNotes = notes.get(no.id) || [];              // see `notasPorPai`
     if (CONTAINERS.has(no.kind)) {
       const c = res.container(no);
       boxes.set(no.id, { container: true, ...c });
-      if (!kids.length && !minhasNotas.length) return caixaVazia(no, c, res);
-      const temFolha = kids.some(k => LEAVES.has(k.kind));   // por TIPO — ver `caixaVazia`
-      const gap = temFolha ? Math.ceil(metrica.transbordo) : 0;
+      if (!kids.length && !myNotes.length) return emptyBox(no, c, res);
+      const hasLeaf = kids.some(k => LEAVES.has(k.kind));   // by TYPE — see `emptyBox`
+      const gap = hasLeaf ? Math.ceil(metrica.transbordo) : 0;
       return {
         id: no.id,
         layoutOptions: {
-          'elk.padding': `[top=${c.tituloH + GAP.PAD},left=${GAP.PAD + gap},` +
+          'elk.padding': `[top=${c.titleH + GAP.PAD},left=${GAP.PAD + gap},` +
             `bottom=${GAP.PAD},right=${GAP.PAD + gap + (measure.get(no.id) || 0)}]`,
           ...spacing,
         },
-        children: [...kids.map(paraElk), ...minhasNotas],
+        children: [...kids.map(paraElk), ...myNotes],
       };
     }
     const f = res.leaf(no);
@@ -1131,31 +1154,31 @@ async function layoutDaConta(elk, account, d, res, boxes, metrica, measure = new
 
   const cC = res.container(account);
   boxes.set(account.id, { container: true, ...cC });
-  const folgaConta = d.t.filhos.get(account.id).some(k => LEAVES.has(k.kind))
-    ? metrica.transbordo : 0;                              // por TIPO — ver `caixaVazia`
+  const accountGap = d.t.filhos.get(account.id).some(k => LEAVES.has(k.kind))
+    ? metrica.transbordo : 0;                              // by TYPE — see `emptyBox`
 
-  // só as arestas cujas DUAS pontas moram nesta conta — a travessia é do motor
+  // only the edges whose BOTH ends live in this account — the crossing belongs to the engine
   const inside = new Set();
   (function mark(id) { inside.add(id); for (const k of d.t.filhos.get(id)) mark(k.id); })(account.id);
-  const internas = d.edges.filter(a => inside.has(a.from) && inside.has(a.to));
+  const internal = d.edges.filter(a => inside.has(a.from) && inside.has(a.to));
   const revertidas = new Set();
 
-  const grafo = {
+  const graph = {
     id: account.id,
     layoutOptions: {
       ...ROOT_OPTIONS,
-      'elk.json.edgeCoords': 'CONTAINER',   // dentro da conta, o espaço é o da conta
-      // a folga lateral vale para a CONTA também, não só para os containers de
-      // dentro: o rótulo da folha é desenhado centrado sob o ícone e mais largo
-      // que ele, então sem isto "IAM Identity Center" encosta na borda magenta
-      'elk.padding': `[top=${cC.tituloH + GAP.PAD},left=${GAP.PAD + folgaConta},` +
-        `bottom=${GAP.PAD},right=${GAP.PAD + folgaConta + (measure.get(account.id) || 0)}]`,
+      'elk.json.edgeCoords': 'CONTAINER',   // inside the account, the space is the account's
+      // the side slack applies to the ACCOUNT too, not only to the containers
+      // inside it: the leaf's label is drawn centered under the icon and wider
+      // than it, so without this "IAM Identity Center" would touch the magenta border
+      'elk.padding': `[top=${cC.titleH + GAP.PAD},left=${GAP.PAD + accountGap},` +
+        `bottom=${GAP.PAD},right=${GAP.PAD + accountGap + (measure.get(account.id) || 0)}]`,
       ...spacing,
     },
     children: [...d.t.filhos.get(account.id).map(paraElk), ...(notes.get(account.id) || [])],
-    edges: internas.map(a => {
+    edges: internal.map(a => {
       const txt = textoDaAresta(a);
-      const s = sentidoDeLeitura(a);                       // o dado manda no layout
+      const s = sentidoDeLeitura(a);                       // the data drives the layout
       if (s.revertida) revertidas.add(a.id);
       return {
         id: a.id, sources: [s.from], targets: [s.to],
@@ -1163,17 +1186,17 @@ async function layoutDaConta(elk, account, d, res, boxes, metrica, measure = new
       };
     }),
   };
-  return unrevert(clean(await elk.layout(grafo)), revertidas);
+  return unrevert(clean(await elk.layout(graph)), revertidas);
 }
 
-/** As duas medidas de rótulo que todo caminho precisa antes de montar grafo nenhum. */
+/** The two label measurements every path needs before assembling any graph. */
 function metricaDeRotulo(model, d, res) {
   let rotuloMax = 0, transbordo = 0;
   for (const no of model.nodes) {
-    if (!LEAVES.has(no.kind)) continue;              // ver `caixaVazia`
+    if (!LEAVES.has(no.kind)) continue;              // see `emptyBox`
     const f = res.leaf(no);
-    rotuloMax = Math.max(rotuloMax, f.rotuloH);
-    transbordo = Math.max(transbordo, Math.max(0, ((f.rotuloW || 0) - f.formaW) / 2));
+    rotuloMax = Math.max(rotuloMax, f.labelH);
+    transbordo = Math.max(transbordo, Math.max(0, ((f.labelW || 0) - f.shapeW) / 2));
   }
   return { rotuloMax, transbordo: Math.ceil(transbordo) };
 }
@@ -1182,59 +1205,59 @@ async function porContas(model, d, res) {
   const elk = new ELK();
   const boxes = new Map();
   const metrica = metricaDeRotulo(model, d, res);
-  // a nota presa a um nó entra no ELK da CONTA dele — ver `notasPorPai`. A que
-  // fala de um nó fora de conta nenhuma não tem ELK onde entrar (a fileira de
-  // contas é grade do motor), e `planejar` a coloca no offset de sempre.
+  // a note attached to a node enters the ELK of ITS account — see `notasPorPai`.
+  // One about a node that lives in no account has no ELK to enter (the row of
+  // accounts is the engine's grid), and `plan.cjs` puts it at the usual offset.
   const notes = notasPorPai(model, d, res, boxes);
   const accounts = model.nodes.filter(n => n.kind === 'account');
   const modo = d.modo.modo;
 
-  // 1. cada conta é layoutada isolada, para saber de que tamanho ela precisa (S4)
+  // 1. each account is laid out in isolation, to know what size it needs (S4)
   const interno = new Map();
   for (const c of accounts) {
     let measure = new Map(), r = null;
     for (let pass = 0; pass < 2; pass++) {
       r = await layoutDaConta(elk, c, d, res, boxes, metrica, measure, notes);
-      const proximo = new Map();
+      const next = new Map();
       const def = deficitDeTitulo(c, boxes.get(c.id), r.width, res);
-      if (def > 0) proximo.set(c.id, def);
-      (function medirTitulos(n) {
-        for (const filho of n.children || []) {
-          const no = d.t.byId.get(filho.id);
-          const dd = deficitDeTitulo(no, boxes.get(filho.id), filho.width, res);
-          if (dd > 0) proximo.set(filho.id, dd);
-          medirTitulos(filho);
+      if (def > 0) next.set(c.id, def);
+      (function measureTitles(n) {
+        for (const child of n.children || []) {
+          const no = d.t.byId.get(child.id);
+          const dd = deficitDeTitulo(no, boxes.get(child.id), child.width, res);
+          if (dd > 0) next.set(child.id, dd);
+          measureTitles(child);
         }
       })(r);
-      if (!proximo.size) break;
-      measure = proximo;
+      if (!next.size) break;
+      measure = next;
     }
     interno.set(c.id, r);
   }
 
-  // 2. a ordem ao longo do eixo — varrida na integração, canônica no inventário
+  // 2. the order along the axis — swept in integration, canonical in inventory
   const { order, custo, varridas } = ordemDeContas(accounts, d.travessias, modo);
 
-  // `X6`: a conta que é hub ganha ênfase de borda, os spokes ficam finos. Só
-  // marca quem DOMINA — empate não tem hub, e uma ênfase que não distingue é
-  // ruído. Hub = quem mais participa de travessia.
+  // `X6`: the hub account gets a border emphasis, the spokes stay thin. Only
+  // marks whoever DOMINATES — a tie has no hub, and an emphasis that doesn't
+  // distinguish is noise. Hub = whoever participates in the most crossings.
   const grau = new Map(accounts.map(c => [c.id, 0]));
   for (const a of d.travessias) {
     grau.set(a.contaDe, (grau.get(a.contaDe) || 0) + 1);
     grau.set(a.contaPara, (grau.get(a.contaPara) || 0) + 1);
   }
   const ranking = [...grau.entries()].sort((a, b) => b[1] - a[1]);
-  // e SÓ na vista de integração: `X6` sai dos diagramas em que a travessia está
-  // desenhada, e no inventário ela não está. Engrossar a borda de uma conta por
-  // causa de arestas que a vista suprimiu é afirmar uma ênfase que o leitor não
-  // tem como conferir.
+  // and ONLY in the integration view: `X6` comes from the diagrams where the
+  // crossing is actually drawn, and in the inventory it isn't. Thickening an
+  // account's border because of edges the view suppressed would assert an
+  // emphasis the reader has no way to check.
   const hub = modo === 'integracao' && ranking.length > 1 &&
     ranking[0][1] > ranking[1][1] && ranking[0][1] >= 2
     ? ranking[0][0] : null;
 
-  // 3. a grade. Integração: uma fileira, calha larga (X1). Inventário: uma
-  //    COLUNA por grupo de OU, contas empilhadas dentro dela (a disposição do
-  //    SRA, medida em §2.2), com o contraste de gap 1:4 fazendo o agrupamento.
+  // 3. the grid. Integration: a single row, wide lane (X1). Inventory: one
+  //    COLUMN per OU group, accounts stacked inside it (the SRA's layout,
+  //    measured in §2.2), with the 1:4 gap contrast doing the grouping.
   const pos = new Map();
   let larguraTotal = 0, alturaTotal = 0;
   const colunas = [];
@@ -1245,36 +1268,36 @@ async function porContas(model, d, res) {
     order.forEach((c, i) => {
       const g = interno.get(c.id);
       if (i > 0) x += LANE;
-      // `S5` transposto: numa COLUNA as contas são left-aligned na origem; numa
-      // FILEIRA, top-aligned. O topo reto é o que deixa a travessia sair
-      // horizontal e curta.
+      // `S5` transposed: in a COLUMN accounts are left-aligned at the origin;
+      // in a ROW, top-aligned. The flat top is what lets the crossing come out
+      // horizontal and short.
       pos.set(c.id, { x, y: 0, w: g.width, h: g.height });
       x += g.width;
     });
     larguraTotal = x; alturaTotal = alt;
     colunas.push({ ou: null, accounts: order.map(c => c.id) });
   } else {
-    // agrupa em colunas por OU, preservando a ordem canônica já calculada
-    let atual = null;
+    // groups into columns by OU, preserving the already-computed canonical order
+    let current = null;
     for (const c of order) {
       const key = c.ou || null;
-      if (!atual || atual.ou !== key) { atual = { ou: key, accounts: [] }; colunas.push(atual); }
-      atual.accounts.push(c.id);
+      if (!current || current.ou !== key) { current = { ou: key, accounts: [] }; colunas.push(current); }
+      current.accounts.push(c.id);
     }
     let x = 0;
     for (const [i, col] of colunas.entries()) {
       if (i > 0) x += GAP_OU;
-      const larg = Math.max(...col.accounts.map(id => interno.get(id).width));
-      let y = d.ou.draw ? OU_LANE : 0;   // a faixa de rótulo da OU nasce acima do primeiro membro
-      col.x = x; col.larg = larg; col.y = 0;
+      const width = Math.max(...col.accounts.map(id => interno.get(id).width));
+      let y = d.ou.draw ? OU_LANE : 0;   // the OU's label band is born above the first member
+      col.x = x; col.width = width; col.y = 0;
       for (const id of col.accounts) {
         const g = interno.get(id);
-        pos.set(id, { x, y, w: g.width, h: g.height });   // S5: left-aligned na origem da coluna
+        pos.set(id, { x, y, w: g.width, h: g.height });   // S5: left-aligned at the column's origin
         y += g.height + GAP_IRMA;
       }
-      col.alt = y - GAP_IRMA;
-      alturaTotal = Math.max(alturaTotal, col.alt);
-      x += larg;
+      col.height = y - GAP_IRMA;
+      alturaTotal = Math.max(alturaTotal, col.height);
+      x += width;
     }
     larguraTotal = x;
   }

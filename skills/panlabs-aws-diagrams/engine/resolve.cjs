@@ -44,14 +44,14 @@ const MIN_LABEL = 23;
  * enters the pipeline BEFORE the layout. See `tools/check-partition.cjs`.
  */
 
-/** How many lines the label takes if wrapped in a box `larg` px wide. */
-function labelLines(text, larg, charWidth) {
+/** How many lines the label takes if wrapped in a box `width` px wide. */
+function labelLines(text, width, charWidth) {
   if (!text) return 0;
   // a label with a qualifier (O21) already carries the break inside it
   const forced = String(text).split(/<br\s*\/?>/i);
   if (forced.length > 1)
-    return forced.reduce((n, p) => n + labelLines(p.replace(/<[^>]+>/g, ''), larg, charWidth), 0);
-  const perLine = Math.max(1, Math.floor(larg / charWidth));
+    return forced.reduce((n, p) => n + labelLines(p.replace(/<[^>]+>/g, ''), width, charWidth), 0);
+  const perLine = Math.max(1, Math.floor(width / charWidth));
   let lines = 1, current = 0;
   for (const word of String(text).split(/\s+/)) {
     const cost = word.length + (current ? 1 : 0);
@@ -94,8 +94,8 @@ function create(theme, catalogDir) {
       // group's text body — not from the density. `check-partition.cjs` caught
       // this: with the band fixed at 4 steps, raising `text.group` to 16 pt moved
       // not one coordinate and the label began to graze the top border.
-      tituloH: Math.max(theme.lane(4), Math.round(theme.tokens.text.group * 2.2)),
-      recuoTitulo: hasIcon ? 30 : 8,
+      titleH: Math.max(theme.lane(4), Math.round(theme.tokens.text.group * 2.2)),
+      titleIndent: hasIcon ? 30 : 8,
       color: (style.match(/strokeColor=(#[0-9A-Fa-f]{6})/) || [])[1] || '#5A6C86',
       corrections: g.corrections,
     };
@@ -104,8 +104,8 @@ function create(theme, catalogDir) {
   /** Leaf: style + a box that already includes the label band. */
   function leaf(node) {
     if (node.kind === 'block') {
-      const larg = 170;
-      const lines = labelLines(node.label || node.id, larg - 16, M.largCar);
+      const width = 170;
+      const lines = labelLines(node.label || node.id, width - 16, M.largCar);
       used.push({ id: node.id, pediu: 'block', virou: '(logical block)', via: 'block' });
       return {
         // logical view: pre-services, therefore out of reach of the AWS
@@ -113,8 +113,8 @@ function create(theme, catalogDir) {
         // without contradicting anyone.
         style: theme.block(),
         label: node.label || node.id,
-        formaW: larg, formaH: Math.max(56, 20 + lines * M.altLinha),
-        rotuloH: 0,                       // the label is internal — no band to reserve
+        shapeW: width, shapeH: Math.max(56, 20 + lines * M.altLinha),
+        labelH: 0,                       // the label is internal — no band to reserve
       };
     }
 
@@ -127,13 +127,13 @@ function create(theme, catalogDir) {
       fallback: s.via === 'generic' || String(s.via).includes(':'),
     });
 
-    const name = node.label || s.rotuloSugerido || s.title;
+    const name = node.label || s.suggestedLabel || s.title;
     // O21 of #5: the name says what it IS, the italic says what it does HERE.
     // Whether it shows is the theme's call; the text itself is a fact of the
     // model — the only style token of this prototype that needed a new field in
     // the IR.
     const label = theme.rotuloDeFolha(name, node.qualifier);
-    const formaW = s.w || 78, formaH = s.h || 78;
+    const shapeW = s.w || 78, shapeH = s.h || 78;
     // #33/#35: the box is the MEASURED width of the label, not an assumed wrap —
     // mxGraph does not break the line the way `labelLines` supposed (it comes out
     // whole, and the "wrapped" one came only from the explicit `<br>` of
@@ -141,17 +141,17 @@ function create(theme, catalogDir) {
     // what makes overflow stop existing as a concept: the icon stays centred
     // inside the box because the catalog style already carries `aspect=fixed` —
     // there is no offset to compute here.
-    const rotuloW = Math.max(0, ...label.split(/<br\s*\/?>/i)
+    const labelW = Math.max(0, ...label.split(/<br\s*\/?>/i)
       .map(row => textWidth(row.replace(/<[^>]+>/g, ''), M.largCar)));
-    const boxW = Math.max(formaW, rotuloW);
+    const boxW = Math.max(shapeW, labelW);
     const lines = labelLines(label, boxW, M.largCar);
     return {
       style: theme.service(s.style, s),
       label,
-      formaW, formaH,
-      rotuloH: Math.max(MIN_LABEL, lines * M.altLinha),
-      rotuloW,
-      caixaW: boxW,
+      shapeW, shapeH,
+      labelH: Math.max(MIN_LABEL, lines * M.altLinha),
+      labelW,
+      boxW,
     };
   }
 

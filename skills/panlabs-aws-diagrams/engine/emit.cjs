@@ -42,7 +42,7 @@ function geometry(g, extra = '') {
 function vertex(c, ind) {
   const p = ' '.repeat(ind);
   const attrs = `id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" vertex="1" parent="${esc(c.parent)}"` +
-    (c.visivel === false ? ' visible="0"' : '');
+    (c.visible === false ? ' visible="0"' : '');
   return `${p}<mxCell ${attrs}>\n${p}  ${geometry(c.geo)}\n${p}</mxCell>`;
 }
 
@@ -56,7 +56,7 @@ function vertexWithData(c, ind) {
   const data = Object.entries(c.data)
     .map(([k, v]) => `${k}="${esc(stripGremlins(v))}"`).join(' ');
   return `${p}<object id="${esc(c.id)}" label="${esc(c.label || '')}" ${data}>\n` +
-    `${p}  <mxCell style="${esc(c.style)}" vertex="1" parent="${esc(c.parent)}"${c.visivel === false ? ' visible="0"' : ''}>\n` +
+    `${p}  <mxCell style="${esc(c.style)}" vertex="1" parent="${esc(c.parent)}"${c.visible === false ? ' visible="0"' : ''}>\n` +
     `${p}    ${geometry(c.geo)}\n` +
     `${p}  </mxCell>\n${p}</object>`;
 }
@@ -72,10 +72,10 @@ function vertexWithData(c, ind) {
  */
 function edge(c, ind) {
   const p = ' '.repeat(ind);
-  const points = (c.pontos || []).map(pt => `\n${p}      <mxPoint x="${r(pt.x)}" y="${r(pt.y)}"/>`).join('');
+  const points = (c.points || []).map(pt => `\n${p}      <mxPoint x="${r(pt.x)}" y="${r(pt.y)}"/>`).join('');
   const arr = points ? `\n${p}    <Array as="points">${points}\n${p}    </Array>` : '';
 
-  const loose = c.solta || {};
+  const loose = c.loose || {};
   const tip = (name, x, y) =>
     `\n${p}    <mxPoint x="${r(x)}" y="${r(y)}" as="${name}"/>`;
   const looseEnds =
@@ -93,14 +93,14 @@ function edge(c, ind) {
 }
 
 function page(layoutPlan) {
-  const body = layoutPlan.celulas.map(c =>
+  const body = layoutPlan.cells.map(c =>
     c.kind === 'edge' ? edge(c, 8)
       : c.data ? vertexWithData(c, 8)
       : vertex(c, 8)).join('\n');
 
   return `  <diagram id="${esc(layoutPlan.id)}" name="${esc(layoutPlan.name || layoutPlan.title)}">
     <mxGraphModel dx="0" dy="0" grid="0" gridSize="10" guides="1" tooltips="1" connect="1"
-        arrows="1" fold="1" page="1" pageScale="1" pageWidth="${r(layoutPlan.larg)}" pageHeight="${r(layoutPlan.alt)}"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="${r(layoutPlan.width)}" pageHeight="${r(layoutPlan.height)}"
         math="0" shadow="0"${layoutPlan.background ? ` background="${esc(layoutPlan.background)}"` : ''}>
       <root>
         <mxCell id="0"/>

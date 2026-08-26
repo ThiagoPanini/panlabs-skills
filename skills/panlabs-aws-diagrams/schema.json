@@ -58,6 +58,7 @@
         },
         "label": { "type": "string", "description": "O que aparece desenhado. Ausente: o motor deriva de 'servico' pelo catalogo, ou do tipo." },
         "qualifier": { "type": "string", "description": "O que este servico faz AQUI — 'armazena os PDFs', 'fila de retentativa'. E o O21 do #5: o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama, e e o que salva tres buckets S3 identicos e ilegiveis. Vive no MODELO e nao no tema, porque e fato da arquitetura; o tema so decide se mostra (texto.qualificador)." },
+        "resource": { "type": "string", "description": "Como este recurso SE CHAMA — o nome da tabela, do bucket, da fila. So faz sentido onde o recurso e nomeavel, o que so a vista TECNICA sabe dizer; a vista logica nao tem recurso, so capacidade, e usa 'qualifier'. Na folha, ganha de 'qualifier' quando os dois existem (#38) — e e o mesmo O21 do #5, uma casa abaixo: o nome do icone diz o que o servico E, este campo diz como ESTE recurso se chama." },
         "inside": { "$ref": "#/definitions/identifier", "description": "Id do no que contem este. Ausente = raiz da pagina. Lista PLANA com referencia ao pai, nao aninhamento: acrescentar um no a 4 niveis de profundidade e uma linha no fim do arquivo, nao reidentar uma subarvore." },
         "service": { "type": "string", "description": "Chave do catalogo AWS (#17). Ex.: 'lambda', 'api gateway', 'dynamodb'. So faz sentido com tipo=servico." },
         "az": {
@@ -103,6 +104,10 @@
         {
           "if": { "properties": { "layer": { "type": "string" } }, "required": ["layer"] },
           "then": { "properties": { "kind": { "const": "subnet" } } }
+        },
+        {
+          "if": { "properties": { "resource": { "type": "string" } }, "required": ["resource"] },
+          "then": { "properties": { "kind": { "const": "service" } } }
         }
       ]
     },

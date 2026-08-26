@@ -226,7 +226,7 @@ function createScene(layoutPlan, opts = {}) {
     if (c.kind === 'edge') {
       elements.push({
         id: c.id, kind: 'edge', parent: c.parent, z, style, rawStyle: c.style || '',
-        label: c.label || '', from: c.from, to: c.to, bends: c.points || [],
+        label: c.label || '', from: c.from, to: c.to, bends: c.points || [], labelT: c.labelT,
         // the same fields the boxes get: without this every family re-parses
         // the style by hand, and A3.9 and A7.1 already disagreed on the
         // default for `fontSize`
@@ -328,23 +328,33 @@ function createScene(layoutPlan, opts = {}) {
     const fontSize = num(a.style, 'fontSize', 12);
     const width = text.length * v('avgCharWidth') * (fontSize / 12);
     const height = v('lineHeight') * (fontSize / 12);
-    const mid = midpoint(a.points);
+    // #40 — the engine slides a label that would collide away from the
+    // midpoint (`labelT`, along the SAME polyline); default to 0.5 for
+    // whoever didn't need to move.
+    const mid = pointAt(a.points, a.labelT ?? 0.5);
     return { x: mid.x - width / 2, y: mid.y - height / 2, w: width, h: height, placement: 'edge' };
   }
 
-  function midpoint(points) {
+  /** The point at fraction `t` (0 = start, 1 = end) along a polyline's length. */
+  function pointAt(points, t) {
     const total = geo.polylineLength(points);
+    const target = total * t;
     let walked = 0;
     for (let i = 0; i + 1 < points.length; i++) {
       const d = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
-      if (walked + d >= total / 2) {
-        const t = d < geo.EPS ? 0 : (total / 2 - walked) / d;
-        return { x: points[i].x + t * (points[i + 1].x - points[i].x), y: points[i].y + t * (points[i + 1].y - points[i].y) };
+      if (walked + d >= target) {
+        const along = d < geo.EPS ? 0 : (target - walked) / d;
+        return { x: points[i].x + along * (points[i + 1].x - points[i].x), y: points[i].y + along * (points[i + 1].y - points[i].y) };
       }
       walked += d;
     }
     return points[0] || { x: 0, y: 0 };
   }
+
+  // A7's contrast sampling wants the STROKE's midpoint, not the label's — an
+  // edge's color doesn't move when #40 slides the label off it, so this stays
+  // fixed at t=0.5 and keeps its own one-argument shape for `scene.midpoint`.
+  const midpoint = points => pointAt(points, 0.5);
 
   /**
    * The effective background at a point — decision 4 of #18.

@@ -959,6 +959,32 @@ async function porGrade(model, d, res) {
     p += run + GAP.COL_GAP + GAP.ROW_GAP;
   }
 
+  /**
+   * #40 — the leaf queue is centered in the subnet's FINAL box, not packed
+   * against its left padding.
+   *
+   * A subnet's own ELK pass (step 1) sizes it to its own leaves. But the grid
+   * then equalizes that box against a sibling column (AZ) or row (role), and
+   * the final `pos.get(s.id).w` can come out wider than `intra.get(s.id).w`.
+   * ELK never sees the wider box — it only ever laid out the subnet in
+   * isolation — so its children stay flush left, and the extra width reads as
+   * a hole on the right (visible on telemedicina's public subnet). This has
+   * to run here, after `pos` exists: centering against a box that hasn't
+   * reached its final size yet would just mean centering twice.
+   *
+   * `box.w >= inner.w` always: `box.w` is a max that already includes
+   * `inner.w` as one of its terms (see `tamT`/`tamP` above), so `offsetX`
+   * never goes negative.
+   */
+  for (const s of subnets) {
+    const box = pos.get(s.id);
+    const inner = intra.get(s.id);
+    if (!box || !inner || !inner.filhos.length) continue;
+    const offsetX = (box.w - inner.w) / 2;
+    if (offsetX <= 0) continue;
+    for (const child of inner.filhos) child.x += offsetX;
+  }
+
   const fimP = p - GAP.COL_GAP - GAP.ROW_GAP;
   const alturaRaia = vpcs.length
     ? Math.max(...[...vpcBox.values()].map(b => b.y + b.h))

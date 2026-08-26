@@ -85,6 +85,8 @@ step "multi-account triggers (OR, mode, level)"  node "$HERE/check-triggers.cjs"
 step "traversal: the decisions, in the file"         node "$HERE/check-traversal.cjs"
 step "bisection (the tool that isolates)"         node "$ROOT/tools/bisect-model.cjs" "$ROOT/models/hub-tgw-3-accounts.json"
 step "resource wins over qualifier on the leaf (#38)"   node "$HERE/check-resource-label.cjs"
+step "the leaf queue centers in its final box (#40)"   node "$HERE/check-leaf-queue-center.cjs"
+step "a colliding edge label slides along its edge (#40)"  node "$HERE/check-edge-label-collision.cjs"
 
 echo
 echo "════ layer 4 · the theme ════"

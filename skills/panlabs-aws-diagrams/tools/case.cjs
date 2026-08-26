@@ -3,7 +3,7 @@
 /**
  * THE CASE VERB — session@1 + slug -> the case's file set, in the CALLER's project.
  *
- *   node tools/case.cjs <session.json> <slug> [--gate <level>] [--image]
+ *   node tools/case.cjs <session.json> <slug> --brief <brief.txt> [--gate <level>] [--image]
  *
  * #35 moved the arc's output out of the skill's own tree: what used to be
  * written under `output/` inside the package is now born at
@@ -33,6 +33,17 @@
  * (#35's journey has no human between the two views), and #18 already named
  * `truthfulness` the recommended default for a PUBLISHING gate. Writing into
  * the caller's project is publishing.
+ *
+ * #42 ADDS `case.md` TO THE FILE SET — the dossier rendered for the human
+ * who has to decide whether to trust the drawing, without opening the
+ * .drawio: the case verbatim, what was asked vs. inferred, the candidate
+ * that won and why not the others, the resource names to confirm, and what
+ * still deserves attention. The rendering itself lives in
+ * `session/case-notes.cjs` — a pure function, same split as the XML above —
+ * and this file's only job is to gather its two inputs: the brief the
+ * caller passed in (`opts.brief` — session@1 has nowhere to persist it, and
+ * it does not need to: it is spent the moment the case is written) and the
+ * semantic failures both draws already measured.
  */
 
 const fs = require('fs');
@@ -41,6 +52,7 @@ const { spawnSync } = require('child_process');
 
 const { draw } = require('../session/draw.cjs');
 const { stitch } = require('../session/save.cjs');
+const { caseNotes } = require('../session/case-notes.cjs');
 const { binaryIfPresent } = require('./drawio.cjs');
 
 const DEFAULT_GATE = 'truthfulness';
@@ -55,6 +67,11 @@ const DEFAULT_GATE = 'truthfulness';
  * and a logical-only session has no technical facet to draw as the second
  * one. Getting there — resuming, elaborating — is `session/open.cjs` and
  * `session/elaborate.cjs`'s job, done before this is ever called.
+ *
+ * Requires `opts.brief` too: `case.md`'s first section is the original
+ * prose description, verbatim (#42) — a case with no brief has nothing
+ * honest to put there, and a placeholder would be exactly the silent gap
+ * this skill's dossier otherwise refuses to allow.
  */
 async function caseFiles(session, slug, opts = {}) {
   if (session.stage !== 'technical')
@@ -62,14 +79,30 @@ async function caseFiles(session, slug, opts = {}) {
       `the case verb needs a technical-stage session (got stage="${session.stage}") — ` +
         'elaborate the technical view first (session/elaborate.cjs)'
     );
+  if (!opts.brief || !String(opts.brief).trim())
+    throw new Error('the case verb needs the original brief, verbatim — pass opts.brief');
 
   const gate = opts.gate || DEFAULT_GATE;
   const logical = await draw(session, 'logical', { gate });
   const technical = await draw(session, 'technical', { gate });
   const xml = stitch([logical.xml, technical.xml]);
 
+  // The ONLY validator output `case.md` reaches for — see `case-notes.cjs`'s
+  // header for why `falhas`/`avisos` (which carry the two permanent, nobody-
+  // can-fix-it findings) never feed section 5.
+  const semanticFailures = [];
+  for (const [view, drawn] of [['logical', logical], ['technical', technical]])
+    for (const g of drawn.relatorio.geometry)
+      for (const f of g.report.semanticas)
+        semanticFailures.push({ id: f.id, name: f.name, message: f.mensagem, view });
+
+  const md = caseNotes(session, { brief: opts.brief, semanticFailures });
+
   return {
-    files: [{ path: `${slug}.drawio`, content: xml }],
+    files: [
+      { path: `${slug}.drawio`, content: xml },
+      { path: 'case.md', content: md },
+    ],
     warnings: [...logical.relatorio.avisos, ...technical.relatorio.avisos],
   };
 }
@@ -88,19 +121,31 @@ function resolveRoot(cwd) {
   return { root: cwd, inRepo: false };
 }
 
-const HELP = `
-  node tools/case.cjs <session.json> <slug> [options]
+/** Reads a file the CLI was pointed at, or exits — the session and the brief both need this. */
+function readOrDie(file) {
+  if (!fs.existsSync(file)) {
+    console.error(`\n  ✗ could not find ${file}`);
+    process.exit(1);
+  }
+  return fs.readFileSync(file, 'utf8');
+}
 
+const HELP = `
+  node tools/case.cjs <session.json> <slug> --brief <brief.txt> [options]
+
+    --brief <file>   the original prose description, read verbatim
+                      (required — it is case.md's first section)
     --gate <level>   truthfulness|none|failure|strict   (default: truthfulness)
     --image          also render the PNG, when the draw.io binary is present
 
   Reads a session@1 already at the technical stage and writes its two-tab
-  .drawio to docs/architecture/diagrams/<slug>/, at the root of the CALLER's
-  git repository — never inside this skill's own tree. Outside a git
-  repository, falls back to the current directory, with a warning.
+  .drawio, plus a case.md dossier, to docs/architecture/diagrams/<slug>/, at
+  the root of the CALLER's git repository — never inside this skill's own
+  tree. Outside a git repository, falls back to the current directory, with
+  a warning.
 `;
 
-const WITH_VALUE = ['gate'];
+const WITH_VALUE = ['gate', 'brief'];
 
 function parse(args) {
   const opts = {};
@@ -122,17 +167,14 @@ async function main() {
   const [input, slug] = positional;
   if (!input || !slug) { console.error(HELP); process.exit(2); }
 
-  if (!fs.existsSync(input)) {
-    console.error(`\n  ✗ could not find ${input}`);
-    process.exit(1);
-  }
-
-  const session = JSON.parse(fs.readFileSync(input, 'utf8'));
+  const session = JSON.parse(readOrDie(input));
   console.log(`\n  CASE · ${session.title} → "${slug}"`);
+
+  const brief = opts.brief ? readOrDie(opts.brief) : undefined;
 
   let result;
   try {
-    result = await caseFiles(session, slug, { gate: opts.gate });
+    result = await caseFiles(session, slug, { gate: opts.gate, brief });
   } catch (e) {
     console.error(`\n  ✗ ${e.message}`);
     for (const l of e.erros || []) console.error(`      · ${l}`);

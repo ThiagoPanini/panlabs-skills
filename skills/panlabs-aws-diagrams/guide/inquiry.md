@@ -97,29 +97,33 @@ adoção. Mesmo mecanismo do material de entrada: pré-preenche, confirmação v
 
 ## Fase 3 · A parada
 
-> **A checagem que falha é a próxima pergunta.**
+> **Perguntei o que a descrição não determinou.**
 
-Não é julgamento seu. Rode a família `A1` — completude semântica — contra o modelo
-em construção, e cada falha nomeia um fato faltante que **é** a pergunta.
+É uma lista, não um julgamento — e é o **teto de uma rodada** que a torna executável:
+
+- os **eixos de forma** `E1–E5` que a descrição deixou em aberto;
+- mais **qualquer fato cuja ausência faria o desenho afirmar algo falso** — quem inicia uma travessia, se o que guarda estado mora em subnet pública, se uma fronteira é conta ou grupo.
+
+Perguntado isso, a rodada acabou. O que sobrou de aberto não vira segunda rodada: com **um** eixo em aberto desenha-se com a recomendação e **declara-se o chute**; com **dois ou mais**, o arco volta a ser sequencial e as candidatas vêm antes do desenho. Os dois gatilhos estão no [`SKILL.md`](../SKILL.md).
+
+### `A1` continua rodando — depois do desenho
+
+A regra de parada **era** *"`A1` chega ao piso"*, e a troca não aposentou a família: aposentou a **posição** dela. `A1` mede o modelo, e antes de desenhar não existe modelo para medir — cobrá-la adiantado é fazer o usuário responder uma dúzia de perguntas sobre uma arquitetura que ele ainda não viu.
+
+Ela roda no turno do desenho, junto da revisão de lacunas, e o que ela acusar volta como **ajuste**, que é barato, em vez de como **pergunta**, que é cara. O que continua valendo é o que ela dá em troca: `A1` é lista fechada e finita, então o conserto termina.
 
 ```bash
-node tools/check-geometry.cjs <modelo-em-construcao.json>
+node tools/check-geometry.cjs <modelo.json>
 ```
-
-Limita dos dois lados, que era o medo do ticket: não pergunta para sempre (`A1` é
-lista fechada e finita) e não pergunta de menos (`A1` tem de chegar ao piso antes
-do layout).
 
 ### Rodando `A1` sobre um modelo de sessão
 
-`check-geometry.cjs` come `model@1`. Se o que você está construindo é um
-`session@1`, **projete antes** — e a projeção é fiel: os dois caminhos produzem
-laudo idêntico, medido.
+`check-geometry.cjs` come `model@1`. Se o que você tem é um `session@1`, **projete antes** — e a projeção é fiel: os dois caminhos produzem laudo idêntico, medido.
 
 ```bash
-node -e "const {projetar}=require('./session/project.cjs');
+node -e "const {project}=require('./session/project.cjs');
   require('fs').writeFileSync('/tmp/proj.json',
-    JSON.stringify(projetar(require('./models/session/<caso>-logica.json'),'logica').modelo));"
+    JSON.stringify(project(require('./models/session/<caso>-logical.json'),'logical').model));"
 node tools/check-geometry.cjs /tmp/proj.json
 ```
 
@@ -146,32 +150,29 @@ Isto morde o protocolo de frente: a **fase 5 exige** uma nota ligada por `viaNot
 para cada achado recusado. Se ela for presa ao nó, essas duas passam a fazer parte
 do piso — e não são perguntas.
 
-**Pare quando `A1` chegar a exatamente o piso do seu modelo.** Tratar entrada de
-piso como pergunta faz a sabatina rodar para sempre; a dívida tem dono e endereço
-em [`report.md`](report.md).
+**Pare de consertar quando `A1` chegar a exatamente o piso do seu modelo.** Tratar entrada de piso como defeito faz o ajuste rodar para sempre; a dívida tem dono e endereço em [`report.md`](report.md).
 
-### As que são perguntas
+### As que viram ajuste
 
 `A1.1` título · `A1.4` todo elemento nomeado · `A1.6` toda aresta rotulada ·
 `A1.7` toda aresta unidirecional · `A1.8` nenhuma linha sem seta · `A1.9` siglas
 expandidas · `A1.10` um nível de abstração. Mais `A1.5` e `A1.12` **quando não há
-nota presa a nó** — aí elas voltam a ser perguntas de verdade.
+nota presa a nó** — aí elas voltam a acusar de verdade.
 
-Prova de que fechar é barato: um modelo de 3 nós acusava `A1.6` em duas arestas;
-escrever os dois `rotulo` levou `A1` ao piso na mesma rodada.
+Nenhuma delas precisa de uma volta ao usuário: são fatos que o próprio modelo já carrega ou que o agente escreve. Prova de que fechar é barato: um modelo de 3 nós acusava `A1.6` em duas arestas; escrever os dois `label` levou `A1` ao piso na mesma rodada.
 
-### A sabatina também subtrai
+### O ajuste também subtrai
 
-Estourado o teto de complexidade (`A2.1`, `A8.1`), a próxima pergunta **não** é
-*"me conte mais"* — é **"o que sai do diagrama?"**. O remédio para diagrama
-saturado é decompor, não encolher.
+Estourado o teto de complexidade (`A2.1`, `A8.1`), a resposta **não** é *"me conte mais"* — é **"o que sai do diagrama?"**. O remédio para diagrama saturado é decompor, não encolher, e essa é a única entrada de `A1` que de fato volta ao usuário.
 
 ### Duas réguas, não uma
 
-*Decidir* fecha na fase lógica: candidatas genuinamente distintas.
-*Desenhar* fecha na técnica: `A1` no piso.
+*Decidir* fecha na rodada de perguntas: os eixos em aberto foram perguntados.
+*Desenhar* fecha depois do desenho: `A1` no piso.
 
 ## Fase 4 · As candidatas
+
+**Elas mudaram de posição, não de conteúdo.** No caminho normal o agente escolhe a que recomendaria, desenha, e apresenta as alternativas **junto** do desenho — o humano compara formas olhando uma delas pronta, em vez de escolher entre três parágrafos. No arco sequencial elas voltam a vir **antes**, e é para isso que os dois gatilhos do [`SKILL.md`](../SKILL.md) existem. Tudo abaixo vale igual nos dois casos.
 
 **Teto 3, piso 2, e diga por quê quando entregar menos.** O número cai do
 invariante, não é constante: forçar uma terceira quando o espaço real tem duas
@@ -209,9 +210,7 @@ recusada, e ninguém sabe responder *"por que não a B?"*.
 
 ## Fase 5 · A revisão de lacunas
 
-Roda **depois** do modelo montado e **antes** do layout, porque estas não são
-respostas a perguntas — são **propriedades emergentes do grafo**. Não dá para
-perguntar *"tem SPOF?"*.
+Roda **depois do desenho**, porque estas não são respostas a perguntas — são **propriedades emergentes do grafo**, e o grafo só existe depois de montado. Não dá para perguntar *"tem SPOF?"*.
 
 ```bash
 node tools/review-gaps.cjs <modelo.json>       # o laudo
@@ -239,9 +238,7 @@ conserta-se num só.
 
 > **Relata, propõe, e conserta apenas o que o usuário mandar consertar.**
 
-**Bloqueia — mas em bloco e uma vez só.** Todos os achados de uma vez, um passe,
-cada um aceito ou recusado. Uma interação, não N: atrito importa, e bloqueio que
-dispara à toa é bloqueio que o usuário aprende a ignorar.
+**Não bloqueia mais — relata, em bloco e uma vez só.** Todos os achados saem junto do desenho, no mesmo turno, e viram a seção 5 do `case.md`; cada um é aceito ou recusado pelo usuário quando ele responder. Uma interação, não N: atrito importa, e o que bloqueava aqui deixou de precisar bloquear porque o desenho já está na frente de quem decide — quem guarda a fronteira de rede agora é o portão de veracidade, por máquina.
 
 ### A recusa tem de chegar ao desenho
 
@@ -302,25 +299,21 @@ lê o grafo.
 
 ## Fase 6 · O acordo e a transição
 
-Entregue a vista lógica com **zero nome de serviço AWS** e diga o que acontece ao
-aprovar: o estacionamento volta como sugestão inferida contra a capacidade
-correspondente.
+**Esta fase é do arco sequencial** — no caminho normal não há vista lógica entregue sozinha para aprovar, porque as duas saem juntas no mesmo turno.
 
-A aprovação vira fato conferível — ver o passo 5 do [`SKILL.md`](../SKILL.md) para
-o mecanismo, e [`model.md`](model.md) para o que a projeção faz com os níveis
-que só a vista técnica tem.
+Entregue a vista lógica com **zero nome de serviço AWS** e diga o que acontece ao aprovar: o estacionamento volta como sugestão inferida contra a capacidade correspondente.
 
-## O que veio do método de sabatina geral
+A aprovação vira **registro** conferível — e deixou de **travar** a vista técnica; quem guarda essa fronteira agora é o portão de veracidade, por máquina. Ver [`SKILL.md`](../SKILL.md) para o mecanismo, e [`model.md`](model.md) para o que a projeção faz com os níveis que só a vista técnica tem.
 
-Herdado e creditado: **rodadas** · **frontier** · **a rodada inteira de uma vez** ·
-**pergunta numerada com recomendação** · **nunca perguntar fato que dá para
-descobrir sozinho**.
+## O que veio do método de sabatina geral, e o que fica de fora
 
-O mecanismo está **internalizado, não invocado**, e a razão é a portabilidade:
-uma skill auto-contida e publicável não pode depender em runtime de uma skill
-pessoal que talvez não exista no ambiente corporativo nem em outro harness. O
-terminal também difere — lá é frontier vazia mais confirmação; aqui é `A1` no
-piso, que é checagem executável.
+Herdado e creditado: **rodadas** · **frontier** · **a rodada inteira de uma vez** · **pergunta numerada com recomendação** · **nunca perguntar fato que dá para descobrir sozinho**.
+
+**Detecte a `/grilling` e use-a se ela estiver no ambiente, com teto de uma rodada.** Quem já tem a skill instalada recebe o formato de pergunta ao qual já está acostumado, e isso não custa nada a quem não tem: **não existindo, aplique este mesmo documento**, que é o formato inteiro escrito aqui. Nenhum comando desta skill a invoca e nenhuma instrução pressupõe que ela exista — o caminho de fallback é o caminho principal, e é assim que a régua o mede.
+
+**O empréstimo é de forma, nunca de regra de parada**, e a distinção é a única coisa que essa detecção não pode borrar. Lá se para quando a frontier esvazia — critério da outra skill, sobre o material dela. Aqui o teto é **uma rodada**, e o que fica em aberto vira chute declarado ou promove para o arco sequencial. Herdar a parada de lá reintroduziria exatamente a sabatina que cobra adiantado.
+
+A portabilidade é o que decide isso: uma skill auto-contida e publicável não pode depender **em runtime** de uma skill pessoal que talvez não exista no ambiente corporativo nem em outro harness.
 
 ## O que o protótipo do protocolo NÃO demonstrou
 

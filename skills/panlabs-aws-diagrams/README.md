@@ -1,8 +1,6 @@
 # panlabs-aws-diagrams
 
-Skill de diagramas de arquitetura AWS no draw.io: sabatina a necessidade, propõe
-arquiteturas candidatas como vista lógica e, aprovada uma, gera a vista técnica
-multi-conta por motor determinístico `IR → layout → mxGraph XML`.
+Skill de diagramas de arquitetura AWS no draw.io: uma rodada de perguntas sobre o que a descrição não determinou, e as duas vistas — lógica e técnica multi-conta — desenhadas juntas por motor determinístico `IR → layout → mxGraph XML`, no projeto de quem chamou.
 
 > **O documento que um agente lê é [`SKILL.md`](SKILL.md)**, com o [`guide/`](guide/)
 > ao lado. Este README é o mapa da árvore, para quem vai mexer no código.
@@ -11,7 +9,7 @@ multi-conta por motor determinístico `IR → layout → mxGraph XML`.
 node engine/generate.cjs models/web-multi-az.json --output output/x.drawio
 node tools/check-geometry.cjs models/web-multi-az.json    # o laudo das 62
 node tools/review-gaps.cjs models/web-multi-az.json    # a revisão de lacunas
-node tools/approve.cjs models/session/retail-logical.json    # passo 5: aprovar a lógica
+node tools/approve.cjs models/session/retail-logical.json    # o arco sequencial: aprovar a lógica
 node tools/resume.cjs output/retail.drawio --delta models/session/retail-elaboration.json
 ./tests/run.sh                                           # a régua inteira
 ./tools/install.sh                                        # expor nos dois harnesses
@@ -47,8 +45,8 @@ do Node).
 
 | | |
 |---|---|
-| **`SKILL.md`** | **O documento.** O arco em sete passos, cada um com critério de parada checável |
-| `guide/` | O que o arco revela por ponteiro: sabatina, modelo, context pack, laudo, visual |
+| **`SKILL.md`** | **O documento.** A jornada em três turnos — pergunta, desenho, ajuste —, cada um com critério de parada checável, mais os dois gatilhos que promovem para o arco sequencial |
+| `guide/` | O que a jornada revela por ponteiro: perguntas, modelo, context pack, laudo, visual |
 | **`schema.json`** | **O contrato.** `model@1` — o IR que o agente escreve. Na raiz de propósito: é de quem escreve o modelo, e o motor é só o primeiro leitor |
 | `engine/` | O pipeline. `gerar` › `validar` › `resolver` › `derivar` › `dispor` › `planejar` › `emitir` › `conferir`, mais o portão de contraste |
 | `validator/` | As 62 checagens da rubrica viradas código — 60 no validador obrigatório, 2 no render. É **portão**, não otimizador |
@@ -58,7 +56,7 @@ do Node).
 | `models/` | O corpus. `models/recusa/` para o que o motor **deve** recusar, `models/session/` para `session@1` |
 | `tests/` | A união das suítes, em 8 camadas |
 | `agents/` | O empacotamento multi-harness. `openai.yaml` copia a forma das outras 25 skills instaladas em `~/.claude/skills/*/agents/` — `interface.display_name` + `interface.short_description`, e nada mais. É **metadado de vitrine**, não instrução: um harness não-Claude aprende o NOME da skill por aqui e o resto por `SKILL.md`. Se algum harness precisar de mais, é aqui que cresce |
-| `tools/` | Os comandos do arco (`aprovar`, `retomar`, `check-geometria`, `revisar-lacunas`, `instalar`) e as ferramentas de bancada — bisseção, render, as medições. `drawio.cjs` é o único lugar que sabe onde o binário mora |
+| `tools/` | Os comandos da jornada (`case.cjs`, `approve.cjs`, `resume.cjs`, `check-geometry.cjs`, `review-gaps.cjs`, `install.sh`) e as ferramentas de bancada — bisseção, render, as medições. `drawio.cjs` é o único lugar que sabe onde o binário mora |
 | `output/` | **Rascunho, e ignorado pelo git.** É onde `tests/run.sh` escreve o corpus gerado e o render |
 
 `guide/` é o que o agente lê para **operar** a skill — nada aqui se lê para

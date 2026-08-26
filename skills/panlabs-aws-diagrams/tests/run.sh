@@ -54,6 +54,11 @@ step "production doesn't reach prototypes/"           node "$HERE/check-no-proto
 # The 30 MB ceiling is HARD and only shows up at upload time. Measuring it here is what
 # stops the tree from creeping back to 29 MB without anyone noticing — that's where it was.
 step "the package fits under the 30 MB ceiling"            "$ROOT/tools/package.sh" --check
+# The front door, which until #43 nothing measured: three turns, no documented
+# command writing into this tree or reaching outside it, and /grilling named but
+# never invoked. It plants its own defects first — a document checker earns the
+# same proof layer 2 asks of the validator.
+step "the journey document holds (#43)"                 node "$HERE/check-journey.cjs"
 
 echo
 echo "════ layer 1 · the boundary ════"

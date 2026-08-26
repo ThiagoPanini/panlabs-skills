@@ -117,8 +117,10 @@ repetiria exatamente o erro diagnosticado.
 
 ## A cópia que circula
 
+Ela nasce **ao lado** do arquivo de trabalho, no diretório do caso — `docs/architecture/diagrams/<case-slug>/`, no projeto de quem chamou. Nada disto é gravado dentro da árvore da skill.
+
 ```bash
-node session/publish.cjs output/<caso>.drawio --output output/<caso>.publicado.drawio
+node session/publish.cjs <dir-do-caso>/<case-slug>.drawio --output <dir-do-caso>/<case-slug>.published.drawio
 ```
 
 O arquivo de trabalho carrega a deliberação em texto legível por qualquer um em

@@ -379,14 +379,15 @@ function build(raw, t) {
       `endFill=${t.edge.tip === 'open' ? 0 : 1};endSize=6;`,
 
     /**
-     * The leaf's label. `qualifier` is #5's O21 — "Amazon Route 53 /
-     * *DNS service*" —, backed by 4 corpora: the name says what it IS, the
-     * italics say what it does THERE. It costs a second line, and the line is
-     * metric, not paint.
+     * The leaf's label. #5's O21 — "Amazon Route 53 / *DNS service*" —,
+     * backed by 4 corpora: the name says what it IS, the italics say what it
+     * does THERE or how it's CALLED there (`resource`, #38 — the caller
+     * already resolved which of the two wins). It costs a second line, and
+     * the line is metric, not paint.
      */
-    rotuloDeFolha(name, qualifier) {
-      if (!t.text.qualifier || !qualifier) return name;
-      return `${name}<br><i>${qualifier}</i>`;
+    rotuloDeFolha(name, second) {
+      if (!t.text.qualifier || !second) return name;
+      return `${name}<br><i>${second}</i>`;
     },
   };
   return api;

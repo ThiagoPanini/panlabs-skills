@@ -237,6 +237,10 @@
           "type": "string",
           "description": "O que este no faz AQUI. Mesmo campo do `model@1`, e pelo mesmo motivo (o O21 do #5): o nome diz o que E, o italico embaixo diz o que faz NESTE diagrama. Vive nas DUAS vistas porque a capacidade logica tambem se repete — \"Guardar a serie\" e \"Guardar o evento\" sao dois blocos que o rotulo sozinho nao distingue."
         },
+        "resource": {
+          "type": "string",
+          "description": "Como este recurso SE CHAMA — mesmo campo do `model@1` (#38). So no casaco TECNICO: nome de tabela, de bucket, de fila e fato de recurso concreto, e a vista logica nao tem recurso, so capacidade — o `logicalFacet` nao declara este campo de proposito."
+        },
         "ou": {
           "type": "string",
           "minLength": 1,

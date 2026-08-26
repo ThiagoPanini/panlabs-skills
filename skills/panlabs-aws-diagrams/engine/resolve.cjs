@@ -105,14 +105,21 @@ function create(theme, catalogDir) {
   function leaf(node) {
     if (node.kind === 'block') {
       const width = 170;
-      const lines = labelLines(node.label || node.id, width - 16, M.largCar);
+      // A block never has a `resource` (#38 restricts it to kind=service —
+      // a capacity isn't a nameable AWS resource), so this only ever falls
+      // through to `qualifier`. Until here the block branch never called
+      // `rotuloDeFolha` at all: `qualifier` reached the projected model@1
+      // node and then vanished with no error, the same silent loss this
+      // engine's history keeps finding one layer at a time (#14, #23, #37).
+      const label = theme.rotuloDeFolha(node.label || node.id, node.resource || node.qualifier);
+      const lines = labelLines(label, width - 16, M.largCar);
       used.push({ id: node.id, pediu: 'block', virou: '(logical block)', via: 'block' });
       return {
         // logical view: pre-services, therefore out of reach of the AWS
         // convention. It is the only place where the house picks a box colour
         // without contradicting anyone.
         style: theme.block(),
-        label: node.label || node.id,
+        label,
         shapeW: width, shapeH: Math.max(56, 20 + lines * M.altLinha),
         labelH: 0,                       // the label is internal — no band to reserve
       };
@@ -128,11 +135,13 @@ function create(theme, catalogDir) {
     });
 
     const name = node.label || s.suggestedLabel || s.title;
-    // O21 of #5: the name says what it IS, the italic says what it does HERE.
-    // Whether it shows is the theme's call; the text itself is a fact of the
-    // model — the only style token of this prototype that needed a new field in
-    // the IR.
-    const label = theme.rotuloDeFolha(name, node.qualifier);
+    // O21 of #5: the name says what it IS, the italic says what it does HERE
+    // or what it's CALLED here. `resource` wins over `qualifier` when both
+    // exist (#38) — the technical view knows a nameable resource, the
+    // logical one never does, so it always falls through to `qualifier`
+    // there. Whether either shows is the theme's call; the text itself is a
+    // fact of the model.
+    const label = theme.rotuloDeFolha(name, node.resource || node.qualifier);
     const shapeW = s.w || 78, shapeH = s.h || 78;
     // #33/#35: the box is the MEASURED width of the label, not an assumed wrap —
     // mxGraph does not break the line the way `labelLines` supposed (it comes out

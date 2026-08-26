@@ -84,6 +84,7 @@ step "gap review: it fires AND stays quiet (#15)"   node "$HERE/check-gaps.cjs"
 step "multi-account triggers (OR, mode, level)"  node "$HERE/check-triggers.cjs"
 step "traversal: the decisions, in the file"         node "$HERE/check-traversal.cjs"
 step "bisection (the tool that isolates)"         node "$ROOT/tools/bisect-model.cjs" "$ROOT/models/hub-tgw-3-accounts.json"
+step "resource wins over qualifier on the leaf (#38)"   node "$HERE/check-resource-label.cjs"
 
 echo
 echo "════ layer 4 · the theme ════"

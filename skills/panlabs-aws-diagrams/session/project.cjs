@@ -57,7 +57,7 @@ const VIEWS = ['logical', 'technical'];
  * real list, not a copy of it.
  */
 const TECHNICAL_FIELDS = ['service', 'az', 'access', 'cidr', 'account', 'note',
-                         'qualifier', 'ou', 'enables', 'layer'];
+                         'qualifier', 'ou', 'enables', 'layer', 'resource'];
 
 /** The same, on the logical side. `note` was already there; `qualifier` came in with #29. */
 const LOGICAL_FIELDS = ['note', 'qualifier'];

@@ -31,6 +31,7 @@ const { derive } = require('./derive.cjs');
 const layersMod = require('./layers.cjs');
 const dispor = require('./layout.cjs');
 const plan = require('./plan.cjs');
+const { resolveEdgeLabelCollisions } = require('./labels.cjs');
 const { emit, checkXml } = require('./emit.cjs');
 const themeMod = require('../theme/theme.cjs');
 const contrast = require('./contrast.cjs');
@@ -233,6 +234,13 @@ async function generate(model, opts = {}) {
     caminho: layoutPath, celulas: layoutPlan.cells.length, page: `${layoutPlan.width}×${layoutPlan.height}`,
     ...(pages.length ? { pages: 1 + pages.length } : {}),
   });
+
+  // #40 — a label that would collide with another's slides along its own
+  // edge before the gate ever measures it. One page at a time: a label
+  // clashing on the main page says nothing about a detail view's own.
+  const labelMoves = [layoutPlan, ...pages].flatMap(p => resolveEdgeLabelCollisions(p));
+  if (labelMoves.length)
+    milestone('labels', { moved: labelMoves.length, edges: labelMoves.map(m => m.id).join(', ') });
 
   /**
    * THE GEOMETRIC GATE (#18) — between `plan` and `emit`, the only point where

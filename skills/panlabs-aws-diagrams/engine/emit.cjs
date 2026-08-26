@@ -83,9 +83,13 @@ function edge(c, ind) {
     (c.to ? '' : (loose.x2 !== undefined ? tip('targetPoint', loose.x2, loose.y2) : ''));
 
   const body = arr + looseEnds;
+  // #40 — a label displaced off the midpoint carries mxGraph's own relative
+  // label position on the edge's OWN geometry (no child cell needed for a
+  // single label): -1 at the start, 0 at the untouched midpoint, 1 at the end.
+  const labelX = c.labelT !== undefined ? ` x="${(2 * c.labelT - 1).toFixed(3)}"` : '';
   const geo = body
-    ? `<mxGeometry relative="1" as="geometry">${body}\n${p}  </mxGeometry>`
-    : `<mxGeometry relative="1" as="geometry"/>`;
+    ? `<mxGeometry relative="1"${labelX} as="geometry">${body}\n${p}  </mxGeometry>`
+    : `<mxGeometry relative="1"${labelX} as="geometry"/>`;
 
   return `${p}<mxCell id="${esc(c.id)}" value="${esc(c.label || '')}" style="${esc(c.style)}" edge="1" ` +
     `parent="${esc(c.parent)}"${c.from ? ` source="${esc(c.from)}"` : ''}${c.to ? ` target="${esc(c.to)}"` : ''}>\n` +

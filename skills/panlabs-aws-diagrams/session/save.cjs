@@ -36,7 +36,7 @@ const path = require('path');
 
 const ENGINE_DIR = path.join(__dirname, '..', 'engine');
 const { esc, checkXml } = require(path.join(ENGINE_DIR, 'emit.cjs'));
-const { impressaoSemantica, appearanceFingerprint, reescreverSelos } = require('./fingerprint.cjs');
+const { semanticFingerprint, appearanceFingerprint, reescreverSelos } = require('./fingerprint.cjs');
 
 /** Recognition mark. See `open.cjs` for why the `host` alone is not enough. */
 const SEAL_SCHEMA = 'panlabs-aws-diagrams/session@1';
@@ -87,8 +87,8 @@ function sealInto(xml, session, view, opts = {}) {
   return reescreverSelos(xml, p => ({
     panlabsSchema: SEAL_SCHEMA,
     panlabsVista: view,
-    panlabsSemantica: impressaoSemantica(p.celulas),
-    panlabsAparencia: appearanceFingerprint(p.celulas),
+    panlabsSemantica: semanticFingerprint(p.cells),
+    panlabsAparencia: appearanceFingerprint(p.cells),
     panlabsMotor: opts.engine || ENGINE,
     panlabsSessao: JSON.stringify(session),
   })).xml;

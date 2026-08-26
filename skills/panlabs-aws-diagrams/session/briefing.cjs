@@ -41,7 +41,7 @@ function briefing(opened, extra = {}) {
     if (p.because) L.push(`        ${p.because}`);
   }
   if (opened.copyConflict)
-    L.push(`    ⚠ the pages carry ${opened.copyConflict.quantas} DIFFERENT copies of the model — ` +
+    L.push(`    ⚠ the pages carry ${opened.copyConflict.count} DIFFERENT copies of the model — ` +
       'someone pasted a page from another file in here.');
 
   // ------------------------------------------------------------ the agreement

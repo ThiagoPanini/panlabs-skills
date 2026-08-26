@@ -1,35 +1,36 @@
 'use strict';
 /**
- * Elaboracao — a fase tecnica aplicada sobre o modelo que a sessao anterior
- * aprovou.
+ * Elaboration — the technical phase applied on top of the model the previous
+ * session approved.
  *
- * A sessao 2 NAO reescreve o modelo logico. Ela aplica um DELTA sobre o modelo
- * que recuperou de dentro do `.drawio`, e o delta nao tem como alcancar um
- * casaco logico — nao existe campo para isso na elaboracao, e o guarda no fim
- * confere que nenhum foi tocado. Mesma jogada do #11: a regra vira gramatica em
- * vez de disciplina.
+ * Session 2 does NOT rewrite the logical model. It applies a DELTA on top of the
+ * model it recovered from inside the `.drawio`, and the delta has no way to reach
+ * a logical facet — there is no field for that in the elaboration, and the guard
+ * at the end checks that none was touched. Same move as #11: the rule becomes
+ * grammar instead of discipline.
  *
- * Ate o #37, `elaboration@1` nao tinha arquivo de esquema: o unico jeito de errar
- * a FORMA do delta (campo com typo, `esquema` errado, no novo sem `camada`) era
- * cair direto nos erros de dominio abaixo, ou nem isso. Agora a forma e
- * conferida primeiro, contra o mesmo esquema que `tests/check-single-schema.cjs`
- * passou a varrer.
+ * Until #37, `elaboration@1` had no schema file: the only way to catch the delta's
+ * SHAPE being wrong (a typo'd field, the wrong `schema`, a new node with no
+ * `layer`) was to fall straight into the domain errors below, or not even that.
+ * Now the shape is checked first, against the same schema
+ * `tests/check-single-schema.cjs` started sweeping.
  *
- * O que o delta pode fazer:
- *   nos            acrescentar infraestrutura (camada "tecnica" obrigatoria)
- *   casacos        vestir um no aprovado de servico AWS
- *   dentro         reparentar um no aprovado para dentro de nivel novo  ← a operacao de risco
- *   refina         transformar uma aresta aprovada num CAMINHO tecnico
- *   arestas        acrescentar aresta que so a camada tecnica tem
- *   arestasCasaco  dar rotulo tecnico a uma aresta aprovada
- *   notas, dossie  acrescentar
+ * What the delta can do:
+ *   nodes         add infrastructure (mandatory "technical" layer)
+ *   facets        dress an approved node in an AWS service
+ *   inside        reparent an approved node into a new level     ← the risky operation
+ *   refines       turn an approved edge into a technical PATH
+ *   edges         add an edge only the technical layer has
+ *   facetEdges    give an approved edge a technical label
+ *   notes, dossier  add
  *
- * `refina` merece a explicacao. Tecnicamente, "guardar-bruto avisa chegada a
- * processar-na-chegada" passa por um barramento de eventos. O reflexo e apagar a
- * aresta aprovada e escrever duas novas — e ai o extremo aprovado depende de
- * alguem reescrever certo. Declarando os SALTOS, os extremos sao os mesmos
- * objetos de antes: a primeira aresta continua sendo a aprovada, com o rotulo
- * logico dela intacto, e a contracao da projecao reconstroi o par original.
+ * `refines` deserves the explanation. Technically, "store-raw notifies arrival to
+ * process-on-arrival" goes through an event bus. The reflex is to delete the
+ * approved edge and write two new ones — and then the approved endpoint depends on
+ * someone rewriting it correctly. By declaring the JUMPS, the endpoints stay the
+ * same objects as before: the first edge is still the approved one, with its
+ * logical label intact, and the projection's contraction reconstructs the original
+ * pair.
  */
 
 const fs = require('fs');
@@ -41,84 +42,87 @@ const SCHEMA = JSON.parse(fs.readFileSync(path.join(__dirname, 'elaboration.sche
 const clone = o => JSON.parse(JSON.stringify(o));
 
 function elaborate(base, el) {
-  const deForma = againstSchema(el, SCHEMA, SCHEMA);
-  if (deForma.length) { const e = new Error('elaboracao fora do esquema'); e.erros = deForma; throw e; }
+  const schemaErrors = againstSchema(el, SCHEMA, SCHEMA);
+  if (schemaErrors.length) { const e = new Error('elaboration is out of schema'); e.erros = schemaErrors; throw e; }
 
   if (el.about && el.about !== base.id)
-    throw new Error(`elaboracao e sobre "${el.about}", o modelo e "${base.id}"`);
+    throw new Error(`elaboration is about "${el.about}", the model is "${base.id}"`);
 
   const m = clone(base);
-  const erros = [];
+  const errors = [];
   const byId = new Map(m.nodes.map(n => [n.id, n]));
-  const porAresta = new Map((m.edges || []).filter(a => a.id).map(a => [a.id, a]));
+  const byEdgeId = new Map((m.edges || []).filter(a => a.id).map(a => [a.id, a]));
 
-  // 1 · nos novos ------------------------------------------------------------
+  // 1 · new nodes --------------------------------------------------------------
   for (const n of (el.nodes || [])) {
-    if (byId.has(n.id)) { erros.push(`no novo "${n.id}" ja existe no modelo aprovado`); continue; }
+    if (byId.has(n.id)) { errors.push(`new node "${n.id}" already exists in the approved model`); continue; }
     if (n.logical)
-      erros.push(`no novo "${n.id}" traz casaco logico. A fase tecnica nao inventa capacidade: ` +
-        `se ela e mesmo nova, a vista logica mudou e precisa de aprovacao nova, nao de um casaco a mais.`);
+      errors.push(`new node "${n.id}" carries a logical facet. The technical phase does not invent capability: ` +
+        `if it really is new, the logical view changed and needs a fresh approval, not one more facet.`);
     if ((n.layer || 'both') !== 'technical')
-      erros.push(`no novo "${n.id}" sem camada "tecnica" — tudo que a elaboracao acrescenta e infraestrutura.`);
-    const copia = clone(n);
-    m.nodes.push(copia); byId.set(copia.id, copia);
+      errors.push(`new node "${n.id}" with no "technical" layer — everything the elaboration adds is infrastructure.`);
+    const copy = clone(n);
+    m.nodes.push(copy); byId.set(copy.id, copy);
   }
 
-  // 2 · casacos tecnicos -----------------------------------------------------
+  // 2 · technical facets ---------------------------------------------------------
   for (const [id, facet] of Object.entries(el.facets || {})) {
     const n = byId.get(id);
-    if (!n) { erros.push(`casaco para "${id}", que nao existe`); continue; }
-    if (n.technical) erros.push(`no "${id}" ja tinha casaco tecnico`);
+    if (!n) { errors.push(`facet for "${id}", which does not exist`); continue; }
+    if (n.technical) errors.push(`node "${id}" already had a technical facet`);
     n.technical = clone(facet);
   }
 
-  // 3 · reparentar -----------------------------------------------------------
+  // 3 · reparent ----------------------------------------------------------------
   for (const [id, parent] of Object.entries(el.inside || {})) {
     const n = byId.get(id);
-    if (!n) { erros.push(`reparenta "${id}", que nao existe`); continue; }
-    if (!byId.has(parent)) { erros.push(`reparenta "${id}" para dentro de "${parent}", que nao existe`); continue; }
+    if (!n) { errors.push(`reparents "${id}", which does not exist`); continue; }
+    if (!byId.has(parent)) { errors.push(`reparents "${id}" into "${parent}", which does not exist`); continue; }
     n.inside = parent;
   }
 
-  // 4 · refinar aresta em caminho -------------------------------------------
+  // 4 · refine an edge into a path -----------------------------------------------
   for (const [id, r] of Object.entries(el.refines || {})) {
-    const a = porAresta.get(id);
-    if (!a) { erros.push(`refina a aresta "${id}", que nao existe`); continue; }
+    const a = byEdgeId.get(id);
+    if (!a) { errors.push(`refines edge "${id}", which does not exist`); continue; }
     const jumps = r.by || [];
-    for (const s of jumps) if (!byId.has(s)) erros.push(`refina "${id}" por "${s}", que nao existe`);
+    for (const s of jumps) if (!byId.has(s)) errors.push(`refines "${id}" through "${s}", which does not exist`);
+    // NOTE: `rotulos` is the actual field name in `elaboration.schema.json` and in
+    // the corpus (e.g. `models/session/retail-elaboration.json`) — left as is
+    // since that schema file is off limits here.
     const rotulos = r.rotulos || [];
     if (rotulos.length && rotulos.length !== jumps.length + 1)
-      erros.push(`refina "${id}": ${jumps.length} salto(s) exigem ${jumps.length + 1} rotulo(s), vieram ${rotulos.length}`);
+      errors.push(`refines "${id}": ${jumps.length} jump(s) require ${jumps.length + 1} label(s), got ${rotulos.length}`);
 
-    const cadeia = [a.from, ...jumps, a.to];
-    // O primeiro segmento CONTINUA sendo a aresta aprovada: mesmo objeto, mesmo
-    // id, mesmo rotulo logico. So o alvo muda e ganha um casaco tecnico.
-    a.to = cadeia[1];
+    const chain = [a.from, ...jumps, a.to];
+    // The first segment REMAINS the approved edge: same object, same id, same
+    // logical label. Only the target changes and gains a technical facet.
+    a.to = chain[1];
     if (rotulos[0] !== undefined) a.technical = { ...(a.technical || {}), label: rotulos[0] };
-    for (let k = 1; k < cadeia.length - 1; k++) {
-      const seg = { id: `${id}-s${k}`, from: cadeia[k], to: cadeia[k + 1], layer: 'both' };
-      // O salto NAO herda `dados` nem `protocolo`: e plumbing, e a aresta
-      // aprovada (o primeiro segmento) e que carrega a afirmacao. Herdar
-      // `dados: "ambos"` faria o barramento sair com seta dupla, afirmando um
-      // caminho de volta que passa por outro lugar.
+    for (let k = 1; k < chain.length - 1; k++) {
+      const seg = { id: `${id}-s${k}`, from: chain[k], to: chain[k + 1], layer: 'both' };
+      // The jump does NOT inherit `data` or `protocol`: it is plumbing, and the
+      // approved edge (the first segment) is what carries the assertion.
+      // Inheriting `data: "both"` would make the bus come out with a double
+      // arrow, asserting a return path that runs somewhere else.
       if (rotulos[k] !== undefined) seg.label = rotulos[k];
-      m.edges.push(seg); porAresta.set(seg.id, seg);
+      m.edges.push(seg); byEdgeId.set(seg.id, seg);
     }
   }
 
-  // 5 · arestas novas e casacos de aresta ------------------------------------
+  // 5 · new edges and edge facets ------------------------------------------------
   for (const a of (el.edges || [])) {
-    if (a.id && porAresta.has(a.id)) { erros.push(`aresta nova "${a.id}" ja existe`); continue; }
-    const copia = clone(a);
-    m.edges.push(copia); if (copia.id) porAresta.set(copia.id, copia);
+    if (a.id && byEdgeId.has(a.id)) { errors.push(`new edge "${a.id}" already exists`); continue; }
+    const copy = clone(a);
+    m.edges.push(copy); if (copy.id) byEdgeId.set(copy.id, copy);
   }
   for (const [id, facet] of Object.entries(el.facetEdges || {})) {
-    const a = porAresta.get(id);
-    if (!a) { erros.push(`casaco para a aresta "${id}", que nao existe`); continue; }
+    const a = byEdgeId.get(id);
+    if (!a) { errors.push(`facet for edge "${id}", which does not exist`); continue; }
     a.technical = { ...(a.technical || {}), ...clone(facet) };
   }
 
-  // 6 · notas e dossie -------------------------------------------------------
+  // 6 · notes and dossier ---------------------------------------------------------
   m.notes = [...(m.notes || []), ...clone(el.notes || [])];
   if (el.dossier) {
     m.dossier = m.dossier || {};
@@ -138,21 +142,21 @@ function elaborate(base, el) {
   if (el.title) m.title = el.title;
   if (el.subtitle) m.subtitle = el.subtitle;
 
-  // 7 · o guarda -------------------------------------------------------------
-  // Nao e paranoia: e o mesmo experimento de controle do #11. A elaboracao nao
-  // TEM campo que alcance um casaco logico, e mesmo assim a checagem existe,
-  // porque foi assim que o #17 aprendeu que 24 checagens verdes nao pegaram o
-  // icone errado. Barato, e fecha a porta que o esquema deixaria entreaberta se
-  // alguem acrescentasse um campo amanha.
-  const antes = new Map(base.nodes.map(n => [n.id, JSON.stringify(n.logical)]));
-  for (const [id, logical] of antes) {
-    const agora = byId.get(id);
-    if (!agora) { erros.push(`o no aprovado "${id}" sumiu na elaboracao`); continue; }
-    if (JSON.stringify(agora.logical) !== logical)
-      erros.push(`a elaboracao mexeu no casaco logico de "${id}" — isso muda o que foi aprovado`);
+  // 7 · the guard -----------------------------------------------------------------
+  // Not paranoia: it is the same control experiment as #11. The elaboration has NO
+  // field that reaches a logical facet, and the check exists anyway, because that
+  // is how #17 learned that 24 green checks did not catch the wrong icon. Cheap,
+  // and it closes the door the schema would leave ajar if someone added a field
+  // tomorrow.
+  const before = new Map(base.nodes.map(n => [n.id, JSON.stringify(n.logical)]));
+  for (const [id, logical] of before) {
+    const now = byId.get(id);
+    if (!now) { errors.push(`approved node "${id}" vanished during elaboration`); continue; }
+    if (JSON.stringify(now.logical) !== logical)
+      errors.push(`the elaboration touched the logical facet of "${id}" — that changes what was approved`);
   }
 
-  if (erros.length) { const e = new Error('elaboracao invalida'); e.erros = erros; throw e; }
+  if (errors.length) { const e = new Error('invalid elaboration'); e.erros = errors; throw e; }
   return m;
 }
 

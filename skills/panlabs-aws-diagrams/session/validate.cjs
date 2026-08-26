@@ -1,22 +1,22 @@
 'use strict';
 /**
- * Validacao do modelo de sessao.
+ * Session model validation.
  *
- * Nao repete o validador do #11 — checa o que SO a camada de sessao sabe: se os
- * casacos fecham, se o dossie e coerente, se o acordo aponta para algo que
- * existe. O que e do desenho (subnet fora de VPC, aresta terminando em
- * container, servico na vista logica) continua sendo do motor, e chega la pela
- * projecao com as mensagens que o #11 ja escreveu. Duas camadas, cada uma
- * cobrando o que enxerga.
+ * Does not repeat the #11 validator — it checks what ONLY the session layer knows:
+ * whether the facets close, whether the dossier is coherent, whether the agreement
+ * points at something that exists. What belongs to the drawing (a subnet outside a
+ * VPC, an edge ending in a container, a service in the logical view) is still the
+ * engine's job, and reaches it through the projection with the messages #11 already
+ * wrote. Two layers, each charging for what it can see.
  *
- * A regra que carrega o ticket:
+ * The rule that carries the ticket:
  *
- *   > No que existe nas duas camadas TEM de ter os dois casacos.
+ *   > Whatever exists in both layers HAS TO have both facets.
  *
- * Sem ela, esquecer o casaco logico de uma capacidade aprovada nao da erro
- * nenhum — a capacidade simplesmente some da projecao logica, e a vista que o
- * usuario aprovou passa a mostrar menos do que ele aprovou. Silenciosamente.
- * Essa e a falha que o #14 existe para impedir, e ela e barata de fechar.
+ * Without it, forgetting the logical facet of an approved capability gives no error
+ * at all — the capability simply vanishes from the logical projection, and the view
+ * the user approved comes out showing less than they approved. Silently. That is
+ * the failure #14 exists to prevent, and it is cheap to close here.
  */
 
 const fs = require('fs');
@@ -34,119 +34,120 @@ function references(m) {
   const erros = [];
   const byId = new Map();
   for (const n of m.nodes) {
-    if (byId.has(n.id)) erros.push(`no "${n.id}" declarado duas vezes`);
+    if (byId.has(n.id)) erros.push(`node "${n.id}" declared twice`);
     byId.set(n.id, n);
   }
   for (const n of m.nodes) {
     if (n.inside === undefined) continue;
-    if (!byId.has(n.inside)) erros.push(`no "${n.id}": dentro="${n.inside}" nao existe`);
-    if (n.inside === n.id) erros.push(`no "${n.id}": contido em si mesmo`);
+    if (!byId.has(n.inside)) erros.push(`node "${n.id}": inside="${n.inside}" does not exist`);
+    if (n.inside === n.id) erros.push(`node "${n.id}": contained in itself`);
   }
-  // ciclo de contencao — a lista e plana (#11), entao o ciclo e possivel
+  // containment cycle — the list is flat (#11), so a cycle is possible
   for (const n of m.nodes) {
-    const visto = new Set([n.id]);
+    const seen = new Set([n.id]);
     let c = n.inside;
     while (c !== undefined && byId.has(c)) {
-      if (visto.has(c)) { erros.push(`ciclo de contencao passando por "${n.id}"`); break; }
-      visto.add(c); c = byId.get(c).inside;
+      if (seen.has(c)) { erros.push(`containment cycle passing through "${n.id}"`); break; }
+      seen.add(c); c = byId.get(c).inside;
     }
   }
   for (const [i, a] of (m.edges || []).entries())
     for (const p of ['from', 'to'])
-      if (!byId.has(a[p])) erros.push(`aresta[${i}]: ${p}="${a[p]}" nao existe`);
+      if (!byId.has(a[p])) erros.push(`edge[${i}]: ${p}="${a[p]}" does not exist`);
   for (const f of (m.bands || []))
-    for (const id of f.members) if (!byId.has(id)) erros.push(`faixa "${f.id}": membro "${id}" nao existe`);
+    for (const id of f.members) if (!byId.has(id)) erros.push(`band "${f.id}": member "${id}" does not exist`);
   for (const [i, nt] of (m.notes || []).entries())
-    if (nt.about !== undefined && !byId.has(nt.about)) erros.push(`nota[${i}]: sobre="${nt.about}" nao existe`);
+    if (nt.about !== undefined && !byId.has(nt.about)) erros.push(`note[${i}]: about="${nt.about}" does not exist`);
   return { erros, byId };
 }
 
 function facets(m, byId) {
   const erros = [], avisos = [];
-  const camadaDe = el => el.layer || 'both';
+  const layerOf = el => el.layer || 'both';
 
-  const temFilho = new Set();
-  for (const n of m.nodes) if (n.inside !== undefined) temFilho.add(n.inside);
+  const hasChild = new Set();
+  for (const n of m.nodes) if (n.inside !== undefined) hasChild.add(n.inside);
 
   for (const n of m.nodes) {
-    const layer = camadaDe(n);
+    const layer = layerOf(n);
 
     if (m.stage === 'logical') {
       if (layer === 'technical')
-        erros.push(`no "${n.id}": camada "tecnica" num modelo no estagio logico. ` +
-          `Infraestrutura sem capacidade so aparece quando a fase tecnica comeca — antes disso ela nao foi decidida.`);
+        erros.push(`node "${n.id}": layer "technical" in a model at the logical stage. ` +
+          `Infrastructure with no capability only shows up once the technical phase begins — before that it has not been decided.`);
       if (!n.logical)
-        erros.push(`no "${n.id}": sem casaco "logico" num modelo no estagio logico.`);
+        erros.push(`node "${n.id}": no "logical" facet in a model at the logical stage.`);
       if (n.technical)
-        erros.push(`no "${n.id}": casaco "tecnico" num modelo no estagio logico. ` +
-          `Nome de servico dito cedo demais vai para dossie.estacionamento (#15 §5), nao para o modelo — ` +
-          `se entrar aqui, contamina a vista logica e quebra A1.10 (um nivel de abstracao).`);
+        erros.push(`node "${n.id}": "technical" facet in a model at the logical stage. ` +
+          `A service name said too early goes to dossier.parking (#15 §5), not into the model — ` +
+          `if it lands here, it contaminates the logical view and breaks A1.10 (one level of abstraction).`);
     } else {
       if (!n.technical)
-        erros.push(`no "${n.id}": sem casaco "tecnico" num modelo no estagio tecnico.`);
+        erros.push(`node "${n.id}": no "technical" facet in a model at the technical stage.`);
       if (layer === 'both' && !n.logical)
-        erros.push(`no "${n.id}": camada "ambas" e sem casaco "logico". ` +
-          `Ou ele existe na vista logica e precisa do casaco, ou e infraestrutura e precisa de camada:"tecnica". ` +
-          `Deixar assim faria a capacidade sumir da projecao logica sem erro nenhum.`);
+        erros.push(`node "${n.id}": layer "both" but no "logical" facet. ` +
+          `Either it exists in the logical view and needs the facet, or it is infrastructure and needs layer:"technical". ` +
+          `Leaving it as is would make the capability vanish from the logical projection with no error at all.`);
       if (layer === 'technical' && n.logical)
-        erros.push(`no "${n.id}": camada "tecnica" mas tem casaco "logico" — o que ele afirma se contradiz.`);
+        erros.push(`node "${n.id}": layer "technical" but has a "logical" facet — what it asserts contradicts itself.`);
     }
 
-    // Um no que contem coisa tem de ser container NAS DUAS vistas. Um casaco
-    // folha sobre um no com filhos produziria um model@1 em que a folha e pai
-    // de alguem — e o motor desenharia o filho dentro de um icone.
-    if (temFilho.has(n.id)) {
+    // A node that contains something has to be a container in BOTH views. A leaf
+    // facet on a node with children would produce a model@1 where the leaf is
+    // someone's parent — and the engine would draw the child inside an icon.
+    if (hasChild.has(n.id)) {
       if (n.technical && !TECHNICAL_CONTAINERS.has(n.technical.kind))
-        erros.push(`no "${n.id}": contem outros nos, mas o casaco tecnico e "${n.technical.kind}", que e folha.`);
+        erros.push(`node "${n.id}": contains other nodes, but the technical facet is "${n.technical.kind}", which is a leaf.`);
       if (n.logical && !LOGICAL_CONTAINERS.has(n.logical.kind)) {
-        // So vale se algum descendente sobrevive na vista logica — senao o
-        // colapso passa por cima dele e ninguem fica dentro de nada.
-        const descendentesLogicos = m.nodes.some(o => {
-          if (camadaDe(o) === 'technical' || o.id === n.id) return false;
+        // Only counts if some descendant survives in the logical view — otherwise
+        // the collapse passes right over it and nobody ends up inside anything.
+        const logicalDescendants = m.nodes.some(o => {
+          if (layerOf(o) === 'technical' || o.id === n.id) return false;
           let c = o.inside;
           while (c !== undefined && byId.has(c)) { if (c === n.id) return true; c = byId.get(c).inside; }
           return false;
         });
-        if (descendentesLogicos)
-          erros.push(`no "${n.id}": contem capacidades, mas o casaco logico e "${n.logical.kind}". ` +
-            `Fronteira de responsabilidade e tipo "grupo" (#15 §6).`);
+        if (logicalDescendants)
+          erros.push(`node "${n.id}": contains capabilities, but the logical facet is "${n.logical.kind}". ` +
+            `A responsibility boundary is kind "group" (#15 §6).`);
       }
     }
   }
 
   for (const [i, a] of (m.edges || []).entries()) {
-    if (m.stage === 'logical' && camadaDe(a) === 'technical')
-      erros.push(`aresta[${i}]: camada "tecnica" num modelo no estagio logico.`);
-    if (camadaDe(a) === 'both') {
-      const pontas = [a.from, a.to].map(id => byId.get(id)).filter(Boolean);
-      for (const p of pontas)
-        if (camadaDe(p) === 'technical' && !avisos.some(x => x.includes(`"${p.id}"`)))
-          avisos.push(`aresta[${i}]: passa por "${p.id}", que so existe na vista tecnica — ` +
-            `na projecao logica ela sera CONTRAIDA atraves dele.`);
+    if (m.stage === 'logical' && layerOf(a) === 'technical')
+      erros.push(`edge[${i}]: layer "technical" in a model at the logical stage.`);
+    if (layerOf(a) === 'both') {
+      const ends = [a.from, a.to].map(id => byId.get(id)).filter(Boolean);
+      for (const p of ends)
+        if (layerOf(p) === 'technical' && !avisos.some(x => x.includes(`"${p.id}"`)))
+          avisos.push(`edge[${i}]: passes through "${p.id}", which only exists in the technical view — ` +
+            `in the logical projection it will be CONTRACTED through it.`);
     }
   }
 
-  // ------------------------------------------------- contracao ambigua
+  // ------------------------------------------------- ambiguous contraction
   //
-  // Um no que so a camada tecnica tem e atravessado pela projecao logica: a
-  // aresta `a -> [hub] -> b` vira `a -> b`. Enquanto o hub tem uma entrada OU
-  // uma saida, o pareamento e unico e a leitura e obvia. Com DUAS entradas e
-  // DUAS saidas, ele nao e mais um salto — e um cruzamento, e a contracao
-  // produziria as 4 combinacoes, quando so 2 foram afirmadas.
+  // A node only the technical layer has is crossed by the logical projection: the
+  // edge `a -> [hub] -> b` becomes `a -> b`. As long as the hub has one input OR
+  // one output, the pairing is unique and the reading is obvious. With TWO inputs
+  // and TWO outputs, it is no longer a single jump — it is a crossing, and the
+  // contraction would produce all 4 combinations, when only 2 were asserted.
   //
-  // Isso e o desenho mentindo, que e a falha que este mapa inteiro persegue.
-  // O conserto e do autor do modelo, e e barato: as arestas que nao carregam
-  // leitura logica levam `camada: "tecnica"` e somem da projecao.
+  // That is the drawing lying, which is the failure this whole map exists to hunt
+  // down. The fix belongs to the model's author, and it is cheap: the edges that
+  // carry no logical reading get `layer: "technical"` and vanish from the
+  // projection.
   for (const n of m.nodes) {
-    if (camadaDe(n) !== 'technical') continue;
-    const entram = (m.edges || []).filter(a => a.to === n.id && camadaDe(a) === 'both');
-    const saem = (m.edges || []).filter(a => a.from === n.id && camadaDe(a) === 'both');
-    if (entram.length > 1 && saem.length > 1)
-      erros.push(`no "${n.id}": so existe na vista tecnica e tem ${entram.length} entradas e ${saem.length} saidas ` +
-        `que atravessam para a vista logica. A contracao emitiria ${entram.length * saem.length} arestas logicas, ` +
-        `e so ${entram.length + saem.length} foram afirmadas — o desenho passaria a dizer que ` +
-        `"${entram[0].from}" fala com "${saem[1].to}" sem que ninguem tenha dito isso. ` +
-        `Marque com camada:"tecnica" as arestas que nao carregam leitura logica.`);
+    if (layerOf(n) !== 'technical') continue;
+    const incoming = (m.edges || []).filter(a => a.to === n.id && layerOf(a) === 'both');
+    const outgoing = (m.edges || []).filter(a => a.from === n.id && layerOf(a) === 'both');
+    if (incoming.length > 1 && outgoing.length > 1)
+      erros.push(`node "${n.id}": only exists in the technical view and has ${incoming.length} input(s) and ${outgoing.length} output(s) ` +
+        `that cross into the logical view. The contraction would emit ${incoming.length * outgoing.length} logical edges, ` +
+        `and only ${incoming.length + outgoing.length} were asserted — the drawing would end up saying that ` +
+        `"${incoming[0].from}" talks to "${outgoing[1].to}" without anyone having said so. ` +
+        `Mark the edges that carry no logical reading with layer:"technical".`);
   }
 
   return { erros, avisos };
@@ -155,67 +156,68 @@ function facets(m, byId) {
 function dossier(m) {
   const erros = [], avisos = [];
   const d = m.dossier;
-  if (!d) { avisos.push('sem dossie — a sessao seguinte retoma o desenho, mas nao a conversa.'); return { erros, avisos }; }
+  if (!d) { avisos.push('no dossier — the next session resumes the drawing, but not the conversation.'); return { erros, avisos }; }
 
   const cands = d.candidates || [];
   if (cands.length) {
-    const escolhidas = cands.filter(c => c.state === 'chosen');
-    if (escolhidas.length !== 1)
-      erros.push(`dossie.candidatas: ${escolhidas.length} escolhida(s) — tem de ser exatamente uma.`);
+    const chosen = cands.filter(c => c.state === 'chosen');
+    if (chosen.length !== 1)
+      erros.push(`dossier.candidates: ${chosen.length} chosen — has to be exactly one.`);
     if (cands.length < 2)
-      avisos.push('dossie.candidatas: uma so. O #15 poe piso 2 — se o espaco real tinha uma, o dossie devia dizer por que.');
+      avisos.push('dossier.candidates: only one. #15 sets a floor of 2 — if the real space only had one, the dossier should say why.');
     if (cands.length > 3)
-      avisos.push(`dossie.candidatas: ${cands.length}. O #15 poe teto 3.`);
-    // O invariante de distincao do #15 §3, virado checagem: tuplas iguais
-    // colapsam, e duas candidatas com a mesma tupla sao a mesma arquitetura com
-    // dois nomes — que e exatamente o "tres variacoes da mesma coisa" que o
-    // protocolo existe para impedir.
+      avisos.push(`dossier.candidates: ${cands.length}. #15 sets a ceiling of 3.`);
+    // #15 §3's distinction invariant, turned into a check: equal tuples collapse,
+    // and two candidates with the same tuple are the same architecture with two
+    // names — exactly the "three variations on the same thing" the protocol
+    // exists to prevent.
     for (let i = 0; i < cands.length; i++)
       for (let j = i + 1; j < cands.length; j++)
         if (JSON.stringify(cands[i].tuple) === JSON.stringify(cands[j].tuple))
-          erros.push(`dossie.candidatas: "${cands[i].name}" e "${cands[j].name}" tem a MESMA tupla E1-E5 — ` +
-            `nao sao candidatas distintas, sao a mesma arquitetura com dois nomes.`);
+          erros.push(`dossier.candidates: "${cands[i].name}" and "${cands[j].name}" have the SAME E1-E5 tuple — ` +
+            `they are not distinct candidates, they are the same architecture with two names.`);
   }
 
   const ids = new Set(m.nodes.map(n => n.id));
   for (const a of (d.findings || []))
-    if (a.target !== undefined && !ids.has(a.target)) erros.push(`dossie.achados: alvo "${a.target}" nao existe entre os nos.`);
+    if (a.target !== undefined && !ids.has(a.target)) erros.push(`dossier.findings: target "${a.target}" does not exist among the nodes.`);
   for (const e of (d.parking || []))
     if (e.capability !== undefined && !ids.has(e.capability))
-      erros.push(`dossie.estacionamento: capacidade "${e.capability}" nao existe entre os nos.`);
+      erros.push(`dossier.parking: capability "${e.capability}" does not exist among the nodes.`);
 
-  // Achado recusado que nao virou nota e a falha que o #15 §4 nomeia: sem diff
-  // contra IaC, achado ignorado vira diagrama que engana em silencio.
+  // A rejected finding that did not become a note is the failure #15 §4 names:
+  // with no diff against IaC, an ignored finding turns into a diagram that misleads
+  // in silence.
   for (const a of (d.findings || []).filter(x => x.state === 'rejected')) {
     if (!a.viaNote) {
-      erros.push(`dossie.achados: "${a.rule}" foi RECUSADO e nao aponta \`viaNota\`. ` +
-        `A recusa tem de virar marca no diagrama (#15 §4), senao o desenho engana calado.`);
+      erros.push(`dossier.findings: "${a.rule}" was REJECTED and does not point at \`viaNote\`. ` +
+        `The rejection has to become a mark on the diagram (#15 §4), or the drawing misleads in silence.`);
       continue;
     }
     const note = (m.notes || []).find(n => n.id === a.viaNote);
-    if (!note) erros.push(`dossie.achados: "${a.rule}" aponta viaNota="${a.viaNote}", que nao existe em notas.`);
+    if (!note) erros.push(`dossier.findings: "${a.rule}" points at viaNote="${a.viaNote}", which does not exist among the notes.`);
     else if (note.origin !== 'rejected-finding')
-      erros.push(`dossie.achados: "${a.rule}" aponta a nota "${a.viaNote}", que tem origem "${note.origin}" e nao "achado-recusado".`);
+      erros.push(`dossier.findings: "${a.rule}" points at note "${a.viaNote}", whose origin is "${note.origin}" and not "rejected-finding".`);
     else if ((note.layer || 'both') !== 'both')
-      erros.push(`dossie.achados: a nota "${a.viaNote}" so aparece na vista tecnica — a recusa some da vista logica, que e a que foi aprovada.`);
+      erros.push(`dossier.findings: note "${a.viaNote}" only appears in the technical view — the rejection vanishes from the logical view, which is the one that was approved.`);
   }
 
   if (d.agreement && d.agreement.candidate && !cands.some(c => c.id === d.agreement.candidate))
-    erros.push(`dossie.acordo: candidata "${d.agreement.candidate}" nao esta em dossie.candidatas.`);
+    erros.push(`dossier.agreement: candidate "${d.agreement.candidate}" is not in dossier.candidates.`);
 
   if (m.stage === 'technical' && !d.agreement)
-    erros.push('estagio "tecnica" sem dossie.acordo. A premissa 2 poe a aprovacao da vista logica ' +
-      'ENTRE as duas fases — elaborar tecnicamente sem ela e pular o coracao do produto.');
+    erros.push('stage "technical" with no dossier.agreement. Assumption 2 places approval of the logical view ' +
+      'BETWEEN the two phases — elaborating technically without it skips the heart of the product.');
 
   return { erros, avisos };
 }
 
 function validate(model) {
-  const deForma = againstSchema(model, SCHEMA, SCHEMA);
-  if (deForma.length) return { ok: false, fase: 'schema', erros: deForma, avisos: [] };
+  const schemaErrors = againstSchema(model, SCHEMA, SCHEMA);
+  if (schemaErrors.length) return { ok: false, fase: 'schema', erros: schemaErrors, avisos: [] };
 
-  const { erros: deRef, byId } = references(model);
-  if (deRef.length) return { ok: false, fase: 'references', erros: deRef, avisos: [] };
+  const { erros: refErrors, byId } = references(model);
+  if (refErrors.length) return { ok: false, fase: 'references', erros: refErrors, avisos: [] };
 
   const c = facets(model, byId);
   const d = dossier(model);

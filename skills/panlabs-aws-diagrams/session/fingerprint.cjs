@@ -1,48 +1,48 @@
 'use strict';
 /**
- * Impressoes — o que responde "o humano mexeu no arquivo?".
+ * Fingerprints — what answers "did the human touch the file?".
  *
- * Sao TRES impressoes, e a razao de serem tres e a pergunta do #14:
+ * There are THREE fingerprints, and the reason there are three is #14's question:
  *
- *   > O que acontece quando o humano editou o `.drawio` a mao entre as duas
- *   > sessoes — o modelo ainda vale? A skill detecta divergencia?
+ *   > What happens when the human edited the `.drawio` by hand between the two
+ *   > sessions — is the model still valid? Does the skill detect divergence?
  *
- * "Detectar divergencia" com um hash do arquivo inteiro nao serve, e isto e
- * MEDIDO em `tools/medir-fingerprint.cjs`, nao suposto: abrir e salvar no proprio
- * draw.io, sem tocar em nada, ja reescreve o XML. Hash de arquivo acusa um
- * arquivo intocado. E, pior, ele nao distingue mover uma caixa (inofensivo) de
- * apagar um servico (o modelo virou mentira).
+ * "Detecting divergence" with a hash of the whole file does not work, and this is
+ * MEASURED in `tests/check-fingerprint.cjs`, not assumed: opening and saving in
+ * draw.io itself, without touching anything, already rewrites the XML. A file hash
+ * flags an untouched file. And, worse, it does not distinguish moving a box
+ * (harmless) from deleting a service (the model became a lie).
  *
- *   impressao do DESENHO, semantica  — o que as celulas AFIRMAM: identidade da
- *                                      forma, rotulo, pai, extremos da aresta.
- *   impressao do DESENHO, aparencia  — como elas APARECEM: geometria, ordem z e
- *                                      todo o resto do style.
- *   impressao do ACORDO              — a projecao logica que foi aprovada.
+ *   DRAWING fingerprint, semantic    — what the cells ASSERT: shape identity,
+ *                                      label, parent, edge endpoints.
+ *   DRAWING fingerprint, appearance  — how they APPEAR: geometry, z-order and
+ *                                      everything else in the style.
+ *   AGREEMENT fingerprint            — the logical projection that was approved.
  *
- * As duas primeiras separam "mexeu" de "so ajeitou". A terceira e outra pergunta:
- * nao "o humano editou o arquivo", e "a elaboracao tecnica ainda serve o que foi
- * aprovado".
+ * The first two separate "touched" from "just tidied up". The third is a different
+ * question: not "did the human edit the file", but "does the technical elaboration
+ * still serve what was approved".
  *
- * A fronteira entre as duas primeiras nao e geometria contra o resto — e
- * AFIRMACAO contra APARENCIA, e a diferenca custou uma medicao: trocar a fonte ou
- * recolher um container nao mexe em coordenada nenhuma, e na primeira versao o
- * arquivo saia INTACTO, quer dizer, "regere a vontade" por cima do ajuste que
- * alguem fez a mao.
+ * The boundary between the first two is not geometry against everything else — it
+ * is ASSERTION against APPEARANCE, and the difference cost a measurement: changing
+ * the font or collapsing a container does not touch a single coordinate, and in the
+ * first version the file came out INTACT — meaning "regenerate at will" — over an
+ * adjustment someone made by hand.
  *
  * ---------------------------------------------------------------------------
- * COR E SEMANTICA NUM DIAGRAMA AWS.
+ * COLOR AND SEMANTICS IN AN AWS DIAGRAM.
  *
- * O reflexo e classificar cor como cosmetico. Medido no catalogo do #17, e
- * errado: `Public subnet` e `Private subnet` tem o MESMO `shape` e o MESMO
- * `grIcon` (`mxgraph.aws4.group` + `group_security_group`) e diferem SO no hex
- * (#7AA116 verde contra #00A4A6 turquesa). A fronteira publica/privada — que e
- * exatamente a que a checagem A4.2 da rubrica (#8) existe para proteger — mora
- * na cor e em nenhum outro lugar. Uma impressao que ignora cor deixa repintar
- * uma subnet privada de publica e ainda chama o arquivo de intacto.
+ * The reflex is to classify color as cosmetic. Measured against the #17 catalog,
+ * that is wrong: `Public subnet` and `Private subnet` have the SAME `shape` and the
+ * SAME `grIcon` (`mxgraph.aws4.group` + `group_security_group`) and differ ONLY in
+ * hex (green #7AA116 against turquoise #00A4A6). The public/private boundary — the
+ * exact one the rubric's A4.2 check (#8) exists to protect — lives in the color and
+ * nowhere else. A fingerprint that ignores color would let someone repaint a
+ * private subnet as public and still call the file untouched.
  *
- * Por isso a fatia semantica do style inclui `strokeColor` e `fillColor`. O
- * experimento de controle em `medir-fingerprint.cjs` prova que a fatia sem cor
- * deixa esse caso passar.
+ * That is why the semantic slice of the style includes `strokeColor` and
+ * `fillColor`. The control experiment in `tests/check-fingerprint.cjs` proves that
+ * the slice without color lets this case slip through.
  */
 
 const crypto = require('crypto');
@@ -51,7 +51,7 @@ const { esc, checkXml, stripGremlins } = require(path.join(__dirname, '..', 'eng
 
 const sha = s => 'sha256:' + crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 
-/** JSON com chaves em ordem — hash so vale se a serializacao for unica. */
+/** JSON with keys in order — the hash only holds if the serialization is unique. */
 function canonicalize(v) {
   if (v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
   if (Array.isArray(v)) return '[' + v.map(canonicalize).join(',') + ']';
@@ -59,7 +59,7 @@ function canonicalize(v) {
     .map(k => JSON.stringify(k) + ':' + canonicalize(v[k])).join(',') + '}';
 }
 
-// ------------------------------------------------------------- XML -> celulas
+// --------------------------------------------------------------- XML -> cells
 
 const UNESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'" };
 function unescape(s) {
@@ -70,31 +70,31 @@ function unescape(s) {
 }
 
 /**
- * Varredura de XML suficiente para `.drawio`. Nao e um parser geral: nao ha DTD,
- * namespace nem texto misto num mxfile. Precisa aguentar o que o codec do
- * proprio app escreve na volta, que difere do que o motor escreveu — ordem de
- * atributo, aspas, tag que fecha sozinha.
+ * XML sweep good enough for `.drawio`. Not a general parser: there is no DTD,
+ * namespace, or mixed text in an mxfile. It has to tolerate what the app's own
+ * codec writes back, which differs from what the engine wrote — attribute order,
+ * quoting, a tag that closes itself.
  */
 function sweep(xml) {
-  const raiz = { name: '#raiz', attrs: {}, filhos: [] };
-  const pilha = [raiz];
+  const root = { name: '#root', attrs: {}, children: [] };
+  const stack = [root];
   const re = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<\/([A-Za-z_][\w.-]*)\s*>|<([A-Za-z_][\w.-]*)((?:\s+[\w.:-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/g;
   let m;
   while ((m = re.exec(xml))) {
     if (m[0].startsWith('<!') || m[0].startsWith('<?')) continue;
-    if (m[1]) { if (pilha.length > 1) pilha.pop(); continue; }
+    if (m[1]) { if (stack.length > 1) stack.pop(); continue; }
     const attrs = {};
     for (const a of String(m[3] || '').matchAll(/([\w.:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
       attrs[a[1]] = unescape(a[2] !== undefined ? a[2] : a[3]);
-    const no = { name: m[2], attrs, filhos: [] };
-    pilha[pilha.length - 1].filhos.push(no);
-    if (!m[4]) pilha.push(no);
+    const node = { name: m[2], attrs, children: [] };
+    stack[stack.length - 1].children.push(node);
+    if (!m[4]) stack.push(node);
   }
-  return raiz;
+  return root;
 }
 
-function acharTodos(no, name, out = []) {
-  for (const f of no.filhos) { if (f.name === name) out.push(f); acharTodos(f, name, out); }
+function findAll(node, name, out = []) {
+  for (const f of node.children) { if (f.name === name) out.push(f); findAll(f, name, out); }
   return out;
 }
 
@@ -102,38 +102,38 @@ const PREFIX = 'panlabs';
 const SEAL_ID = 'panlabs-modelo';
 
 /**
- * Le as paginas de um `.drawio`. Cada pagina vira `{ id, nome, selo, celulas }`.
- * A celula do selo NAO entra em `celulas`: ela carrega a impressao do desenho, e
- * uma impressao que se inclui nunca fecha.
+ * Reads the pages of a `.drawio`. Each page becomes `{ id, name, seal, cells }`.
+ * The seal cell does NOT enter `cells`: it carries the drawing's own fingerprint,
+ * and a fingerprint that includes itself never settles.
  */
 function readPages(xml) {
-  const raiz = sweep(xml);
-  const mxfile = acharTodos(raiz, 'mxfile')[0];
+  const root = sweep(xml);
+  const mxfile = findAll(root, 'mxfile')[0];
   const pages = [];
 
-  for (const diagrama of acharTodos(raiz, 'diagram')) {
-    const model = acharTodos(diagrama, 'mxGraphModel')[0];
-    const celulas = [];
+  for (const diagram of findAll(root, 'diagram')) {
+    const model = findAll(diagram, 'mxGraphModel')[0];
+    const cells = [];
     let seal = null;
 
-    const container = model ? acharTodos(model, 'root')[0] : null;
-    for (const filho of (container ? container.filhos : [])) {
-      let id, valor, data = null, mx;
-      if (filho.name === 'object' || filho.name === 'UserObject') {
-        id = filho.attrs.id;
-        valor = filho.attrs.label;
-        data = filho.attrs;
-        mx = filho.filhos.find(f => f.name === 'mxCell');
-      } else if (filho.name === 'mxCell') {
-        id = filho.attrs.id; valor = filho.attrs.value; mx = filho;
+    const container = model ? findAll(model, 'root')[0] : null;
+    for (const child of (container ? container.children : [])) {
+      let id, value, data = null, mx;
+      if (child.name === 'object' || child.name === 'UserObject') {
+        id = child.attrs.id;
+        value = child.attrs.label;
+        data = child.attrs;
+        mx = child.children.find(f => f.name === 'mxCell');
+      } else if (child.name === 'mxCell') {
+        id = child.attrs.id; value = child.attrs.value; mx = child;
       } else continue;
       if (!mx) continue;
 
-      // O selo se identifica pelo id OU pelo atributo de esquema — e por mais
-      // nada. Aceitar qualquer atributo comecado em "panlabs" abriria um jeito
-      // de a celula SUMIR das impressoes: bastava batizar um atributo qualquer
-      // de `panlabsX` e a edicao daquela celula passaria despercebida. Num
-      // detector de divergencia isso nao e detalhe.
+      // The seal identifies itself by id OR by the schema attribute — and nothing
+      // else. Accepting any attribute starting with "panlabs" would open a way for
+      // a cell to VANISH from the fingerprints: naming any attribute `panlabsX`
+      // would let that cell's edit slip by unnoticed. In a divergence detector
+      // that is not a detail.
       if (id === SEAL_ID || (data && data.panlabsSchema !== undefined)) {
         seal = {};
         for (const [k, v] of Object.entries(data || {})) if (k.startsWith(PREFIX)) seal[k] = v;
@@ -141,32 +141,33 @@ function readPages(xml) {
       }
       if (id === '0' || id === '1') continue;
 
-      const geo = mx.filhos.find(f => f.name === 'mxGeometry');
-      const pontos = geo ? acharTodos(geo, 'mxPoint').map(p => ({ x: +p.attrs.x || 0, y: +p.attrs.y || 0 })) : [];
-      celulas.push({
+      const geo = mx.children.find(f => f.name === 'mxGeometry');
+      const points = geo ? findAll(geo, 'mxPoint').map(p => ({ x: +p.attrs.x || 0, y: +p.attrs.y || 0 })) : [];
+      cells.push({
         id,
-        valor: valor === undefined ? '' : valor,
+        value: value === undefined ? '' : value,
         style: mx.attrs.style || '',
         parent: mx.attrs.parent,
         from: mx.attrs.source, to: mx.attrs.target,
         edge: mx.attrs.edge === '1',
-        visivel: mx.attrs.visible !== '0',
-        // `collapsed` nao e style nem geometria, e um container recolhido esconde
-        // o que ele tem dentro. Fica na aparencia: quem recolheu quer o desenho
-        // assim, e regerar por cima desfaz.
-        colapsado: mx.attrs.collapsed === '1',
+        visible: mx.attrs.visible !== '0',
+        // `collapsed` is neither style nor geometry, and a collapsed container hides
+        // what is inside it. It stays in the appearance fingerprint: whoever
+        // collapsed it wants the drawing this way, and regenerating over it would
+        // undo that.
+        collapsed: mx.attrs.collapsed === '1',
         geo: geo ? { x: +geo.attrs.x || 0, y: +geo.attrs.y || 0, w: +geo.attrs.width || 0, h: +geo.attrs.height || 0 } : null,
-        pontos,
+        points,
       });
     }
-    pages.push({ id: diagrama.attrs.id, name: diagrama.attrs.name, seal, celulas });
+    pages.push({ id: diagram.attrs.id, name: diagram.attrs.name, seal, cells });
   }
   return { host: mxfile ? mxfile.attrs.host : undefined, pages };
 }
 
-// ------------------------------------------------------------- as impressoes
+// ------------------------------------------------------------- the fingerprints
 
-const chavesDeStyle = s => {
+const styleKeys = s => {
   const out = {};
   for (const p of String(s).split(';')) {
     if (!p) continue;
@@ -176,122 +177,124 @@ const chavesDeStyle = s => {
   return out;
 };
 
-/** O que o style AFIRMA — identidade da forma e a cor, que em AWS carrega fronteira. */
+/** What the style ASSERTS — shape identity and color, which in AWS carries the boundary. */
 const SEMANTIC_VERTEX = ['shape', 'resIcon', 'grIcon', 'container', 'strokeColor', 'fillColor', 'dashed'];
-/** Numa aresta a cor e decoracao; a ponta e afirmacao de sentido. */
+/** On an edge, color is decoration; the arrowhead is an assertion of direction. */
 const SEMANTIC_EDGE = ['startArrow', 'endArrow', 'startFill', 'endFill'];
 
-function fatiaSemantica(c, comCor = true) {
-  const k = chavesDeStyle(c.style);
-  const chaves = (c.edge ? SEMANTIC_EDGE : SEMANTIC_VERTEX)
-    .filter(x => comCor || !/Color$/.test(x));
-  const forma = {};
-  for (const x of chaves) if (k[x] !== undefined) forma[x] = k[x];
+function semanticSlice(c, withColor = true) {
+  const k = styleKeys(c.style);
+  const keys = (c.edge ? SEMANTIC_EDGE : SEMANTIC_VERTEX)
+    .filter(x => withColor || !/Color$/.test(x));
+  const shape = {};
+  for (const x of keys) if (k[x] !== undefined) shape[x] = k[x];
   return {
-    id: c.id, valor: c.valor, parent: c.parent, edge: c.edge,
-    from: c.from, to: c.to, visivel: c.visivel, forma,
+    id: c.id, value: c.value, parent: c.parent, edge: c.edge,
+    from: c.from, to: c.to, visible: c.visible, shape,
   };
 }
 
 /**
- * Tudo que NAO e afirmacao: geometria, ordem no documento (que e a ordem z) e
- * todo o resto do style.
+ * Everything that is NOT assertion: geometry, order in the document (which is the
+ * z-order) and everything else in the style.
  *
- * A primeira versao chamava isto de "impressao geometrica" e so olhava x/y/w/h.
- * A medicao de `medir-fingerprint.cjs` derrubou: quem troca a fonte ou recolhe um
- * container nao mexe em coordenada nenhuma, e o arquivo saia como INTACTO — quer
- * dizer, "pode regerar a vontade", jogando fora o ajuste do humano em silencio.
+ * The first version called this the "geometric fingerprint" and only looked at
+ * x/y/w/h. The measurement in `tests/check-fingerprint.cjs` brought that down:
+ * changing the font or collapsing a container does not touch a single coordinate,
+ * and the file came out as INTACT — meaning "regenerate at will" — silently
+ * discarding the human's adjustment.
  *
- * A fronteira certa nao e geometria contra o resto. E **o que a celula AFIRMA**
- * contra **como ela APARECE**. Duas perguntas diferentes, dois hashes:
- * a afirmacao mudou -> o modelo virou mentira; so a aparencia mudou -> alguem
- * ajeitou o desenho e regerar apaga o trabalho dele.
+ * The right boundary is not geometry against everything else. It is **what the
+ * cell ASSERTS** against **how it APPEARS**. Two different questions, two hashes:
+ * the assertion changed -> the model became a lie; only the appearance changed ->
+ * someone tidied the drawing and regenerating erases their work.
  */
 function appearanceSlice(c, i) {
   const r = n => Math.round(n);
-  const k = chavesDeStyle(c.style);
-  const semanticas = new Set(c.edge ? SEMANTIC_EDGE : SEMANTIC_VERTEX);
-  const resto = {};
-  for (const [key, v] of Object.entries(k)) if (!semanticas.has(key)) resto[key] = v;
+  const k = styleKeys(c.style);
+  const semanticKeys = new Set(c.edge ? SEMANTIC_EDGE : SEMANTIC_VERTEX);
+  const rest = {};
+  for (const [key, v] of Object.entries(k)) if (!semanticKeys.has(key)) rest[key] = v;
   return {
     id: c.id,
-    // ordem z = posicao ENTRE IRMAOS, nao indice na lista plana. Ver
-    // `impressaoDeAparencia`, que e quem calcula o numero.
-    ordemZ: i,
+    // z-order = position AMONG SIBLINGS, not index in the flat list. See
+    // `appearanceFingerprint`, which is what computes the number.
+    zOrder: i,
     parent: c.parent === undefined || c.parent === null ? null : String(c.parent),
-    colapsado: !!c.colapsado,
+    collapsed: !!c.collapsed,
     geo: c.geo ? { x: r(c.geo.x), y: r(c.geo.y), w: r(c.geo.w), h: r(c.geo.h) } : null,
-    pontos: c.pontos.map(p => ({ x: r(p.x), y: r(p.y) })),
-    resto,
+    points: c.points.map(p => ({ x: r(p.x), y: r(p.y) })),
+    rest,
   };
 }
 
 const sortBy = cs => [...cs].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-function impressaoSemantica(celulas, opts = {}) {
-  return sha(canonicalize(sortBy(celulas).map(c => fatiaSemantica(c, opts.comCor !== false))));
+function semanticFingerprint(cells, opts = {}) {
+  return sha(canonicalize(sortBy(cells).map(c => semanticSlice(c, opts.withColor !== false))));
 }
 
 /**
- * A ordem do documento e ordem z, entao ela entra ANTES da ordenacao por id.
+ * Document order is z-order, so it enters BEFORE sorting by id.
  *
- * ⚠️ E a ordem que conta e ENTRE IRMAOS, nao o indice na lista plana — corrigido
- * na recertificacao do #23, com medicao.
+ * WARNING: the order that counts is AMONG SIBLINGS, not the index in the flat
+ * list — fixed in the #23 recertification, with measurement.
  *
- * No mxGraph z-order E a ordem dos filhos dentro do pai: quem vem depois na lista
- * de filhos daquele pai fica por cima. O indice absoluto na serializacao e outra
- * coisa — e a ordem em que o gerador escreveu as celulas no arquivo, que pode
- * mudar sem que nada fique por cima de nada.
+ * In mxGraph the z-order IS the order of children inside their parent: whoever
+ * comes later in that parent's child list sits on top. The absolute index in the
+ * serialization is a different thing — it is the order in which the generator
+ * wrote the cells to the file, which can change without anything ending up on top
+ * of anything else.
  *
- * Enquanto o motor tinha um caminho so, os dois numeros andavam juntos e a
- * diferenca nao aparecia. Com o caminho multi-conta do #12, o motor emite por
- * blocos (rotulos de OU, depois contas, depois arestas, depois habilitadores) e
- * o codec do proprio draw.io reescreve em profundidade — MEDIDO: abrir e salvar
- * a vista tecnica de tres contas troca 22 posicoes na lista plana e ZERO na
- * ordem de irmaos, em todos os 7 pais. Com o indice absoluto, um arquivo que
- * ninguem tocou lia como `remanejado`, que e a skill avisando "regerar apaga o
- * seu ajuste" sobre um ajuste que nao existe.
+ * While the engine had a single path, the two numbers moved together and the
+ * difference did not show. With the multi-account path from #12, the engine emits
+ * in blocks (OU labels, then accounts, then edges, then enablers) and draw.io's own
+ * codec rewrites depth-first — MEASURED: opening and saving the three-account
+ * technical view swaps 22 positions in the flat list and ZERO in sibling order,
+ * across all 7 parents. With the absolute index, a file nobody touched read as
+ * `moved`, which is the skill warning "regenerating erases your adjustment" over an
+ * adjustment that does not exist.
  *
- * O caso de controle continua guardado: `check-fingerprint.cjs` move uma celula
- * para outra posicao ENTRE IRMAOS e exige `remanejado`.
+ * The control case is still kept: `tests/check-fingerprint.cjs` moves a cell to
+ * another position AMONG SIBLINGS and requires `moved`.
  */
-function appearanceFingerprint(celulas) {
-  const entreIrmaos = new Map();
-  const comOrdem = celulas.map(c => {
+function appearanceFingerprint(cells) {
+  const siblingIndex = new Map();
+  const withOrder = cells.map(c => {
     const key = c.parent === undefined || c.parent === null ? '?' : String(c.parent);
-    const n = entreIrmaos.get(key) || 0;
-    entreIrmaos.set(key, n + 1);
+    const n = siblingIndex.get(key) || 0;
+    siblingIndex.set(key, n + 1);
     return { c, i: n };
   });
-  comOrdem.sort((a, b) => a.c.id < b.c.id ? -1 : a.c.id > b.c.id ? 1 : 0);
-  return sha(canonicalize(comOrdem.map(({ c, i }) => appearanceSlice(c, i))));
+  withOrder.sort((a, b) => a.c.id < b.c.id ? -1 : a.c.id > b.c.id ? 1 : 0);
+  return sha(canonicalize(withOrder.map(({ c, i }) => appearanceSlice(c, i))));
 }
 
 /**
- * REESCREVER O SELO DE TODA PAGINA — um lugar so, porque sao duas operacoes com
- * a mesma mecanica e o mesmo invariante.
+ * REWRITE THE SEAL ON EVERY PAGE — a single place, because these are two
+ * operations with the same mechanics and the same invariant.
  *
- * `gravar.selar` troca a celula que o motor emitiu pelo selo da sessao;
- * `publicar.publicar` troca o selo da sessao pelo selo podado. As duas andam
- * pelas mesmas ocorrencias, contam as mesmas paginas e cobram a mesma igualdade
- * no fim. Tinham a mesma regex escrita tres vezes, ao lado de um `ID_SELO`
- * importado e nao usado: renomear a constante deixaria as duas casando com nada
- * e a poda vira no-op silencioso ate estourar na contagem.
+ * `save.sealInto` swaps the cell the engine emitted for the session seal;
+ * `publish.publish` swaps the session seal for the pruned seal. Both walk the same
+ * occurrences, count the same pages and demand the same equality at the end. They
+ * had the same regex written three times, next to an imported and unused
+ * `SEAL_ID`: renaming the constant would leave both matching nothing, and the
+ * pruning would turn into a silent no-op until it blew up in the count.
  *
- * Aqui a regex NASCE do `ID_SELO`, entao renomear quebra alto.
+ * Here the regex is BUILT FROM `SEAL_ID`, so renaming it breaks loudly.
  *
  * @param {string} xml
- * @param {(pagina, i) => object} faz  atributos do selo daquela pagina
+ * @param {(page, i) => object} make  that page's seal attributes
  * @returns {string}
  */
-function reescreverSelos(xml, faz) {
+function reescreverSelos(xml, make) {
   const { pages } = readPages(xml);
-  if (!pages.length) throw new Error('XML sem pagina nenhuma');
+  if (!pages.length) throw new Error('XML with no page at all');
   const re = new RegExp(`[ \\t]*<object id="${SEAL_ID}"[\\s\\S]*?</object>\\n?`, 'g');
   let i = 0;
   const output = xml.replace(re, () => {
     const p = pages[i] || pages[pages.length - 1];
-    const attrs = Object.entries(faz(p, i))
+    const attrs = Object.entries(make(p, i))
       .filter(([, v]) => v !== undefined && v !== null)
       .map(([k, v]) => `${k}="${esc(stripGremlins(v))}"`).join(' ');
     i += 1;
@@ -301,80 +304,80 @@ function reescreverSelos(xml, faz) {
       `          </mxCell>\n` +
       `        </object>\n`;
   });
-  if (i === 0) throw new Error(`o XML nao trouxe nenhuma celula ${SEAL_ID} para trocar`);
+  if (i === 0) throw new Error(`the XML did not carry a single ${SEAL_ID} cell to swap`);
   if (i !== pages.length)
-    throw new Error(`o XML tem ${pages.length} pagina(s) mas ${i} celula(s) ${SEAL_ID} — ` +
-      'alguma pagina ficou sem selo');
-  const erros = checkXml(output);
-  if (erros.length) { const e = new Error('a reescrita do selo produziu XML mal formado'); e.erros = erros; throw e; }
+    throw new Error(`the XML has ${pages.length} page(s) but ${i} ${SEAL_ID} cell(s) — ` +
+      'some page was left without a seal');
+  const errors = checkXml(output);
+  if (errors.length) { const e = new Error('rewriting the seal produced malformed XML'); e.erros = errors; throw e; }
   return { xml: output, pages };
 }
 
-/** A impressao que a aprovacao pendura: o recorte do acordo, canonizado. */
-const impressaoDoAcordo = snapshot => sha(canonicalize(snapshot));
+/** The fingerprint the approval hangs onto: the agreement slice, canonicalized. */
+const agreementFingerprint = snapshot => sha(canonicalize(snapshot));
 
-// --------------------------------------------------------------- a diferenca
+// ----------------------------------------------------------------- the difference
 
 /**
- * Diferenca celula a celula. Existe porque "divergente" sozinho nao e acionavel:
- * a regra do #15 e *relata, propoe, nunca conserta calado*, e relatar exige
- * dizer O QUE mudou. Como toda celula que o motor emite tem o id de um elemento
- * do modelo, a diferenca sai no vocabulario do modelo, nao no do XML.
+ * Cell-by-cell difference. It exists because "divergent" alone is not actionable:
+ * #15's rule is *report, propose, never fix in silence*, and reporting requires
+ * saying WHAT changed. Since every cell the engine emits carries the id of a model
+ * element, the difference comes out in the model's vocabulary, not the XML's.
  */
-function diferenca(antes, depois) {
-  const a = new Map(antes.map(c => [c.id, c]));
-  const d = new Map(depois.map(c => [c.id, c]));
+function difference(before, after) {
+  const beforeMap = new Map(before.map(c => [c.id, c]));
+  const afterMap = new Map(after.map(c => [c.id, c]));
   const findings = [];
 
-  for (const [id, c] of a)
-    if (!d.has(id)) findings.push({ kind: 'sumiu', id, o: c.edge ? 'edge' : 'no', era: c.valor });
+  for (const [id, c] of beforeMap)
+    if (!afterMap.has(id)) findings.push({ kind: 'gone', id, entity: c.edge ? 'edge' : 'node', was: c.value });
 
-  for (const [id, c] of d) {
-    if (!a.has(id)) { findings.push({ kind: 'apareceu', id, o: c.edge ? 'edge' : 'no', virou: c.valor }); continue; }
-    const antiga = a.get(id);
-    const fa = fatiaSemantica(antiga), fd = fatiaSemantica(c);
-    if (fa.valor !== fd.valor) findings.push({ kind: 'label', id, era: fa.valor, virou: fd.valor });
-    if (fa.parent !== fd.parent) findings.push({ kind: 'mudou-de-pai', id, era: fa.parent, virou: fd.parent });
+  for (const [id, c] of afterMap) {
+    if (!beforeMap.has(id)) { findings.push({ kind: 'appeared', id, entity: c.edge ? 'edge' : 'node', became: c.value }); continue; }
+    const previous = beforeMap.get(id);
+    const fa = semanticSlice(previous), fd = semanticSlice(c);
+    if (fa.value !== fd.value) findings.push({ kind: 'label', id, was: fa.value, became: fd.value });
+    if (fa.parent !== fd.parent) findings.push({ kind: 'reparented', id, was: fa.parent, became: fd.parent });
     if (fa.from !== fd.from || fa.to !== fd.to)
-      findings.push({ kind: 'extremos', id, era: `${fa.from}->${fa.to}`, virou: `${fd.from}->${fd.to}` });
-    if (fa.visivel !== fd.visivel) findings.push({ kind: 'visibilidade', id, era: fa.visivel, virou: fd.visivel });
-    if (canonicalize(fa.forma) !== canonicalize(fd.forma))
-      findings.push({ kind: 'forma', id, era: canonicalize(fa.forma), virou: canonicalize(fd.forma) });
+      findings.push({ kind: 'endpoints', id, was: `${fa.from}->${fa.to}`, became: `${fd.from}->${fd.to}` });
+    if (fa.visible !== fd.visible) findings.push({ kind: 'visibility', id, was: fa.visible, became: fd.visible });
+    if (canonicalize(fa.shape) !== canonicalize(fd.shape))
+      findings.push({ kind: 'shape', id, was: canonicalize(fa.shape), became: canonicalize(fd.shape) });
   }
   return findings;
 }
 
 /**
- * O que a divergencia CUSTA de conserto. A classificacao nao conserta nada — ela
- * diz se o modelo tem onde guardar o que o humano desenhou.
+ * What the divergence COSTS to fix. The classification does not fix anything — it
+ * says whether the model has somewhere to hold what the human drew.
  *
- * `absorvivel`: existe campo no `session@1` que expressa a mudanca. A skill pode
- *               propor a absorcao — proximo passo, uma confirmacao.
- * `opaca`:      o humano desenhou algo que o modelo nao sabe dizer. Nao ha o que
- *               absorver; ou ele descreve o que fez, ou o desenho e a verdade e
- *               o modelo foi abandonado.
+ * `absorbable`: a field exists in `session@1` that expresses the change. The skill
+ *               can propose absorbing it — next step, a confirmation.
+ * `opaque`:     the human drew something the model has no way to say. There is
+ *               nothing to absorb; either they describe what they did, or the
+ *               drawing is the truth and the model was abandoned.
  */
 function classify(findings) {
   const WHERE = {
-    label: 'campo `rotulo`',
-    sumiu: 'tirar o elemento do modelo',
-    apareceu: 'no novo — mas a skill nao sabe QUE capacidade ele serve; absorver custa uma pergunta',
-    'mudou-de-pai': 'campo `dentro`',
-    extremos: 'campos `de` / `para`',
+    label: 'field `label`',
+    gone: 'remove the element from the model',
+    appeared: 'new node — but the skill does not know WHAT capability it serves; absorbing costs a question',
+    reparented: 'field `inside`',
+    endpoints: 'fields `from` / `to`',
   };
   return findings.map(a => {
-    let onde = WHERE[a.kind] || null;
-    // Trocar o icone e expressavel: e outro `servico` do catalogo. Trocar o
-    // style para algo que nao carrega icone nenhum nao e — o modelo nao tem
-    // vocabulario para "uma caixa que o usuario desenhou do jeito dele".
-    if (a.kind === 'forma' && /Icon/.test(String(a.virou))) onde = 'campo `servico` ou `tipo`';
-    return { ...a, classe: onde ? 'absorvivel' : 'opaca', onde };
+    let where = WHERE[a.kind] || null;
+    // Swapping the icon is expressible: it is another catalog `service`. Swapping
+    // the style for something with no icon at all is not — the model has no
+    // vocabulary for "a box the user drew their own way".
+    if (a.kind === 'shape' && /Icon/.test(String(a.became))) where = 'field `service` or `kind`';
+    return { ...a, category: where ? 'absorbable' : 'opaque', where };
   });
 }
 
 module.exports = {
-  sha, canonicalize, sweep, acharTodos, readPages, unescape,
-  impressaoSemantica, appearanceFingerprint, impressaoDoAcordo,
-  fatiaSemantica, appearanceSlice, diferenca, classify, chavesDeStyle,
+  sha, canonicalize, sweep, findAll, readPages, unescape,
+  semanticFingerprint, appearanceFingerprint, agreementFingerprint,
+  semanticSlice, appearanceSlice, difference, classify, styleKeys,
   SEAL_ID, PREFIX, reescreverSelos,
 };

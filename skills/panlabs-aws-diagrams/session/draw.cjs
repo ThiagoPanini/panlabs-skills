@@ -25,7 +25,7 @@ const { dossierWarning } = require('./publish.cjs');
 const { generate } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
 
 async function draw(session, view, opts = {}) {
-  const { model, trilha } = project(session, view);
+  const { model, trail } = project(session, view);
   const r = await generate(model, opts);
   const xml = sealInto(r.xml, session, view, { engine: opts.engine });
   // A one-line warning, in the style of #16: it warns, never blocks, and names
@@ -33,7 +33,7 @@ async function draw(session, view, opts = {}) {
   // the CLI's job.
   const warning = dossierWarning(session);
   if (warning) r.relatorio.avisos.push(warning);
-  return { xml, model, trilha, relatorio: r.relatorio, caminho: r.caminho, tema: r.tema };
+  return { xml, model, trail, relatorio: r.relatorio, caminho: r.caminho, tema: r.tema };
 }
 
 module.exports = { draw };

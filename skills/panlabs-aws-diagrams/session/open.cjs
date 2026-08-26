@@ -26,7 +26,7 @@
  * block that fires for nothing is a block the user learns to ignore.
  */
 
-const { readPages, impressaoSemantica, appearanceFingerprint, diferenca, classify } = require('./fingerprint.cjs');
+const { readPages, semanticFingerprint, appearanceFingerprint, difference, classify } = require('./fingerprint.cjs');
 const { SEAL_SCHEMA } = require('./save.cjs');
 const { PUBLISHED_SCHEMA } = require('./publish.cjs');
 
@@ -75,7 +75,7 @@ function open(xml) {
   // a page from ANOTHER file in here — which is information, not an error.
   const copies = [...new Set(sealed.map(p => p.seal.panlabsSessao))];
   const copyConflict = copies.length > 1
-    ? { quantas: copies.length, pages: sealed.map(p => ({ page: p.id, view: p.seal.panlabsVista })) }
+    ? { count: copies.length, pages: sealed.map(p => ({ page: p.id, view: p.seal.panlabsVista })) }
     : null;
 
   let session = null;
@@ -85,16 +85,16 @@ function open(xml) {
 
   const analysed = pages.map(p => {
     if (!p.seal || !p.seal.panlabsSchema)
-      return { ...p, view: null, state: 'sem-selo', because: 'page with no seal — added by hand, or ours with the seal deleted' };
-    const semNow = impressaoSemantica(p.celulas);
-    const appNow = appearanceFingerprint(p.celulas);
-    const semMatches = semNow === p.seal.panlabsSemantica;
-    const appMatches = appNow === p.seal.panlabsAparencia;
+      return { ...p, view: null, state: 'no-seal', because: 'page with no seal — added by hand, or ours with the seal deleted' };
+    const semanticNow = semanticFingerprint(p.cells);
+    const appearanceNow = appearanceFingerprint(p.cells);
+    const semanticMatches = semanticNow === p.seal.panlabsSemantica;
+    const appearanceMatches = appearanceNow === p.seal.panlabsAparencia;
     return {
       ...p,
       view: p.seal.panlabsVista,
-      state: !semMatches ? 'divergente' : appMatches ? 'intacto' : 'remanejado',
-      impressoes: { semAgora: semNow, apaAgora: appNow, semSelada: p.seal.panlabsSemantica, apaSelada: p.seal.panlabsAparencia },
+      state: !semanticMatches ? 'divergent' : appearanceMatches ? 'intact' : 'moved',
+      fingerprints: { semanticNow, appearanceNow, semanticSealed: p.seal.panlabsSemantica, appearanceSealed: p.seal.panlabsAparencia },
       engine: p.seal.panlabsMotor,
     };
   });
@@ -112,10 +112,10 @@ function open(xml) {
  */
 function canRegenerate(session, view) {
   if (view === 'technical' && session.stage !== 'technical')
-    return { pode: false, because: 'the page says it is the technical view, but the sealed model is at the logical stage — ' +
+    return { can: false, because: 'the page says it is the technical view, but the sealed model is at the logical stage — ' +
       'the seal and the pages did not come from the same save.' };
-  if (!view) return { pode: false, because: 'the page does not say which view it is.' };
-  return { pode: true };
+  if (!view) return { can: false, because: 'the page does not say which view it is.' };
+  return { can: true };
 }
 
 /**
@@ -134,16 +134,16 @@ function canRegenerate(session, view) {
  * explainable rather than mysterious.
  */
 function differ(page, referenceCells) {
-  const findings = classify(diferenca(referenceCells, page.celulas));
+  const findings = classify(difference(referenceCells, page.cells));
   const only = t => findings.filter(a => a.kind === t).length;
   return {
     findings,
-    resumo: {
-      sumiram: only('sumiu'), apareceram: only('apareceu'), rotulos: only('label'),
-      pais: only('mudou-de-pai'), formas: only('forma'), extremos: only('extremos'),
+    summary: {
+      gone: only('gone'), appeared: only('appeared'), labels: only('label'),
+      reparented: only('reparented'), shapes: only('shape'), endpoints: only('endpoints'),
     },
-    absorviveis: findings.filter(a => a.classe === 'absorvivel').length,
-    opacas: findings.filter(a => a.classe === 'opaca').length,
+    absorbable: findings.filter(a => a.category === 'absorbable').length,
+    opaque: findings.filter(a => a.category === 'opaque').length,
   };
 }
 
@@ -158,18 +158,18 @@ function differ(page, referenceCells) {
  */
 function policy(state) {
   switch (state) {
-    case 'intacto':
-      return { glifo: '✓', regerarEhSeguro: true, bloqueia: false,
-        diga: 'the drawing is what the model produces. Carrying on.' };
-    case 'remanejado':
-      return { glifo: '~', regerarEhSeguro: true, bloqueia: false, avisa: true,
-        diga: 'you moved things in this drawing. The model still holds, but regenerating restores the engine layout and loses your adjustment — confirm first.' };
-    case 'divergente':
-      return { glifo: '✗', regerarEhSeguro: false, bloqueia: true,
-        diga: 'the drawing asserts an architecture the model does not. I will not regenerate over it: I would erase your edit, and I do not know which of the two versions you call true.' };
+    case 'intact':
+      return { glyph: '✓', safeToRegenerate: true, blocks: false,
+        say: 'the drawing is what the model produces. Carrying on.' };
+    case 'moved':
+      return { glyph: '~', safeToRegenerate: true, blocks: false, warn: true,
+        say: 'you moved things in this drawing. The model still holds, but regenerating restores the engine layout and loses your adjustment — confirm first.' };
+    case 'divergent':
+      return { glyph: '✗', safeToRegenerate: false, blocks: true,
+        say: 'the drawing asserts an architecture the model does not. I will not regenerate over it: I would erase your edit, and I do not know which of the two versions you call true.' };
     default:
-      return { glifo: '?', regerarEhSeguro: false, bloqueia: true,
-        diga: 'page with no seal — I do not know what it asserts nor who drew it.' };
+      return { glyph: '?', safeToRegenerate: false, blocks: true,
+        say: 'page with no seal — I do not know what it asserts nor who drew it.' };
   }
 }
 

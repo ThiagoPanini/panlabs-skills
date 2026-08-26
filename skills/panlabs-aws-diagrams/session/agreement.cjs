@@ -18,18 +18,18 @@
  * model serves 11" — and not as hash against hash.
  */
 
-const { project, recorteDoAcordo } = require('./project.cjs');
-const { impressaoDoAcordo, canonicalize } = require('./fingerprint.cjs');
+const { project, agreementSlice } = require('./project.cjs');
+const { agreementFingerprint, canonicalize } = require('./fingerprint.cjs');
 
 /** Seals the approval into the dossier. Changes nothing else in the model. */
 function approve(session, who = {}) {
   const { model } = project(session, 'logical');
-  const snapshot = recorteDoAcordo(model);
+  const snapshot = agreementSlice(model);
   const output = JSON.parse(JSON.stringify(session));
   output.dossier = output.dossier || {};
   output.dossier.agreement = {
     view: 'logical',
-    fingerprint: impressaoDoAcordo(snapshot),
+    fingerprint: agreementFingerprint(snapshot),
     snapshot,
     ...(who.at ? { at: who.at } : {}),
     ...(who.by ? { by: who.by } : {}),
@@ -51,8 +51,8 @@ function check(session) {
   if (!agreement) return { ok: false, motivo: 'no agreement', diferencas: [] };
 
   const { model } = project(session, 'logical');
-  const now = recorteDoAcordo(model);
-  const fingerprint = impressaoDoAcordo(now);
+  const now = agreementSlice(model);
+  const fingerprint = agreementFingerprint(now);
   if (fingerprint === agreement.fingerprint) return { ok: true, fingerprint, diferencas: [] };
 
   return { ok: false, motivo: "today's logical projection differs from the approved one", fingerprint,

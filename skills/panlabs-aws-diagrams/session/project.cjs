@@ -1,189 +1,192 @@
 'use strict';
 /**
- * Projecao — `session@1` + vista  ->  `model@1` (o que o motor do #11 come).
+ * Projection — `session@1` + view  ->  `model@1` (what the #11 engine eats).
  *
- * Este arquivo e a resposta inteira a primeira pergunta do #14 ("um IR ou
- * dois?"). O ticket enunciou o trade-off como *rastreabilidade vs simplicidade*:
- * dois modelos ligados por mapeamento explicito rastreiam melhor; um modelo so e
- * mais simples. **O trade-off e falso**, e a razao esta aqui dentro:
+ * This file is the entire answer to #14's first question ("one IR or two?"). The
+ * ticket stated the trade-off as *traceability vs simplicity*: two models linked by
+ * an explicit mapping trace better; a single model is simpler. **The trade-off is
+ * false**, and the reason is in here:
  *
- *   com um IR so, a rastreabilidade nao e uma tabela de-para que alguem mantem —
- *   e uma FUNCAO. `projetar(tecnico, 'logica')` reconstroi a vista logica a
- *   partir do modelo tecnico, e comparar o resultado com o que foi aprovado e
- *   uma igualdade de strings.
+ *   with a single IR, traceability is not a lookup table someone maintains — it is
+ *   a FUNCTION. `project(technical, 'logical')` reconstructs the logical view from
+ *   the technical model, and comparing the result with what was approved is a
+ *   string equality.
  *
- * Com dois modelos, a mesma pergunta ("o que estou desenhando ainda e o que voce
- * aprovou?") exige que o mapeamento esteja correto — e nada garante isso. Com um
- * modelo, a pergunta se responde sozinha.
+ * With two models, the same question ("is what I am drawing still what you
+ * approved?") requires the mapping to be correct — and nothing guarantees that.
+ * With one model, the question answers itself.
  *
- * Duas mecanicas fazem a projecao funcionar:
+ * Two mechanics make the projection work:
  *
- * 1. COLAPSO DE CONTENCAO. `dentro` aponta sempre para o pai mais fino que o
- *    modelo conhece. Para achar o pai numa vista mais grossa, sobe-se ate o
- *    primeiro ancestral que exista naquela vista. E isto que deixa a fase
- *    tecnica enfiar VPC e subnet entre a folha e a fronteira SEM MEXER no que foi
- *    aprovado: a folha muda de `dentro`, a projecao logica nao muda nada.
+ * 1. CONTAINMENT COLLAPSE. `inside` always points to the finest-grained parent the
+ *    model knows. To find the parent in a coarser view, walk up to the first
+ *    ancestor that exists in that view. That is what lets the technical phase slot
+ *    a VPC and a subnet in between the leaf and the boundary WITHOUT TOUCHING what
+ *    was approved: the leaf's `inside` changes, the logical projection changes
+ *    nothing.
  *
- * 2. CONTRACAO DE ARESTA. Um no que so a camada tecnica tem (VPC endpoint, papel
- *    de IAM, barramento de evento) fica no MEIO de um caminho logico. A aresta
- *    logica e a contracao do caminho: `processar -> endpoint -> tabela` projeta
- *    para `processar -> tabela`, com o rotulo da primeira aresta.
+ * 2. EDGE CONTRACTION. A node only the technical layer has (a VPC endpoint, an IAM
+ *    role, an event bus) sits in the MIDDLE of a logical path. The logical edge is
+ *    the contraction of the path: `process -> endpoint -> table` projects to
+ *    `process -> table`, with the first edge's label.
  *
- * O motor do #11 nao mudou uma linha para isto acontecer — e nao e coincidencia:
- * a saida daqui e um `model@1` valido, e o motor continua sendo um renderizador
- * de UMA vista. Quem sabe que existem duas e a camada de sessao.
+ * The #11 engine did not change a single line for this to happen — and that is not
+ * a coincidence: what comes out of here is a valid `model@1`, and the engine
+ * remains a renderer of ONE view. The one who knows two exist is the session layer.
  */
 
-const VISTAS = ['logical', 'technical'];
+const VIEWS = ['logical', 'technical'];
 
 /**
- * Campos que o casaco tecnico repassa direto para o no do model@1.
+ * Fields the technical facet forwards straight onto the model@1 node.
  *
- * ⚠️ ESTA LISTA E O `session/schema.json` SAO A MESMA DECISAO ESCRITA DUAS VEZES,
- * e o dia em que discordarem o campo some sem erro nenhum — foi o que aconteceu
- * com `qualificador`, `ou` e `habilita` ate o #29: os tres existiam em `model@1`
- * e nao existiam aqui, entao quem passava pelo ARCO DE DUAS VISTAS perdia os tres
- * enquanto quem escrevia `model@1` direto os tinha. `ou` era o mais caro: sem
- * ele, multi-conta pelo arco nao conseguia expressar unidade organizacional
- * nenhuma — as duas bandeiras da skill nao se combinavam.
+ * WARNING: THIS LIST AND `session/schema.json` ARE THE SAME DECISION WRITTEN
+ * TWICE, and the day they disagree the field vanishes with no error at all — that
+ * is what happened with `qualifier`, `ou` and `enables` until #29: all three
+ * existed in `model@1` and did not exist here, so whoever went through the
+ * TWO-VIEW ARC lost the three of them while whoever wrote `model@1` directly kept
+ * them. `ou` was the most costly: without it, multi-account through the arc could
+ * not express a single organizational unit — the skill's two flags did not combine.
  *
- * `tests/check-technical-parity.cjs` (#37) mede duas paridades, nao uma:
- * model@1.no contra session@1.casacoTecnico (os dois ESQUEMAS), e esta lista
- * contra session@1.casacoTecnico (o esquema contra quem de fato PROJETA). A
- * primeira sozinha nao pegaria a falha que faltou aqui para `camada` (#22)
- * ate o #37: o campo podia estar nos dois esquemas e ainda assim nunca
- * chegar ao model@1 projetado, se esta lista esquecesse dele. Exportada por
- * isso — a checagem le a lista de verdade, nao uma copia dela.
+ * `tests/check-technical-parity.cjs` (#37) measures two parities, not one:
+ * model@1.node against session@1.technicalFacet (the two SCHEMAS), and this list
+ * against session@1.technicalFacet (the schema against whoever actually PROJECTS).
+ * The first alone would not have caught the gap that `layer` (#22) had here until
+ * #37: the field could be in both schemas and still never reach the projected
+ * model@1, if this list forgot it. Exported for that reason — the check reads the
+ * real list, not a copy of it.
  */
 const TECHNICAL_FIELDS = ['service', 'az', 'access', 'cidr', 'account', 'note',
                          'qualifier', 'ou', 'enables', 'layer'];
 
-/** O mesmo, do lado logico. `nota` ja vinha; `qualificador` entrou no #29. */
-const CAMPOS_LOGICOS = ['note', 'qualifier'];
+/** The same, on the logical side. `note` was already there; `qualifier` came in with #29. */
+const LOGICAL_FIELDS = ['note', 'qualifier'];
 
-const existeNa = (el, view) =>
+const existsIn = (el, view) =>
   view === 'technical' ? true : (el.layer || 'both') !== 'technical';
 
 /**
- * @param {object} sessao  modelo `session@1`
- * @param {'logica'|'tecnica'} vista
- * @returns {{modelo: object, trilha: object}}
+ * @param {object} session  `session@1` model
+ * @param {'logical'|'technical'} view
+ * @returns {{model: object, trail: object}}
  */
 function project(session, view) {
-  if (!VISTAS.includes(view)) throw new Error(`vista "${view}" — esperado logica ou tecnica`);
+  if (!VIEWS.includes(view)) throw new Error(`view "${view}" — expected "logical" or "technical"`);
   if (view === 'technical' && session.stage !== 'technical')
-    throw new Error('modelo no estagio "logica" nao emite vista tecnica: nenhum no tem casaco tecnico ainda');
+    throw new Error('a model at the "logical" stage does not emit a technical view: no node has a technical facet yet');
 
   const byId = new Map(session.nodes.map(n => [n.id, n]));
-  const trilha = { colapsados: [], contraidas: [], descartados: [] };
+  const trail = { collapsed: [], contracted: [], discarded: [] };
 
-  // ------------------------------------------------------- 1. quem sobrevive
-  const vive = new Set();
+  // ------------------------------------------------------- 1. who survives
+  const alive = new Set();
   for (const n of session.nodes) {
-    if (!existeNa(n, view)) { trilha.descartados.push({ o: 'no', id: n.id, because: 'so existe na vista tecnica' }); continue; }
-    vive.add(n.id);
+    if (!existsIn(n, view)) { trail.discarded.push({ kind: 'node', id: n.id, because: 'only exists in the technical view' }); continue; }
+    alive.add(n.id);
   }
 
-  // ------------------------------------------------- 2. contencao colapsada
-  /** Sobe por `dentro` ate achar um ancestral que exista nesta vista. */
-  function parentInView(no) {
-    let atual = no.inside, jumps = 0;
-    while (atual !== undefined) {
-      if (vive.has(atual)) return { parent: atual, jumps };
-      const acima = byId.get(atual);
-      if (!acima) return { parent: undefined, jumps };   // referencia quebrada — o validador reclama antes
-      atual = acima.inside; jumps++;
+  // ------------------------------------------------- 2. collapsed containment
+  /** Walks up through `inside` until it finds an ancestor that exists in this view. */
+  function parentInView(node) {
+    let current = node.inside, jumps = 0;
+    while (current !== undefined) {
+      if (alive.has(current)) return { parent: current, jumps };
+      const parentNode = byId.get(current);
+      if (!parentNode) return { parent: undefined, jumps };   // broken reference — the validator complains first
+      current = parentNode.inside; jumps++;
     }
     return { parent: undefined, jumps };
   }
 
   const nodes = [];
   for (const n of session.nodes) {
-    if (!vive.has(n.id)) continue;
+    if (!alive.has(n.id)) continue;
     const facet = view === 'logical' ? n.logical : n.technical;
-    if (!facet) throw new Error(`no "${n.id}" sem casaco "${view}" — o validador de sessao deveria ter pego isto`);
+    if (!facet) throw new Error(`node "${n.id}" has no "${view}" facet — the session validator should have caught this`);
 
     const { parent, jumps } = parentInView(n);
-    if (jumps > 0) trilha.colapsados.push({ id: n.id, from: n.inside, to: parent, jumps });
+    if (jumps > 0) trail.collapsed.push({ id: n.id, from: n.inside, to: parent, jumps });
 
     const output = { id: n.id, kind: facet.kind };
     const label = facet.label !== undefined ? facet.label : n.label;
     if (label !== undefined) output.label = label;
     if (parent !== undefined) output.inside = parent;
-    // As chaves aqui NAO sao decoracao: sem elas o `else` gruda no `if` de
-    // dentro do `for` e a projecao LOGICA nunca copia `nota` — o casaco logico
-    // declara o campo, o esquema o documenta, e ele some sem erro nenhum.
+    // These braces are not decoration: without them the `else` sticks to the `if`
+    // inside the `for` and the LOGICAL projection never copies `note` — the
+    // logical facet declares the field, the schema documents it, and it vanishes
+    // with no error at all.
     if (view === 'technical') {
       for (const c of TECHNICAL_FIELDS) if (facet[c] !== undefined) output[c] = facet[c];
     } else {
-      for (const c of CAMPOS_LOGICOS) if (facet[c] !== undefined) output[c] = facet[c];
+      for (const c of LOGICAL_FIELDS) if (facet[c] !== undefined) output[c] = facet[c];
     }
     nodes.push(output);
   }
 
-  // ---------------------------------------------------- 3. arestas
-  const viewEdges = (session.edges || []).filter(a => existeNa(a, view));
+  // ---------------------------------------------------- 3. edges
+  const viewEdges = (session.edges || []).filter(a => existsIn(a, view));
   for (const a of (session.edges || []))
-    if (!existeNa(a, view))
-      trilha.descartados.push({ o: 'edge', id: a.id || `${a.from}->${a.to}`, because: 'so existe na vista tecnica' });
+    if (!existsIn(a, view))
+      trail.discarded.push({ kind: 'edge', id: a.id || `${a.from}->${a.to}`, because: 'only exists in the technical view' });
 
-  const saindoDe = new Map();
+  const outgoingFrom = new Map();
   for (const a of viewEdges) {
-    if (!saindoDe.has(a.from)) saindoDe.set(a.from, []);
-    saindoDe.get(a.from).push(a);
+    if (!outgoingFrom.has(a.from)) outgoingFrom.set(a.from, []);
+    outgoingFrom.get(a.from).push(a);
   }
 
   /**
-   * Anda para frente atravessando nos que nao existem nesta vista, e devolve os
-   * nos vivos alcancados. Um endpoint tecnico com duas saidas produz duas
-   * arestas logicas — o que e a leitura certa: quem manda para o barramento
-   * manda para os dois consumidores dele.
+   * Walks forward across nodes that do not exist in this view, and returns the
+   * live nodes it reaches. A technical endpoint with two outputs produces two
+   * logical edges — which is the correct reading: whoever sends to the bus sends
+   * to both of its consumers.
    */
-  function alcancaveis(idInicial, visitados) {
-    if (vive.has(idInicial)) return [{ id: idInicial, by: [] }];
-    if (visitados.has(idInicial)) return [];
-    visitados.add(idInicial);
+  function reachable(startId, visited) {
+    if (alive.has(startId)) return [{ id: startId, by: [] }];
+    if (visited.has(startId)) return [];
+    visited.add(startId);
     const out = [];
-    for (const seguinte of (saindoDe.get(idInicial) || []))
-      for (const target of alcancaveis(seguinte.to, visitados))
-        out.push({ id: target.id, by: [idInicial, ...target.by] });
+    for (const next of (outgoingFrom.get(startId) || []))
+      for (const target of reachable(next.to, visited))
+        out.push({ id: target.id, by: [startId, ...target.by] });
     return out;
   }
 
   const edges = [];
   const alreadySeenSet = new Set();
   for (const a of viewEdges) {
-    if (!vive.has(a.from)) continue;   // caminho que comeca em infraestrutura nao tem leitura logica
+    if (!alive.has(a.from)) continue;   // a path that starts in infrastructure has no logical reading
 
-    // Os alvos tem de estar todos conhecidos ANTES de emitir, porque o id de
-    // saida depende de quantos sao. Sem isto a aresta contraida perdia o id da
-    // aresta aprovada, o motor caia no id derivado, e a MESMA vista logica saia
-    // com outros ids de celula depois da elaboracao tecnica — uma divergencia
-    // inteira num desenho que nao mudou em nada. Custou uma rodada de bancada.
-    const alvos = [];
-    const vistos = new Set();
-    for (const target of alcancaveis(a.to, new Set())) {
-      if (target.id === a.from) continue;                          // contracao fechou um laco
-      if (vistos.has(target.id)) continue;
-      // A chave leva a ARESTA de origem, nao so o par (de, para). Sem isso, duas
-      // arestas aprovadas DISTINTAS entre o mesmo par — "envia pedido" e
-      // "confirma recebimento" entre os mesmos dois blocos — colapsariam numa
-      // so, e as duas pontas da comparacao do acordo perderiam a mesma, deixando
-      // a checagem cega para a perda. `vistos` continua deduplicando o leque de
-      // UMA aresta, que e o caso que a contracao realmente cria.
+    // The targets all have to be known BEFORE emitting, because the outgoing id
+    // depends on how many there are. Without this the contracted edge lost the
+    // approved edge's id, the engine fell back to the derived id, and the SAME
+    // logical view came out with different cell ids after the technical
+    // elaboration — a full-blown divergence on a drawing that had not changed at
+    // all. Cost a bench round to find.
+    const targets = [];
+    const seen = new Set();
+    for (const target of reachable(a.to, new Set())) {
+      if (target.id === a.from) continue;                          // contraction closed a loop
+      if (seen.has(target.id)) continue;
+      // The key carries the SOURCE EDGE, not just the (from, to) pair. Without
+      // this, two DISTINCT approved edges between the same pair — "send request"
+      // and "confirm receipt" between the same two blocks — would collapse into
+      // one, and both ends of the agreement comparison would lose the same one,
+      // leaving the check blind to the loss. `seen` keeps deduplicating the
+      // fan-out of ONE edge, which is the case contraction actually creates.
       const key = `${a.id || `${a.from}>${a.to}`}#${target.id}`;
       if (alreadySeenSet.has(key)) continue;
-      alreadySeenSet.add(key); vistos.add(target.id);
-      alvos.push(target);
+      alreadySeenSet.add(key); seen.add(target.id);
+      targets.push(target);
     }
 
-    for (const target of alvos) {
+    for (const target of targets) {
       const facet = (view === 'logical' ? a.logical : a.technical) || {};
       const e = { from: a.from, to: target.id };
-      // A aresta contraida CONTINUA sendo a aresta aprovada — so passou a ser
-      // desenhada pelo caminho curto, e por isso herda o id. Quando um salto
-      // abre em leque (um barramento com varios consumidores), o alvo desempata.
-      if (a.id !== undefined) e.id = alvos.length > 1 ? `${a.id}--${target.id}` : a.id;
+      // The contracted edge REMAINS the approved edge — it has just started being
+      // drawn through the short path, which is why it inherits the id. When a
+      // jump fans out (a bus with several consumers), the target breaks the tie.
+      if (a.id !== undefined) e.id = targets.length > 1 ? `${a.id}--${target.id}` : a.id;
       const label = facet.label !== undefined ? facet.label : a.label;
       if (label !== undefined) e.label = label;
       const protocol = facet.protocol !== undefined ? facet.protocol : a.protocol;
@@ -194,30 +197,30 @@ function project(session, view) {
       edges.push(e);
 
       if (target.by.length)
-        trilha.contraidas.push({ from: a.from, to: target.id, by: target.by, label });
+        trail.contracted.push({ from: a.from, to: target.id, by: target.by, label });
     }
   }
 
-  // ---------------------------------------------------- 4. faixas e notas
-  // Faixa e conceito de topologia (#19) — a vista logica nao tem o que cruzar.
+  // ---------------------------------------------------- 4. bands and notes
+  // A band is a topology concept (#19) — the logical view has nothing to cross.
   const bands = view === 'technical'
-    ? (session.bands || []).filter(f => f.members.every(m => vive.has(m)))
+    ? (session.bands || []).filter(f => f.members.every(m => alive.has(m)))
     : [];
 
   const notes = [];
   for (const nt of (session.notes || [])) {
-    if (!existeNa(nt, view)) { trilha.descartados.push({ o: 'note', id: nt.id || nt.text.slice(0, 24), because: 'so existe na vista tecnica' }); continue; }
-    if (nt.about !== undefined && !vive.has(nt.about)) {
-      // Nota presa a um no que sumiu na projecao. Reancorar no ancestral seria
-      // mudar o que ela afirma; omitir calado seria A4.2. Vira nota de rodape,
-      // e a trilha registra o remanejo.
-      trilha.descartados.push({ o: 'ancora-de-nota', id: nt.about, because: 'nota virou rodape nesta vista' });
-      const { about, layer, ...resto } = nt;
-      notes.push(resto);
+    if (!existsIn(nt, view)) { trail.discarded.push({ kind: 'note', id: nt.id || nt.text.slice(0, 24), because: 'only exists in the technical view' }); continue; }
+    if (nt.about !== undefined && !alive.has(nt.about)) {
+      // A note anchored to a node that vanished in the projection. Re-anchoring it
+      // on the ancestor would change what it asserts; dropping it in silence would
+      // be A4.2. It becomes a footnote, and the trail records the move.
+      trail.discarded.push({ kind: 'note-anchor', id: nt.about, because: 'note became a footnote in this view' });
+      const { about, layer, ...rest } = nt;
+      notes.push(rest);
       continue;
     }
-    const { layer, ...resto } = nt;
-    notes.push(resto);
+    const { layer, ...rest } = nt;
+    notes.push(rest);
   }
 
   const ap = (session.vistas && session.vistas[view]) || {};
@@ -234,34 +237,35 @@ function project(session, view) {
   if (bands.length) model.bands = bands;
   if (notes.length) model.notes = notes;
 
-  return { model, trilha };
+  return { model, trail };
 }
 
 /**
- * O ACORDO: o recorte do modelo projetado que a aprovacao cobre.
+ * THE AGREEMENT: the slice of the projected model that the approval covers.
  *
- * Nao e o modelo inteiro. Titulo, subtitulo e genero sao apresentacao — mudar o
- * subtitulo depois de aprovado nao desfaz o acordo, e um esquema de aprovacao
- * que se quebra com isso vira ruido e o usuario aprende a ignorar. O que o
- * acordo cobre e o que foi DISCUTIDO: quais capacidades existem, dentro de que
- * fronteira, quem fala com quem, e as notas — inclusive a do achado recusado,
- * que e como "SPOF conhecido e aceito" (#15 §4) sobrevive.
+ * Not the whole model. Title, subtitle and genre are presentation — changing the
+ * subtitle after approval does not undo the agreement, and an approval scheme that
+ * breaks over that turns into noise the user learns to ignore. What the agreement
+ * covers is what was DISCUSSED: which capabilities exist, inside which boundary,
+ * who talks to whom, and the notes — including the rejected-finding one, which is
+ * how "known and accepted SPOF" (#15 §4) survives.
  */
-function recorteDoAcordo(modeloLogico) {
-  // As chaves de ordenacao levam separador e rotulo. Concatenar `de + para` cru
-  // faz ("a","bc") e ("ab","c") virarem a mesma chave; e o rotulo entra porque,
-  // com arestas paralelas entre o mesmo par, sem ele a ordem depende de quem
-  // chegou primeiro na lista — e a impressao do acordo deixaria de ser estavel.
-  const chaveDaAresta = a => `${a.from} ${a.to} ${a.label || ''}`;
+function agreementSlice(logicalModel) {
+  // The sort keys carry a separator and the label. Concatenating `from + to` raw
+  // makes ("a","bc") and ("ab","c") collide into the same key; and the label is
+  // there because, with parallel edges between the same pair, without it the order
+  // would depend on whoever arrived first in the list — and the agreement
+  // fingerprint would stop being stable.
+  const edgeKey = a => `${a.from} ${a.to} ${a.label || ''}`;
   const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
   return {
-    nodes: modeloLogico.nodes.map(n => ({ id: n.id, kind: n.kind, label: n.label, inside: n.inside, note: n.note }))
+    nodes: logicalModel.nodes.map(n => ({ id: n.id, kind: n.kind, label: n.label, inside: n.inside, note: n.note }))
       .sort((a, b) => cmp(a.id, b.id)),
-    edges: (modeloLogico.edges || []).map(a => ({ from: a.from, to: a.to, label: a.label, data: a.data }))
-      .sort((x, y) => cmp(chaveDaAresta(x), chaveDaAresta(y))),
-    notes: (modeloLogico.notes || []).map(n => ({ text: n.text, about: n.about, origin: n.origin }))
+    edges: (logicalModel.edges || []).map(a => ({ from: a.from, to: a.to, label: a.label, data: a.data }))
+      .sort((x, y) => cmp(edgeKey(x), edgeKey(y))),
+    notes: (logicalModel.notes || []).map(n => ({ text: n.text, about: n.about, origin: n.origin }))
       .sort((a, b) => cmp(a.text, b.text)),
   };
 }
 
-module.exports = { project, recorteDoAcordo, VISTAS, TECHNICAL_FIELDS, CAMPOS_LOGICOS };
+module.exports = { project, agreementSlice, VIEWS, TECHNICAL_FIELDS, LOGICAL_FIELDS };

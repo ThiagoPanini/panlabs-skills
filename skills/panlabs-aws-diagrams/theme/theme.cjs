@@ -72,7 +72,10 @@ const DEFAULT = {
     page: { color: '#FFFFFF', margin: 32 },
     group:  { tint: 'derived' },
     ink:  { strong: '#232F3E', weak: '#5A6C86', halo: '#FFFFFF' },
-    text:  { family: 'Arial,Helvetica', label: 12, group: 12, edge: 10, title: 19, subtitle: 12, qualifier: false },
+    // `qualifier: true` — #39: before this, only `corporate` turned the second
+    // line on and the other two themes dropped it with no warning anywhere.
+    // Whoever draws on the default theme never saw the resource name.
+    text:  { family: 'Arial,Helvetica', label: 12, group: 12, edge: 10, title: 19, subtitle: 12, qualifier: true },
     edge: { color: '#232F3E', thickness: 1.6, tip: 'blockThin', corners: 12, jumps: 'arc', flow: 'solid' },
     gap:  { base: 8, density: 1.0 },
     note:   { background: '#FFF8E1', edge: '#B7791F', ink: '#6B4E00' },
@@ -95,7 +98,8 @@ const DEFAULT = {
     // same hex — and makes it impossible to prove on the pixel that the VPC's
     // gray label didn't survive anywhere.
     ink:  { strong: '#FFFFFF', weak: '#B4B4B4', halo: '#1C1C1C' },
-    text:  { family: 'Arial,Helvetica', label: 12, group: 12, edge: 10, title: 19, subtitle: 12, qualifier: false },
+    // qualifier: true — same #39 rule as the light default, see above.
+    text:  { family: 'Arial,Helvetica', label: 12, group: 12, edge: 10, title: 19, subtitle: 12, qualifier: true },
     edge: { color: '#EDEDED', thickness: 1.6, tip: 'blockThin', corners: 12, jumps: 'arc', flow: 'solid' },
     gap:  { base: 8, density: 1.0 },
     note:   { background: '#2A2416', edge: '#8A6D3B', ink: '#F3DFAE' },

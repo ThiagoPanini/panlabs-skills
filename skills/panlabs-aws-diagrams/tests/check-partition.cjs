@@ -88,7 +88,9 @@ const METRIC = [
   ['text.edge', { text: { edge: 16 } }],
   ['text.title', { text: { title: 30 } }],
   ['text.subtitle', { text: { subtitle: 18 } }],
-  ['text.qualifier', { text: { qualifier: true } }],
+  // #39 flipped the "light" default to true, so the row now moves away FROM
+  // the baseline by turning the token off — same metric claim, other direction.
+  ['text.qualifier', { text: { qualifier: false } }],
   ['gap.base', { gap: { base: 4 } }],
   ['gap.density', { gap: { density: 1.6 } }],
   // doesn't move anyone, but it ADDS a cell to the title block — and that's

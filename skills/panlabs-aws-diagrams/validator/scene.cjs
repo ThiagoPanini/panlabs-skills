@@ -108,21 +108,8 @@ function labelBox(cellBox, label, style) {
 
   const fontSize = num(style, 'fontSize', 12);
   const scale = fontSize / 12;
-  const maxWidth = v('maxLabelWidth');
   const perChar = v('avgCharWidth') * scale;
   const lineHeight = v('lineHeight') * scale;
-
-  const wrap = (width) => {
-    const perLine = Math.max(1, Math.floor(width / perChar));
-    let lines = 1;
-    let current = 0;
-    for (const word of text.split(/\s+/)) {
-      const cost = word.length + (current ? 1 : 0);
-      if (current + cost > perLine && current > 0) { lines++; current = word.length; }
-      else current += cost;
-    }
-    return lines;
-  };
 
   // Container: the label lives in the title band, top-left corner.
   if (style.container === '1') {
@@ -140,10 +127,20 @@ function labelBox(cellBox, label, style) {
 
   // Leaf with an outside label: band centered right below the icon.
   if (style.verticalLabelPosition === 'bottom') {
-    const width = Math.min(maxWidth, text.length * perChar);
+    // O21: an explicit `<br>` is a MANDATORY break, not a wrap opportunity —
+    // the same treatment `resolve.cjs`'s `labelLines()` gives it, and since
+    // #33 the box GROWS to the widest row instead of wrapping at a fixed
+    // width (`ROTULO_W`/120px died there — see `check-leaf-box.cjs`). This
+    // used to measure `text` — the tag-stripped label with both rows glued
+    // into one string — and cap that at the dead 120px width; the first
+    // summed the two rows' lengths into one, the second reintroduced the
+    // wrap #33 removed. Both overstated the box and made a two-line
+    // qualifier read as leaving its own group when it didn't (#39).
+    const rows = String(label || '').split(/<br\s*\/?>/i).map(l => l.replace(/<[^>]+>/g, '').trim());
+    const width = Math.max(...rows.map(r => r.length * perChar));
     return {
       x: cellBox.x + (cellBox.w - width) / 2, y: cellBox.y + cellBox.h,
-      w: width, h: Math.max(v('minLabelHeight'), wrap(maxWidth) * lineHeight),
+      w: width, h: Math.max(v('minLabelHeight'), rows.length * lineHeight),
       placement: 'below',
     };
   }

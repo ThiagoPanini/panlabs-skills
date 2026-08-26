@@ -171,7 +171,7 @@ tomados**; fica o que é sobre a arquitetura desenhada.
 | | |
 |---|---|
 | `node engine/generate.cjs <m.json> --output x.drawio` | desenha. `--theme light\|dark\|corporate` · `--flow solid\|dashed\|animated` · `--gate none\|truthfulness\|failure\|strict` · `--explain` |
-| `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda o corpus, `--json` para ler no código |
+| `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda o corpus, `--json` para ler no código, `--theme light\|dark\|corporate` avalia o tema pedido (padrão `light`) |
 | `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas do passo 4. `--corpus` roda a régua inteira |
 | `node catalog/aws-shapes.cjs <nome>...` | resolve nome → shape, com as correções aplicadas |
 | `node tools/approve.cjs <sessao.json>` | passo 5: aprova a vista lógica e grava o `.drawio` que retoma. `--by` · `--candidate` · `--at` · `--output` |

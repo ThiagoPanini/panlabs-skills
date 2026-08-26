@@ -24,6 +24,10 @@ Só o que este repositório cunhou ou torceu — e, nos dois primeiros grupos, c
 
 **Prova** — o `<família>.proof.sh` ao lado de uma família, cujo trabalho é plantar o defeito e exigir que a família fique **vermelha**. Checagem só vista verde é documentação. _Evitar_: teste — neste repositório a palavra já pertence à checagem de invocação.
 
+### O workspace irmão de uma skill
+
+Nem toda verificação é **checagem de invocação** (roda dentro da skill) nem **validação de desenvolvimento** (genérica, vale para qualquer skill) — falta a que testa o motor de UMA skill específica: geometria, determinismo, semântica. Ela não serve a nenhuma outra skill do repositório, e a skill instalada nunca a roda — então não é nem uma nem outra, e ficar dentro da árvore só infla o pacote publicado. Mora num diretório irmão, `workbench/<nome-da-skill>/`, rastreado neste mesmo repositório e apontando **para dentro** da skill que testa — nunca o inverso, porque instalar a skill não instala o irmão. O #44 abriu a primeira instância, `workbench/panlabs-aws-diagrams/`, com a suíte de 8 camadas e o corpus de modelos que ela come. _Evitar_: bancada (nomeia as ferramentas que ainda moram dentro de `tools/`, não este diretório), corpus de testes (sozinho) — a confusão que motivou o nome é exatamente com as duas categorias acima.
+
 ### As duas camadas em que uma regra nasce
 
 Distinção decidida no [ADR 0001](docs/adr/0001-estrutura-vira-portao-o-merge-continua-na-mao.md), que também fixa o que fazer com ela.

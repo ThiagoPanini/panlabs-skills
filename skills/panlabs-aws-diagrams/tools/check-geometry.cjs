@@ -4,7 +4,7 @@
  * The geometric validator, from the command line.
  *
  *   node tools/check-geometry.cjs <model.json> [...]    validates what the engine generates
- *   node tools/check-geometry.cjs --examples             validates the #11 models
+ *   node tools/check-geometry.cjs --examples             validates the shipped examples/
  *   node tools/check-geometry.cjs ... --all             also shows what passed
  *   node tools/check-geometry.cjs ... --json             report in JSON
  *   node tools/check-geometry.cjs ... --strict           warning fails too
@@ -42,7 +42,7 @@ async function main() {
   const themeName = iTheme >= 0 ? args[iTheme + 1] : 'light';
   let inputs = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--theme');
 
-  if (examples) inputs = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).map(f => path.join(ROOT, 'models', f));
+  if (examples) inputs = fs.readdirSync(path.join(ROOT, 'examples')).filter(f => f.endsWith('.json')).map(f => path.join(ROOT, 'examples', f));
   if (!inputs.length) {
     console.error('usage: node check-geometry.cjs <model.json> [...] | --examples  [--all] [--json] [--strict] [--theme <name>]');
     process.exit(2);

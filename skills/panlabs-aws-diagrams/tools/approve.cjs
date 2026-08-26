@@ -45,7 +45,7 @@ const HELP = `
     --at <YYYY-MM-DD>      agreement date           (default: today)
     --output <x.drawio>    where to write           (default: output/<model-id>.drawio)
 
-  With no argument at all, runs the corpus case (models/session/retail-logical.json).
+  With no argument at all, runs the shipped example (examples/session/retail-logical.json).
 `;
 
 // One single pass, so the positional cannot be confused with the VALUE of an
@@ -85,7 +85,7 @@ async function main() {
   const { opts, positional } = parse(process.argv.slice(2));
   if (opts.help || opts.h) { console.log(HELP); return; }
 
-  const input = positional[0] || path.join(ROOT, 'models', 'session', 'retail-logical.json');
+  const input = positional[0] || path.join(ROOT, 'examples', 'session', 'retail-logical.json');
 
   if (!fs.existsSync(input)) {
     console.error(`\n  ✗ could not find ${input}`);

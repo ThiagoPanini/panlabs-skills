@@ -6,16 +6,18 @@ Skill de diagramas de arquitetura AWS no draw.io: uma rodada de perguntas sobre 
 > ao lado. Este README é o mapa da árvore, para quem vai mexer no código.
 
 ```bash
-node engine/generate.cjs models/web-multi-az.json --output output/x.drawio
-node tools/check-geometry.cjs models/web-multi-az.json    # o laudo das 62
-node tools/review-gaps.cjs models/web-multi-az.json    # a revisão de lacunas
-node tools/approve.cjs models/session/retail-logical.json    # o arco sequencial: aprovar a lógica
-node tools/resume.cjs output/retail.drawio --delta models/session/retail-elaboration.json
-./tests/run.sh                                           # a régua inteira
+node engine/generate.cjs examples/web-multi-az.json --output output/x.drawio
+node tools/check-geometry.cjs examples/web-multi-az.json    # o laudo das 62
+node tools/review-gaps.cjs examples/web-multi-az.json    # a revisão de lacunas
+node tools/approve.cjs examples/session/retail-logical.json    # o arco sequencial: aprovar a lógica
+node tools/resume.cjs output/retail.drawio --delta examples/session/retail-elaboration.json
 ./tools/install.sh                                        # expor nos dois harnesses
 ./tools/package.sh --check                            # o pacote cabe nos 30 MB?
 ./tools/measure-candidates.sh                                # a medição que escolheu o motor
 ```
+
+A régua de 8 camadas mora no workspace irmão e roda de lá, contra esta árvore:
+`workbench/panlabs-aws-diagrams/tests/run.sh` (#44).
 
 ## Instalar
 
@@ -53,11 +55,10 @@ do Node).
 | `theme/` | O vocabulário FECHADO de estilo e os quatro temas. `schema.json` aqui é `theme@1` |
 | `session/` | Vista lógica → vista técnica, o `.drawio` como formato de persistência, e a cópia publicável. `schema.json` aqui é `session@1`. `gaps.cjs` é o vizinho de fora da regra: ele come `model@1`, não `session@1` — mora aqui porque a revisão de lacunas é passo do arco, e quem a chama é a camada de sessão |
 | `catalog/` | 403 service icons + 606 resource icons do draw.io 31.3.1, com o delta de correções escrito à mão |
-| `models/` | O corpus. `models/recusa/` para o que o motor **deve** recusar, `models/session/` para `session@1` |
-| `tests/` | A união das suítes, em 8 camadas |
+| `examples/` | **Diretório de exemplos mínimo** — só o suficiente para os comandos documentados acima rodarem sem baixar nada. `examples/session/` guarda o único par pronto de `session@1` (lógica + delta) |
 | `agents/` | O empacotamento multi-harness. `openai.yaml` copia a forma das outras 25 skills instaladas em `~/.claude/skills/*/agents/` — `interface.display_name` + `interface.short_description`, e nada mais. É **metadado de vitrine**, não instrução: um harness não-Claude aprende o NOME da skill por aqui e o resto por `SKILL.md`. Se algum harness precisar de mais, é aqui que cresce |
 | `tools/` | Os comandos da jornada (`case.cjs`, `approve.cjs`, `resume.cjs`, `check-geometry.cjs`, `review-gaps.cjs`, `install.sh`) e as ferramentas de bancada — bisseção, render, as medições. `drawio.cjs` é o único lugar que sabe onde o binário mora |
-| `output/` | **Rascunho, e ignorado pelo git.** É onde `tests/run.sh` escreve o corpus gerado e o render |
+| `output/` | **Rascunho, e ignorado pelo git.** É onde a régua do workspace irmão escreve o corpus gerado e o render |
 
 `guide/` é o que o agente lê para **operar** a skill — nada aqui se lê para
 modificá-la, e nada daqui aponta para fora da árvore.
@@ -72,22 +73,33 @@ leva o diretório inteiro (menos `__pycache__`, `node_modules`, `*.pyc`,
 
 | o que era | o que aconteceu |
 |---|---|
-| os protótipos | 18 MB, 252 arquivos, um diretório por pergunta respondida. Saíram da árvore no #29 e foram **apagados no #62**: um único commit na vida deles, o próprio `git mv`. `tests/check-no-prototype.cjs` sempre provou que a produção não os alcançava; agora nem existem |
-| o corpus renderizado | 6,7 MB de `.drawio` e PNG commitados. Também **apagados no #62**, e a medição que decidiu foi esta: 4 de 4 modelos regenerados divergiam do commitado, e nada na régua os comparava. `tests/run.sh` escreve em `output/` e nunca leu aquele diretório — não era fixture, era foto vencida |
-| os casos de uso | 3,2 MB de prosa, modelo, desenho e laudo. Idem, com a mesma medição. Os defeitos que eles acharam já eram ticket e os repros já tinham sido promovidos para `models/`. A tabela de cobertura sobreviveu, na auditoria do registro |
+| os protótipos | 18 MB, 252 arquivos, um diretório por pergunta respondida. Saíram da árvore no #29 e foram **apagados no #62**: um único commit na vida deles, o próprio `git mv`. `check-no-prototype.cjs` sempre provou que a produção não os alcançava; agora nem existem |
+| o corpus renderizado | 6,7 MB de `.drawio` e PNG commitados. Também **apagados no #62**, e a medição que decidiu foi esta: 4 de 4 modelos regenerados divergiam do commitado, e nada na régua os comparava. A régua escreve em `output/` e nunca leu aquele diretório — não era fixture, era foto vencida |
+| os casos de uso | 3,2 MB de prosa, modelo, desenho e laudo. Idem, com a mesma medição. Os defeitos que eles acharam já eram ticket e os repros já tinham sido promovidos para `models/` — que, por sua vez, saiu no #44 (ver abaixo). A tabela de cobertura sobreviveu, na auditoria do registro |
+| a suíte de testes e o corpus de modelos | A suíte inteira (8 camadas) e os ~28 modelos que ela come — **movidos no #44** para `workbench/panlabs-aws-diagrams/`, que é quem os lê e roda agora. Não são apagados: a régua continua verde, rodando de fora da árvore e apontando para dentro dela, que é a única direção permitida. Ficou um diretório de exemplos mínimo (`examples/`) — só o suficiente para os comandos documentados no topo deste README rodarem sem baixar nada |
 
 O git guarda os três, e o #62 registra os endereços. **Nada aqui aponta para lá** —
 é a direção que o #46 exige, e a razão de a lista congelada do
-`tests/check-single-schema.cjs` ter substituído uma leitura do git que subia dois
+`check-single-schema.cjs` ter substituído uma leitura do git que subia dois
 níveis acima da raiz da skill.
 
 Sobraram **156 arquivos e 3,4 MB** — 11% do teto, medido por
 `tools/package.sh --check` —, dos quais 1,6 MB é o `elkjs` embarcado que é a
 razão de a skill não precisar de `npm install`.
 
-E o teto deixou de ser a razão de qualquer coisa sair. A 11% ele não aperta mais
-ninguém; o que ainda manda material para fora é a **carga de leitura**, e o
-critério do #45 é o executável: *"o agente lê ou roda isto para executar a
+**O #44 mediu de novo, e a mesma régua.** Antes da suíte e do corpus saírem, a
+árvore estava em **168 arquivos e 3,7 MB** (12% do teto) — o crescimento desde
+o `156` acima é trabalho de motor que aterrissou entre os dois tickets.
+Depois, **101 arquivos e 3,4 MB** (11%): `tests/` e `models/` — 67 arquivos,
+552 KB — foram para `workbench/panlabs-aws-diagrams/`, e ficaram os três
+arquivos de `examples/`. A carga de leitura (`SKILL.md` + `guide/`) não se
+mexeu — 78,6 KB antes, 78,9 KB depois —, porque nenhuma das duas árvores que
+saíram era lida pelo agente: a suíte e o corpus sempre foram carga de quem
+mantém, nunca de quem executa.
+
+E o teto deixou de ser a razão de qualquer coisa sair. Já não aperta ninguém;
+o que ainda manda material para fora é a **carga de leitura**, e o critério
+dos #44/#45 é o executável: *"o agente lê ou roda isto para executar a
 skill?"*.
 
 E o teto deixou de ser fé: `tools/package.sh --check` mede, e a camada 0 da
@@ -105,11 +117,12 @@ não protege o pacote**. O empacotador oficial varre o diretório e exclui exata
 | `panlabs-aws-diagrams/session@1` | `session/schema.json` | a camada de sessão, entre duas conversas |
 | `panlabs-aws-diagrams/elaboration@1` | **não existe** | o agente, na fase técnica |
 
-`tests/check-single-schema.cjs` trava três coisas: nenhum `$id` repetido, o
-`model@1` na raiz, e é **esse** arquivo que o motor abre — medido, não afirmado.
+`check-single-schema.cjs`, na régua do workspace irmão, trava três coisas: nenhum
+`$id` repetido, o `model@1` na raiz, e é **esse** arquivo que o motor abre —
+medido, não afirmado.
 
 > ⚠️ **O quarto contrato não tem esquema.** `elaboration@1` é declarado em
-> `models/session/retail-elaboration.json` e consumido por `session/elaborate.cjs`, e
+> `examples/session/retail-elaboration.json` e consumido por `session/elaborate.cjs`, e
 > nada o valida — a checagem acima varre só os três arquivos de esquema, então um
 > contrato sem arquivo passa por baixo dela. A forma está descrita em
 > [`guide/model.md`](guide/model.md); enquanto não houver esquema, essa descrição é
@@ -118,8 +131,8 @@ não protege o pacote**. O empacotador oficial varre o diretório e exclui exata
 ## Zero dependência de rede ou de binário em runtime
 
 O `elkjs` vai embarcado em `engine/vendor/` (1,6 MB) e nada mais é carregado de
-fora da árvore — `tests/check-no-prototype.cjs` mede isso com `require.cache`,
-não com grep.
+fora da árvore — `check-no-prototype.cjs`, na régua do workspace irmão, mede
+isso com `require.cache`, não com grep.
 
 O draw.io headless é **dependência de desenvolvimento**: a camada 7 da suíte
 precisa dele e, sem o binário, avisa e segue.

@@ -113,12 +113,11 @@ node catalog/aws-shapes.cjs "kinesis data firehose" "vpc endpoint" opensearch
 
 A escada de resolução tem seis degraus, e a primeira que casa vence: desambiguação → renome → título ou stencil → sigla/apelido → **substring** → genérico.
 
-**Só o quinto degrau erra calado.** Genérico avisa alto (`⚠ N nó(s) caíram no ícone genérico`); os outros quatro acertam por construção. Substring casa — então nenhum aviso dispara — e pode casar com a coisa errada. Medido em 47 nomes plausíveis, 45 resolvem certo e os dois erros são ambos substring:
+**Só o quinto degrau ainda pode errar calado.** Genérico sempre foi a resposta de "não sei", mas até o #139 só o motor de geração avisava alto disso (`report.avisos`); esta CLI imprimia a mesma linha de um match bem-sucedido, com `generic` escondido dentro dos parênteses — é o caso de `aurora serverless`: "Aurora" e o ícone de categoria "Serverless" nunca compartilharam stencil, então a consulta sempre caiu em genérico, só que calada. Hoje a CLI imprime `⚠ generic <nome> -> ...` e sai com código de erro quando isso acontece. Substring é a outra forma de erro, e mais grave: casa — então nenhum aviso dispara — e podia casar com a coisa errada, com confiança total. Medido em 47 nomes plausíveis, dois casavam errado: `kinesis firehose` (linha abaixo) e `vpc endpoint`, que casava com **VPC** (um grupo!) porque a consulta continha as palavras "vpc" e "endpoint" e um desempate escolhia o ícone de serviço entre os dois candidatos reais e diferentes — o #139 tirou esse desempate, e agora esse tipo de colisão cai em genérico, ruidosamente, em vez de devolver uma resposta confiante errada. O que resta, porque não há colisão nenhuma para recusar — é uma palavra só, sozinha:
 
 | você escreve | vira | devia ser |
 |---|---|---|
 | `kinesis firehose` | **Kinesis** | `kinesis data firehose` → Data Firehose |
-| `vpc endpoint` | **VPC** (um grupo!) | escreva o serviço que o endpoint expõe |
 
 `--explain` mostra a via de cada nó — `service` quando o título casou direto, `service:rename`, `service:substring`, e assim por diante. Qualquer coisa lendo `service:substring` merece uma segunda olhada.
 

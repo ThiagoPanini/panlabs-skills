@@ -300,6 +300,12 @@ fi
 # ticket of its own.
 step "render.sh names who ended the process (#128)"  node "$HERE/check-render-verdict.cjs"
 
+# Same reasoning as the step above, one level up: #144's four callers dial no
+# binary of their own, only `xvfb-run` through a stub `call-render.cjs`
+# writes, so this needs no draw.io either — and the same append-only rule
+# keeps it here instead of next to the four checks it is about.
+step "the four render.sh callers add no retry, no unscoped kill (#144)"  node "$HERE/check-render-callers.cjs"
+
 echo
 if [ "$failed" -ne 0 ]; then
   echo "SUITE RED — ${#REDS[@]} layer(s):"

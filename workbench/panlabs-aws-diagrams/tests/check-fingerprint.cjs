@@ -25,7 +25,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { execFileSync } = require('child_process');
 
 const { readPages, semanticFingerprint, appearanceFingerprint } = require('../../../skills/panlabs-aws-diagrams/session/fingerprint.cjs');
 const { approve } = require('../../../skills/panlabs-aws-diagrams/session/agreement.cjs');
@@ -34,6 +33,7 @@ const { draw } = require('../../../skills/panlabs-aws-diagrams/session/draw.cjs'
 
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
 const WORKBENCH = path.join(__dirname, '..');
+const { callRender, indent } = require(path.join(WORKBENCH, 'tools', 'call-render.cjs'));
 const { binary } = require(path.join(ROOT, 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
 
@@ -151,8 +151,12 @@ async function main() {
       if (!hasApp) { rows.push({ edit, skipped: true }); continue; }
       const inPath = path.join(TMP, 'e.drawio'), outPath = path.join(TMP, 's.drawio');
       fs.writeFileSync(inPath, base);
-      execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', outPath, inPath],
-        { stdio: ['ignore', 'ignore', 'ignore'] });
+      // #144: this used to dial `xvfb-run` with no timeout at all — a hang
+      // here froze the whole suite. `render.sh` bounds it and retries only a
+      // non-answer.
+      const exported = callRender(inPath, outPath, 'xml', DRAWIO);
+      if (!exported.ok) throw new Error(`render.sh failed to export the fingerprint fixture (exit ${exported.code}):\n${exported.log}`);
+      if (exported.flaked) console.log(indent(exported.out));
       after = fs.readFileSync(outPath, 'utf8');
       codecBytes = { before: base.length, after: after.length, equal: base === after };
     } else {

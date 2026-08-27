@@ -20,36 +20,24 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
-
-/**
- * The headless export fails in ways that aren't a failure of THIS test:
- * another draw.io process hung on the machine brings down any later export
- * (see `tools/render.sh`). A raw exception here would turn into an
- * `execFileSync` stack trace in the middle of the suite, without saying what
- * happened — so the call is wrapped, with a retry after reaping anything hung.
- */
-function exportXml(origin, destination, profile) {
-  const args = ['-a', DRAWIO, '-x', '-f', 'xml', '-o', destination, origin,
-    '--no-sandbox', '--disable-gpu', '--disable-update', '--user-data-dir=' + profile];
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      execFileSync('xvfb-run', args, { stdio: 'ignore' });
-      if (fs.existsSync(destination) && fs.statSync(destination).size > 0) return true;
-    } catch (e) { /* falls through to the retry */ }
-    try {
-      execFileSync('bash', ['-c',
-        "ps -o pid,etimes -C drawio --no-headers | awk '$2>180 {print $1}' | xargs -r kill -9"],
-        { stdio: 'ignore' });
-    } catch (e) { /* no hung process, great */ }
-  }
-  return false;
-}
 
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
 const WORKBENCH = path.join(__dirname, '..');
+const { callRender, indent } = require(path.join(WORKBENCH, 'tools', 'call-render.cjs'));
 const { binary } = require(path.join(ROOT, 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
+
+/**
+ * #144: this used to dial `xvfb-run` directly — no timeout, a blind 2-attempt
+ * retry no matter WHY the export failed, and a cleanup between attempts that
+ * killed every `drawio` process on the machine, a neighbour session's
+ * legitimate render included. `render.sh` already carries the timeout, the
+ * scoped kill and the answer-vs-non-answer retry that #128 built; this just
+ * asks it for XML instead of PNG.
+ */
+function exportXml(origin, destination) {
+  return callRender(origin, destination, 'xml', DRAWIO);
+}
 
 const ENTITIES = { '&quot;': '"', '&#39;': "'", '&lt;': '<', '&gt;': '>', '&#xa;': '\n', '&#x9;': '\t', '&#xd;': '\r', '&amp;': '&' };
 const unescape = s => String(s).replace(/&(?:quot|#39|lt|gt|#xa|#x9|#xd|amp);/g, e => ENTITIES[e]);
@@ -100,11 +88,14 @@ async function main() {
     if (!fs.existsSync(origin)) { console.log(`   ✗ ${name}: .drawio missing`); failed = 1; continue; }
     checked++;
     const destination = path.join(tmp, name + '.xml');
-    if (!exportXml(origin, destination, tmp)) {
+    const exported = exportXml(origin, destination);
+    if (!exported.ok) {
       console.log(`   ✗ ${name.padEnd(14)} the headless export produced no XML (see tools/render.sh)`);
+      console.log(indent(exported.log));
       failed = 1;
       continue;
     }
+    if (exported.flaked) console.log(indent(exported.out));
 
     const before = fs.readFileSync(origin, 'utf8');
     const after = fs.readFileSync(destination, 'utf8');

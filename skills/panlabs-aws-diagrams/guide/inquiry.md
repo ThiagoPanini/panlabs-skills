@@ -14,12 +14,12 @@ Três julgamentos que precisariam de olho humano ficam satisfeitos **por constru
 
 Aceite ata de reunião, notas soltas, documento e foto de quadro branco. A foto é o insumo mais rico — entrega o **grafo** direto —, e todo rótulo nela é ilegível até ser confirmado.
 
-**Material de entrada pré-preenche e nunca abaixa a régua.** Todo fato extraído entra como `procedencia: "inferido"` e **não conta** até `confirmado: true`. Confirme **em bloco**, não uma pergunta por fato.
+**Material de entrada pré-preenche e nunca abaixa a régua.** Todo fato extraído entra como `provenance: "inferred"` e **não conta** até `confirmed: true`. Confirme **em bloco**, não uma pergunta por fato.
 
 | o que veio | como entra |
 |---|---|
-| afirmação direta — *"são 300 lojas"* | `fato` com `procedencia: "perguntado"` |
-| leitura sua do material — *"os arquivos caem de madrugada"* | `inferido` + `de:` com o trecho, e some da conta até confirmar |
+| afirmação direta — *"são 300 lojas"* | `fact` com `provenance: "asked"` |
+| leitura sua do material — *"os arquivos caem de madrugada"* | `inferred` + `from:` com o trecho, e some da conta até confirmar |
 | linguagem hedge — *"acho que dava pra fazer com Lambda"* | **opção**, jamais fato |
 | nome de serviço AWS dito cedo | **estacionamento** (abaixo) |
 
@@ -27,7 +27,7 @@ Aceite ata de reunião, notas soltas, documento e foto de quadro branco. A foto 
 
 O usuário diz "Lambda" no minuto um — sempre. Se o nome entrar agora, quebra *um nível de abstração* (`A1.10`) e contamina a vista lógica, que é mostrada também a gente não-AWS.
 
-Guarde em `dossie.estacionamento` com `estado: "estacionado"` e a `capacidade` contra a qual ele volta. Na fase técnica ele reaparece como **sugestão inferida**, para confirmar — não para assumir. Sem esse campo o retorno não sobrevive a uma sessão nova.
+Guarde em `dossier.parking` com `state: "parked"` e a `capability` contra a qual ele volta. Na fase técnica ele reaparece como **sugestão inferida**, para confirmar — não para assumir. Sem esse campo o retorno não sobrevive a uma sessão nova.
 
 ## Fases 1 e 2 · As rodadas
 
@@ -102,16 +102,16 @@ Medido nas **35 páginas** que os 20 modelos do corpus produzem — em páginas 
 |---|---|---|
 | `A1.2` | legenda presente | o motor ainda não emite legenda |
 | `A1.3` | legenda cobre todo canal visual | mesma causa |
-| `A1.11` | `data`, `versao`, `autor` | `model@1` é `additionalProperties: false` e **não tem esses campos** — não há onde escrever |
+| `A1.11` | `date`, `version`, `author` | `model@1` é `additionalProperties: false` e **não tem esses campos** — não há onde escrever |
 
-E o piso **sobe duas** assim que qualquer nota tiver `sobre`:
+E o piso **sobe duas** assim que qualquer nota tiver `about`:
 
 | | quando |
 |---|---|
-| `A1.5` todo elemento tipado | `A1.5` e `A1.12` acusam a **nota presa a nó**, que desenha como nó e vive em `notas[]`, não em `nos[]` |
-| `A1.12` nenhum shape órfão | idem — isoladas em experimento: sem nota, limpo; nota de rodapé, limpo; nota com `sobre`, as duas acusam |
+| `A1.5` todo elemento tipado | `A1.5` e `A1.12` acusam a **nota presa a nó**, que desenha como nó e vive em `notes[]`, não em `nodes[]` |
+| `A1.12` nenhum shape órfão | idem — isoladas em experimento: sem nota, limpo; nota de rodapé, limpo; nota com `about`, as duas acusam |
 
-Isto morde o protocolo de frente: a **fase 5 exige** uma nota ligada por `viaNota` para cada achado recusado. Se ela for presa ao nó, essas duas passam a fazer parte do piso — e não são perguntas.
+Isto morde o protocolo de frente: a **fase 5 exige** uma nota ligada por `viaNote` para cada achado recusado. Se ela for presa ao nó, essas duas passam a fazer parte do piso — e não são perguntas.
 
 **Pare de consertar quando `A1` chegar a exatamente o piso do seu modelo.** Tratar entrada de piso como defeito faz o ajuste rodar para sempre; a dívida tem dono e endereço em [`report.md`](report.md).
 
@@ -137,14 +137,14 @@ Estourado o teto de complexidade (`A2.1`, `A8.1`), a resposta **não** é *"me c
 
 ### O invariante de tupla
 
-Cada candidata carrega sua tupla `E1–E5`. **Todo par difere em ≥1 eixo de forma, e você tem de saber dizer qual** — o campo `difereEm` guarda isso. Tuplas iguais colapsam e são descartadas: é o guarda mecânico contra distinção só de intenção.
+Cada candidata carrega sua tupla `E1–E5`. **Todo par difere em ≥1 eixo de forma, e você tem de saber dizer qual** — o campo `differsIn` guarda isso. Tuplas iguais colapsam e são descartadas: é o guarda mecânico contra distinção só de intenção.
 
 Do corpus, três candidatas e a distinção explícita entre elas:
 
 ```
 cand-a  escolhida    gerenciado-sem-compute · evento        · data-lake            · privado · multi-fronteira
-cand-b  descartada   gerenciado-sem-compute · lote-agendado · data-lake            · privado · multi-fronteira   difereEm: E2
-cand-c  descartada   conteineres            · evento        · relacional-gerenciado · privado · fronteira-unica   difereEm: E1, E3, E5
+cand-b  descartada   gerenciado-sem-compute · lote-agendado · data-lake            · privado · multi-fronteira   differsIn: E2
+cand-c  descartada   conteineres            · evento        · relacional-gerenciado · privado · fronteira-unica   differsIn: E1, E3, E5
 ```
 
 ### Como apresentar
@@ -158,7 +158,7 @@ cand-c  descartada   conteineres            · evento        · relacional-geren
 
 ### As descartadas ficam
 
-Com o `porque` do descarte. Sem elas a sessão seguinte re-propõe uma forma já recusada, e ninguém sabe responder *"por que não a B?"*.
+Com o `because` do descarte. Sem elas a sessão seguinte re-propõe uma forma já recusada, e ninguém sabe responder *"por que não a B?"*.
 
 ## Fase 5 · A revisão de lacunas
 
@@ -177,8 +177,8 @@ São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura qu
 | `spof` | nó sem par, único caminho de um ator até **≥2** outros | não há ator, ou não há aresta |
 | `single-az` | o que guarda estado mora num papel de subnet que existe em **1** zona | nenhuma subnet declara `az` |
 | `egress-sem-controle` | VPC com subnet privada ocupada, sem NAT/endpoint/gateway **dentro nem ligado** | não há subnet privada com conteúdo |
-| `dado-em-subnet-publica` | o que guarda estado está numa subnet `publica` | não há subnet pública |
-| `cross-account-sem-confianca` | travessia entre contas sem `habilita` em nenhuma ponta | <2 contas, ou nenhuma travessia |
+| `dado-em-subnet-publica` | o que guarda estado está numa subnet `public` | não há subnet pública |
+| `cross-account-sem-confianca` | travessia entre contas sem `enables` em nenhuma ponta | <2 contas, ou nenhuma travessia |
 | `assincrono-sem-dlq` | consumidor de fila que não escreve em nenhuma **outra fila** | nada sai de fila, tópico ou barramento |
 
 **"Estado" e "fila" não são listas novas** — saem da mesma tabela de categoria AWS do [#22](https://github.com/ThiagoPanini/panlabs-skills/issues/22) que decide o andar da subnet. Se ela estiver errada, está errada nos dois lugares e conserta-se num só.
@@ -189,11 +189,11 @@ São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura qu
 
 ### A recusa tem de chegar ao desenho
 
-Todo achado com `estado: "recusado"` precisa de `viaNota` apontando para uma entrada de `notas` com `origem: "achado-recusado"`. O elo é **explícito**, e não busca de substring no texto, para que quem edita o texto da nota não quebre a rastreabilidade sem perceber.
+Todo achado com `state: "rejected"` precisa de `viaNote` apontando para uma entrada de `notes` com `origin: "rejected-finding"`. O elo é **explícito**, e não busca de substring no texto, para que quem edita o texto da nota não quebre a rastreabilidade sem perceber.
 
 ```
-achado   spof · alvo receber-arquivo · recusado · viaNota: n-spof
-nota     n-spof · origem achado-recusado
+finding  spof · target receber-arquivo · rejected · viaNote: n-spof
+note     n-spof · origin rejected-finding
          "SPOF conhecido e aceito: ponto de entrada sem par (decisão de orçamento, 2026-08)."
 ```
 

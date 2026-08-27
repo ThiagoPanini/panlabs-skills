@@ -2,7 +2,7 @@
 
 Como a skill é alimentada com a arquitetura de referência de uma empresa, e como isso restringe o que ela propõe.
 
-> **Isto é contrato, não script.** Não há código de produção que leia o pack: o extrator e o aplicador ficaram em `prototypes/q16/`, e a árvore de produção não alcança `prototypes/` de propósito. **Você lê o pack e escreve o modelo de acordo.** O canal que leva o conflito até o desenho — `notas[].origem = "premissa"` — esse sim existe no esquema.
+> **Isto é contrato, não script.** Não há código de produção que leia o pack: o extrator e o aplicador ficaram em `prototypes/q16/`, e a árvore de produção não alcança `prototypes/` de propósito. **Você lê o pack e escreve o modelo de acordo.** O canal que leva o conflito até o desenho — `notes[].origin = "assumption"` — esse sim existe no esquema.
 
 ## Onde ele mora
 
@@ -39,11 +39,11 @@ Do `.drawio` de exemplo, leia **só divergência de estilo**: a célula real usa
 
 | dimensão | fonte | como toca o modelo |
 |---|---|---|
-| catálogo de serviços (proibidos / obrigatórios) | prosa | filtra ou insere `nos[].servico` |
-| topologia de rede obrigatória | prosa | reescreve `nos[].acesso`; insere ou remove nós de rede |
-| nomenclatura | prosa | reescreve `nos[].rotulo` |
-| padrões de segurança | prosa | quando falta um fato, vira `notas[]` — nunca reescreve calado |
-| estilo visual da casa | exemplo | ajusta a camada de resolução — nunca `nos[]`, nunca topologia |
+| catálogo de serviços (proibidos / obrigatórios) | prosa | filtra ou insere `nodes[].service` |
+| topologia de rede obrigatória | prosa | reescreve `nodes[].access`; insere ou remove nós de rede |
+| nomenclatura | prosa | reescreve `nodes[].label` |
+| padrões de segurança | prosa | quando falta um fato, vira `notes[]` — nunca reescreve calado |
+| estilo visual da casa | exemplo | ajusta a camada de resolução — nunca `nodes[]`, nunca topologia |
 
 **Fora do alcance das duas fontes, por desenho: layout e geometria.** Nenhuma tem vocabulário para isso — a mesma fronteira que o modelo já defende. Um context pack que tentasse ditar posição estaria pedindo a pergunta errada.
 
@@ -71,16 +71,16 @@ Quando a arquitetura tecnicamente melhor viola uma premissa corporativa. Três p
 
 **Só sinaliza** quando obedecer exigiria inventar um fato que nem o modelo nem o pack respondem — *qual* chave KMS usar.
 
-Medido contra um modelo real que violava a premissa de propósito (subnet pública mais NAT gateway): 12 notas `origem: "premissa"` — 2 remoções, 2 inserções de Transit Gateway e 7 renomeações mecânicas do lado que reescreve, mais 3 sinais de segurança sem tocar o grafo.
+Medido contra um modelo real que violava a premissa de propósito (subnet pública mais NAT gateway): 12 notas `origin: "assumption"` — 2 remoções, 2 inserções de Transit Gateway e 7 renomeações mecânicas do lado que reescreve, mais 3 sinais de segurança sem tocar o grafo.
 
 ### Onde a premissa fica escrita
 
 | | onde | por quê |
 |---|---|---|
-| a frase curta que aparece no desenho | `notas[]` com `origem: "premissa"` | `notas[].texto` é **desenhado** — citação inteira empilha caixa em cima de ícone |
+| a frase curta que aparece no desenho | `notes[]` com `origin: "assumption"` | `notes[].text` é **desenhado** — citação inteira empilha caixa em cima de ícone |
 | a premissa citada por inteiro | **no próprio `premissas.md`** | é a fonte da verdade, e já está versionada |
 
-> ⚠️ O contrato original mandava guardar a citação em `dossie.contextPack`. Medido: `model@1` aceita (`dossie` é `additionalProperties: true`), mas **`session@1` recusa** — o dossiê de sessão tem lista fechada de seis campos. Como o pack é um arquivo versionado, guardar a citação dentro do `.drawio` seria uma segunda cópia que dessincroniza; a nota curta mais o ponteiro para o pack basta. Se um dia a citação precisar viajar, o campo tem de nascer em `session/schema.json`.
+> ⚠️ O contrato original mandava guardar a citação em `dossier.contextPack`. Medido: `model@1` aceita (`dossier` é `additionalProperties: true`), mas **`session@1` recusa** — o dossiê de sessão tem lista fechada de seis campos. Como o pack é um arquivo versionado, guardar a citação dentro do `.drawio` seria uma segunda cópia que dessincroniza; a nota curta mais o ponteiro para o pack basta. Se um dia a citação precisar viajar, o campo tem de nascer em `session/schema.json`.
 
 ## Como o pack nasce, na primeira vez
 
@@ -95,6 +95,6 @@ O primeiro diagrama numa empresa sem pack sai assim mesmo. O pack **acumula** um
 
 ## Uma armadilha registrada e não consertada
 
-Reescrita de nomenclatura por AZ (`acme-app-1a` vs `acme-app-1b`) apaga o sinal que o motor usa para reconhecer redundância zonal: `rotulo` faz dois trabalhos — texto exibido **e** chave de papel. O caminho de layout muda de **grade** para **elk** mesmo a arquitetura continuando zonalmente redundante.
+Reescrita de nomenclatura por AZ (`acme-app-1a` vs `acme-app-1b`) apaga o sinal que o motor usa para reconhecer redundância zonal: `label` faz dois trabalhos — texto exibido **e** chave de papel. O caminho de layout muda de **grade** para **elk** mesmo a arquitetura continuando zonalmente redundante.
 
-Se o pack impõe sufixo de AZ no rótulo, confira o `caminho` que o `--explain` reporta antes de aceitar o desenho.
+Se o pack impõe sufixo de AZ no rótulo, confira o `path` que `engine/generate.cjs` imprime na última linha ao gravar (`path "grade"` ou `path "elk"`) antes de aceitar o desenho.

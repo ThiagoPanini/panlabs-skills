@@ -10,14 +10,15 @@ O que importa saber antes de abrir: **a camada normativa da AWS é indizível**.
 
 > **A régua para abrir uma palavra nova:** só quando o token comprovadamente não consegue inventar canal de significado novo.
 
-Quatro temas, todos versionados em [`../theme/`](../theme/):
+Três temas, todos versionados em [`../theme/`](../theme/):
 
 | `--theme` | |
 |---|---|
-| `claro` | o default |
-| `escuro` | não é invenção da casa — a AWS publica **dois** decks |
-| `corporativo` | sóbrio, e ainda em branco puro (ver abaixo) |
-| `armadilha` | dizível e **errado** de propósito: existe para o portão de contraste ter corpo de prova |
+| `light` | o default |
+| `dark` | não é invenção da casa — a AWS publica **dois** decks |
+| `corporate` | sóbrio, e ainda em branco puro (ver abaixo) |
+
+**São três, e a lista viva é `theme.listAll()`** — o `--theme` recusa qualquer outro nome. Houve um quarto, dizível e errado de propósito, que existia para o portão de contraste ter corpo de prova; ele não é mais um tema desta árvore, e o guia deixou de oferecê-lo porque pedi-lo hoje só produz *theme does not exist*.
 
 ## A margem estética da casa NÃO está no fundo
 
@@ -27,13 +28,13 @@ A paleta AWS é calibrada para **branco puro**: `#ED7100` alcança só 3:1 contr
 
 Medindo as nove cores de grupo contra fundo escuro, **oito passam e só `#232F3E` desaba** — e a lista da medição é exatamente a lista do deck escuro da AWS. Por isso o escuro existe e o off-white não.
 
-Se pedirem "o cinza institucional da empresa" no fundo: o tema `armadilha` é literalmente esse pedido, e o portão o reprova. Gere com `--force` para mostrar o estrago, não para entregar.
+Se pedirem "o cinza institucional da empresa" no fundo: é exatamente o pedido que o portão de contraste reprova, e não há tema instalado que o encarne. Para mostrar o estrago em vez de discuti-lo, gere com `--force` — para mostrar, nunca para entregar.
 
 ## O portão de contraste reprova, e não é o mesmo do laudo
 
 | | quando | o que faz |
 |---|---|---|
-| **portão de contraste** (tema) | sempre, em `gerar` | **reprova** — `--force` gera assim mesmo |
+| **portão de contraste** (tema) | sempre, em `generate` | **reprova** — `--force` gera assim mesmo |
 | **portão geométrico** (laudo) | opt-in, `--gate` | ver [`report.md`](report.md) |
 
 Ele reprova porque **rótulo que some não dá erro em lugar nenhum**: o arquivo abre, o PNG sai, e o diagrama passa a omitir informação em silêncio. Roda sobre o **plano** — o tema é hipótese, e o plano é onde ela vira número — e sobre **todas as páginas**, não só a consolidada.
@@ -44,11 +45,11 @@ E ele **não substitui a camada indizível**: trocar a cor dos grupos por um azu
 
 ## O tema não é downstream do layout
 
-Dezessete tokens são pintura pura e não movem coordenada; **dez são métrica e movem** — corpo do rótulo, densidade da grade, qualificador em duas linhas. Texto reserva espaço, e espaço é geometria. Por isso o tema entra em `resolver`, **antes** do layout. A partição está travada por teste.
+Dezessete tokens são pintura pura e não movem coordenada; **dez são métrica e movem** — corpo do rótulo, densidade da grade, qualificador em duas linhas. Texto reserva espaço, e espaço é geometria. Por isso o tema entra em `resolve`, **antes** do layout. A partição está travada por teste.
 
 Consequência prática: trocar o tema **muda a geometria**. Não espere diff limpo entre dois temas.
 
-`folga.densidade` multiplica só as **folgas**, nunca as **calhas**. Folga é respiro; calha é reserva de rótulo, derivada da métrica de fonte. Encolher calha não aperta o desenho — derruba texto em cima de borda.
+`gap.density` multiplica só as **folgas**, nunca as **calhas**. Folga é respiro; calha é reserva de rótulo, derivada da métrica de fonte. Encolher calha não aperta o desenho — derruba texto em cima de borda.
 
 ## Fundo, fluxo e o que sobrevive à exportação
 
@@ -56,11 +57,11 @@ Consequência prática: trocar o tema **muda a geometria**. Não espere diff lim
 
 | `--flow` | PNG | SVG / HTML |
 |---|---|---|
-| `solido` | ✅ | ✅ |
-| `tracejado` | ✅ | ✅ |
-| `animado` | ❌ **vira tracejado estático, sem erro nenhum** | ✅ |
+| `solid` | ✅ | ✅ |
+| `dashed` | ✅ | ✅ |
+| `animated` | ❌ **vira tracejado estático, sem erro nenhum** | ✅ |
 
-`animado` degrada calado: o PNG do animado difere do tracejado só na fase do tracejado — é um quadro congelado. Se pedirem fluxo animado, **exporte em SVG** e avise. A CLI também avisa.
+`animated` degrada calado: o PNG do animado difere do tracejado só na fase do tracejado — é um quadro congelado. Se pedirem fluxo animado, **exporte em SVG** e avise. A CLI também avisa.
 
 `--flow` é override de invocação sobre o token do tema: a mesma arquitetura com o mesmo tema pode querer marcar o caminho quente numa entrega e não na outra.
 
@@ -88,16 +89,16 @@ O arquivo de trabalho carrega a deliberação em texto legível por qualquer um 
 
 | | na cópia |
 |---|---|
-| `nos` `arestas` `faixas` `notas` | **fica** — é o desenho em texto; quem vê a imagem já sabe |
-| `dossie.eixos` | **fica** — descreve a arquitetura escolhida, que está desenhada |
-| candidata escolhida | fica o nome e a tupla; **sai** o argumento (`porque`, `paga`, `erradaSe`, `escolhaSe`) |
+| `nodes` `edges` `bands` `notes` | **fica** — é o desenho em texto; quem vê a imagem já sabe |
+| `dossier.axes` | **fica** — descreve a arquitetura escolhida, que está desenhada |
+| candidata escolhida | fica o nome e a tupla; **sai** o argumento (`because`, `pays`, `wrongIf`, `chooseIf`) |
 | candidatas descartadas | **sai** — *"por que não a B"* é conversa da casa |
-| `achados[]` regra, alvo, estado | fica — o **que** foi encontrado é técnico |
-| `achados[].nota` | **sai** — é onde mora *"o time aceitou por orçamento"* |
-| `estacionamento` | **sai inteiro** — é fala de pessoa, com aspas |
-| `fatos[].de` | **sai** a citação; o `fato` fica, é premissa da arquitetura |
-| `acordo.por` · `acordo.recorte` | **sai** — nome de pessoa, e a deliberação da fase 1 |
-| `acordo.impressao` `em` `vista` | fica — provam **que** e **quando**, sem dizer por quem nem o quê |
+| `findings[]` regra, alvo, estado | fica — o **que** foi encontrado é técnico |
+| `findings[].note` | **sai** — é onde mora *"o time aceitou por orçamento"* |
+| `parking` | **sai inteiro** — é fala de pessoa, com aspas |
+| `facts[].from` | **sai** a citação; o `fact` fica, é premissa da arquitetura |
+| `agreement.by` · `agreement.snapshot` | **sai** — nome de pessoa, e a deliberação da fase 1 |
+| `agreement.fingerprint` `at` `view` | fica — provam **que** e **quando**, sem dizer por quem nem o quê |
 
 **A cópia se declara.** O selo dela diz `published@1` e **que ela não retoma** — senão chegaria numa sessão seguinte como um arquivo de trabalho com o dossiê mutilado, e a skill diria *"candidatas descartadas: nenhuma"*, que é falso.
 

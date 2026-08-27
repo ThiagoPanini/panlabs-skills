@@ -1,6 +1,6 @@
 # O laudo e o portão
 
-O laudo sai **sempre**, em `relatorio.geometria` e no `--explain`. Bloquear é que é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
+O laudo sai **sempre**, em `relatorio.geometry` e no `--explain`. Bloquear é que é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
 ```bash
 node tools/check-geometry.cjs <modelo.json>          # o laudo, legível
@@ -28,7 +28,7 @@ Duas checagens de **faixa** têm a mesma tolerância zero e ficam **fora das 62 
 | `F1` | a faixa não abraça exatamente os membros que declara | `A4.2` |
 | `F2` | a aresta atravessa a caixa de uma faixa que não é dela | `A5.5` |
 
-`F2` nasceu no [#26](https://github.com/ThiagoPanini/panlabs-skills/issues/26) e a razão é que **ela não existia**: `A5.5` varre `cena.grupos`, faixa é outra classe, e o motor era estruturalmente cego ao defeito que o fallback do #21 existe para evitar. Ela entra **armada e calada** — medida em malha completa de 3 a 6 zonas, `F2` = 0 nas quatro. O que ela compra é a regressão: no dia em que uma mudança de roteamento reintroduzir o cruzamento, o portão `truthfulness` barra.
+`F2` nasceu no [#26](https://github.com/ThiagoPanini/panlabs-skills/issues/26) e a razão é que **ela não existia**: `A5.5` varre `scene.groups`, faixa é outra classe, e o motor era estruturalmente cego ao defeito que o fallback do #21 existe para evitar. Ela entra **armada e calada** — medida em malha completa de 3 a 6 zonas, `F2` = 0 nas quatro. O que ela compra é a regressão: no dia em que uma mudança de roteamento reintroduzir o cruzamento, o portão `truthfulness` barra.
 
 ## As oito famílias
 
@@ -51,7 +51,7 @@ O nome, o que mede, o limiar e a **fonte** de cada uma estão em [`../validator/
 node -e "require('./validator/index.cjs').CHECKS.filter(c=>c.family==='A5').forEach(c=>console.log(c.id,c.severity,c.name))"
 ```
 
-**Os limiares não foram inventados.** As métricas contínuas estão calibradas nos percentis de 4.890 desenhos de especialistas. Oito checagens não têm base experimental e estão marcadas `calibravel: true`, com `porque: null` em `thresholds.json` — o campo vazio é um pedido de medição, não um número respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
+**Os limiares não foram inventados.** As métricas contínuas estão calibradas nos percentis de 4.890 desenhos de especialistas. Oito checagens não têm base experimental e estão marcadas `calibravel: true`, com `because: null` em `thresholds.json` — o campo vazio é um pedido de medição, não um número respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
 
 ## Os quatro níveis, e quem nasce em qual
 
@@ -72,7 +72,7 @@ Se uma família parou de rodar, o verde não quer dizer nada. Isso é garantia d
 
 ## É portão, não otimizador
 
-Ele roda entre `planejar` e `emitir` — o único ponto onde a geometria já existe e o XML ainda não — e é **função pura**.
+Ele roda entre `plan` e `emit` — o único ponto onde a geometria já existe e o XML ainda não — e é **função pura**.
 
 Um laço de correção comandado pelo validador seria um segundo otimizador competindo com o ELK **sem gradiente nem função objetivo**: as 62 não se combinam num escore (a rubrica proíbe), e sem escalar não há o que descer. O motor já corrige no lugar certo — `align.cjs` desfaz a passada que piora, porque tem as alavancas.
 
@@ -83,42 +83,42 @@ Medido nas **35 páginas** dos 20 modelos — em páginas e não em modelos, por
 | | | por quê |
 |---|---|---|
 | `A1.2` `A1.3` | ✗ 35/35 | **nenhum diagrama emite legenda.** O vocabulário fechado do tema não contrai essa dívida — e não a contrai de propósito: legenda é a dívida de quem inventa notação, e o tema não deixa inventar |
-| `A1.11` | ⚠ 35/35 | pede `data`, `versao`, `autor`; `model@1` é `additionalProperties: false` e não tem esses campos |
+| `A1.11` | ⚠ 35/35 | pede `date`, `version`, `author`; `model@1` é `additionalProperties: false` e não tem esses campos |
 | `A3.9` | ⚠ 35/35 | `calibravel` — o limiar é default de engenharia |
 | `A4.5` | ⚠ 33/35 | padding de grupo uniforme |
 | `A7.4` | ⚠ 32/35 | `calibravel`, idem |
 | `A7.2` | ✗ 21/35 | o quadrado do ícone de serviço fica em **2,71:1** contra o tingimento de subnet. O portão de contraste do tema **avisa** (trata como área); este validador **reprova** (trata como traço). As duas leituras convivem |
 | `A3.7` | ✗ 8/20 modelos | o caminho da grade dimensiona a largura só pela nuvem, e o desenho estoura o canvas. Contado em modelos porque é o CAMINHO que decide, e o caminho é do modelo |
-| `A1.5` `A1.12` | ✗ sempre que houver **nota com `sobre`** | ver abaixo |
+| `A1.5` `A1.12` | ✗ sempre que houver **nota com `about`** | ver abaixo |
 
 ### A nota presa a nó derruba `A1.5` e `A1.12`
 
-Nota com `sobre` desenha **como nó** — foi assim que o roteamento zerou as falhas semânticas dela, pondo-a dentro do container do sujeito em vez de num offset fixo. Mas `A1.5` (*todo elemento tipado*) e `A1.12` (*nenhum shape órfão*) procuram todo objeto desenhado em `modelo.nos[]`, e a nota vive em `modelo.notas[]`. Resultado: `n-x desenha como nó e não existe no modelo`.
+Nota com `about` desenha **como nó** — foi assim que o roteamento zerou as falhas semânticas dela, pondo-a dentro do container do sujeito em vez de num offset fixo. Mas `A1.5` (*todo elemento tipado*) e `A1.12` (*nenhum shape órfão*) procuram todo objeto desenhado em `model.nodes[]`, e a nota vive em `model.notes[]`. Resultado: `n-x desenha como nó e não existe no modelo`.
 
 Isolado em experimento, num modelo de dois nós:
 
 ```
 sem nota                    → limpo
-nota de rodapé (sem sobre)  → limpo
-nota presa a nó (com sobre) → A1.5 e A1.12 acusam
+nota de rodapé (sem about)  → limpo
+nota presa a nó (com about) → A1.5 e A1.12 acusam
 ```
 
-Nenhum modelo do corpus de desenvolvimento usa `sobre`, e por isso ele não pega — só o corpus de sessão usa, e o laudo dele não é asserido checagem a checagem. **É defeito das duas checagens, não do seu modelo**: a nota é objeto desenhado legítimo, e as duas precisam aprender a classe. Até lá, entra no piso.
+Nenhum modelo do corpus de desenvolvimento usa `about`, e por isso ele não pega — só o corpus de sessão usa, e o laudo dele não é asserido checagem a checagem. **É defeito das duas checagens, não do seu modelo**: a nota é objeto desenhado legítimo, e as duas precisam aprender a classe. Até lá, entra no piso.
 
-Morde o protocolo: a revisão de lacunas **exige** nota ligada por `viaNota` para todo achado recusado. Ver [`inquiry.md`](inquiry.md).
+Morde o protocolo: a revisão de lacunas **exige** nota ligada por `viaNote` para todo achado recusado. Ver [`inquiry.md`](inquiry.md).
 
 **"Tem falha" não distingue bom de quebrado neste corpus.** O que distingue é `semanticas.length`, e ele está em **zero** no corpus inteiro.
 
 ### `A5.7` avisa de propósito
 
-Direção de fluxo consistente passou a avisar em três páginas, e foi uma conta paga conscientemente: com `dados: "volta"` virando dica de reversão, o eixo passou a seguir **o dado** e a seta de uma consulta aponta para trás — que é o que ela é. A troca foi *seta cosmética* por *ordem de leitura verdadeira*. Antes, a seta ficava bonita e a fileira de contas saía lida de trás para frente.
+Direção de fluxo consistente passou a avisar em três páginas, e foi uma conta paga conscientemente: com `data: "back"` virando dica de reversão, o eixo passou a seguir **o dado** e a seta de uma consulta aponta para trás — que é o que ela é. A troca foi *seta cosmética* por *ordem de leitura verdadeira*. Antes, a seta ficava bonita e a fileira de contas saía lida de trás para frente.
 
-Não "conserte" `A5.7` invertendo `dados`.
+Não "conserte" `A5.7` invertendo `data`.
 
 ## Quando algo acusa de verdade
 
 1. **Rode `--explain`** — as três trilhas de auditoria, descritas no [`SKILL.md`](../SKILL.md).
-2. **Falha semântica → o fato está errado no modelo**, não a geometria. `A4.2` costuma ser `dentro` apontando para o lugar errado; `A5.5`, uma travessia que o modelo não declara.
+2. **Falha semântica → o fato está errado no modelo**, não a geometria. `A4.2` costuma ser `inside` apontando para o lugar errado; `A5.5`, uma travessia que o modelo não declara.
 3. **`A8.1` estourado → decompor, não encolher.** O remédio é explícito na literatura. E é o mesmo movimento da sabatina: a próxima pergunta vira *"o que sai do diagrama?"*.
 4. **`A2.1` acima de 6 entradas de legenda** é o único limite numérico rigorosamente derivado da pesquisa — *span of absolute judgement*. Não o negocie.
 

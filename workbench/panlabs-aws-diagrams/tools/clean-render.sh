@@ -4,6 +4,17 @@
 # It exists because a hung `drawio` is NOT harmless: after half a dozen of them,
 # files that used to render start failing, and the bisection blames the wrong
 # file. Every render measurement in this prototype starts here.
+#
+# ⚠️ SINCE #128, OUR OWN RENDERS NO LONGER FILL THIS FLOOR. `render.sh` used to
+# put `setsid` in front of `xvfb-run`, which moved the render out of the process
+# group `timeout` signals — so every hang leaked a whole Chromium and an `Xvfb`,
+# and this script was the only thing that ever collected them. Measured there:
+# with `setsid` a killed render left four processes alive and grew to six two
+# seconds later; without it the tree is back to baseline before the first
+# sample. What is left for this sweeper is what it was always best at — the
+# leftovers of an ABORTED run, and of whoever else on this machine renders
+# without going through `render.sh`. Finding a pile here now is a finding, not
+# the weather.
 set -uo pipefail
 
 # The trailing `-` in the pattern is not decoration — it is the same scar that

@@ -254,6 +254,20 @@ else
     echo "   Pillow missing — pixel verification skipped."
   fi
   step "the case verb's image, with the binary (#41)"  node "$HERE/check-case.cjs" "$DRAWIO"
+  # ⚠️ ITS SUBJECT COMES BEFORE EVERY RENDER ABOVE IT, and it sits at the end anyway.
+  #
+  # `render.sh` is what the three render steps of this layer AND the layer-3
+  # bisection all call, so by this file's own rule — "the order of the layers is
+  # the order in which one failure invalidates the ones that follow" — it belongs
+  # at the head. It is appended here because a registry in this repo is
+  # append-only (CLAUDE.md § Registro é append-only): a line inserted in the
+  # middle mergeia green against a parallel branch and yields an order nobody
+  # chose. The debt is named rather than hidden; moving it is a ticket of its own.
+  #
+  # It needs no draw.io — the binary it drives is a stub it writes itself — but it
+  # lives inside this guard on purpose: with no draw.io nothing renders, and
+  # `bisect-model.cjs` never reaches `render.sh` at all.
+  step "render.sh names who ended the process (#128)"  node "$HERE/check-render-verdict.cjs"
 fi
 
 echo

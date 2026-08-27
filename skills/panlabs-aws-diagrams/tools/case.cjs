@@ -63,10 +63,15 @@ const DEFAULT_GATE = 'truthfulness';
  * did not draw honestly has no file to write, and the caller is a machine
  * (the journey, or this file's own `main`), not a human waiting on a prompt.
  *
- * Requires a TECHNICAL-stage session: the two tabs are the point of a case,
- * and a logical-only session has no technical facet to draw as the second
- * one. Getting there — resuming, elaborating — is `session/open.cjs` and
- * `session/elaborate.cjs`'s job, done before this is ever called.
+ * Requires a TECHNICAL-stage session: BOTH views are the point of a case,
+ * and a logical-only session has no technical facet to draw at all. What a
+ * case guarantees is the SPLIT, never a count — this seam draws logical
+ * first and hands `stitch` that order, and `engine/generate.cjs` adds one
+ * detail page per account to the technical view as soon as the model has
+ * two accounts or more. So a case is 1 + (1+N) pages, and opens with the
+ * two tabs of always only when N is zero. Getting there — resuming,
+ * elaborating — is `session/open.cjs` and `session/elaborate.cjs`'s job,
+ * done before this is ever called.
  *
  * Requires `opts.brief` too: `case.md`'s first section is the original
  * prose description, verbatim (#42) — a case with no brief has nothing
@@ -138,11 +143,16 @@ const HELP = `
     --gate <level>   truthfulness|none|failure|strict   (default: truthfulness)
     --image          also render the PNG, when the draw.io binary is present
 
-  Reads a session@1 already at the technical stage and writes its two-tab
-  .drawio, plus a case.md dossier, to docs/architecture/diagrams/<slug>/, at
-  the root of the CALLER's git repository — never inside this skill's own
-  tree. Outside a git repository, falls back to the current directory, with
-  a warning.
+  Reads a session@1 already at the technical stage and writes its .drawio,
+  plus a case.md dossier, to docs/architecture/diagrams/<slug>/, at the root
+  of the CALLER's git repository — never inside this skill's own tree.
+  Outside a git repository, falls back to the current directory, with a
+  warning.
+
+  The .drawio carries BOTH views, the logical page first. The technical one
+  comes out in 1+N pages — one consolidated, plus one per account — as soon
+  as the model has two accounts or more; with one account, or none, N is
+  zero and the file opens with the two tabs of always.
 `;
 
 const WITH_VALUE = ['gate', 'brief'];

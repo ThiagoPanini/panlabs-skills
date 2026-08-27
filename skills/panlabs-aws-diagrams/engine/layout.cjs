@@ -19,7 +19,7 @@
  * a new engine.
  */
 
-const ELK = require('./vendor/elk.bundled.js');
+const ELK = require('./vendor/elk.bundled.cjs');
 const { align } = require('./align.cjs');
 const layersMod = require('./layers.cjs');
 const { CONTAINERS, LEAVES } = require('./validate.cjs');

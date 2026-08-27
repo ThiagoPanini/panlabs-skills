@@ -172,7 +172,7 @@ console.log('\n  the render died of a SIGNAL — and a signal is nobody\'s opini
   // The first version of `render.sh` asked only for 124 and 137, so every other
   // way of not answering fell into "the drawing": a segfault came back as
   // `REFUSED by draw.io (code 139) — the drawing`, and so would an OOM that took
-  // a child (`137` is what #128's own ticket calls "cheiro de memória"), an
+  // a child (#128 reads `137` as the smell of memory pressure), an
   // abort, or a foreign sweep's TERM. The rule is now about WHO CHOSE the
   // number — only 0–123 is draw.io's own — and this case is what holds it there.
   const { code, out } = render(stub('kill -SEGV $$'), { limit: 5, attempts: 2 });

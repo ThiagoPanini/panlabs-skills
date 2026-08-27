@@ -87,9 +87,9 @@ extra=()
 # ⚠️ THE FIRST VERSION OF THIS ASKED ONLY FOR 124 AND 137, and a code review
 # found the hole: a stub that raised SIGSEGV came back as
 # `REFUSED by draw.io (code 139) — the drawing`, sending the reader to debug a
-# model over a dead compositor. The ticket's own measurements name `137` as
-# "cheiro de memória"; an OOM that takes a CHILD rather than the wrapper lands
-# here too. Asking who chose the number is the version with no hole in it.
+# model over a dead compositor. #128's own measurements read `137` as the smell
+# of memory pressure, and an OOM that takes a CHILD rather than the wrapper
+# lands here too. Asking who chose the number is the version with no hole in it.
 answered() { [ "$1" -lt 124 ]; }
 
 log_tail() { grep -vi 'dbus\|trace-warnings' | tail -5; }

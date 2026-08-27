@@ -312,7 +312,7 @@ if (require.main === module) {
   // is falsy — so printing it on the same "service" line as a real match buries
   // the one outcome that means "the catalog does not know this name" inside a
   // tuple a skimming reader has to parse. #139: this line, unlike the engine's
-  // own `report.avisos`, printed exactly that silence.
+  // own `report.warnings`, printed exactly that silence.
   let unresolved = 0;
   for (const a of args) {
     const s = cat.service(a);

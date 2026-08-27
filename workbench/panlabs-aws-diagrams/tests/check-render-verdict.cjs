@@ -128,10 +128,16 @@ function render(bin, { limit = 2, attempts = 3 } = {}) {
     { stdio: ['ignore', fd, fd], env: { ...process.env, DRAWIO: bin, LIMIT: String(limit), ATTEMPTS: String(attempts) } });
   fs.closeSync(fd);
   let out = fs.readFileSync(LOG, 'utf8');
+  // ⚠️ These 124/137 are OUR outer `timeout` reporting on `render.sh` itself —
+  // not the same question as `render.sh`'s own `answered()`, which asks who
+  // chose draw.io's status. Same two numbers, one level up. Do not unify them.
   const hung = r.status === 124 || r.status === 137;
   if (hung) out += `\n(render.sh never returned — killed after ${budget}s)`;
   return { code: r.status, out, hung };
 }
+
+/** What `render.sh` actually answered, per case — asserted against its reader below. */
+const observed = {};
 
 /** How many processes still carry our temp directory on their command line. */
 function survivors() {
@@ -150,6 +156,7 @@ console.log('\n  the render came out\n');
 console.log('\n  the DRAWING was refused — draw.io read it and said no\n');
 {
   const { code, out } = render(stub('echo "Error: Export failed" >&2; exit 1'));
+  observed.refused = code;
   check('exits 1, not 4', code === 1, out);
   check('and the sentence blames the drawing', /the drawing/i.test(out), out);
   // The promise that costs something: a verdict is an ANSWER, and repeating the
@@ -158,9 +165,26 @@ console.log('\n  the DRAWING was refused — draw.io read it and said no\n');
   check('the binary was called ONCE — a verdict is not retried', calls() === 1, `called ${calls()}×`);
 }
 
+console.log('\n  the render died of a SIGNAL — and a signal is nobody\'s opinion of the file\n');
+{
+  // ⚠️ THE HOLE A CODE REVIEW FOUND, PLANTED SO IT STAYS SHUT.
+  //
+  // The first version of `render.sh` asked only for 124 and 137, so every other
+  // way of not answering fell into "the drawing": a segfault came back as
+  // `REFUSED by draw.io (code 139) — the drawing`, and so would an OOM that took
+  // a child (`137` is what #128's own ticket calls "cheiro de memória"), an
+  // abort, or a foreign sweep's TERM. The rule is now about WHO CHOSE the
+  // number — only 0–123 is draw.io's own — and this case is what holds it there.
+  const { code, out } = render(stub('kill -SEGV $$'), { limit: 5, attempts: 2 });
+  check('exits 4, not 1 — 139 is the kernel talking, not draw.io', code === 4, out);
+  check('and the sentence blames the render', /the render, not the drawing/i.test(out), out);
+  check('and it was retried, because nothing answered', calls() === 2, `called ${calls()}×`);
+}
+
 console.log('\n  the RENDER never answered — it hung, and we ended it\n');
 {
   const { code, out } = render(stub(HANG), { limit: 2, attempts: 3 });
+  observed.unanswered = code;
   check('exits 4, not 1', code === 4, out);
   check('and the sentence blames the render, not the drawing', /the render, not the drawing/i.test(out), out);
   check('every attempt was spent', calls() === 3, `called ${calls()}×`);
@@ -183,8 +207,8 @@ console.log('\n  the flake itself — it hung once, on bytes that render fine\n'
   check('it took two calls', calls() === 2, `called ${calls()}×`);
   // A retry that says nothing is a red silently turned green, and the next
   // person to look at the binary has no idea it has been flaking for months.
-  check('and it SAYS draw.io hung — a swallowed flake is a flake nobody fixes',
-    /draw\.io hung/.test(out) && /attempt 2 of 3/.test(out), out);
+  check('and it names the attempt that finally worked — a swallowed flake is a flake nobody fixes',
+    /attempt 2 of 3/.test(out), out);
 
   // ⚠️ BOTH ENDS OF THE SAME STRING, and only one of them is written here.
   //
@@ -193,13 +217,27 @@ console.log('\n  the flake itself — it hung once, on bytes that render fine\n'
   // it — and CLAUDE.md already names what happens when only one end moves: a
   // green that lies. Reword `render.sh` and the ⚠ line simply stops appearing,
   // which is the precise failure #128 was opened to end. So the pattern is not
-  // copied: it is READ OUT OF THE READER, and asserted against the writer.
+  // copied here: it is READ OUT OF THE READER, and asserted against the writer.
   const bisect = fs.readFileSync(path.join(__dirname, '..', 'tools', 'bisect-model.cjs'), 'utf8');
-  const declared = bisect.match(/const flaked = \/(.+?)\/\.test\(out\)/);
-  if (check('bisect-model.cjs still greps for it with a literal this check can read', !!declared,
-    'the `const flaked = /…/.test(out)` line moved or changed shape — teach this check the new one')) {
+  const declared = bisect.match(/const FLAKED = \/(.+?)\/;/);
+  if (check('bisect-model.cjs still declares FLAKED as a literal this check can read', !!declared,
+    'the `const FLAKED = /…/;` line moved or changed shape — teach this check the new one')) {
     check(`and that literal — /${declared[1]}/ — matches what render.sh just said`,
       new RegExp(declared[1]).test(out), out);
+  }
+
+  // The other two-ended contract, and the same treatment: `bisect-model.cjs`
+  // hard-codes which exit code means what. `render.sh` could renumber and every
+  // cut would come back as "a code this tool does not know" — loud, but only in
+  // a run nobody may make for months. Here the table is read and required to
+  // agree with what `render.sh` ANSWERED, minutes ago, in this same file.
+  const table = {};
+  for (const m of bisect.matchAll(/^\s*(\w+):\s*\{[^}]*\bcode:\s*(\d+)/gm)) table[m[1]] = Number(m[2]);
+  if (check('bisect-model.cjs still declares codes this check can read', Object.keys(table).length > 0,
+    'the `ANSWERS` table moved or changed shape — teach this check the new one')) {
+    for (const [state, code] of Object.entries(observed))
+      check(`bisect-model.cjs reads ${code} as "${state}", and that is what render.sh answered`,
+        table[state] === code, `table says ${table[state]}, render.sh answered ${code}`);
   }
 }
 

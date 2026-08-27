@@ -41,12 +41,22 @@
 #    those the machine saturates and GOOD FILES START FAILING — the feedback
 #    loop that turned a 1-in-20 flake into a red suite one run in three.
 #
-# 3. ATTEMPTS, AND ONLY FOR THE HANG. Retrying a verdict is blind repetition;
-#    retrying a hang is the measurement that tells the two apart. #128 measured
-#    both ends: the same bytes render 19 times out of 20 and hang on the 20th,
-#    while a file draw.io genuinely refuses fails 3 times out of 3, exits ON ITS
-#    OWN with code 1, and says `Error: Export failed`. A self-exit is therefore
-#    a verdict and is never retried; a kill is a non-answer and is.
+# 3. ATTEMPTS, AND ONLY FOR THE NON-ANSWER. Retrying a verdict is blind
+#    repetition; retrying a hang is the measurement that tells the two apart.
+#    #128 measured both ends: the same bytes render 19 times out of 20 and hang
+#    on the 20th, while a file draw.io genuinely refuses fails 3 times out of 3,
+#    exits ON ITS OWN with code 1, and says `Error: Export failed`. A chosen
+#    status is therefore a verdict and is never retried; anything else is a
+#    non-answer and is.
+#
+#    ⚠️ AND THE CLOCK IS A SUSPECT, so the arithmetic is worth writing down. Three
+#    attempts put the worst case at `LIMIT × ATTEMPTS` for one file, and #128's
+#    own ticket records a suite run blowing a 590s ceiling. It still comes out
+#    ahead: before scar 2 was fixed, a "killed" render was not killed — it kept
+#    a whole Chromium burning CPU for the rest of the run, so the clock paid for
+#    every hang forever instead of for `LIMIT` seconds. Two attempts would put
+#    the suite's ~30 renders back at roughly one red in fifty; three put it at
+#    one in two thousand, measured against the 2,5% per-render rate of #128.
 #
 # 4. A RETRY THAT SAVES A RENDER SAYS SO. A flake that is swallowed is a flake
 #    nobody ever fixes, and a layer that quietly passes on the second try is
@@ -66,13 +76,23 @@ ATTEMPTS="${ATTEMPTS:-3}"
 extra=()
 [ "$FORMAT" = png ] && extra=(-s 2)
 
-# DID WE END IT, OR DID IT END ITSELF? 124 is `timeout` reporting its own
-# deadline; 137 is a SIGKILL that came from somewhere else — `clean-render.sh`,
-# a parallel sweep, the OOM killer. Either way nobody got an answer out of
-# draw.io, and that is the distinction the exit codes above are built on.
-killed() { [ "$1" = 124 ] || [ "$1" = 137 ]; }
+# DID DRAW.IO ANSWER, OR DID SOMETHING END IT? Only 0–123 is a status the
+# program CHOSE. From 124 up, the answer is somebody else's:
+#
+#   124, 125   `timeout` speaking — its deadline passed, or it failed to run
+#   126, 127   the shell speaking — not executable, not found (no `xvfb-run`)
+#   128+N      the kernel speaking — killed by signal N: our own SIGKILL at 137,
+#              a segfault at 139, an OOM-killed child, a foreign sweep at 143
+#
+# ⚠️ THE FIRST VERSION OF THIS ASKED ONLY FOR 124 AND 137, and a code review
+# found the hole: a stub that raised SIGSEGV came back as
+# `REFUSED by draw.io (code 139) — the drawing`, sending the reader to debug a
+# model over a dead compositor. The ticket's own measurements name `137` as
+# "cheiro de memória"; an OOM that takes a CHILD rather than the wrapper lands
+# here too. Asking who chose the number is the version with no hole in it.
+answered() { [ "$1" -lt 124 ]; }
 
-quiet() { grep -vi 'dbus\|trace-warnings' | tail -5; }
+log_tail() { grep -vi 'dbus\|trace-warnings' | tail -5; }
 
 # DO NOT try a safety net with `pkill -f "$(basename "$INPUT")"`: the file name
 # appears on the command line of WHOEVER CALLED this script, and pkill kills the
@@ -91,25 +111,25 @@ while :; do
 
   if [ -s "$OUTPUT" ]; then
     flake=""
-    [ "$hangs" -gt 0 ] && flake="   ⚠ draw.io hung $hangs× on these same bytes — attempt $attempt of $ATTEMPTS (#128)"
+    [ "$hangs" -gt 0 ] && flake="   ⚠ draw.io did not answer $hangs× on these same bytes — attempt $attempt of $ATTEMPTS (#128)"
     echo "✓ $(basename "$OUTPUT")  $(stat -c %s "$OUTPUT") bytes$flake"
     exit 0
   fi
 
-  if ! killed "$code"; then
-    # draw.io ended itself. It read the file and said no — repeating that is
-    # asking the same question twice and calling the second answer better.
+  if answered "$code"; then
+    # draw.io chose this number. It read the file and said no — repeating that
+    # is asking the same question twice and calling the second answer better.
     echo "✗ $(basename "$INPUT") REFUSED by draw.io (code $code) — the drawing"
-    echo "$render_log" | quiet
+    echo "$render_log" | log_tail
     exit 1
   fi
 
   hangs=$((hangs + 1))
   if [ "$attempt" -ge "$ATTEMPTS" ]; then
-    echo "✗ $(basename "$INPUT") NEVER ANSWERED — $hangs attempt(s) hung and were killed at ${LIMIT}s — the render, not the drawing"
-    echo "$render_log" | quiet
+    echo "✗ $(basename "$INPUT") NEVER ANSWERED — $hangs attempt(s) ended without draw.io choosing a status (last: $code, deadline ${LIMIT}s) — the render, not the drawing"
+    echo "$render_log" | log_tail
     exit 4
   fi
-  echo "  … attempt $attempt hung (killed at ${LIMIT}s) — retrying"
+  echo "  … attempt $attempt did not answer (code $code, deadline ${LIMIT}s) — retrying"
   attempt=$((attempt + 1))
 done

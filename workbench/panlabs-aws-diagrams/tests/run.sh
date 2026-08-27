@@ -254,21 +254,28 @@ else
     echo "   Pillow missing — pixel verification skipped."
   fi
   step "the case verb's image, with the binary (#41)"  node "$HERE/check-case.cjs" "$DRAWIO"
-  # ⚠️ ITS SUBJECT COMES BEFORE EVERY RENDER ABOVE IT, and it sits at the end anyway.
-  #
-  # `render.sh` is what the three render steps of this layer AND the layer-3
-  # bisection all call, so by this file's own rule — "the order of the layers is
-  # the order in which one failure invalidates the ones that follow" — it belongs
-  # at the head. It is appended here because a registry in this repo is
-  # append-only (CLAUDE.md § Registro é append-only): a line inserted in the
-  # middle mergeia green against a parallel branch and yields an order nobody
-  # chose. The debt is named rather than hidden; moving it is a ticket of its own.
-  #
-  # It needs no draw.io — the binary it drives is a stub it writes itself — but it
-  # lives inside this guard on purpose: with no draw.io nothing renders, and
-  # `bisect-model.cjs` never reaches `render.sh` at all.
-  step "render.sh names who ended the process (#128)"  node "$HERE/check-render-verdict.cjs"
 fi
+
+# ⚠️ OUTSIDE THE GUARD, AND STILL AT THE END OF THE LAYER. Both halves are on
+# purpose, and one of them was a correction.
+#
+# OUTSIDE, because it needs no draw.io: the binary it drives is a stub it writes
+# itself, and `xvfb-run` is all it borrows. The documented way to skip layer 7 is
+# to pass a path that is not executable (`run.sh /nonexistent/drawio`, #128), and
+# that is exactly the moment someone is trying to separate "my change broke
+# something" from "the render fell over again" — the wrong moment to stop
+# measuring the render contract. The first draft of this step sat inside the
+# guard and a review caught it.
+#
+# AT THE END, because its subject comes BEFORE every render above it. `render.sh`
+# is what the three render steps of this layer and the layer-3 bisection all
+# call, so by this file's own rule — "the order of the layers is the order in
+# which one failure invalidates the ones that follow" — it belongs at the head.
+# A registry in this repo is append-only (CLAUDE.md § Registro é append-only): a
+# line inserted in the middle merges green against a parallel branch and yields
+# an order nobody chose. The debt is named rather than hidden; moving it is a
+# ticket of its own.
+step "render.sh names who ended the process (#128)"  node "$HERE/check-render-verdict.cjs"
 
 echo
 if [ "$failed" -ne 0 ]; then

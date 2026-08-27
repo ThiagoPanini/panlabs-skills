@@ -41,9 +41,34 @@ const { generate } = require(path.join(SKILL, 'engine', 'generate.cjs'));
 // on it at runtime, so it could not move with the rest of the bancada.
 const RENDER = path.join(SKILL, 'tools', 'render.sh');
 
-/** `render.sh`'s exit codes. Anything else is a surprise, and is reported as one. */
-const REFUSED = 1;     // draw.io read the file and said no — the DRAWING
-const UNANSWERED = 4;  // every attempt hung and had to be killed — the RENDER
+/**
+ * WHAT `render.sh` CAN ANSWER, AND WHAT EACH ANSWER MEANS — in one place.
+ *
+ * Three facts about an outcome used to sit apart: the exit code, the sentence
+ * printed next to the cut, and which summary the cut is counted under. A state
+ * added to one had to be remembered in the other two, and forgetting is exactly
+ * the shape of defect this ticket is about. `rejected` carries no code because
+ * the ENGINE refuses before `render.sh` is ever called; it shares the `drawing`
+ * blame all the same. Anything `render.sh` answers that is not in this table is
+ * a surprise, and is reported as one rather than guessed into a bucket.
+ */
+const ANSWERS = {
+  rejected:   { blame: 'drawing' },
+  refused:    { blame: 'drawing', code: 1, line: '✗ THE DRAWING WAS REFUSED' },
+  unanswered: { blame: 'render',  code: 4, line: '✗ THE RENDER NEVER ANSWERED' },
+};
+const stateFor = code => Object.keys(ANSWERS).find(s => ANSWERS[s].code === code) || 'unknown';
+const blamed = (results, blame) => results.filter(x => (ANSWERS[x.state] || {}).blame === blame);
+
+/**
+ * The sentence `render.sh` prints when a retry is what saved the render.
+ *
+ * ⚠️ TWO ENDS, AND THE OTHER ONE IS `render.sh`. `tests/check-render-verdict.cjs`
+ * reads THIS literal out of THIS file and requires `render.sh` to still print
+ * something it matches — so a reword over there goes red here instead of
+ * silently retiring the warning.
+ */
+const FLAKED = /did not answer/;
 
 /** Removes a node and everything that depends on it — descendants, edges, bands. */
 function prune(model, ids) {
@@ -89,7 +114,6 @@ async function test(name, model) {
     return { name, state: 'generated', txt: `${name.padEnd(24)} ✓ engine generated  ${plan}  (render skipped — no draw.io)` };
   }
   fs.writeFileSync(drawio, r.xml);
-  let out;
   try {
     // ⚠️ THE BINARY THIS FILE CHOSE, HANDED TO THE SCRIPT THAT RUNS IT.
     //
@@ -100,25 +124,22 @@ async function test(name, model) {
     // `tools/drawio.cjs` was written to end, one call site further along, and it
     // surfaced in #128 the moment a stub binary was pointed at this tool and
     // every cut came back green.
-    out = execFileSync(RENDER, [drawio, png], { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, DRAWIO } });
+    const out = execFileSync(RENDER, [drawio, png], { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, DRAWIO } });
+    // `render.sh` says so when a retry is what saved the render — a flake that
+    // is swallowed is a flake nobody ever fixes.
+    const flaked = FLAKED.test(out);
+    return {
+      name, state: 'rendered', flaked,
+      txt: `${name.padEnd(24)} ✓ rendered   ${plan}` + (flaked ? `\n${indent(out)}` : ''),
+    };
   } catch (e) {
-    fs.rmSync(drawio, { force: true }); fs.rmSync(png, { force: true });
     const log = `${e.stdout || ''}${e.stderr || ''}`.trim() || `render.sh exited ${e.status} and said nothing`;
-    const state = e.status === UNANSWERED ? 'unanswered'
-      : e.status === REFUSED ? 'refused'
-      : 'broken';
-    const verdict = { unanswered: '✗ THE RENDER NEVER ANSWERED', refused: '✗ THE DRAWING WAS REFUSED' }[state]
-      || `✗ render.sh exited ${e.status} — a code this tool does not know`;
-    return { name, state, txt: `${name.padEnd(24)} ${verdict}   ${plan}\n${indent(log)}` };
+    const state = stateFor(e.status);
+    const line = (ANSWERS[state] || {}).line || `✗ render.sh exited ${e.status} — a code this tool does not know`;
+    return { name, state, txt: `${name.padEnd(24)} ${line}   ${plan}\n${indent(log)}` };
+  } finally {
+    fs.rmSync(drawio, { force: true }); fs.rmSync(png, { force: true });
   }
-  fs.rmSync(drawio, { force: true }); fs.rmSync(png, { force: true });
-  // `render.sh` says so when a retry is what saved the render — a flake that is
-  // swallowed is a flake nobody ever fixes.
-  const flaked = /draw\.io hung/.test(out);
-  return {
-    name, state: 'rendered', flaked,
-    txt: `${name.padEnd(24)} ✓ rendered   ${plan}` + (flaked ? `\n${indent(out)}` : ''),
-  };
 }
 
 async function main() {
@@ -154,15 +175,15 @@ async function main() {
    * look at the machine.
    */
   const flaked = r.filter(x => x.flaked);
-  const drawing = r.filter(x => x.state === 'rejected' || x.state === 'refused');
-  const machine = r.filter(x => x.state === 'unanswered');
+  const drawing = blamed(r, 'drawing');
+  const machine = blamed(r, 'render');
   // A code `render.sh` does not document gets its own sentence rather than being
   // folded into one of the two above. Reachable today by pointing this tool at a
   // path that exists but is not executable (`HAS_APP` tests existence, `render.sh`
   // tests the execute bit and answers 3), and tomorrow by `render.sh` growing an
   // outcome this file was never taught. Guessing which bucket it belongs in would
   // be the tool inventing a verdict, which is the habit #128 is here to break.
-  const strange = r.filter(x => x.state === 'broken');
+  const strange = r.filter(x => x.state === 'unknown');
 
   if (flaked.length)
     console.log(`\n  ⚠ draw.io hung on ${flaked.length} cut(s) and render.sh got them on a later attempt: ` +
@@ -173,8 +194,9 @@ async function main() {
 
   if (machine.length)
     console.log(`\n  ✗ THE RENDER — ${machine.length} cut(s) never came out: ${machine.map(x => x.name).join(', ')}` +
-      `\n    every attempt hung. Go look at this machine — leftovers, memory, display — not at the model.` +
-      `\n    tools/clean-render.sh is what sweeps a saturated one.`);
+      `\n    on every attempt something other than draw.io chose the exit code — a deadline, a signal, a missing xvfb-run.` +
+      `\n    Go look at this machine — leftovers, memory, display, another session rendering — not at the model.` +
+      `\n    tools/clean-render.sh is what sweeps a saturated one; pgrep -f "drawio|Xvfb" is what finds a neighbour.`);
 
   if (strange.length)
     console.log(`\n  ✗ render.sh answered with a code this tool does not know, on: ${strange.map(x => x.name).join(', ')}` +

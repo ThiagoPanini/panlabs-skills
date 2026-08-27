@@ -32,7 +32,7 @@
         "logical",
         "technical"
       ],
-      "description": "Ate onde o modelo foi elaborado. `logical` = so casacos logicos existem (fase pre-servicos, #15 §5). `technical` = todo no tem casaco tecnico. Estagio e do MODELO; vista e do DESENHO. Um modelo no estagio tecnica emite as DUAS vistas; um no estagio logica emite so a logica."
+      "description": "Ate onde o modelo foi elaborado. `logical` = so casacos logicos existem (fase pre-servicos, #15 §5). `technical` = todo no tem casaco tecnico. Estagio e do MODELO; vista e do DESENHO. Um modelo no estagio `technical` emite as DUAS vistas; um no estagio `logical` emite so a logica."
     },
     "views": {
       "type": "object",
@@ -221,7 +221,7 @@
             "application",
             "data"
           ],
-          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `node` em `model@1`, e mesmo NOME que o `layer` do `node` que envolve este casaco (que aqui significa onde o elemento existe na sessao — both|technical). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com tipo=subnet. Ausente ate o #37 — era o mesmo defeito que `qualifier`, `ou` e `enables` tiveram ate o #29 (tests/check-technical-parity.cjs mede isto agora)."
+          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `node` em `model@1`, e mesmo NOME que o `layer` do `node` que envolve este casaco (que aqui significa onde o elemento existe na sessao — both|technical). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com kind=subnet. Ausente ate o #37 — era o mesmo defeito que `qualifier`, `ou` e `enables` tiveram ate o #29 (tests/check-technical-parity.cjs mede isto agora)."
         },
         "cidr": {
           "type": "string"
@@ -244,7 +244,7 @@
         "ou": {
           "type": "string",
           "minLength": 1,
-          "description": "DIMENSAO da conta, nunca um container (#12) — mesmo campo do `model@1`. So com tipo=conta. Sem ele, uma arquitetura multi-conta construida pelo ARCO DE DUAS VISTAS nao conseguia expressar unidade organizacional nenhuma, enquanto a mesma arquitetura escrita direto em `model@1` conseguia. A assimetria era acidente, nao politica."
+          "description": "DIMENSAO da conta, nunca um container (#12) — mesmo campo do `model@1`. So com kind=account. Sem ele, uma arquitetura multi-conta construida pelo ARCO DE DUAS VISTAS nao conseguia expressar unidade organizacional nenhuma, enquanto a mesma arquitetura escrita direto em `model@1` conseguia. A assimetria era acidente, nao politica."
         },
         "enables": {
           "$ref": "#/definitions/identifier",

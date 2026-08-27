@@ -200,18 +200,30 @@ const backticked = text => [...text.replace(/```[\s\S]*?```/g, '').matchAll(/`([
   .map(m => m[1].trim());
 
 /**
- * Three shapes carry a field name in this document, and a scanner that knows
- * only the first two goes green on the table where the names actually live:
+ * FIVE shapes carry a field name in this document, and every one of them was
+ * added after a scanner that did not know it reported a file as clean:
  *
  *   `notes[].origin`                    a path
  *   `layer: "technical"`                a key AND its value — both are contract
+ *   `service:substring`                 the same, with no quotes
  *   `{ edgeId: { by: [ids] } }`         the SHAPE column of every field table
+ *   `notes[].origin = "assumption"`     a path ASSIGNED a value
  *
- * The third was missing until the review planted `{ id: casacos }` in place of
- * `{ id: technicalFacet }` and watched verdict 1 stay green — 48 of the 155
- * backticked spans in `model.md` were invisible, including rows 38-42, which is
- * the exact table #115 exists to fix. Inside braces every identifier is read;
- * prose does not live in there, so the extra reach costs nothing.
+ * The brace form was missing until the review planted `{ id: casacos }` in
+ * place of `{ id: technicalFacet }` and watched verdict 1 stay green — 48 of
+ * the 155 backticked spans in `model.md` were invisible, including rows 38-42,
+ * which is the exact table #115 exists to fix. Inside braces every identifier
+ * is read; prose does not live in there, so the extra reach costs nothing.
+ *
+ * The bare-colon form came from the same review, which found the one dead name
+ * that survived #115 hiding in it. The assignment form is #124's, and it was
+ * sitting in the OPENING PARAGRAPH of `guide/context-pack.md` — the count this
+ * check printed said that file carried 18 occurrences, and the nineteenth was
+ * three lines from the title, unseen.
+ *
+ * The pattern across all three is worth naming: every time this function has
+ * been wrong, it has been wrong by returning [] — SILENTLY, and reported as
+ * clean. A shape it does not know does not raise; it just stops measuring.
  */
 function tokensOf(span) {
   if (span.includes('{')) return [...span.matchAll(/[A-Za-z_]\w*/g)].map(m => m[0]);
@@ -447,43 +459,53 @@ console.log('\n5 · the name the guide teaches is the name the code reads (#124)
       nodes: [{ id: 'bus-probe', layer: 'technical', technical: { kind: 'service', service: 'eventbridge' } }],
       refines: { [edgeId]: { by: ['bus-probe'], [taught]: ['FIRST-PROBE', 'SECOND-PROBE'] } },
     };
-    const s = elaborate(base, delta);
-    const first = (s.edges || []).find(e => e.id === edgeId);
-    const seg = (s.edges || []).find(e => e.id === `${edgeId}-s1`);
-    ok(first && first.technical && first.technical.label === 'FIRST-PROBE',
-      `elaborate() reads \`${taught}\` — the first label lands on the approved edge`,
-      first && first.technical && first.technical.label);
-    ok(!!seg && seg.label === 'SECOND-PROBE',
-      'and the second lands on the jump segment', seg && seg.label);
+    // What the refine is supposed to produce, read the same way both times:
+    // the approved edge keeps its id and gains a technical label, and the jump
+    // becomes `<id>-s1`.
+    const labelsOf = session => {
+      const at = id => (session.edges || []).find(e => e.id === id);
+      const approvedEdge = at(edgeId);
+      const jump = at(`${edgeId}-s1`);
+      return {
+        first: approvedEdge && approvedEdge.technical && approvedEdge.technical.label,
+        segment: jump && jump.label,
+      };
+    };
+
+    const taughtRun = labelsOf(elaborate(base, delta));
+    ok(taughtRun.first === 'FIRST-PROBE',
+      `elaborate() reads \`${taught}\` — the first label lands on the approved edge`, taughtRun.first);
+    ok(taughtRun.segment === 'SECOND-PROBE',
+      'and the second lands on the jump segment', taughtRun.segment);
 
     // CONTROL: the same delta under the name the guide does NOT teach. Nothing
     // refuses it — that is the whole point — and the labels simply vanish.
-    const stale = JSON.parse(JSON.stringify(delta));
-    stale.refines[edgeId] = { by: ['bus-probe'], rotulos: ['FIRST-PROBE', 'SECOND-PROBE'] };
-    ok(againstSchema(stale, SCHEMAS['panlabs-aws-diagrams/elaboration@1'], SCHEMAS['panlabs-aws-diagrams/elaboration@1']).length === 0,
+    const staleDelta = JSON.parse(JSON.stringify(delta));
+    staleDelta.refines[edgeId] = { by: ['bus-probe'], rotulos: ['FIRST-PROBE', 'SECOND-PROBE'] };
+    const ELABORATION = SCHEMAS['panlabs-aws-diagrams/elaboration@1'];
+    ok(againstSchema(staleDelta, ELABORATION, ELABORATION).length === 0,
       'CONTROL: a delta using the OLD name still validates — the open map cannot catch it',
       'which is why this verdict exists at all');
-    const s2 = elaborate(approved(), stale);
-    const f2 = (s2.edges || []).find(e => e.id === edgeId);
-    const g2 = (s2.edges || []).find(e => e.id === `${edgeId}-s1`);
-    ok(!(f2 && f2.technical && f2.technical.label) && !(g2 && g2.label),
+    const staleRun = labelsOf(elaborate(approved(), staleDelta));
+    ok(!staleRun.first && !staleRun.segment,
       'CONTROL: and its labels vanish silently, which is the defect in one line',
-      `first=${f2 && f2.technical && f2.technical.label} segment=${g2 && g2.label}`);
+      `first=${staleRun.first} segment=${staleRun.segment}`);
   }
 
   // `views` is the other half of #124 and the EASY half: `session@1` is closed,
   // so the old name is refused instead of ignored. Asserted anyway, because
   // "the closed one is fine" is exactly the assumption that stops being true
   // the day somebody opens it.
-  const stale = JSON.parse(JSON.stringify(readExample('retail-logical.json')));
-  stale.vistas = stale.views; delete stale.views;
-  const errs = againstSchema(stale, SCHEMAS['panlabs-aws-diagrams/session@1'], SCHEMAS['panlabs-aws-diagrams/session@1']);
+  const shipped = readExample('retail-logical.json');
+  const staleSession = JSON.parse(JSON.stringify(shipped));
+  staleSession.vistas = staleSession.views; delete staleSession.views;
+  const SESSION = SCHEMAS['panlabs-aws-diagrams/session@1'];
+  const errs = againstSchema(staleSession, SESSION, SESSION);
   ok(errs.length > 0, 'CONTROL: `vistas` is refused by session@1, where the open map could not refuse',
     errs.slice(0, 1).join('; '));
-  const m = project(approved(), 'logical').model;
-  const shipped = readExample('retail-logical.json');
-  ok(m.title === shipped.views.logical.title,
-    'and project() reads `views` — the per-view title reaches the model', m.title);
+  ok(project(approved(), 'logical').model.title === shipped.views.logical.title,
+    'and project() reads `views` — the per-view title reaches the model',
+    project(approved(), 'logical').model.title);
 }
 
 // ---------------------------------------------------------------------------

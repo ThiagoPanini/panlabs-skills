@@ -93,7 +93,7 @@ O arquivo de trabalho carrega a deliberação em texto legível por qualquer um 
 | `dossier.axes` | **fica** — descreve a arquitetura escolhida, que está desenhada |
 | candidata escolhida | fica o nome e a tupla; **sai** o argumento (`because`, `pays`, `wrongIf`, `chooseIf`) |
 | candidatas descartadas | **sai** — *"por que não a B"* é conversa da casa |
-| `findings[]` regra, alvo, estado | fica — o **que** foi encontrado é técnico |
+| `findings[].rule` `findings[].target` `findings[].state` | fica — o **que** foi encontrado é técnico |
 | `findings[].note` | **sai** — é onde mora *"o time aceitou por orçamento"* |
 | `parking` | **sai inteiro** — é fala de pessoa, com aspas |
 | `facts[].from` | **sai** a citação; o `fact` fica, é premissa da arquitetura |

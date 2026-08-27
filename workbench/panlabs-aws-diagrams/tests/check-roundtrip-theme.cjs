@@ -34,6 +34,23 @@ const DRAWIO = binary(process.argv[2]);
  * legitimate render included. `render.sh` already carries the timeout, the
  * scoped kill and the answer-vs-non-answer retry that #128 built; this just
  * asks it for XML instead of PNG.
+ *
+ * ⚠️ `--user-data-dir=<profile>` AND `--disable-update` ARE GONE, ON PURPOSE.
+ * The old call gave every export a fresh Electron profile, presumably to
+ * dodge a `SingletonLock` collision between concurrent sessions — the same
+ * neighbour-contention worry the killer above was (wrongly) guarding
+ * against. `render.sh` has never taken a custom profile, for anyone: not
+ * `tools/case.cjs`'s `--image`, not `tools/bisect-model.cjs`, not any step in
+ * `tests/run.sh` — all default-profile, all `render.sh`. #144's own
+ * measurement is the evidence that this is safe: with a neighbour session
+ * rendering at the same time, EVERY layer that already went through
+ * `render.sh` (bisection, corpus render, theme PNG render — same machine,
+ * same default profile) stayed green; the only red was this file talking to
+ * `xvfb-run` on its own. Isolating the profile was never what made the
+ * difference; going through `render.sh`'s discipline was. Extending
+ * `render.sh` with a flag every other caller would carry and never use is
+ * the "two copies" the issue asked to justify — not extending it is the
+ * answer.
  */
 function exportXml(origin, destination) {
   return callRender(origin, destination, 'xml', DRAWIO);

@@ -19,14 +19,22 @@ const { execFileSync } = require('child_process');
 const RENDER = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams', 'tools', 'render.sh');
 
 /**
- * `render.sh` says so when one of its own retries is what saved the render —
- * read here as a live literal, not copied, for the same reason
- * `tools/bisect-model.cjs` reads it that way: a reword over there is meant to
- * go red here, not to retire the warning in silence.
+ * `render.sh` says so when one of its own retries is what saved the render.
+ *
+ * ⚠️ THIS IS A SECOND COPY of the wording `render.sh` prints, not a live read
+ * of it — `tools/bisect-model.cjs`'s own `FLAKED` is the one `tests/check-
+ * render-verdict.cjs` reads OUT of that file's source and checks against
+ * `render.sh`'s real output; requiring the same trick here would mean
+ * `call-render.cjs` parsing `bisect-model.cjs`'s source to borrow a regex,
+ * which is a stranger dependency than the duplication it would remove. The
+ * two-ended-contract discipline still applies, just from the other end:
+ * `tests/check-render-callers.cjs`'s flake scenario runs `render.sh` for
+ * real and asserts THIS regex still matches what it prints, so a reword over
+ * there is meant to go red here, not to retire the warning in silence.
  */
 const FLAKED = /did not answer/;
 
-/** Indents a multi-line log for a two-space nested print. */
+/** Indents a multi-line log for a four-space nested print. */
 const indent = txt => String(txt).trim().split('\n').map(l => '    ' + l.trim()).join('\n');
 
 /**

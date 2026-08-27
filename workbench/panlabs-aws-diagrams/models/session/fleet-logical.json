@@ -3,7 +3,7 @@
   "id": "predictive-fleet",
   "title": "Frota · manutenção preditiva",
   "stage": "logical",
-  "vistas": {
+  "views": {
     "logical": {
       "genre": "L2",
       "title": "Frota · manutenção preditiva · vista lógica",

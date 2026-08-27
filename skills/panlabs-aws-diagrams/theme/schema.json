@@ -111,7 +111,7 @@
     },
 
     "card": {
-      "description": "NÃO existe token de legenda aqui, e a ausência é a resposta, não um esquecimento. O7/O20 do #5: 21 de 24 diagramas oficiais não têm legenda, e os 3 que têm são exatamente os 3 que codificaram significado na cor da linha — legenda é a dívida de quem inventa notação. Como este vocabulário não deixa inventar notação (não há token de cor por serviço, por grupo nem por aresta individual), a dívida nunca é contraída e `legenda: auto` teria um único valor alcançável. Knob de um valor só é pior que knob nenhum: sugere uma escolha que não existe. Se um dia o vocabulário abrir um canal de significado, o token da legenda nasce junto — e obrigatório.",
+      "description": "NÃO existe token de legenda aqui, e a ausência é a resposta, não um esquecimento. O7/O20 do #5: 21 de 24 diagramas oficiais não têm legenda, e os 3 que têm são exatamente os 3 que codificaram significado na cor da linha — legenda é a dívida de quem inventa notação. Como este vocabulário não deixa inventar notação (não há token de cor por serviço, por grupo nem por aresta individual), a dívida nunca é contraída e `legend: auto` teria um único valor alcançável. Knob de um valor só é pior que knob nenhum: sugere uma escolha que não existe. Se um dia o vocabulário abrir um canal de significado, o token da legenda nasce junto — e obrigatório.",
       "type": "object", "additionalProperties": false,
       "properties": {
         "revision": {

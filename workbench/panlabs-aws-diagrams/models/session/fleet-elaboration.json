@@ -32,7 +32,7 @@
     "avisar-oficina":     { "kind": "service", "service": "sns", "label": "SNS · tópico de alerta" }
   },
 
-  "_reparenta": "A operação de risco, isolada aqui para ficar visível na revisão: `pontuar-risco` foi APROVADO dentro de `analise`, e a fase técnica o empurra dois níveis para baixo, para dentro de uma sub-rede que a vista lógica não conhece. A projeção lógica tem de sair byte a byte idêntica assim mesmo — é o colapso de contenção do #14, e é o que `conferir()` mede no passo 6.",
+  "_inside": "A operação de risco, isolada aqui para ficar visível na revisão: `pontuar-risco` foi APROVADO dentro de `analise`, e a fase técnica o empurra dois níveis para baixo, para dentro de uma sub-rede que a vista lógica não conhece. A projeção lógica tem de sair byte a byte idêntica assim mesmo — é o colapso de contenção do #14, e é o que `conferir()` mede no passo 6.",
   "inside": {
     "coleta": "cloud",
     "analise": "cloud",
@@ -40,7 +40,7 @@
     "pontuar-risco": "sub-modelo"
   },
 
-  "_arestas": "Como o modelo alcança o objeto é detalhe técnico. A vista lógica diz \"anomalia encontrada, pontua\" e foi isso que a diretoria aprovou.",
+  "_edges": "Como o modelo alcança o objeto é detalhe técnico. A vista lógica diz \"anomalia encontrada, pontua\" e foi isso que a diretoria aprovou.",
   "edges": [
     { "id": "a-artefato", "from": "pontuar-risco", "to": "endpoint-s3", "layer": "technical",
       "label": "carrega o artefato do modelo", "data": "back" }

@@ -118,6 +118,88 @@ function primitive() {
   return failed;
 }
 
+/**
+ * THE TWO-ROW GRID, WHICH IS WHERE #110's TRADE ACTUALLY GETS DECIDED.
+ *
+ * `quorum-3-az` is the corpus's triangle graph, and its detour comes out SOUTH
+ * of every band because that margin is the one nearer the midpoint. Stack the
+ * VPCs two rows deep and put the same triangle in the TOP row and the nearer
+ * margin flips north — into the cloud's label row, with the two verticals
+ * crossing the VPC's title row. That is an `A3.4`, it does not block, and the
+ * same model reports the same single `A3.4` with the fix reverted.
+ *
+ * The alternative was to forbid north outright and always take the south row.
+ * Measured on this exact model, it makes the crossbar clear every band and
+ * then drags both verticals down past the BOTTOM row's subnets: `A5.5` ×3, a
+ * lie about the network, in exchange for a note about legibility.
+ *
+ * No corpus model has two VPC rows and a triangle, so nothing here would have
+ * caught the reversal. This is that model, and it lives in the test rather
+ * than in `models/` because what it pins is one routing decision, not an
+ * architecture anybody would draw.
+ */
+function twoRowGrid() {
+  const zone = (vpc, z, n) => ([
+    { id: `${vpc}-${z}`, kind: 'subnet', label: 'App subnet', access: 'private',
+      az: `us-east-1${z}`, cidr: `10.${n}.${z.charCodeAt(0) - 96}.0/24`, inside: vpc },
+    { id: `svc-${vpc}-${z}`, kind: 'service', service: 'msk', label: `Broker ${vpc}${z}`,
+      inside: `${vpc}-${z}` },
+  ]);
+  return {
+    schema: 'panlabs-aws-diagrams/model@1', id: 'two-row-grid',
+    title: 'Two stacked VPC rows, the triangle in the top one',
+    view: 'technical', genre: 'T1',
+    nodes: [
+      { id: 'cloud', kind: 'cloud', label: 'AWS Cloud' },
+      { id: 'vpc1', kind: 'vpc', label: 'Top VPC · 10.1.0.0/16', cidr: '10.1.0.0/16', inside: 'cloud' },
+      ...['a', 'b', 'c'].flatMap(z => zone('vpc1', z, 1)),
+      { id: 'vpc2', kind: 'vpc', label: 'Bottom VPC · 10.2.0.0/16', cidr: '10.2.0.0/16', inside: 'cloud' },
+      ...['a', 'b', 'c'].flatMap(z => zone('vpc2', z, 2)),
+    ],
+    // every pair, so no lane order puts the three of them side by side (#21)
+    edges: [['a', 'b'], ['b', 'c'], ['a', 'c']].map(([x, y]) =>
+      ({ from: `svc-vpc1-${x}`, to: `svc-vpc1-${y}`, label: 'replica', protocol: 'kafka' })),
+  };
+}
+
+/**
+ * THE ONE ROUTING DEFECT NO VALIDATOR FAMILY CAN EVER REPORT.
+ *
+ * `scene.cjs` keeps a `CHROME` set — `title`, `subtitle`, `notes`,
+ * `panlabs-modelo` — out of the scene on purpose: they are the page's
+ * furniture, not the diagram's content, and measuring a legend block as if it
+ * were an architecture element would make every family lie. The consequence is
+ * that an edge drawn straight through the note block is INVISIBLE to `A3.4`,
+ * to `A3.5`, to all of them. It cannot be a finding, so it has to be a test.
+ *
+ * And the grid genuinely routes there. In column mode an AZ band is a
+ * full-height strip that already overflows the cloud by `CROSS_OUT`, so
+ * getting around one means a row past its end — and for `quorum-3-az` the
+ * nearer end is the south one, outside the cloud by construction. #110 sent
+ * that far pair down that row and it came out on top of the legend, one green
+ * report later. `plan.cjs` now starts the footer below whatever the routing
+ * drew instead of below the cloud, and this is what holds it there.
+ */
+function chromeIsClear(name, layoutPlan) {
+  const geo = require(path.join(ROOT, 'validator', 'geometry.cjs'));
+  const { createScene } = require(path.join(ROOT, 'validator', 'scene.cjs'));
+  // `panlabs-modelo` is a 1×1 data marker at the origin, not ink on the page
+  const INK = new Set(['title', 'subtitle', 'notes']);
+
+  const scene = createScene(layoutPlan);
+  const chrome = (layoutPlan.cells || []).filter(c => INK.has(c.id) && c.geo);
+  const hits = [];
+  for (const c of chrome) {
+    const box = { x: c.geo.x, y: c.geo.y, w: c.geo.w, h: c.geo.h };
+    for (const a of scene.edges) {
+      if (!a.complete) continue;
+      if (geo.polilinhaCruzaRetangulo(a.points, box))
+        hits.push(`${name}: edge "${a.id}" runs through the page's "${c.id}"`);
+    }
+  }
+  return hits;
+}
+
 async function main() {
   let failed = primitive();
 
@@ -133,13 +215,16 @@ async function main() {
     ...corpus.map(f => ({ name: path.basename(f, '.json'),
       model: JSON.parse(fs.readFileSync(f, 'utf8')) })),
     { name: 'technical view (#14 session)', model: technicalView() },
+    { name: 'two stacked VPC rows (#110)', model: twoRowGrid() },
   ];
 
   let crossings = 0;
+  const onChrome = [];
   for (const { name, model } of entries) {
     const r = await generate(model);
     for (const p of [r.layoutPlan, ...r.pages]) {
       const a55 = occurrences(validateGeometry(p), 'A5.5');
+      onChrome.push(...chromeIsClear(`${name} · page "${p.id}"`, p));
       if (!a55) { failed = 1; console.log(`  ‼ ${name}: A5.5 did not run`); continue; }
       if (!a55.n) continue;
       failed = 1; crossings += a55.n;
@@ -148,6 +233,26 @@ async function main() {
     }
   }
   console.log(`  ${crossings ? '✗' : '✓'} ${crossings} spurious crossing(s) in the corpus — the budget is 0`);
+
+  // ----------------------------------- 1b · and the routing stays off the page's chrome (#110)
+  console.log("\n  the routing lands on no page furniture — the defect no family reports\n");
+  if (onChrome.length) failed = 1;
+  for (const o of onChrome) console.log(`  ✗ ${o}`);
+  console.log(`  ${onChrome.length ? '✗' : '✓'} ${onChrome.length} edge(s) over a title, subtitle or note block — the budget is 0`);
+
+  // -------------------------------- 1c · the band is an obstacle, on BOTH margins (#110)
+  //
+  // `A5.5` above already covers the south choice. What only this model can say
+  // is that the NORTH one stays truthful too — see `twoRowGrid`'s header for
+  // the trade, and note that F2 is the finding that would come back if the
+  // band ever stopped being an obstacle at all.
+  console.log('\n  the detour clears every band it does not belong to, on either margin\n');
+  const twoRow = validateGeometry((await generate(twoRowGrid())).layoutPlan);
+  const lies = twoRow.semanticas.map(m => `${m.id}×${m.occurrences.length}`);
+  if (lies.length) failed = 1;
+  for (const m of twoRow.semanticas) for (const o of m.occurrences) console.log(`      · ${o.o_que}`);
+  console.log(`  ${lies.length ? '✗' : '✓'} two stacked VPC rows, triangle in the top one: ` +
+    `${lies.length ? lies.join(', ') : 'no semantic failure'} — the budget is 0`);
 
   // -------------------------------------------------- 2 · legibility, in the technical view
   //

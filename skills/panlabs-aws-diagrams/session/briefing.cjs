@@ -36,7 +36,7 @@ function briefing(opened, extra = {}) {
   // ---------------------------------------------------------- page states
   L.push(...head('Pages, and what the human did to them'));
   for (const p of opened.pages) {
-    const mark = policy(p.state).glifo;
+    const mark = policy(p.state).glyph;
     L.push(`    ${mark} ${String(p.name || p.id).padEnd(34)} view=${p.view || '—'}  ${p.state}`);
     if (p.because) L.push(`        ${p.because}`);
   }

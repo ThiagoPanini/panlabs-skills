@@ -22,7 +22,7 @@
  *
  * How it enters `engine/generate.cjs`, and why this way:
  *
- *   THE REPORT ALWAYS COMES OUT, in `relatorio.geometria`, and a SEMANTIC
+ *   THE REPORT ALWAYS COMES OUT, in `relatorio.geometry`, and a SEMANTIC
  *   failure becomes a warning even with nobody asking for a gate. A gate that
  *   only exists when someone asks is a gate nobody knows about.
  *

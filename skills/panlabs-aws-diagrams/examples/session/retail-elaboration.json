@@ -1,16 +1,16 @@
 {
   "schema": "panlabs-aws-diagrams/elaboration@1",
   "about": "retail-300-stores",
-  "_": "O DELTA da fase técnica. Não é um segundo modelo — é o que a sessão 2 acrescenta ao modelo que ela recuperou de dentro do .drawio. Nenhum campo aqui alcança um casaco lógico: `elaborate.cjs` recusa, e a projeção confere depois.",
+  "_": "O DELTA da fase técnica. Não é um segundo modelo — é o que a sessão 2 acrescenta ao modelo que ela recuperou de dentro do .drawio. Nenhum campo aqui alcança um casaco lógico: `elaborate.cjs` recusa, e a projeção confere depois. Repare em `resource` nos casacos abaixo: é o que vira a SEGUNDA LINHA em itálico da folha, e é o que distingue dois buckets S3 na mesma página. Colar a descrição dentro do `label` (\"S3 · zona bruta\", numa string só) parece a mesma coisa e não é — some o itálico, a caixa não sabe se medir, e a vista lógica não sabe descartar. Ver guide/model.md, `A segunda linha da folha`.",
 
   "nodes": [
     { "id": "cloud", "layer": "technical", "technical": { "kind": "cloud", "label": "AWS Cloud" } },
 
     { "id": "papel-leitura", "layer": "technical", "inside": "aterrissagem",
-      "technical": { "kind": "service", "service": "role", "label": "Papel de leitura cross-account" } },
+      "technical": { "kind": "service", "service": "role", "resource": "retail-cross-account-leitura" } },
 
     { "id": "barramento", "layer": "technical", "inside": "processamento",
-      "technical": { "kind": "service", "service": "eventbridge", "label": "EventBridge" } },
+      "technical": { "kind": "service", "service": "eventbridge", "resource": "retail-eventos" } },
 
     { "id": "vpc-dados", "layer": "technical", "inside": "processamento",
       "technical": { "kind": "vpc", "label": "VPC de processamento · 10.20.0.0/16", "cidr": "10.20.0.0/16" } },
@@ -19,7 +19,7 @@
       "technical": { "kind": "subnet", "label": "Private subnet", "access": "private", "az": "us-east-1a", "cidr": "10.20.1.0/24" } },
 
     { "id": "endpoint-s3", "layer": "technical", "inside": "sub-app",
-      "technical": { "kind": "service", "service": "endpoints", "label": "VPC endpoint (S3)" } }
+      "technical": { "kind": "service", "service": "endpoints", "label": "VPC endpoint (S3)", "resource": "vpce-s3-gateway" } }
   ],
 
   "facets": {
@@ -30,13 +30,13 @@
     "processamento":  { "kind": "account", "account": "222233334444", "label": "Conta dados · 222233334444" },
     "consumo":        { "kind": "account", "account": "333344445555", "label": "Conta analytics · 333344445555" },
 
-    "receber-arquivo":      { "kind": "service", "service": "transfer family", "label": "Transfer Family (SFTP)" },
-    "guardar-bruto":        { "kind": "service", "service": "s3", "label": "S3 · zona bruta" },
-    "processar-na-chegada": { "kind": "service", "service": "lambda", "label": "Lambda · parse e curadoria" },
-    "tratar-falha":         { "kind": "service", "service": "sqs", "label": "SQS · fila de falha" },
-    "reter-objeto":         { "kind": "service", "service": "s3", "label": "S3 · zona curada", "note": "ciclo de vida 5 anos" },
-    "consultar":            { "kind": "service", "service": "athena", "label": "Athena" },
-    "painel":               { "kind": "service", "service": "quicksight", "label": "QuickSight" }
+    "receber-arquivo":      { "kind": "service", "service": "transfer family", "resource": "sftp-lojas" },
+    "guardar-bruto":        { "kind": "service", "service": "s3", "label": "S3", "resource": "retail-lake-bruto" },
+    "processar-na-chegada": { "kind": "service", "service": "lambda", "resource": "parse-e-curadoria" },
+    "tratar-falha":         { "kind": "service", "service": "sqs", "label": "SQS", "resource": "dlq-parse" },
+    "reter-objeto":         { "kind": "service", "service": "s3", "label": "S3", "resource": "retail-lake-curado", "note": "ciclo de vida 5 anos" },
+    "consultar":            { "kind": "service", "service": "athena", "qualifier": "consulta ad hoc" },
+    "painel":               { "kind": "service", "service": "quicksight", "resource": "operacao-diaria" }
   },
 
   "_reparenta": "A operação de risco do ticket, isolada num bloco só para ficar visível na revisão. Cada linha empurra um nó aprovado para dentro de um nível que só a camada técnica tem — e a projeção lógica tem de sair idêntica assim mesmo. É a prova de que o colapso funciona.",

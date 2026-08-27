@@ -88,6 +88,12 @@ step "the package fits under the 30 MB ceiling"            "$SCRIPTS/checks/weig
 # never invoked. It plants its own defects first — a document checker earns the
 # same proof layer 2 asks of the validator.
 step "the journey document holds (#43)"                 node "$HERE/check-journey.cjs"
+# The other end of the same document. `check-journey.cjs` measures the PATHS a
+# documented command names; this measures the FIELD NAMES the prose promises.
+# #53 converted every contract key to English and `guide/model.md` kept teaching
+# the old ones, green the whole way — a contract key has two ends, and until now
+# only one of them was ruled.
+step "the guide names the contract of today (#115/#123)"  node "$HERE/check-guide-contract.cjs"
 
 echo
 echo "════ layer 1 · the boundary ════"

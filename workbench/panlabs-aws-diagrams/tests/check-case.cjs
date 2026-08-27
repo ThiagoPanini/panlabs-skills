@@ -93,8 +93,9 @@ async function main() {
     !/\bfs\.|spawnSync|execFileSync|writeFileSync/.test(notesSrc));
 
   // 2 · case-notes.cjs, unit-tested directly — a hand-built session, no
-  // engine and no disk, so every branch (including the ones the corpus
-  // never exercises, like an inferred resource name) is reachable.
+  // engine and no disk, so every branch is reachable here regardless of what
+  // the corpus happens to contain. Since #123 the corpus exercises the
+  // resource-name branch too, and the two now agree from opposite directions.
   console.log('\n  case-notes.cjs — the rendering, in isolation\n');
   const fakeSession = {
     schema: 'panlabs-aws-diagrams/session@1', id: 'unit-case-notes', title: 'Unit test — case notes', stage: 'technical',
@@ -168,6 +169,7 @@ async function main() {
 
   for (const name of Object.keys(drawn)) {
     const result = drawn[name];
+    const technical = technicalSession(name);
     check(`"${name}": exactly two files — "${name}.drawio" and "case.md"`,
       result.files.length === 2 &&
       result.files.some(f => f.path === `${name}.drawio`) &&
@@ -200,8 +202,23 @@ async function main() {
     const caseMd = result.files.find(f => f.path === 'case.md').content;
     check(`"${name}": case.md has the five sections, in order`, headersInOrder(caseMd));
     check(`"${name}": the original brief appears verbatim`, caseMd.includes(BRIEF[name]));
-    check(`"${name}": no resource name was inferred here, and case.md says so`,
-      caseMd.includes('_No resource name was inferred for this drawing._'));
+    // Both halves of section 4, against the real verb. Until #123 gave the
+    // shipped elaboration its `resource` names, BOTH corpus cases landed on the
+    // empty branch and the populated one was exercised only by the pure seam
+    // above — which is how a section stays correct and is never once seen
+    // carrying anything.
+    //
+    // Which half a case lands on is asked of the SESSION, never of its name: a
+    // third fixture would otherwise fall silently into whichever branch the
+    // `else` happened to be, and the fixtures are documentation — they move.
+    const named = technical.nodes.filter(n => n.technical && n.technical.resource).map(n => n.technical.resource);
+    const EMPTY = '_No resource name was inferred for this drawing._';
+    if (named.length) {
+      check(`"${name}": case.md lists all ${named.length} inferred resource names, tied to their nodes`,
+        named.every(r => caseMd.includes(`"${r}"`)) && !caseMd.includes(EMPTY));
+    } else {
+      check(`"${name}": no resource name was inferred here, and case.md says so`, caseMd.includes(EMPTY));
+    }
     // "Fixo porque a aceitação precisa ser observável" — the ~80-line target is
     // only observable if something actually counts. 80 is a soft "around", not
     // a hard truncation point (nothing here drops a real finding to fit), so
@@ -213,7 +230,7 @@ async function main() {
     // on every page today — #11's engine emits neither. Confirmed against the
     // RAW report (not `result`, which never carries it) so the exclusion below
     // is proven against real findings, not against an accidentally-empty list.
-    const rawTechnical = await draw(technicalSession(name), 'technical', { gate: 'truthfulness' });
+    const rawTechnical = await draw(technical, 'technical', { gate: 'truthfulness' });
     const allResults = rawTechnical.relatorio.geometry.flatMap(g => g.report.resultados);
     const floorFires = ['A1.2', 'A1.11'].every(id =>
       allResults.some(r => r.id === id && (r.state === 'failure' || r.state === 'warning')));

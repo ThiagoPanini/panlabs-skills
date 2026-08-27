@@ -87,9 +87,10 @@ function elaborate(base, el) {
     if (!a) { errors.push(`refines edge "${id}", which does not exist`); continue; }
     const jumps = r.by || [];
     for (const s of jumps) if (!byId.has(s)) errors.push(`refines "${id}" through "${s}", which does not exist`);
-    // NOTE: `rotulos` is the actual field name in `elaboration.schema.json` and in
-    // the corpus (e.g. `models/session/retail-elaboration.json`) — left as is
-    // since that schema file is off limits here.
+    // NOTE: `rotulos` is the actual field name — in `elaboration.schema.json`,
+    // in the shipped `examples/session/retail-elaboration.json`, and here. It is
+    // the last Portuguese key #53 left behind on this side, and renaming it has
+    // TWO ENDS, so it waits for #124 rather than getting half done here.
     const rotulos = r.rotulos || [];
     if (rotulos.length && rotulos.length !== jumps.length + 1)
       errors.push(`refines "${id}": ${jumps.length} jump(s) require ${jumps.length + 1} label(s), got ${rotulos.length}`);

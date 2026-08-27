@@ -26,11 +26,11 @@
     { "id": "consumo", "label": "Consumo analítico", "logical": { "kind": "group" } },
 
     { "id": "receber-arquivo", "label": "Receber arquivo da loja", "inside": "aterrissagem", "logical": { "kind": "block" } },
-    { "id": "guardar-bruto", "label": "Guardar arquivo bruto", "inside": "aterrissagem", "logical": { "kind": "block" } },
+    { "id": "guardar-bruto", "label": "Guardar arquivo bruto", "inside": "aterrissagem", "logical": { "kind": "block", "qualifier": "zona de aterrissagem" } },
 
     { "id": "processar-na-chegada", "label": "Processar na chegada", "inside": "processamento", "logical": { "kind": "block" } },
     { "id": "tratar-falha", "label": "Tratar arquivo que falhou", "inside": "processamento", "logical": { "kind": "block" } },
-    { "id": "reter-objeto", "label": "Reter objeto curado", "inside": "processamento", "logical": { "kind": "block" } },
+    { "id": "reter-objeto", "label": "Reter objeto curado", "inside": "processamento", "logical": { "kind": "block", "qualifier": "zona curada, 5 anos" } },
 
     { "id": "consultar", "label": "Consultar histórico", "inside": "consumo", "logical": { "kind": "block" } },
     { "id": "painel", "label": "Painel da diretoria", "inside": "consumo", "logical": { "kind": "block" } }

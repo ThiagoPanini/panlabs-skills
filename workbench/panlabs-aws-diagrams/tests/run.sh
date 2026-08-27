@@ -102,6 +102,10 @@ step "the guide names the contract of today (#115/#123)"  node "$HERE/check-guid
 # belongs, and all 43 checks stayed green: the suite measured what the briefing
 # said, never the character it said it with.
 step "every contract key answers on both ends (#125)"  node "$HERE/check-contract-ends.cjs"
+# The skill inherits the host's module system (#133): the engine's only `.js`
+# file used to read as ESM under a `"type": "module"` package.json anywhere up
+# the caller's tree, and `new ELK()` threw with no clue why.
+step "the engine is host-agnostic (#133)"                  node "$HERE/check-esm-host.cjs"
 
 echo
 echo "════ layer 1 · the boundary ════"

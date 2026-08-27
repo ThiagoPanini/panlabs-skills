@@ -223,7 +223,7 @@ function project(session, view) {
     notes.push(rest);
   }
 
-  const ap = (session.vistas && session.vistas[view]) || {};
+  const ap = (session.views && session.views[view]) || {};
   const model = {
     schema: 'panlabs-aws-diagrams/model@1',
     id: `${session.id}-${view}`,

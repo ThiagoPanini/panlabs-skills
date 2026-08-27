@@ -4,7 +4,7 @@
   "title": "Varejo · 300 lojas",
   "stage": "logical",
 
-  "vistas": {
+  "views": {
     "logical": {
       "genre": "L2",
       "title": "Varejo · 300 lojas · vista lógica",

@@ -39,7 +39,7 @@
     "painel":               { "kind": "service", "service": "quicksight", "resource": "operacao-diaria" }
   },
 
-  "_reparenta": "A operação de risco do ticket, isolada num bloco só para ficar visível na revisão. Cada linha empurra um nó aprovado para dentro de um nível que só a camada técnica tem — e a projeção lógica tem de sair idêntica assim mesmo. É a prova de que o colapso funciona.",
+  "_inside": "A operação de risco do ticket, isolada num bloco só para ficar visível na revisão. Cada linha empurra um nó aprovado para dentro de um nível que só a camada técnica tem — e a projeção lógica tem de sair idêntica assim mesmo. É a prova de que o colapso funciona.",
   "inside": {
     "aterrissagem": "cloud",
     "processamento": "cloud",
@@ -47,12 +47,12 @@
     "processar-na-chegada": "sub-app"
   },
 
-  "_refina": "Uma aresta lógica vira um CAMINHO técnico. Declarar os saltos em vez de apagar a aresta e escrever duas novas é o que garante que os extremos sobrevivam — a contração da projeção reconstrói exatamente a aresta aprovada.",
+  "_refines": "Uma aresta lógica vira um CAMINHO técnico. Declarar os saltos em vez de apagar a aresta e escrever duas novas é o que garante que os extremos sobrevivam — a contração da projeção reconstrói exatamente a aresta aprovada.",
   "refines": {
-    "a-avisa": { "by": ["barramento"], "rotulos": ["ObjectCreated", "dispara"] }
+    "a-avisa": { "by": ["barramento"], "labels": ["ObjectCreated", "dispara"] }
   },
 
-  "_arestas": "Como o Lambda ALCANÇA o arquivo é detalhe técnico: a vista lógica diz \"chegou arquivo novo, processa\", e é isso que foi aprovado. O caminho pelo VPC endpoint e o papel cross-account existem só na camada técnica — e é assim que a Q9 da sabatina (\"dados puxa de lojas\") aparece desenhada sem poluir a vista que a diretoria vê.",
+  "_edges": "Como o Lambda ALCANÇA o arquivo é detalhe técnico: a vista lógica diz \"chegou arquivo novo, processa\", e é isso que foi aprovado. O caminho pelo VPC endpoint e o papel cross-account existem só na camada técnica — e é assim que a Q9 da sabatina (\"dados puxa de lojas\") aparece desenhada sem poluir a vista que a diretoria vê.",
   "edges": [
     { "id": "a-le", "from": "processar-na-chegada", "to": "endpoint-s3", "layer": "technical",
       "label": "GetObject", "data": "back" },

@@ -19,13 +19,13 @@
  * has TWO ENDS, whoever writes it and whoever reads it, and converting one end
  * produces a green that lies. The guide is the second end.
  *
- * Four verdicts, and each one has to fail a planted defect before it counts —
+ * Five verdicts, and each one has to fail a planted defect before it counts —
  * layer 2's rule, applied to a document checker:
  *
- *   1  RETIRED VOCABULARY   no dead contract key survives inside backticks.
- *                           Curated list, each entry carrying the live name,
- *                           because "dead" is history and history cannot be
- *                           derived from today's schemas.
+ *   1  RETIRED VOCABULARY   no dead contract key survives inside backticks, in
+ *                           ANY file under `guide/`. Curated list, each entry
+ *                           carrying the live name, because "dead" is history
+ *                           and history cannot be derived from today's schemas.
  *   2  EXAMPLES RUN         every fenced ```json block names a known contract
  *                           in `schema` and validates against it, and an
  *                           `elaboration@1` block also SURVIVES `elaborate()`
@@ -38,6 +38,15 @@
  *                           `<i>` on its technical leaves. #123's second
  *                           criterion — the blind run produced 0 of 24, and
  *                           the mechanism was never the problem.
+ *   5  THE TAUGHT NAME IS   the name `guide/model.md` prints for a key that
+ *      THE READ NAME        lives inside an OPEN map is the name `elaborate.cjs`
+ *                           actually reads. #124. Four of `elaboration@1`'s
+ *                           blocks are `additionalProperties: true`, so those
+ *                           inner names are validated by nothing: misspell one
+ *                           and the delta parses, validates, and quietly does
+ *                           less. There the guide is not a description of the
+ *                           contract — it IS the contract, and this is the only
+ *                           verdict that can hold it to that.
  *
  * WHY VERDICT 4 READS THE SHIPPED EXAMPLE and not a model built here: the
  * blind run of #47 did not misread the guide, it copied the example. Every one
@@ -47,10 +56,29 @@
  * dedicada"`, the same shape. A guide that teaches the field while the example
  * next to it demonstrates the workaround loses to the example.
  *
- * QUARANTINE. The other four files under `guide/` carry the same debt — a
- * count is printed below and the ticket is named there. They are listed by
- * FILE rather than by word: the fix is a conversion per file, and a per-word
- * allowlist would grow into a second copy of the dead vocabulary.
+ * QUARANTINE, and it is EMPTY since #124. It held the other four files under
+ * `guide/`, listed by FILE rather than by word — the fix was a conversion per
+ * file, and a per-word allowlist would have grown into a second copy of the
+ * dead vocabulary. The mechanism stays for the next debt; the two guards below
+ * are what keep an empty list from being decoration.
+ *
+ * #124 more than doubled RETIRED — 37 names to 79 — and the reason is worth
+ * keeping: the original list was curated from ONE converted file, so it could
+ * only name the debt that file happened to carry. Converting the other four
+ * against the 165 live names in the four schemas turned up 42 more, most of
+ * them the dossier's vocabulary, which `model.md` never had to name. So the
+ * count this check printed for two tickets ("45 occurrences in four files") was
+ * a FLOOR, not a total. A curated list measures what its author had in front of
+ * them, and says nothing about the rest.
+ *
+ * WHAT THIS STILL DOES NOT SEE, said out loud rather than left to be
+ * rediscovered: `backticked()` strips every fenced block first, so a fence that
+ * SHOWS a dead key teaches it and goes unmeasured. #124 found three such fences
+ * by hand (`viaNota`, `origem achado-recusado` and `difereEm` in `inquiry.md`,
+ * `sobre` in `report.md`) and fixed them. The rule is not extended into fences
+ * because a fence carries prose too — a plain block reading "nota de rodapé
+ * (sem sobre)" is Portuguese, and half the words on this list are ordinary
+ * Portuguese. Measuring it would need a shape rule, not a word list.
  */
 
 const fs = require('fs');
@@ -102,15 +130,51 @@ const RETIRED = {
   // for the value as surely as for the key.
   tecnica: 'technical', ambas: 'both', volta: 'back', premissa: 'assumption',
   legenda: 'legend', 'achado-recusado': 'rejected-finding',
+
+  // #124. The list above was curated from ONE file, and curating from one file
+  // is how a curated list goes stale: converting the other four was driven by
+  // the 165 live names in the four schemas instead, and every name below was
+  // standing in the tree when this ticket opened — invisible to the list, and
+  // therefore to the count it printed. The dossier's own vocabulary is most of
+  // it, because `model.md` never had to name a dossier field.
+  procedencia: 'provenance', inferido: 'inferred', perguntado: 'asked',
+  confirmado: 'confirmed', fato: 'fact', fatos: 'facts',
+  acordo: 'agreement', recorte: 'snapshot', impressao: 'fingerprint', eixos: 'axes',
+  achados: 'findings', alvo: 'target', viaNota: 'viaNote', estado: 'state',
+  recusado: 'rejected', estacionamento: 'parking', estacionado: 'parked',
+  capacidade: 'capability', difereEm: 'differsIn', erradaSe: 'wrongIf',
+  escolhaSe: 'chooseIf', porque: 'because', paga: 'pays',
+  logica: 'logical', publica: 'public', modelo: 'model',
+  // `theme@1` is a contract too, and no guide file measured it until now.
+  folga: 'gap', densidade: 'density', solido: 'solid', tracejado: 'dashed',
+  animado: 'animated', claro: 'light', escuro: 'dark', corporativo: 'corporate',
+  // #53 renamed the engine's own files and phases; a guide naming the old verb
+  // sends the reader to a path that is not there.
+  gerar: 'generate', planejar: 'plan', emitir: 'emit', resolver: 'resolve',
+  cena: 'scene', geometria: 'geometry',
+  // the two keys #124 itself converted, now that both ends are English
+  vistas: 'views', rotulos: 'labels',
 };
 
-/** The file this ticket converted, and the one verdict 1 holds to the standard. */
+/**
+ * The file whose TABLE verdict 3 reads. Verdict 1 measures every file under
+ * `guide/`; this one is named by hand because it is the one that documents the
+ * facet fields, and #123's result table lives in it.
+ */
 const MEASURED = 'model.md';
 
-/** Files under `guide/` still carrying the debt. Named ticket, not silence. */
-const QUARANTINE = {
-  'inquiry.md': '#124', 'report.md': '#124', 'visual.md': '#124', 'context-pack.md': '#124',
-};
+/**
+ * Files under `guide/` still carrying the debt. Named ticket, not silence.
+ *
+ * EMPTY since #124, and the machinery below stays: the two rot-guards are what
+ * make an empty list mean something. One refuses a file that is excused and
+ * already CLEAN — a fix that never came off the list. The other refuses an
+ * entry naming a file that is GONE, which excuses nothing and reads as debt
+ * still standing. The third guard this used to need — a new guide file born
+ * measured by nothing — is gone because verdict 1 no longer names one file by
+ * hand: it measures everything the quarantine does not excuse.
+ */
+const QUARANTINE = {};
 
 /** Backticked spans that are prose, not a contract key, and must not be read as one. */
 const NOT_A_FIELD = new Set([
@@ -125,28 +189,51 @@ const NOT_A_FIELD = new Set([
  * writes a delta that parses and does nothing.
  */
 const READ_ONLY_BY_CODE = {
-  rotulos: 'session/elaborate.cjs:93 — residue of #53, tracked in #124',
+  // EMPTY since #124 renamed `rotulos` to `labels` on both ends at once. The
+  // mechanism stays because the CLASS did not go away: `refines`, `facets`,
+  // `inside` and `facetEdges` are all `additionalProperties: true`, so the next
+  // key that lives only in `elaborate.cjs` gets excused here — with the line
+  // that reads it, and CONTROL 5 holding the excuse to that line.
 };
 
 const backticked = text => [...text.replace(/```[\s\S]*?```/g, '').matchAll(/`([^`\n]+)`/g)]
   .map(m => m[1].trim());
 
 /**
- * Three shapes carry a field name in this document, and a scanner that knows
- * only the first two goes green on the table where the names actually live:
+ * FIVE shapes carry a field name in this document, and every one of them was
+ * added after a scanner that did not know it reported a file as clean:
  *
  *   `notes[].origin`                    a path
  *   `layer: "technical"`                a key AND its value — both are contract
+ *   `service:substring`                 the same, with no quotes
  *   `{ edgeId: { by: [ids] } }`         the SHAPE column of every field table
+ *   `notes[].origin = "assumption"`     a path ASSIGNED a value
  *
- * The third was missing until the review planted `{ id: casacos }` in place of
- * `{ id: technicalFacet }` and watched verdict 1 stay green — 48 of the 155
- * backticked spans in `model.md` were invisible, including rows 38-42, which is
- * the exact table #115 exists to fix. Inside braces every identifier is read;
- * prose does not live in there, so the extra reach costs nothing.
+ * The brace form was missing until the review planted `{ id: casacos }` in
+ * place of `{ id: technicalFacet }` and watched verdict 1 stay green — 48 of
+ * the 155 backticked spans in `model.md` were invisible, including rows 38-42,
+ * which is the exact table #115 exists to fix. Inside braces every identifier
+ * is read; prose does not live in there, so the extra reach costs nothing.
+ *
+ * The bare-colon form came from the same review, which found the one dead name
+ * that survived #115 hiding in it. The assignment form is #124's, and it was
+ * sitting in the OPENING PARAGRAPH of `guide/context-pack.md` — the count this
+ * check printed said that file carried 18 occurrences, and the nineteenth was
+ * three lines from the title, unseen.
+ *
+ * The pattern across all three is worth naming: every time this function has
+ * been wrong, it has been wrong by returning [] — SILENTLY, and reported as
+ * clean. A shape it does not know does not raise; it just stops measuring.
  */
 function tokensOf(span) {
   if (span.includes('{')) return [...span.matchAll(/[A-Za-z_]\w*/g)].map(m => m[0]);
+  // `notas[].origem = "premissa"` — a PATH assigned a value, the fourth shape,
+  // and the one #124 found sitting in the opening paragraph of a guide. The
+  // three below all return [] for it: it is not a bare path (the `= "..."`),
+  // and the `key: "value"` form wants a colon and a single key. Written in the
+  // tree it read as documentation; read by this function it was silence.
+  const assigned = /^([A-Za-z_][\w[\].-]*)\s*=\s*"([^"]*)"$/.exec(span);
+  if (assigned) return [...assigned[1].split('.').map(s => s.replace('[]', '')), assigned[2]];
   const quoted = /^([A-Za-z_][\w-]*)\s*:\s*"([^"]*)"$/.exec(span);
   if (quoted) return [quoted[1], quoted[2]];
   // `service:substring` — a colon with NO quotes. The first draft returned []
@@ -191,15 +278,27 @@ const approved = () => approve(readExample('retail-logical.json'), { at: '2026-0
 console.log('\n1 · the retired vocabulary is gone from the guide (#115)\n');
 
 {
-  const hits = retiredIn(MEASURED);
-  const shown = [...hits.entries()].map(([k, n]) => `\`${k}\`→\`${RETIRED[k]}\`×${n}`).join(' ');
-  ok(hits.size === 0,
-    `guide/${MEASURED} names no key #53 retired`,
-    hits.size ? shown : 'clean');
+  const onDisk = fs.readdirSync(GUIDE).filter(f => f.endsWith('.md')).sort();
+  // #124: every file, not one. Verdict 1 named `model.md` alone while the other
+  // four sat in the quarantine, and "the file this ticket converted" is a
+  // standard that stops meaning anything the moment the quarantine empties.
+  for (const file of onDisk.filter(f => !QUARANTINE[f])) {
+    const hits = retiredIn(file);
+    const shown = [...hits.entries()].map(([k, n]) => `\`${k}\`→\`${RETIRED[k]}\`×${n}`).join(' ');
+    ok(hits.size === 0, `guide/${file} names no key #53 retired`, hits.size ? shown : 'clean');
+  }
+
+  // A quarantine naming a file that is gone excuses nothing and reads as debt
+  // that is still standing. Checked BEFORE the count, which would throw on it.
+  const ghosts = Object.keys(QUARANTINE).filter(f => !onDisk.includes(f));
+  ok(ghosts.length === 0,
+    'every quarantined file is a file that exists',
+    ghosts.length ? `${ghosts.join(', ')} — gone from guide/, still excused` : `${Object.keys(QUARANTINE).length} excused`);
 
   let debt = 0;
   const cleared = [];
   for (const [file, ticket] of Object.entries(QUARANTINE)) {
+    if (ghosts.includes(file)) continue;
     const n = [...retiredIn(file).values()].reduce((a, b) => a + b, 0);
     debt += n;
     if (n) console.log(`    · QUARANTINE ${file}: ${n} occurrence(s) — ${ticket}`);
@@ -207,19 +306,15 @@ console.log('\n1 · the retired vocabulary is gone from the guide (#115)\n');
   }
   console.log(`    · ${debt} occurrence(s) still standing in ${Object.keys(QUARANTINE).length - cleared.length} quarantined file(s)`);
 
-  // A quarantine that only ever grows is a list nobody reads. Two ways it rots,
-  // both closed here: a file gets fixed and stays excused forever, and a NEW
-  // guide file is born measured by nothing — verdict 1 names `model.md` by hand,
-  // so the directory has to account for itself.
+  // A quarantine that only ever grows is a list nobody reads, and it rots in two
+  // directions. One is closed here: a file that got fixed and stays excused
+  // forever. The other — a NEW guide file born measured by nothing — used to
+  // need a guard of its own, because verdict 1 named ONE file by hand; since
+  // #124 it measures every file the quarantine does not excuse, so a new file is
+  // measured the moment it lands and there is nothing left to account for.
   ok(cleared.length === 0,
     'no quarantined file is already clean — a cleared one comes OFF the list',
-    cleared.length ? `${cleared.join(', ')} — delete from QUARANTINE and #124 shrinks` : 'none is');
-
-  const onDisk = fs.readdirSync(GUIDE).filter(f => f.endsWith('.md')).sort();
-  const accounted = [MEASURED, ...Object.keys(QUARANTINE)].sort();
-  ok(JSON.stringify(onDisk) === JSON.stringify(accounted),
-    'every file under guide/ is either measured or named in the quarantine',
-    onDisk.filter(f => !accounted.includes(f)).map(f => `${f} is neither`).join(', ') || `${onDisk.length} file(s)`);
+    cleared.length ? `${cleared.join(', ')} — delete from QUARANTINE` : 'none is');
 }
 
 // ---------------------------------------------------------------------------
@@ -338,18 +433,105 @@ console.log('\n4 · the shipped example puts the italic on its technical leaves 
 }
 
 // ---------------------------------------------------------------------------
-console.log('\n5 · control — each verdict knows how to fail\n');
+console.log('\n5 · the name the guide teaches is the name the code reads (#124)\n');
+
+{
+  // Four of `elaboration@1`'s blocks are `additionalProperties: true`, because
+  // their keys are unpredictable ids. The consequence is that the names INSIDE
+  // those maps are validated by nothing: a delta that misspells one parses
+  // clean, validates clean, and silently does less. `guide/model.md` is the
+  // only place that says what those names are, which makes the guide a load
+  // bearing part of the contract rather than a description of it.
+  //
+  // So: take the name the guide prints, and prove the code reads THAT one.
+  // #124 renamed `rotulos` to `labels` and this is the guard that makes the
+  // next such rename fail loudly instead of drawing unlabelled segments.
+  const guide = fs.readFileSync(path.join(GUIDE, 'model.md'), 'utf8');
+  const row = /\|\s*`refines`\s*\|\s*`\{ edgeId: \{ by: \[ids\], (\w+): \[\.\.\.\] \} \}`/.exec(guide);
+  ok(!!row, 'guide/model.md prints the shape of a `refines` value', row ? `\`${row[1]}\`` : 'no row matches');
+
+  if (row) {
+    const taught = row[1];
+    const base = approved();
+    const edgeId = 'a-avisa';
+    const delta = {
+      schema: 'panlabs-aws-diagrams/elaboration@1', about: base.id,
+      nodes: [{ id: 'bus-probe', layer: 'technical', technical: { kind: 'service', service: 'eventbridge' } }],
+      refines: { [edgeId]: { by: ['bus-probe'], [taught]: ['FIRST-PROBE', 'SECOND-PROBE'] } },
+    };
+    // What the refine is supposed to produce, read the same way both times:
+    // the approved edge keeps its id and gains a technical label, and the jump
+    // becomes `<id>-s1`.
+    const labelsOf = session => {
+      const at = id => (session.edges || []).find(e => e.id === id);
+      const approvedEdge = at(edgeId);
+      const jump = at(`${edgeId}-s1`);
+      return {
+        first: approvedEdge && approvedEdge.technical && approvedEdge.technical.label,
+        segment: jump && jump.label,
+      };
+    };
+
+    const taughtRun = labelsOf(elaborate(base, delta));
+    ok(taughtRun.first === 'FIRST-PROBE',
+      `elaborate() reads \`${taught}\` — the first label lands on the approved edge`, taughtRun.first);
+    ok(taughtRun.segment === 'SECOND-PROBE',
+      'and the second lands on the jump segment', taughtRun.segment);
+
+    // CONTROL: the same delta under the name the guide does NOT teach. Nothing
+    // refuses it — that is the whole point — and the labels simply vanish.
+    const staleDelta = JSON.parse(JSON.stringify(delta));
+    staleDelta.refines[edgeId] = { by: ['bus-probe'], rotulos: ['FIRST-PROBE', 'SECOND-PROBE'] };
+    const ELABORATION = SCHEMAS['panlabs-aws-diagrams/elaboration@1'];
+    ok(againstSchema(staleDelta, ELABORATION, ELABORATION).length === 0,
+      'CONTROL: a delta using the OLD name still validates — the open map cannot catch it',
+      'which is why this verdict exists at all');
+    const staleRun = labelsOf(elaborate(approved(), staleDelta));
+    ok(!staleRun.first && !staleRun.segment,
+      'CONTROL: and its labels vanish silently, which is the defect in one line',
+      `first=${staleRun.first} segment=${staleRun.segment}`);
+  }
+
+  // `views` is the other half of #124 and the EASY half: `session@1` is closed,
+  // so the old name is refused instead of ignored. Asserted anyway, because
+  // "the closed one is fine" is exactly the assumption that stops being true
+  // the day somebody opens it.
+  const shipped = readExample('retail-logical.json');
+  const staleSession = JSON.parse(JSON.stringify(shipped));
+  staleSession.vistas = staleSession.views; delete staleSession.views;
+  const SESSION = SCHEMAS['panlabs-aws-diagrams/session@1'];
+  const errs = againstSchema(staleSession, SESSION, SESSION);
+  ok(errs.length > 0, 'CONTROL: `vistas` is refused by session@1, where the open map could not refuse',
+    errs.slice(0, 1).join('; '));
+  ok(project(approved(), 'logical').model.title === shipped.views.logical.title,
+    'and project() reads `views` — the per-view title reaches the model',
+    project(approved(), 'logical').model.title);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n6 · control — each verdict knows how to fail\n');
 
 {
   // 1 · a planted dead key is caught.
   // Planted in all three shapes a field name takes here. The brace form is the
   // one the review caught going green, and it is the one the field tables use.
-  const planted = 'Uma linha `{ id: casacos }`, uma `camada: "tecnica"`, uma `notas[].origem`, e `facets` viva ao lado.';
+  // The fourth span — `dossie.eixos = "premissa"` — is #124's shape, and it is
+  // the one that decides whether this control is measuring today's function or
+  // yesterday's. Before the fix `tokensOf` returned [] for it, so a guide could
+  // open with a dead key written that way and verdict 1 called the file clean.
+  const planted = 'Uma linha `{ id: casacos }`, uma `camada: "tecnica"`, uma `notas[].origem`, ' +
+    'uma `dossie.eixos = "premissa"`, e `facets` viva ao lado.';
   const hits = new Map();
   for (const span of backticked(planted)) for (const tok of tokensOf(span)) if (RETIRED[tok]) hits.set(tok, 1);
-  for (const dead of ['casacos', 'camada', 'tecnica', 'notas', 'origem'])
+  for (const dead of ['casacos', 'camada', 'tecnica', 'notas', 'origem', 'dossie', 'eixos', 'premissa'])
     ok(hits.has(dead), `CONTROL 1: a planted \`${dead}\` is caught`, [...hits.keys()].join(','));
   ok(!hits.has('facets'), 'CONTROL 1: and the live `facets` beside them is not');
+
+  // And the shape is read for what it IS, not merely scanned for words: the
+  // path splits into its segments and the quoted value comes back beside them.
+  ok(JSON.stringify(tokensOf('notas[].origem = "premissa"')) === JSON.stringify(['notas', 'origem', 'premissa']),
+    'CONTROL 1: the `path = "value"` shape yields path segments AND the value',
+    JSON.stringify(tokensOf('notas[].origem = "premissa"')));
 
   // 2 · a delta that names a retired key no longer validates.
   const deadDelta = { schema: 'panlabs-aws-diagrams/elaboration@1', about: 'retail-300-stores', casacos: { loja: { kind: 'actor' } } };
@@ -397,19 +579,28 @@ console.log('\n5 · control — each verdict knows how to fail\n');
     'CONTROL 4: no name on the retired list is a live key today',
     resurrected.length ? resurrected.join(', ') : `${Object.keys(RETIRED).length} names, none of them live`);
 
-  // 5 · and the one exception has to keep earning it. `rotulos` is excused only
-  // because `elaborate.cjs` really reads it; when #124 renames it, this goes red
-  // and the exception goes away with the same edit.
+  // 5 · and an exception has to keep earning it. A key is excused here only
+  // because `elaborate.cjs` really reads it; the day it stops being read, or
+  // gets renamed, this goes red and the excuse goes away with the same edit.
+  // That is exactly what happened to `rotulos` in #124, which is why the map is
+  // empty today — and an empty map has to REPORT itself as empty rather than
+  // pass on `0 === 0` with a message telling you to delete an exception that is
+  // not there.
+  const excused = Object.keys(READ_ONLY_BY_CODE);
   const elaborateSrc = fs.readFileSync(path.join(ROOT, 'session', 'elaborate.cjs'), 'utf8');
-  const stillRead = Object.keys(READ_ONLY_BY_CODE).filter(k => new RegExp(`\\.${k}\\b`).test(elaborateSrc));
-  ok(stillRead.length === Object.keys(READ_ONLY_BY_CODE).length,
+  const stillRead = excused.filter(k => new RegExp(`\\.${k}\\b`).test(elaborateSrc));
+  ok(stillRead.length === excused.length,
     'CONTROL 5: every key excused as read-only-by-code is still read by that code',
-    stillRead.join(', ') || 'none is — delete the exception');
+    excused.length
+      ? (stillRead.length === excused.length
+        ? stillRead.join(', ')
+        : `${excused.filter(k => !stillRead.includes(k)).join(', ')} — no longer read, delete the exception`)
+      : 'no key is excused — the map is empty');
 }
 
 // ---------------------------------------------------------------------------
 console.log(failures
   ? `\n  ✗ ${failures} failure(s)`
-  : '\n  ✓ the guide names the contract of today, its examples run, and the italic line is both taught and produced.');
+  : '\n  ✓ every guide file names the contract of today, its examples run, the italic line is both taught and produced, and the name the guide teaches is the name the code reads.');
 process.exit(failures ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

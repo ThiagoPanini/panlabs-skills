@@ -42,9 +42,9 @@ module.exports = function a2(scene) {
     const target = lim('graphicComplexityTarget');
     const ceiling = lim('graphicComplexityFail');
     const measured = { entriesNeeded: n, target, ceiling };
-    output.push(n <= target ? ok('A2.1', { measured, mensagem: `${n} symbol type(s) (target ≤ ${target})` })
-      : n <= ceiling ? warning('A2.1', { measured, mensagem: `${n} symbol types — above the target of ${target}, still within ${ceiling}`, occurrences: [{ o_que: `the legend would need ${n} entries`, ids: [] }] })
-        : failure('A2.1', { measured, mensagem: `${n} symbol types — above the limit of ${ceiling} (span of absolute judgement)`, occurrences: [{ o_que: `the legend would need ${n} entries; Moody puts the effective ceiling at ${target}`, ids: [] }] }));
+    output.push(n <= target ? ok('A2.1', { measured, message: `${n} symbol type(s) (target ≤ ${target})` })
+      : n <= ceiling ? warning('A2.1', { measured, message: `${n} symbol types — above the target of ${target}, still within ${ceiling}`, occurrences: [{ o_que: `the legend would need ${n} entries`, ids: [] }] })
+        : failure('A2.1', { measured, message: `${n} symbol types — above the limit of ${ceiling} (span of absolute judgement)`, occurrences: [{ o_que: `the legend would need ${n} entries; Moody puts the effective ceiling at ${target}`, ids: [] }] }));
   }
 
   // ---------------------------------------------------------------- A2.2
@@ -83,7 +83,7 @@ module.exports = function a2(scene) {
       }
       output.push(matches('A2.3', cases, {
         measured: { checked, diverging: cases.length },
-        mensagem: `${checked} icon(s) checked against the catalog's declared color — the pixel hash belongs to render`,
+        message: `${checked} icon(s) checked against the catalog's declared color — the pixel hash belongs to render`,
       }));
     }
   }
@@ -102,7 +102,7 @@ module.exports = function a2(scene) {
       }
       output.push(matches('A2.4', cases, {
         measured: { withStencil, outsideCatalog: cases.length, asOf: cat.asOf },
-        mensagem: `catalog as of ${cat.asOf || 'unknown date'}; ${withStencil} icon(s) with a declared stencil`,
+        message: `catalog as of ${cat.asOf || 'unknown date'}; ${withStencil} icon(s) with a declared stencil`,
       }));
     }
   }

@@ -13,7 +13,7 @@
  *
  *   `severity`  the WORST severity the check can emit. Seven checks scale
  *               with the measurement (A2.1 is warn at 7-8 legend entries and
- *               fail above 8); they carry `escalona: true`, and it is the
+ *               fail above 8); they carry `escalates: true`, and it is the
  *               check, not the table, that decides the concrete case.
  *
  *   `input`     where the data comes from. This is the validator × render
@@ -23,7 +23,7 @@
  *               both. Whoever falls into `render` explains why in
  *               `porqueRender`.
  *
- *   `calibravel`  the number has no experimental basis — it's the list from
+ *   `calibratable`  the number has no experimental basis — it's the list from
  *                 the rubric's U8. It becomes a key in `thresholds.json` with
  *                 `because: null`, and the empty field is the request for
  *                 measurement.
@@ -139,7 +139,7 @@ const CHECKS = [
 
   // ------------------------------------------------------------------- A2
   {
-    id: 'A2.1', family: 'A2', name: 'Graphic complexity ≤ 6', severity: 'fail', escalona: true, input: 'style',
+    id: 'A2.1', family: 'A2', name: 'Graphic complexity ≤ 6', severity: 'fail', escalates: true, input: 'style',
     mede: 'number of distinct entries the legend would need (symbol types, not instances)',
     limiar: { key: 'graphicComplexityTarget', descricao: `≤ ${lim('graphicComplexityTarget')}; warn at 7-8; fail above ${lim('graphicComplexityFail')}` },
     fonte: 'Moody, Physics of Notations ("span of absolute judgement is around 6 categories")',
@@ -265,7 +265,7 @@ const CHECKS = [
     fonte: 'Mooney et al., GD 2025, eq. (9) + Table 2',
   },
   {
-    id: 'A3.9', family: 'A3', name: 'Minimum font size', severity: 'warn', input: 'style', calibravel: true,
+    id: 'A3.9', family: 'A3', name: 'Minimum font size', severity: 'warn', input: 'style', calibratable: true,
     mede: 'declared font size per text class',
     limiar: { key: 'minEdgeLabelFontSize', descricao: `≥ ${lim('minEdgeLabelFontSize')} px on edge label; ≥ ${lim('minElementNameFontSize')} px on element name` },
     fonte: 'derived — the rubric is explicit: this is NOT a WCAG rule (WCAG governs contrast, not size)',
@@ -315,7 +315,7 @@ const CHECKS = [
     fonte: 'IBM ("icons in upper left corners"); AWS deck (Groups)',
   },
   {
-    id: 'A4.7', family: 'A4', name: 'Intra/inter-group proximity ratio', severity: 'warn', input: 'geometry', calibravel: true,
+    id: 'A4.7', family: 'A4', name: 'Intra/inter-group proximity ratio', severity: 'warn', input: 'geometry', calibratable: true,
     mede: 'ρ = mean intra-group distance / mean inter-group distance',
     limiar: { key: 'maxProximity', descricao: `ρ ≤ ${lim('maxProximity')}` },
     fonte: 'proximity formalized in Kobourov, Mchedlidze & Vonessen',
@@ -323,25 +323,25 @@ const CHECKS = [
 
   // ------------------------------------------------------------------- A5
   {
-    id: 'A5.1', family: 'A5', name: 'Edge crossings (EC)', severity: 'fail', escalona: true, input: 'geometry',
+    id: 'A5.1', family: 'A5', name: 'Edge crossings (EC)', severity: 'fail', escalates: true, input: 'geometry',
     mede: 'EC = 1 − c/c_max, and the absolute crossing count',
     limiar: { key: 'crossingsQ1', descricao: `target 0 crossings; warn at ≥1; fail above ⌈|E|/10⌉` },
     fonte: 'Purchase 1997 ("by far the most important aesthetic"); Mooney et al., GD 2025, eq. (3)',
   },
   {
-    id: 'A5.2', family: 'A5', name: 'Crossing angle (CA)', severity: 'fail', escalona: true, input: 'geometry',
+    id: 'A5.2', family: 'A5', name: 'Crossing angle (CA)', severity: 'fail', escalates: true, input: 'geometry',
     mede: 'normalized CA and the smallest absolute angle between crossing edges',
     limiar: { key: 'minCrossingAngle', descricao: `target ≥ ${lim('idealCrossingAngle')}°; fail if < ${lim('minCrossingAngle')}°` },
     fonte: 'Huang, Eades, Hong & Lin (JVLC 2014); formula in Mooney et al., GD 2025, eq. (2)',
   },
   {
-    id: 'A5.3', family: 'A5', name: 'Number of bends per edge', severity: 'fail', escalona: true, input: 'geometry', calibravel: true,
+    id: 'A5.3', family: 'A5', name: 'Number of bends per edge', severity: 'fail', escalates: true, input: 'geometry', calibratable: true,
     mede: 'bends(e) = |points(e)| − 2; maximum and mean',
     limiar: { key: 'bendsWarn', descricao: `target ≤ ${lim('bendsTarget')}; warn above ${lim('bendsWarn')}; fail above ${lim('bendsFail')}` },
     fonte: 'Purchase 1997; Gestalt/continuation (Kobourov et al.)',
   },
   {
-    id: 'A5.4', family: 'A5', name: 'Bend angle', severity: 'fail', escalona: true, input: 'geometry', calibravel: false,
+    id: 'A5.4', family: 'A5', name: 'Bend angle', severity: 'fail', escalates: true, input: 'geometry', calibratable: false,
     mede: 'interior angle at each polyline vertex',
     limiar: { key: 'bendAngleTarget', descricao: `≥ ${lim('bendAngleTarget')}°; fail below ${lim('bendAngleFail')}°` },
     fonte: 'Gestalt/continuation — "few bends, none abrupt"',
@@ -360,7 +360,7 @@ const CHECKS = [
     fonte: 'Mooney et al., GD 2025, eqs. (5)–(6); Purchase 2002',
   },
   {
-    id: 'A5.7', family: 'A5', name: 'Consistent flow direction', severity: 'warn', input: 'geometry', calibravel: true,
+    id: 'A5.7', family: 'A5', name: 'Consistent flow direction', severity: 'warn', input: 'geometry', calibratable: true,
     mede: 'fraction of edges that project positively onto the dominant axis',
     limiar: { key: 'minConsistentFlow', descricao: `≥ ${lim('minConsistentFlow')}` },
     fonte: 'Purchase 2002 (consistent flow direction); Kobourov et al.',
@@ -382,7 +382,7 @@ const CHECKS = [
 
   // ------------------------------------------------------------------- A6
   {
-    id: 'A6.1', family: 'A6', name: 'Angular resolution (AR)', severity: 'fail', escalona: true, input: 'geometry',
+    id: 'A6.1', family: 'A6', name: 'Angular resolution (AR)', severity: 'fail', escalates: true, input: 'geometry',
     mede: 'normalized AR, and the minimum absolute angle between edges incident on the same node',
     limiar: { key: 'angularResolutionQ1', descricao: `warn if AR < ${lim('angularResolutionQ1')}; fail if the absolute angle < ${lim('minIncidentAngle')}°` },
     fonte: 'Mooney et al., GD 2025, eq. (1); Purchase 2002',
@@ -400,7 +400,7 @@ const CHECKS = [
     fonte: 'Mooney et al., GD 2025 (definition + percentiles)',
   },
   {
-    id: 'A6.4', family: 'A6', name: 'Grid alignment', severity: 'warn', input: 'geometry', calibravel: true,
+    id: 'A6.4', family: 'A6', name: 'Grid alignment', severity: 'warn', input: 'geometry', calibratable: true,
     mede: 'fraction of nodes that share x or y with at least one other node',
     limiar: { key: 'minAlignment', descricao: `≥ ${lim('minAlignment') * 100}% of nodes, step of ${lim('gridStep')} px` },
     fonte: 'graph aesthetics (grid alignment); Gestalt/symmetry via Kobourov et al.',
@@ -435,7 +435,7 @@ const CHECKS = [
     fonte: 'WCAG 2.2 SC 1.4.1 (level A); Azure WAF; C4; Google style guide',
   },
   {
-    id: 'A7.4', family: 'A7', name: 'Distinguishability under color deficiency', severity: 'warn', input: 'style', calibravel: true,
+    id: 'A7.4', family: 'A7', name: 'Distinguishability under color deficiency', severity: 'warn', input: 'style', calibratable: true,
     mede: 'smallest ΔE00 between colors of distinct meanings, under protanopia, deuteranopia and tritanopia',
     limiar: { key: 'minDeltaE00', descricao: `ΔE00 ≥ ${lim('minDeltaE00')} across the three simulations` },
     fonte: 'WCAG SC 1.4.1 is the normative requirement; the simulation test is engineering operationalization',
@@ -450,7 +450,7 @@ const CHECKS = [
 
   // ------------------------------------------------------------------- A8
   {
-    id: 'A8.1', family: 'A8', name: 'First-class element count', severity: 'fail', escalona: true, input: 'geometry',
+    id: 'A8.1', family: 'A8', name: 'First-class element count', severity: 'fail', escalates: true, input: 'geometry',
     mede: 'number of nodes, excluding group boxes',
     limiar: { key: 'elementsTarget', descricao: `target ≤ ${lim('elementsTarget')}; warn at 21-${lim('elementsFail')}; fail above ${lim('elementsFail')}` },
     fonte: 'Ghoniem/Fekete/Castagliola; Yoghourdjian et al.; Störrle; C4 FAQ',
@@ -463,13 +463,13 @@ const CHECKS = [
     fonte: 'Yoghourdjian et al. (78% of studies use density <10%)',
   },
   {
-    id: 'A8.3', family: 'A8', name: 'Edges per node (fan-out)', severity: 'warn', input: 'geometry', calibravel: true,
+    id: 'A8.3', family: 'A8', name: 'Edges per node (fan-out)', severity: 'warn', input: 'geometry', calibratable: true,
     mede: 'max(degree(v))',
     limiar: { key: 'maxFanOut', descricao: `warn if degree > ${lim('maxFanOut')}` },
     fonte: 'derived from A6.1 + Ware et al. 2002',
   },
   {
-    id: 'A8.4', family: 'A8', name: 'Ink coverage', severity: 'warn', input: 'render', calibravel: true,
+    id: 'A8.4', family: 'A8', name: 'Ink coverage', severity: 'warn', input: 'render', calibratable: true,
     mede: 'fraction of non-background pixels over the canvas area',
     limiar: { key: 'inkCoverage', descricao: `range [${lim('inkCoverage').join(' ; ')}] as a signal, not a failure` },
     fonte: 'Tufte (data-ink), explicitly adapted and weakened by the rubric itself',

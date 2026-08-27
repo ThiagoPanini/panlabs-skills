@@ -95,18 +95,18 @@ async function caseFiles(session, slug, opts = {}) {
   const xml = stitch([logical.xml, technical.xml]);
 
   // The ONLY validator output `case.md` reaches for — see `case-notes.cjs`'s
-  // header for why `falhas`/`avisos` (which carry the two permanent, nobody-
+  // header for why `failures`/`warnings` (which carry the two permanent, nobody-
   // can-fix-it findings) never feed section 5. `detailPagesMissing` (#137)
-  // is a THIRD exception, structured rather than plucked from `avisos`: it
+  // is a THIRD exception, structured rather than plucked from `warnings`: it
   // is fixable — a model edit, not a floor of the engine — so it earns its
   // own bullet instead of hiding among the nine other warnings.
   const semanticFailures = [];
   const detailPagesMissing = [];
   for (const [view, drawn] of [['logical', logical], ['technical', technical]]) {
-    for (const g of drawn.relatorio.geometry)
-      for (const f of g.report.semanticas)
-        semanticFailures.push({ id: f.id, name: f.name, message: f.mensagem, view });
-    for (const m of drawn.relatorio.detailPagesMissing)
+    for (const g of drawn.report.geometry)
+      for (const f of g.report.semantic)
+        semanticFailures.push({ id: f.id, name: f.name, message: f.message, view });
+    for (const m of drawn.report.detailPagesMissing)
       detailPagesMissing.push({ ...m, view });
   }
 
@@ -117,7 +117,7 @@ async function caseFiles(session, slug, opts = {}) {
       { path: `${slug}.drawio`, content: xml },
       { path: 'case.md', content: md },
     ],
-    warnings: [...logical.relatorio.avisos, ...technical.relatorio.avisos],
+    warnings: [...logical.report.warnings, ...technical.report.warnings],
   };
 }
 
@@ -196,7 +196,7 @@ async function main() {
     result = await caseFiles(session, slug, { gate: opts.gate, brief });
   } catch (e) {
     console.error(`\n  ✗ ${e.message}`);
-    for (const l of e.erros || []) console.error(`      · ${l}`);
+    for (const l of e.errors || []) console.error(`      · ${l}`);
     process.exit(1);
   }
   for (const w of result.warnings) console.log(`  ⚠ ${w}`);
@@ -234,7 +234,7 @@ async function main() {
 if (require.main === module) {
   main().catch(e => {
     console.error(`\n  ✗ ${e.message}`);
-    for (const l of e.erros || []) console.error(`      · ${l}`);
+    for (const l of e.errors || []) console.error(`      · ${l}`);
     process.exit(1);
   });
 }

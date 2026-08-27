@@ -156,7 +156,7 @@ function gatilhoAz(model, t) {
 // ------------------------------------------------------------------ multi-account
 
 /** Nearest account in the ancestor chain. `null` = the node lives in no account at all. */
-function contaDe(no, t) {
+function accountFrom(no, t) {
   if (!no) return null;
   if (no.kind === 'account') return no;
   return t.ancestrais(no).find(a => a.kind === 'account') || null;
@@ -234,13 +234,13 @@ function gatilhoOu(model, t) {
 /** Edges whose two ends live in DIFFERENT accounts. Coming in from outside doesn't count. */
 function travessias(edges, t) {
   return edges.filter(a => {
-    const ca = contaDe(t.byId.get(a.from), t);
-    const cb = contaDe(t.byId.get(a.to), t);
+    const ca = accountFrom(t.byId.get(a.from), t);
+    const cb = accountFrom(t.byId.get(a.to), t);
     return ca && cb && ca.id !== cb.id;
   }).map(a => ({
     ...a,
-    contaDe: contaDe(t.byId.get(a.from), t).id,
-    contaPara: contaDe(t.byId.get(a.to), t).id,
+    accountFrom: accountFrom(t.byId.get(a.from), t).id,
+    accountTo: accountFrom(t.byId.get(a.to), t).id,
   }));
 }
 
@@ -275,21 +275,21 @@ function modoDeContas(model, t, edges) {
   const cross = travessias(edges || model.edges || [], t);
   if (!cross.length)
     return {
-      modo: 'inventario', accounts: accounts.length, travessias: 0,
+      modo: 'inventory', accounts: accounts.length, travessias: 0,
       because: `${accounts.length} accounts, no crossing — this is a placement map`,
     };
   if (accounts.length > MAX_INTEGRATION_ACCOUNTS)
     return {
-      modo: 'inventario', accounts: accounts.length, travessias: cross.length,
+      modo: 'inventory', accounts: accounts.length, travessias: cross.length,
       because: `${accounts.length} accounts is above the ${MAX_INTEGRATION_ACCOUNTS} the integration view holds (X1)`,
     };
   if (cross.length > MAX_TRAVERSALS)
     return {
-      modo: 'inventario', accounts: accounts.length, travessias: cross.length,
+      modo: 'inventory', accounts: accounts.length, travessias: cross.length,
       because: `${cross.length} crossings is above the ${MAX_TRAVERSALS} the official corpus shows (D1)`,
     };
   return {
-    modo: 'integracao', accounts: accounts.length, travessias: cross.length,
+    modo: 'integration', accounts: accounts.length, travessias: cross.length,
     because: `${accounts.length} accounts and ${cross.length} crossing(s) — the crossing is the subject`,
   };
 }
@@ -335,8 +335,8 @@ function sameRelation(edges) {
 }
 
 function politicaDeTravessia(modo, cross, t) {
-  if (modo !== 'integracao')
-    return { level: 1, mecanismo: 'suprimir', grupos: [], because: 'inventory view — E1 suppresses every crossing' };
+  if (modo !== 'integration')
+    return { level: 1, mechanism: 'suppress', groups: [], because: 'inventory view — E1 suppresses every crossing' };
 
   // fan-in: ≥2 origin accounts carrying THE SAME THING to the same destination node
   const byDestination = new Map();
@@ -345,12 +345,12 @@ function politicaDeTravessia(modo, cross, t) {
     byDestination.get(a.to).push(a);
   }
   const fanIn = [...byDestination.entries()]
-    .filter(([, as]) => new Set(as.map(a => a.contaDe)).size >= 2 && sameRelation(as));
+    .filter(([, as]) => new Set(as.map(a => a.accountFrom)).size >= 2 && sameRelation(as));
   if (fanIn.length)
     return {
-      level: 3, mecanismo: 'agregada',
-      grupos: fanIn.map(([to, as]) => ({ to, accounts: [...new Set(as.map(a => a.contaDe))].sort() })),
-      because: `fan-in of ${new Set(fanIn[0][1].map(a => a.contaDe)).size} accounts into "${fanIn[0][0]}" ` +
+      level: 3, mechanism: 'aggregated',
+      groups: fanIn.map(([to, as]) => ({ to, accounts: [...new Set(as.map(a => a.accountFrom))].sort() })),
+      because: `fan-in of ${new Set(fanIn[0][1].map(a => a.accountFrom)).size} accounts into "${fanIn[0][0]}" ` +
         `with the same relationship — E3 collapses into one labeled edge`,
     };
 
@@ -361,17 +361,17 @@ function politicaDeTravessia(modo, cross, t) {
     byOrigin.get(a.from).push(a);
   }
   const bus = [...byOrigin.entries()]
-    .filter(([, as]) => new Set(as.map(a => a.contaPara)).size >= 2 && sameRelation(as));
+    .filter(([, as]) => new Set(as.map(a => a.accountTo)).size >= 2 && sameRelation(as));
   if (bus.length)
     return {
-      level: 4, mecanismo: 'bus',
-      grupos: bus.map(([from, as]) => ({ from, accounts: [...new Set(as.map(a => a.contaPara))].sort() })),
+      level: 4, mechanism: 'bus',
+      groups: bus.map(([from, as]) => ({ from, accounts: [...new Set(as.map(a => a.accountTo))].sort() })),
       because: `"${bus[0][0]}" carries the same link to ` +
-        `${new Set(bus[0][1].map(a => a.contaPara)).size} accounts — E4 routes through a bus, 1 line + N stubs`,
+        `${new Set(bus[0][1].map(a => a.accountTo)).size} accounts — E4 routes through a bus, 1 line + N stubs`,
     };
 
   return {
-    level: 6, mecanismo: 'direta', grupos: cross.map(a => ({ edge: a.id })),
+    level: 6, mechanism: 'direct', groups: cross.map(a => ({ edge: a.id })),
     because: `${cross.length} crossing(s) between distinct pairs — E10 draws direct, no ceremony at the border (E8)`,
   };
 }
@@ -408,9 +408,9 @@ function derive(model, opts = {}) {
    * already holding the layer, which is what orders the siblings.
    */
   const nav = arvore(model);
-  const camadas = camadasDeSubnets(model, nav, cat);
-  const gaps = layerGaps(model, nav, camadas);
-  const layerOf = id => (camadas.get(id) || {}).layer || null;
+  const layers = camadasDeSubnets(model, nav, cat);
+  const gaps = layerGaps(model, nav, layers);
+  const layerOf = id => (layers.get(id) || {}).layer || null;
 
   const t = arvore(model, layerOf);
   const az = gatilhoAz(model, t);
@@ -491,12 +491,12 @@ function derive(model, opts = {}) {
   return {
     t, az, faixasAz, edges, bands,
     ou, faixasOu, modo, travessias: cross, policy, habilitadores,
-    camadas, gaps,
+    layers, gaps,
   };
 }
 
 module.exports = {
   derive, arvore, gatilhoAz, ancestralComum,
-  contaDe, gatilhoOu, travessias, modoDeContas, politicaDeTravessia,
+  accountFrom, gatilhoOu, travessias, modoDeContas, politicaDeTravessia,
   MAX_INTEGRATION_ACCOUNTS, MAX_TRAVERSALS,
 };

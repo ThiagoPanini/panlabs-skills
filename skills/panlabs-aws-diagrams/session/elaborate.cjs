@@ -43,7 +43,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 function elaborate(base, el) {
   const schemaErrors = againstSchema(el, SCHEMA, SCHEMA);
-  if (schemaErrors.length) { const e = new Error('elaboration is out of schema'); e.erros = schemaErrors; throw e; }
+  if (schemaErrors.length) { const e = new Error('elaboration is out of schema'); e.errors = schemaErrors; throw e; }
 
   if (el.about && el.about !== base.id)
     throw new Error(`elaboration is about "${el.about}", the model is "${base.id}"`);
@@ -158,7 +158,7 @@ function elaborate(base, el) {
       errors.push(`the elaboration touched the logical facet of "${id}" — that changes what was approved`);
   }
 
-  if (errors.length) { const e = new Error('invalid elaboration'); e.erros = errors; throw e; }
+  if (errors.length) { const e = new Error('invalid elaboration'); e.errors = errors; throw e; }
   return m;
 }
 

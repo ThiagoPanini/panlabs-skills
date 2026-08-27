@@ -80,7 +80,7 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
   console.log('\nstep 2 · the interview closes when A1 hits the floor\n');
   {
     const v = validate(session);
-    record(v.ok, 'the session model is valid against `session@1`', (v.erros || []).join(' · ') || 'no errors');
+    record(v.ok, 'the session model is valid against `session@1`', (v.errors || []).join(' · ') || 'no errors');
 
     const facts = session.dossier.facts || [];
     record(facts.length > 0 && facts.every(f => f.confirmed),
@@ -171,9 +171,9 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
     const r = await draw(approved, 'logical');
     fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
     fs.writeFileSync(OUTPUT, r.xml);
-    record(fs.existsSync(OUTPUT), 'the logical view is written', `${r.xml.length} bytes, path "${r.caminho}"`);
+    record(fs.existsSync(OUTPUT), 'the logical view is written', `${r.xml.length} bytes, path "${r.path}"`);
 
-    const semanticFailures = r.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0);
+    const semanticFailures = r.report.geometry.reduce((s, x) => s + x.report.semantic.length, 0);
     record(semanticFailures === 0, 'the logical view has no semantic failure', `${semanticFailures} semantic`);
   }
 
@@ -188,7 +188,7 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
     technical = elaborate(opened.session, delta);
 
     const v = validate(technical);
-    record(v.ok, 'the elaborated model is still valid', (v.erros || []).join(' · ') || 'no errors');
+    record(v.ok, 'the elaborated model is still valid', (v.errors || []).join(' · ') || 'no errors');
 
     // #14's PROOF: the approved node was pushed two levels down…
     const target = technical.nodes.find(n => n.id === 'pontuar-risco');
@@ -206,9 +206,9 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
     const rt = await draw(technical, 'technical');
     fs.writeFileSync(OUTPUT, stitch([rl.xml, rt.xml]));
 
-    const semanticFailures = rt.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0);
+    const semanticFailures = rt.report.geometry.reduce((s, x) => s + x.report.semantic.length, 0);
     record(semanticFailures === 0, 'E4 · the technical view passes the truthfulness gate — zero semantic failures',
-      `${rt.relatorio.geometry.length} page(s), ${semanticFailures} semantic`);
+      `${rt.report.geometry.length} page(s), ${semanticFailures} semantic`);
 
     // and no service name leaked into the logical view
     const logical = project(technical, 'logical').model;
@@ -261,7 +261,7 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
     record(reopened.published === true && reopened.session === null,
       'E5 · the published copy declares itself published and returns no session',
       reopened.because || '');
-    record(/publicada/i.test(reopened.because || ''),
+    record(/published/i.test(reopened.because || ''),
       'and says why, instead of just failing', (reopened.because || '').slice(0, 72) + '…');
   }
 

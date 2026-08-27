@@ -102,7 +102,7 @@ function sweepFloor(model) {
 function measureF2(r) {
   let bands = 0;
   const cases = [];
-  for (const { report } of r.relatorio.geometry) {
+  for (const { report } of r.report.geometry) {
     if (report.scene) bands += report.scene.bands.length;
     const f2 = (report.extras || []).find(x => x.id === 'F2');
     if (!f2) continue;
@@ -113,7 +113,7 @@ function measureF2(r) {
 
 function count(r, id) {
   let n = 0;
-  for (const { report } of r.relatorio.geometry) {
+  for (const { report } of r.report.geometry) {
     const x = report.resultados.find(y => y.id === id);
     if (x) n += x.occurrences.length;
   }
@@ -129,7 +129,7 @@ async function measure(model, label) {
   return {
     label, ...p, bands: f2.bands, f2: f2.cases.length, examples: f2.cases.slice(0, 2),
     a55: count(r, 'A5.5'), a51: count(r, 'A5.1'), a32: count(r, 'A3.2'),
-    semantics: r.relatorio.geometry.reduce((s, x) => s + x.report.semanticas.length, 0),
+    semantics: r.report.geometry.reduce((s, x) => s + x.report.semantic.length, 0),
   };
 }
 

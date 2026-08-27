@@ -120,14 +120,14 @@ const cases = [
 let failures = 0;
 for (const c of cases) {
   const r = c.schema
-    ? (es => ({ ok: es.length === 0, erros: es }))(againstSchema(c.model, c.schema, c.schema))
+    ? (es => ({ ok: es.length === 0, errors: es }))(againstSchema(c.model, c.schema, c.schema))
     : validate(c.model, SCHEMA);
-  const text = r.erros.join(' | ');
+  const text = r.errors.join(' | ');
   const ok = c.expect === null ? r.ok : (!r.ok && text.includes(c.expect));
   if (!ok) failures++;
   console.log(`  ${ok ? '✓' : '✗'} ${c.name}`);
   if (!ok) console.log(`      expected to contain ${JSON.stringify(c.expect)}, got: ${text || '(passed)'}`);
-  else if (c.expect) console.log(`      → ${r.erros[0]}`);
+  else if (c.expect) console.log(`      → ${r.errors[0]}`);
 }
 
 console.log(failures ? `\n  ✗ ${failures}/${cases.length} failed` : `\n  ✓ ${cases.length}/${cases.length} — the validator rejects what it should and explains why.`);

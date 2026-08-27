@@ -175,8 +175,8 @@ async function main() {
     `${opened.session.edges.length} → ${technical.edges.length} edges  (stage=${technical.stage})`);
 
   const v = validate(technical);
-  for (const a of v.avisos) console.log(`  ⚠ ${a}`);
-  if (!v.ok) { console.error(`\n  ✗ invalid model (${v.fase})`); for (const e of v.erros) console.error(`      · ${e}`); process.exit(1); }
+  for (const a of v.warnings) console.log(`  ⚠ ${a}`);
+  if (!v.ok) { console.error(`\n  ✗ invalid model (${v.fase})`); for (const e of v.errors) console.error(`      · ${e}`); process.exit(1); }
 
   const agreementAfter = check(technical);
   console.log(`  check       ${agreementAfter.ok ? '✓ the TECHNICAL model\'s logical projection is byte for byte the one that was approved' : '✗ ' + agreementAfter.motivo}`);
@@ -189,9 +189,9 @@ async function main() {
   // 6 -----------------------------------------------------------------------
   const rl = await draw(technical, 'logical');
   const rt = await draw(technical, 'technical');
-  for (const a of rt.relatorio.avisos) console.log(`  ⚠ ${a}`);
+  for (const a of rt.report.warnings) console.log(`  ⚠ ${a}`);
   console.log(`  draw        logical: ${rl.model.nodes.length} nodes, ${rl.model.edges.length} edges  ·  ` +
-    `technical: ${rt.model.nodes.length} nodes, ${rt.model.edges.length} edges (path "${rt.caminho}")`);
+    `technical: ${rt.model.nodes.length} nodes, ${rt.model.edges.length} edges (path "${rt.path}")`);
   if (rt.trail.collapsed.length)
     console.log(`              collapse: ${rt.trail.collapsed.length} node(s) from the technical view re-anchor onto the logical one`);
   for (const c of rl.trail.contracted)
@@ -216,6 +216,6 @@ async function main() {
 
 main().catch(e => {
   console.error(`\n  ✗ ${e.message}`);
-  for (const l of e.erros || []) console.error(`      · ${l}`);
+  for (const l of e.errors || []) console.error(`      · ${l}`);
   process.exit(1);
 });

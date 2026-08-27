@@ -80,8 +80,8 @@ const { withoutTags, roundTo, name } = require(path.join(__dirname, 'common.cjs'
  */
 const bandFinding = (id, checkName) => (state, message, measured, occurrences = []) => ({
   id, name: checkName, family: 'F', input: 'geometry',
-  severidadeMaxima: 'fail', semantica: true, calibravel: false,
-  state, mensagem: message, measured, occurrences,
+  maxSeverity: 'fail', semantica: true, calibratable: false,
+  state, message: message, measured, occurrences,
 });
 
 

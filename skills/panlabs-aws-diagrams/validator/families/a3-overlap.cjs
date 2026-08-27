@@ -40,7 +40,7 @@ module.exports = function a3(scene) {
     }
     output.push(matches('A3.1', cases, {
       measured: { pairsChecked: candidates.length, violations: cases.length },
-      mensagem: cases.length ? `${cases.length} pair(s) overlapping or too tight` : `${candidates.length} pairs checked, none touching`,
+      message: cases.length ? `${cases.length} pair(s) overlapping or too tight` : `${candidates.length} pairs checked, none touching`,
     }));
   }
 
@@ -56,7 +56,7 @@ module.exports = function a3(scene) {
     }
     output.push(matches('A3.2', cases, {
       measured: { labels: withLabel.length, collisions: cases.length },
-      mensagem: cases.length ? `${cases.length} label collision(s)` : `${withLabel.length} labels, none touching another`,
+      message: cases.length ? `${cases.length} label collision(s)` : `${withLabel.length} labels, none touching another`,
     }));
   }
 
@@ -146,7 +146,7 @@ module.exports = function a3(scene) {
       const byConstruction = edges.length - anchored;
       output.push(matches('A3.6', cases, {
         measured: { anchorsDeclared: anchored, byConstruction },
-        mensagem: byConstruction
+        message: byConstruction
           ? `${anchored} anchor(s) checked; ${byConstruction} end(s) with no declared anchor — the renderer projects onto the perimeter, so there A3.6 holds by construction, not by measurement`
           : `${anchored} anchors checked`,
       }));
@@ -161,10 +161,10 @@ module.exports = function a3(scene) {
     const env = g.envolvente(all);
     const fits = env && g.contem(canvas, env, margin);
     output.push(fits
-      ? ok('A3.7', { measured: { envelope: env, canvas, margin }, mensagem: `everything fits in the canvas with ≥ ${margin} px of margin` })
+      ? ok('A3.7', { measured: { envelope: env, canvas, margin }, message: `everything fits in the canvas with ≥ ${margin} px of margin` })
       : failure('A3.7', {
         measured: { envelope: env, canvas, margin },
-        mensagem: `the drawing occupies ${env ? `${roundTo(env.w, 0)}×${roundTo(env.h, 0)} from (${roundTo(env.x, 0)},${roundTo(env.y, 0)})` : '(empty)'} and the canvas is ${canvas.w}×${canvas.h} with a margin of ${margin} px`,
+        message: `the drawing occupies ${env ? `${roundTo(env.w, 0)}×${roundTo(env.h, 0)} from (${roundTo(env.x, 0)},${roundTo(env.y, 0)})` : '(empty)'} and the canvas is ${canvas.w}×${canvas.h} with a margin of ${margin} px`,
         occurrences: [{ o_que: 'the union of the objects does not fit in the canvas with the required margin', ids: [] }],
       }));
   }
@@ -178,8 +178,8 @@ module.exports = function a3(scene) {
       const nr = Math.min(...ds) / Math.max(...ds);
       const q1 = lim('nodeResolutionQ1');
       output.push(nr < q1
-        ? warning('A3.8', { measured: { NR: roundTo(nr) }, mensagem: `NR = ${roundTo(nr)} < ${q1} (expert Q1); target ${lim('nodeResolutionMedian')}` })
-        : ok('A3.8', { measured: { NR: roundTo(nr) }, mensagem: `NR = ${roundTo(nr)}` }));
+        ? warning('A3.8', { measured: { NR: roundTo(nr) }, message: `NR = ${roundTo(nr)} < ${q1} (expert Q1); target ${lim('nodeResolutionMedian')}` })
+        : ok('A3.8', { measured: { NR: roundTo(nr) }, message: `NR = ${roundTo(nr)}` }));
     }
   }
 

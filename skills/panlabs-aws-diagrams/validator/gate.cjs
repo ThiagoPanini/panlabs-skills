@@ -22,7 +22,7 @@
  *
  * How it enters `engine/generate.cjs`, and why this way:
  *
- *   THE REPORT ALWAYS COMES OUT, in `relatorio.geometry`, and a SEMANTIC
+ *   THE REPORT ALWAYS COMES OUT, in `report.geometry`, and a SEMANTIC
  *   failure becomes a warning even with nobody asking for a gate. A gate that
  *   only exists when someone asks is a gate nobody knows about.
  *
@@ -51,9 +51,9 @@ const { validateGeometry, format } = require(path.join(__dirname, 'validate-geom
  */
 const LEVELS = {
   none: () => false,
-  truthfulness: report => report.semanticas.length > 0,
-  failure: report => report.falhas.length > 0,
-  strict: report => report.falhas.length > 0 || report.avisos.length > 0,
+  truthfulness: report => report.semantic.length > 0,
+  failure: report => report.failures.length > 0,
+  strict: report => report.failures.length > 0 || report.warnings.length > 0,
 };
 
 /**
@@ -65,7 +65,7 @@ const LEVELS = {
  * @param {boolean} [opts.block]        shortcut: `true` means level `failure`
  * @param {object} [opts.model]         when the plan does not carry the embedded one
  * @returns {object} the report, when it passes
- * @throws {Error} with `.erros` (readable lines) and `.report`, when it blocks
+ * @throws {Error} with `.errors` (readable lines) and `.report`, when it blocks
  */
 function gate(layoutPlan, opts = {}) {
   const report = validateGeometry(layoutPlan, opts);
@@ -84,18 +84,18 @@ function gate(layoutPlan, opts = {}) {
   if (incomplete) {
     if (report.cobertura.naoRodaram.length)
       lines.push(`checks that did not run: ${report.cobertura.naoRodaram.join(', ')}`);
-    for (const r of report.resultados.filter(x => x.state === 'erro')) lines.push(r.mensagem);
+    for (const r of report.resultados.filter(x => x.state === 'erro')) lines.push(r.message);
   }
-  for (const r of [...report.semanticas, ...report.falhas.filter(f => !f.semantica)]) {
-    lines.push(`${r.id} ${r.name}${r.semantica ? ' (the drawing asserts what the model denies)' : ''}: ${r.mensagem}`);
+  for (const r of [...report.semantic, ...report.failures.filter(f => !f.semantica)]) {
+    lines.push(`${r.id} ${r.name}${r.semantica ? ' (the drawing asserts what the model denies)' : ''}: ${r.message}`);
     for (const o of r.occurrences.slice(0, 3)) lines.push(`    · ${o.o_que}`);
   }
-  if (level === 'strict') for (const r of report.avisos) lines.push(`${r.id} ${r.name}: ${r.mensagem}`);
+  if (level === 'strict') for (const r of report.warnings) lines.push(`${r.id} ${r.name}: ${r.message}`);
 
   const error = new Error(incomplete
     ? 'incomplete geometry report — some check did not run'
     : `geometry rejected at gate "${level}"`);
-  error.erros = lines;
+  error.errors = lines;
   error.report = report;
   throw error;
 }

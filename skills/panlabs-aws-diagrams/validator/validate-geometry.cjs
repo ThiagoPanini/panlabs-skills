@@ -4,7 +4,7 @@
  *
  *   const { validateGeometry } = require('./validator/validate-geometry.cjs');
  *   const r = validateGeometry(layoutPlan);
- *   if (!r.ok) console.error(r.falhas.map(f => f.mensagem));
+ *   if (!r.ok) console.error(r.failures.map(f => f.message));
  *
  * The order of the families is the one from the rubric's §Implementation priority
  * summary — A3+A4, A1, A5, A7, A2, A6, A8 — and it is not decorative: whoever
@@ -61,7 +61,7 @@ const extras = require(path.join(__dirname, 'families', 'extras.cjs'));
 /**
  * @param {object} layoutPlan   the engine plan (post-`plan`, pre-`emit`)
  * @param {object} [opts]       `{ model }` when the plan does not carry the embedded one
- * @returns {{ok, falhas, avisos, resultados, extras, resumo, scene, cobertura}}
+ * @returns {{ok, failures, warnings, resultados, extras, summary, scene, cobertura}}
  */
 function validateGeometry(layoutPlan, opts = {}) {
   const scene = createScene(layoutPlan, opts);
@@ -76,8 +76,8 @@ function validateGeometry(layoutPlan, opts = {}) {
       // go silent: the error becomes a reported failure, carrying the family id.
       got = [{
         id: family, name: `family ${family}`, family, input: 'geometry',
-        severidadeMaxima: 'fail', semantica: false, calibravel: false,
-        state: 'erro', mensagem: `family ${family} blew up: ${e.message}`,
+        maxSeverity: 'fail', semantica: false, calibratable: false,
+        state: 'erro', message: `family ${family} blew up: ${e.message}`,
         measured: { pilha: String(e.stack || '').split('\n').slice(0, 3) }, occurrences: [],
       }];
     }
@@ -90,12 +90,12 @@ function validateGeometry(layoutPlan, opts = {}) {
 
   const extraFindings = extras(scene);
 
-  const falhas = [...resultados, ...extraFindings].filter(r => r.state === 'failure' || r.state === 'erro');
-  const avisos = [...resultados, ...extraFindings].filter(r => r.state === 'warning');
-  const semanticas = falhas.filter(r => r.semantica);
+  const failures = [...resultados, ...extraFindings].filter(r => r.state === 'failure' || r.state === 'erro');
+  const warnings = [...resultados, ...extraFindings].filter(r => r.state === 'warning');
+  const semantic = failures.filter(r => r.semantica);
 
   const count = state => resultados.filter(r => r.state === state).length;
-  const resumo = {
+  const summary = {
     total: resultados.length,
     ok: count('ok'),
     warning: count('warning'),
@@ -103,16 +103,16 @@ function validateGeometry(layoutPlan, opts = {}) {
     notApplicable: count('notApplicable'),
     skipped: count('skipped'),
     erro: count('erro'),
-    falhas_semanticas: semanticas.length,
+    falhas_semanticas: semantic.length,
     occurrences: [...resultados, ...extraFindings].reduce((s, r) => s + r.occurrences.length, 0),
   };
 
   return {
     // A check that should have run and did not fails the whole report: an
     // incomplete report calling itself green is worse than a red one.
-    ok: falhas.length === 0 && naoRodaram.length === 0,
-    falhas, avisos, semanticas,
-    resultados, extras: extraFindings, resumo, scene,
+    ok: failures.length === 0 && naoRodaram.length === 0,
+    failures, warnings, semantic,
+    resultados, extras: extraFindings, summary, scene,
     cobertura: { esperadas: fromValidator.length, rodaram: fromValidator.length - naoRodaram.length, naoRodaram },
   };
 }
@@ -130,13 +130,13 @@ function format(r, opts = {}) {
     if (x.family !== currentFamily) { lines.push(''); currentFamily = x.family; }
     const mark = x.semantica && x.state === 'failure' ? '  ← semantic failure' : '';
     lines.push(`  ${SYMBOL[x.state] || '?'} ${x.id.padEnd(5)} ${x.name}${mark}`);
-    if (x.mensagem) lines.push(`        ${x.mensagem}`);
+    if (x.message) lines.push(`        ${x.message}`);
     for (const o of x.occurrences.slice(0, opts.occurrences || 5)) lines.push(`        · ${o.o_que}`);
     if (x.occurrences.length > (opts.occurrences || 5))
       lines.push(`        · … and ${x.occurrences.length - (opts.occurrences || 5)} more`);
   }
 
-  const s = r.resumo;
+  const s = r.summary;
   lines.push('');
   lines.push(`  ${s.total} checks: ${s.ok} ok · ${s.warning} warning · ${s.failure} failure · ` +
     `${s.notApplicable} not applicable · ${s.skipped} from render${s.erro ? ` · ${s.erro} error` : ''}`);

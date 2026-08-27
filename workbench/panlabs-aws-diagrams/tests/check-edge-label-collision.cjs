@@ -87,7 +87,7 @@ console.log('\n2 · end to end — a corpus model that used to collide comes bac
   // the exact geometry this proof was measured against; the fix under test
   // is #40's collision resolver, not #39's default, so pin the OLD condition.
   const model = JSON.parse(fs.readFileSync(path.join(WORKBENCH, 'models', 'events-fanout.json'), 'utf8'));
-  const r = await generate(model, { tema: themeMod.withPatch('light', { text: { qualifier: false } }) });
+  const r = await generate(model, { theme: themeMod.withPatch('light', { text: { qualifier: false } }) });
   const report = validateGeometry(r.layoutPlan);
   const a32 = report.resultados.find(c => c.id === 'A3.2');
   ok(a32.state === 'ok', 'A3.2 (label-label overlap) is clean on "events-fanout"', JSON.stringify(a32.occurrences));

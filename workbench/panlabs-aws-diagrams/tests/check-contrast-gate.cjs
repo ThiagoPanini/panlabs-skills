@@ -98,7 +98,7 @@ function main() {
 
   for (const testCase of CASES) {
     const r = measure(testCase.layoutPlan);
-    const caught = r.falhas.some(f => f.rule === testCase.rule);
+    const caught = r.failures.some(f => f.rule === testCase.rule);
     if (!caught) failed = 1;
     console.log(`  ${caught ? '✓' : '✗'} ${testCase.name.padEnd(48)} ${testCase.rule}  ${testCase.because}`);
     if (!caught) console.log(`      NOT CAUGHT — the gate approved a plan known to be bad`);

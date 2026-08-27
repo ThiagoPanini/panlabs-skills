@@ -124,7 +124,7 @@ function stitch(xmlsPerPage, opts = {}) {
     diagrams.join('\n') + '\n</mxfile>\n';
 
   const errors = checkXml(output);
-  if (errors.length) { const e = new Error('the stitch produced malformed XML'); e.erros = errors; throw e; }
+  if (errors.length) { const e = new Error('the stitch produced malformed XML'); e.errors = errors; throw e; }
   return output;
 }
 

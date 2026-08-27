@@ -42,14 +42,14 @@ const ok = (cond, title, detail) => {
 function load(name, dir = 'models') {
   const m = JSON.parse(fs.readFileSync(path.join(WORKBENCH, dir, `${name}.json`), 'utf8'));
   const v = validate(m, SCHEMA);
-  if (!v.ok) throw new Error(`${name}: invalid model (${v.fase}) — ${v.erros[0]}`);
+  if (!v.ok) throw new Error(`${name}: invalid model (${v.fase}) — ${v.errors[0]}`);
   return m;
 }
 
 /** The order of private ROLES the grid would stack, top to bottom. */
 function contentOrder(model) {
   const d = derive(model, { cat });
-  const roles = [...layers.papeisDeSubnet(model, d.t, d.camadas).values()];
+  const roles = [...layers.papeisDeSubnet(model, d.t, d.layers).values()];
   const accessOrder = { public: 0, private: 1, '?': 2 };
   return roles
     .sort((a, b) =>
@@ -62,7 +62,7 @@ function contentOrder(model) {
 /** The order the OLD rule would give: exposure, then alphabet. This is the "before". */
 function alphabeticalOrder(model) {
   const d = derive(model, { cat });
-  const roles = [...layers.papeisDeSubnet(model, d.t, d.camadas).values()];
+  const roles = [...layers.papeisDeSubnet(model, d.t, d.layers).values()];
   const accessOrder = { public: 0, private: 1, '?': 2 };
   return roles
     .sort((a, b) =>
@@ -122,7 +122,7 @@ for (const [service, expectedCategory, expectedLayer] of READING) {
 {
   const m = load('three-mixed-layers');
   const d = derive(m, { cat });
-  const ana = d.camadas.get('ana-a');
+  const ana = d.layers.get('ana-a');
   ok(ana.layer === 'data' && ana.evidence.length === 2,
     'ECS + Redshift mixed in the same subnet → data',
     `the deepest one wins (${ana.evidence.map(e => e.layer).join(' vs ')})`);
@@ -135,7 +135,7 @@ for (const [service, expectedCategory, expectedLayer] of READING) {
 {
   const m = load('declared-empty-subnet');
   const d = derive(m, { cat });
-  ok(d.camadas.get('res-a').layer === 'data' && d.camadas.get('res-a').via === 'declared',
+  ok(d.layers.get('res-a').layer === 'data' && d.layers.get('res-a').via === 'declared',
     'empty subnet with a declared `layer` → data [declared]');
   ok(JSON.stringify(contentOrder(m)) === JSON.stringify(['App subnet', 'Reserved subnet']),
     'and the declared row stacks below the application');
@@ -143,7 +143,7 @@ for (const [service, expectedCategory, expectedLayer] of READING) {
   const conflict = JSON.parse(JSON.stringify(m));
   conflict.nodes.find(n => n.id === 'app-a').layer = 'data';
   const dc = derive(conflict, { cat });
-  const c = dc.camadas.get('app-a');
+  const c = dc.layers.get('app-a');
   ok(c.layer === 'data' && c.diverge === 'application',
     'declaring against the content itself → obeys and flags it',
     `declared "data", content says "${c.diverge}"`);
@@ -164,10 +164,10 @@ console.log('\n3 · the gap: where the missing fact refuses, and where it only w
   try { await dispor.porGrade(m, d, res); }
   catch (e) { refused = e; }
   ok(refused !== null, 'the grid REFUSES — it does not draw a made-up order');
-  ok(refused && /Reserved subnet/.test((refused.erros || []).join('\n')) &&
-     /layer/.test((refused.erros || []).join('\n')),
+  ok(refused && /Reserved subnet/.test((refused.errors || []).join('\n')) &&
+     /layer/.test((refused.errors || []).join('\n')),
     'and the refusal says what is missing and where',
-    refused ? (refused.erros || [])[1] : '');
+    refused ? (refused.errors || [])[1] : '');
 }
 
 // single role: no layer, but nothing to be ordered against → does not refuse
@@ -208,7 +208,7 @@ console.log('\n4 · control experiment: the rule reads the CONTENT, not the labe
   const order = contentOrder(swapped);
   const layerOf = r => {
     const d = derive(swapped, { cat });
-    const p = [...layers.papeisDeSubnet(swapped, d.t, d.camadas).values()].find(x => x.label === r);
+    const p = [...layers.papeisDeSubnet(swapped, d.t, d.layers).values()].find(x => x.label === r);
     return p.layer;
   };
   ok(JSON.stringify(order) === JSON.stringify(['Data subnet', 'Web subnet']),

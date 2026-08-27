@@ -52,7 +52,7 @@ module.exports = function a1(scene) {
     const title = model ? withoutTags(model.title) : '';
     const subtitle = model ? withoutTags(model.subtitle) : '';
     if (!title) {
-      output.push(failure('A1.1', { mensagem: 'the diagram has no title', occurrences: [{ o_que: 'meta.title empty or absent', ids: [] }] }));
+      output.push(failure('A1.1', { message: 'the diagram has no title', occurrences: [{ o_que: 'meta.title empty or absent', ids: [] }] }));
     } else {
       // The rubric asks for diagram type + scope. Here the type lives in
       // `view` and the scope usually lands in the subtitle, so both go into
@@ -60,7 +60,7 @@ module.exports = function a1(scene) {
       const view = model.view || null;
       output.push(ok('A1.1', {
         measured: { title, view, subtitle: subtitle || null },
-        mensagem: `"${title}"${view ? ` (view ${view})` : ''}`,
+        message: `"${title}"${view ? ` (view ${view})` : ''}`,
       }));
     }
   }
@@ -71,7 +71,7 @@ module.exports = function a1(scene) {
       ? ok('A1.2', { measured: { entries: scene.legend.length } })
       : failure('A1.2', {
         measured: { entries: 0 },
-        mensagem: 'there is no legend — C4 asks for one on every diagram',
+        message: 'there is no legend — C4 asks for one on every diagram',
         occurrences: [{ o_que: '#11\'s engine does not emit a legend yet; every color and stroke meaning goes unlabeled', ids: [] }],
       }));
   }
@@ -87,7 +87,7 @@ module.exports = function a1(scene) {
           withoutInput.push({ o_que: `channel "${channel}" is used as ${JSON.stringify(value)} on ${who.length} object(s) and the legend does not explain it`, ids: who.slice(0, 6) });
     output.push(matches('A1.3', withoutInput, {
       measured: { channels: channels.size, valuesWithoutEntry: withoutInput.length },
-      mensagem: withoutInput.length ? `${withoutInput.length} visual channel value(s) with no legend entry` : 'every visual channel is explained',
+      message: withoutInput.length ? `${withoutInput.length} visual channel value(s) with no legend entry` : 'every visual channel is explained',
     }));
   }
 
@@ -171,7 +171,7 @@ module.exports = function a1(scene) {
       output.push(levels.size > 1
         ? failure('A1.10', {
           measured: { levels: [...levels] },
-          mensagem: `the diagram mixes ${[...levels].join(' and ')}`,
+          message: `the diagram mixes ${[...levels].join(' and ')}`,
           occurrences: [{ o_que: 'logical blocks and concrete services in the same drawing — C4 asks for one level per diagram', ids: [] }],
         })
         : ok('A1.10', { measured: { levels: [...levels], view: model.view || null } }));
@@ -185,7 +185,7 @@ module.exports = function a1(scene) {
       const missing = ['data', 'versao', 'autor'].filter(k => !model[k]);
       output.push(matches('A1.11', missing.map(k => ({ o_que: `the model does not declare "${k}"`, ids: [] })), {
         measured: { present: ['data', 'versao', 'autor'].filter(k => model[k]), missing },
-        mensagem: missing.length ? `missing ${missing.join(', ')} — there is no way to tell whether the diagram is stale` : 'freshness metadata present',
+        message: missing.length ? `missing ${missing.join(', ')} — there is no way to tell whether the diagram is stale` : 'freshness metadata present',
       }));
     }
   }

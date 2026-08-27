@@ -67,17 +67,17 @@ async function detailPages(model, d, res, opts, report) {
 
     // crossings become TEXT, not geometry — `E3`: "the text replaces the
     // cardinality". The detail view only carries intra-account edges.
-    const incoming = d.travessias.filter(a => a.contaPara === account.id);
-    const outgoing = d.travessias.filter(a => a.contaDe === account.id);
+    const incoming = d.travessias.filter(a => a.accountTo === account.id);
+    const outgoing = d.travessias.filter(a => a.accountFrom === account.id);
     const accountName = id => {
       const c = d.t.byId.get(id);
       return (c && c.label) || id;
     };
     const notes = [];
     for (const a of outgoing)
-      notes.push({ text: `Leaves this account: ${a.label || 'link'} → ${accountName(a.contaPara)}`, origin: 'legend' });
+      notes.push({ text: `Leaves this account: ${a.label || 'link'} → ${accountName(a.accountTo)}`, origin: 'legend' });
     for (const a of incoming)
-      notes.push({ text: `Enters this account: ${a.label || 'link'} ← ${accountName(a.contaDe)}`, origin: 'legend' });
+      notes.push({ text: `Enters this account: ${a.label || 'link'} ← ${accountName(a.accountFrom)}`, origin: 'legend' });
 
     const sub = {
       schema: model.schema,
@@ -97,7 +97,7 @@ async function detailPages(model, d, res, opts, report) {
 
     try {
       const v = validate(sub, SCHEMA);
-      if (!v.ok) throw Object.assign(new Error(`invalid submodel (${v.fase})`), { erros: v.erros });
+      if (!v.ok) throw Object.assign(new Error(`invalid submodel (${v.fase})`), { errors: v.errors });
       const ds = derive(sub, { cat: res.cat });
       let p;
       if (ds.az.draw) {
@@ -114,7 +114,7 @@ async function detailPages(model, d, res, opts, report) {
         });
         if (unsupported.length) {
           const e = new Error('the grid path cannot yet draw these nodes');
-          e.erros = unsupported.map(n =>
+          e.errors = unsupported.map(n =>
             `"${n.id}" (${n.kind}) — a detail page's grid only models account › VPC › subnet › content (#137)`);
           throw e;
         }
@@ -126,9 +126,9 @@ async function detailPages(model, d, res, opts, report) {
       }
       pages.push(p);
     } catch (e) {
-      const because = e.message + (e.erros ? ` — ${e.erros[0]}` : '');
-      report.avisos.push(`detail view of "${account.id}" didn't come out: ${because}`);
-      // Structured, alongside the string above — `report.avisos` is nine
+      const because = e.message + (e.errors ? ` — ${e.errors[0]}` : '');
+      report.warnings.push(`detail view of "${account.id}" didn't come out: ${because}`);
+      // Structured, alongside the string above — `report.warnings` is nine
       // lines deep by the time a real multi-account model runs (#137), and
       // the one thing worth knowing without reading all nine is THIS list.
       report.detailPagesMissing.push({ account: account.id, because });
@@ -138,12 +138,12 @@ async function detailPages(model, d, res, opts, report) {
 }
 
 async function generate(model, opts = {}) {
-  const report = { avisos: [], passos: [], detailPagesMissing: [] };
-  const milestone = (name, extra) => report.passos.push({ name, ...extra });
+  const report = { warnings: [], steps: [], detailPagesMissing: [] };
+  const milestone = (name, extra) => report.steps.push({ name, ...extra });
 
   const v = validate(model, SCHEMA);
-  if (!v.ok) { const e = new Error(`invalid model (${v.fase})`); e.erros = v.erros; throw e; }
-  report.avisos.push(...v.avisos);
+  if (!v.ok) { const e = new Error(`invalid model (${v.fase})`); e.errors = v.errors; throw e; }
+  report.warnings.push(...v.warnings);
   milestone('validate', { nodes: model.nodes.length, edges: (model.edges || []).length });
 
   // `--flow` overrides the theme token at invocation time: the same
@@ -151,8 +151,8 @@ async function generate(model, opts = {}) {
   // delivery and not in another. It overrides the token, and does NOT mutate
   // the caller's object — a theme is a value, and `withPatch` returns another
   // one.
-  const base = (opts.tema && typeof opts.tema === 'object') ? opts.tema
-    : themeMod.load(opts.tema || 'light');
+  const base = (opts.theme && typeof opts.theme === 'object') ? opts.theme
+    : themeMod.load(opts.theme || 'light');
   const theme = opts.flow ? themeMod.withPatch(base, { edge: { flow: opts.flow } }) : base;
   milestone('theme', { id: theme.id, background: theme.background, density: theme.tokens.gap.density, flow: theme.tokens.edge.flow });
 
@@ -165,9 +165,9 @@ async function generate(model, opts = {}) {
   // didn't write any of it, except where it declared the escape hatch — and
   // that's exactly why it's worth reporting: the row order now depends on
   // this reading.
-  for (const [id, c] of d.camadas)
+  for (const [id, c] of d.layers)
     if (c.diverge)
-      report.avisos.push(`subnet "${id}": declared as layer "${c.layer}", ` +
+      report.warnings.push(`subnet "${id}": declared as layer "${c.layer}", ` +
         `but what it holds is "${c.diverge}" (${c.evidence.map(e => e.service).join(', ')}). ` +
         `The engine obeys the declaration.`);
 
@@ -186,15 +186,15 @@ async function generate(model, opts = {}) {
       order: g.order.map(c => c.id).join('→'),
       varredura: g.varredura.varridas ? `${g.varredura.varridas} permutations, cost ${g.varredura.custo}` : 'canonical',
     });
-    report.avisos.push(`mode "${d.modo.modo}": ${d.modo.because}`);
-    report.avisos.push(`crossing level ${d.policy.level} (${d.policy.mecanismo}): ${d.policy.because}`);
+    report.warnings.push(`mode "${d.modo.modo}": ${d.modo.because}`);
+    report.warnings.push(`crossing level ${d.policy.level} (${d.policy.mechanism}): ${d.policy.because}`);
     // The trigger (`d.ou.draw`) only knows about the ACCOUNT — not the mode.
     // `plan.cjs` (§3) suppresses the band in integration mode, and the warning
     // used to be blind to that second condition: it announced the band even
     // when the `.drawio` came out with none. The warning now only asserts what
     // the drawing actually has.
     if (d.ou.draw) {
-      report.avisos.push(d.modo.modo === 'integracao'
+      report.warnings.push(d.modo.modo === 'integration'
         ? `OU bands: ${d.ou.because}, but integration mode doesn't draw an OU band`
         : `OU bands: ${d.ou.because}`);
     }
@@ -222,7 +222,7 @@ async function generate(model, opts = {}) {
     });
     if (unsupported.length) {
       const e = new Error('the grid path cannot yet draw these nodes');
-      e.erros = unsupported.map(n => `"${n.id}" (${n.kind}) — the AZ grid only models cloud › VPC › subnet › content, plus a column of standalone outsiders (#30)`);
+      e.errors = unsupported.map(n => `"${n.id}" (${n.kind}) — the AZ grid only models cloud › VPC › subnet › content, plus a column of standalone outsiders (#30)`);
       throw e;
     }
     const g = await dispor.porGrade(model, d, res);
@@ -236,7 +236,7 @@ async function generate(model, opts = {}) {
         : 'declared order',
       ...(outsiders.length ? { outsiders: outsiders.map(n => n.id).join(',') } : {}),
     });
-    report.avisos.push(`grid axis "${g.eixo}": ${g.whyAxis}`);
+    report.warnings.push(`grid axis "${g.eixo}": ${g.whyAxis}`);
   } else {
     layoutPath = 'elk';
     /**
@@ -250,7 +250,7 @@ async function generate(model, opts = {}) {
      * common case over an ambiguity that almost never reaches the drawing.
      */
     if (d.gaps.length)
-      report.avisos.push('network layer missing where sibling order depends on it — ' +
+      report.warnings.push('network layer missing where sibling order depends on it — ' +
         'ELK decides from the graph, the alphabet breaks the rest of the ties:\n      ' +
         layersMod.textoDaLacuna(d.gaps).join('\n      '));
     const layout = await dispor.porElk(model, d, res);
@@ -258,15 +258,15 @@ async function generate(model, opts = {}) {
     milestone('dispor', { passadas: layout.passadas });
     if (layout.snap) {
       for (const a of layout.snap.applied)
-        report.avisos.push(`snap: "${a.edge}" aligned by moving ${a.moved.join('+')} by ${a.delta}px`);
+        report.warnings.push(`snap: "${a.edge}" aligned by moving ${a.moved.join('+')} by ${a.delta}px`);
       for (const x of layout.snap.undone)
-        report.avisos.push(`snap UNDONE on "${x.edge}" (${x.delta}px): ${x.because}`);
+        report.warnings.push(`snap UNDONE on "${x.edge}" (${x.delta}px): ${x.because}`);
     }
   }
   milestone('plan', {
-    caminho: layoutPath, celulas: layoutPlan.cells.length, page: `${layoutPlan.width}×${layoutPlan.height}`,
+    path: layoutPath, cells: layoutPlan.cells.length, page: `${layoutPlan.width}×${layoutPlan.height}`,
     // Always shown once the model IS multi-account, pages.length===0
-    // included: "1/3" says as much on its own as reading all nine avisos
+    // included: "1/3" says as much on its own as reading all nine warnings
     // does, and it says it in the one milestone nobody skips (#137).
     ...(layoutPath === 'accounts' ? { pages: `${1 + pages.length}/${1 + d.modo.accounts}` } : {}),
   });
@@ -311,7 +311,7 @@ async function generate(model, opts = {}) {
   const level = opts.gate || 'none';
   if (!(level in LEVELS)) {
     const e = new Error(`unknown gate level: "${level}"`);
-    e.erros = [`levels: ${Object.keys(LEVELS).join(', ')}`];
+    e.errors = [`levels: ${Object.keys(LEVELS).join(', ')}`];
     throw e;
   }
   const reports = [];
@@ -325,19 +325,19 @@ async function generate(model, opts = {}) {
     }
   }
   report.geometry = reports;
-  const semantic = reports.flatMap(l => l.report.semanticas);
-  const failures = reports.flatMap(l => l.report.falhas);
+  const semantic = reports.flatMap(l => l.report.semantic);
+  const failures = reports.flatMap(l => l.report.failures);
   milestone('geometry', {
     pages: reports.length,
     failure: failures.length,
-    semanticas: semantic.length,
+    semantic: semantic.length,
     gate: level,
   });
   // a SEMANTIC failure is the drawing lying, and that's worth a warning even
   // when nobody asked for a gate — otherwise the engine would silently
   // deliver what the rubric calls "the validator's most severe failure family"
   for (const f of semantic)
-    report.avisos.push(`⛔ ${f.id} ${f.name}: ${f.mensagem} — the drawing asserts what the model denies`);
+    report.warnings.push(`⛔ ${f.id} ${f.name}: ${f.message} — the drawing asserts what the model denies`);
 
   const xml = emit([layoutPlan, ...pages]);
 
@@ -345,7 +345,7 @@ async function generate(model, opts = {}) {
   // truncated and exit with code 0. If the generator doesn't check, nobody
   // does.
   const malformed = checkXml(xml);
-  if (malformed.length) { const e = new Error('malformed XML — draw.io would render it truncated in silence'); e.erros = malformed; throw e; }
+  if (malformed.length) { const e = new Error('malformed XML — draw.io would render it truncated in silence'); e.errors = malformed; throw e; }
   /**
    * CONTRAST GATE (#13) — and it FAILS, it doesn't just warn.
    *
@@ -363,12 +363,12 @@ async function generate(model, opts = {}) {
   report.contraste = c;
   if (!c.ok && !opts.force) {
     const e = new Error(`theme "${theme.id}" fails the contrast gate (rubric #8's A7)`);
-    e.erros = [...contrast.summarize(c), '', 'to generate anyway and SEE the damage: --force'];
+    e.errors = [...contrast.summarize(c), '', 'to generate anyway and SEE the damage: --force'];
     throw e;
   }
-  if (!c.ok) report.avisos.push(`--force: ${c.falhas.length} pair(s) below the WCAG threshold, generated anyway`);
+  if (!c.ok) report.warnings.push(`--force: ${c.failures.length} pair(s) below the WCAG threshold, generated anyway`);
   // A7.2a is AREA: it warns and doesn't fail (see contrast.cjs's header)
-  for (const l of contrast.summarize(c, c.avisos)) report.avisos.push(l);
+  for (const l of contrast.summarize(c, c.warnings)) report.warnings.push(l);
   const n = v => Number.isFinite(v) ? v.toFixed(2) : '-';
   milestone('check', { ok: true, bytes: xml.length,
     contraste: c.ok ? 'passes' : 'FORCED',
@@ -376,12 +376,12 @@ async function generate(model, opts = {}) {
 
   // leaves that fell back to the generic icon are the symptom of a name the
   // catalog doesn't know — worth a warning, not worth failing
-  const generic = res.usados.filter(u => u.via === 'generic');
+  const generic = res.used.filter(u => u.via === 'generic');
   if (generic.length)
-    report.avisos.push(`${generic.length} node(s) fell back to the generic icon: ` +
-      generic.map(u => `${u.id}("${u.pediu}")`).join(', '));
+    report.warnings.push(`${generic.length} node(s) fell back to the generic icon: ` +
+      generic.map(u => `${u.id}("${u.asked}")`).join(', '));
 
-  return { xml, layoutPlan, pages, relatorio: report, resolucoes: res.usados, derived: d, caminho: layoutPath, tema: theme };
+  return { xml, layoutPlan, pages, report, resolutions: res.used, derived: d, path: layoutPath, theme };
 }
 
 // ------------------------------------------------------------------- CLI
@@ -415,18 +415,18 @@ async function main() {
   catch (e) { console.error(`could not read ${input}: ${e.message}`); process.exit(1); }
 
   let r;
-  try { r = await generate(model, { flow: flow || undefined, tema: themeName, force, gate: gateLevel }); }
+  try { r = await generate(model, { flow: flow || undefined, theme: themeName, force, gate: gateLevel }); }
   catch (e) {
     console.error(`\n✗ ${e.message}`);
-    for (const row of e.erros || []) console.error(`    · ${row}`);
+    for (const row of e.errors || []) console.error(`    · ${row}`);
     process.exit(1);
   }
 
-  for (const p of r.relatorio.passos)
+  for (const p of r.report.steps)
     console.log(`  ${p.name.padEnd(10)} ${Object.entries(p).filter(([k]) => k !== 'name')
       .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('/') : v}`).join('  ')}`);
-  for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  if (r.tema.tokens.edge.flow === 'animated')
+  for (const a of r.report.warnings) console.log(`  ⚠ ${a}`);
+  if (r.theme.tokens.edge.flow === 'animated')
     console.log('  ⚠ "animated" flow is only visible in SVG or HTML. #4 measured it and this engine confirms: ' +
       'exported to PNG it becomes a STATIC dashed line, with no error at all. Export with -f svg.');
 
@@ -435,18 +435,18 @@ async function main() {
     // the engine resolves the same node more than once (pre-measurement +
     // layout); the audit trail matters per node, not per call
     const seen = new Set();
-    for (const u of r.resolucoes.filter(u => !seen.has(u.id) && seen.add(u.id)))
-      console.log(`    ${String(u.id).padEnd(20)} "${u.pediu}" → ${u.virou}  [${u.via}]` +
+    for (const u of r.resolutions.filter(u => !seen.has(u.id) && seen.add(u.id)))
+      console.log(`    ${String(u.id).padEnd(20)} "${u.asked}" → ${u.became}  [${u.via}]` +
         (u.corrections && u.corrections.length ? `  corrections: ${u.corrections.join(', ')}` : ''));
 
     // The network layer is derived but invisible in the drawing — only the
     // ORDER gives it away. Without a trail, "why did the Data subnet end up at
     // the bottom?" can only be answered by rereading the code.
-    if (r.derived.camadas.size) {
+    if (r.derived.layers.size) {
       console.log('\n  subnet network layer (#22):');
-      for (const [id, c] of r.derived.camadas)
+      for (const [id, c] of r.derived.layers)
         console.log(`    ${String(id).padEnd(20)} ${String(c.layer || '—').padEnd(11)} [${c.via || 'no evidence'}]` +
-          (c.evidence.length ? `  ← ${c.evidence.map(e => `${e.service}(${e.categoria})`).join(', ')}` : ''));
+          (c.evidence.length ? `  ← ${c.evidence.map(e => `${e.service}(${e.category})`).join(', ')}` : ''));
     }
 
     // The geometric report (#18), page by page. It shows up here because
@@ -454,21 +454,21 @@ async function main() {
     // drawing came out this way wants both lists, the catalog's and the
     // rubric's.
     console.log('\n  geometric report (#18):');
-    for (const { page, report } of r.relatorio.geometry) {
-      const s = report.resumo;
+    for (const { page, report } of r.report.geometry) {
+      const s = report.summary;
       console.log(`    ${String(page).padEnd(38)} ${s.ok} ok · ${s.warning} warning · ${s.failure} failure · ` +
         `${s.notApplicable} n/a · ${s.skipped} from the render`);
-      for (const f of report.semanticas)
-        console.log(`      ⛔ ${f.id} ${f.name}: ${f.mensagem}`);
-      if (report.falhas.length)
-        console.log(`      findings: ${report.falhas.map(f => f.id).join(', ')}`);
+      for (const f of report.semantic)
+        console.log(`      ⛔ ${f.id} ${f.name}: ${f.message}`);
+      if (report.failures.length)
+        console.log(`      findings: ${report.failures.map(f => f.id).join(', ')}`);
     }
     return;
   }
 
   fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
   fs.writeFileSync(output, r.xml);
-  console.log(`\n  → ${output}  (${r.xml.length} bytes, path "${r.caminho}")`);
+  console.log(`\n  → ${output}  (${r.xml.length} bytes, path "${r.path}")`);
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });

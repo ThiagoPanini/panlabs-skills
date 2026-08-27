@@ -60,7 +60,7 @@
 
 const path = require('path');
 const { CATEGORY_LAYER, categoriaDoNo, chaveDePapel } = require(path.join(__dirname, '..', 'engine', 'layers.cjs'));
-const { arvore, contaDe, travessias } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
+const { arvore, accountFrom, travessias } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
 
 const CATALOG = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
 let _cat = null;
@@ -336,7 +336,7 @@ function ruleTrust(model, ctx) {
   for (const a of crossings) {
     if (authorized.has(a.from) || authorized.has(a.to)) continue;
     findings.push(finding('cross-account-sem-confianca', a.id || `${a.from}→${a.to}`,
-      `"${a.contaDe}" alcança "${a.contaPara}" e nenhum habilitador está desenhado nas pontas`));
+      `"${a.accountFrom}" alcança "${a.accountTo}" e nenhum habilitador está desenhado nas pontas`));
   }
   return { findings, silent: null };
 }

@@ -31,9 +31,9 @@ function outcome(id, state, extra = {}) {
   if (!c) throw new Error(`check "${id}" is not in the index`);
   return {
     id, name: c.name, family: c.family, input: c.input,
-    severidadeMaxima: c.severity, semantica: !!c.semantica, calibravel: !!c.calibravel,
+    maxSeverity: c.severity, semantica: !!c.semantica, calibratable: !!c.calibratable,
     state,
-    mensagem: extra.mensagem || '',
+    message: extra.message || '',
     measured: extra.measured === undefined ? null : extra.measured,
     occurrences: extra.occurrences || [],
   };
@@ -42,12 +42,12 @@ function outcome(id, state, extra = {}) {
 const ok = (id, extra) => outcome(id, 'ok', extra);
 const warning = (id, extra) => outcome(id, 'warning', extra);
 const failure = (id, extra) => outcome(id, 'failure', extra);
-const notApplicable = (id, reason) => outcome(id, 'notApplicable', { mensagem: reason });
+const notApplicable = (id, reason) => outcome(id, 'notApplicable', { message: reason });
 
 /** Skipped checks inherit their reason from the index — there is no second place where it could diverge. */
 function skipped(id) {
   const c = byId(id);
-  return outcome(id, 'skipped', { mensagem: c.porqueRender || 'not the validator\'s job' });
+  return outcome(id, 'skipped', { message: c.porqueRender || 'not the validator\'s job' });
 }
 
 /**

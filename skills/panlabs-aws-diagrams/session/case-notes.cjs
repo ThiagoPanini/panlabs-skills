@@ -19,17 +19,17 @@
  * freshness metadata) fail on every page of the corpus today — #11's engine
  * doesn't emit a legend, and `model@1` has nowhere to write a date. Nobody
  * reading a case can fix either, so section 5 never reaches for
- * `report.falhas` or `report.avisos` (which carry all three): it reaches
- * only for `report.semanticas` — the drawing asserting what the model
+ * `report.failures` or `report.warnings` (which carry all three): it reaches
+ * only for `report.semantic` — the drawing asserting what the model
  * denies, the one family the index marks `semantica: true` — which
  * structurally never contains them.
  *
  * A DETAIL PAGE THAT DIDN'T COME OUT IS THE EXCEPTION (#137). It also
- * arrives through `report.avisos` today — one string among nine on a real
+ * arrives through `report.warnings` today — one string among nine on a real
  * multi-account model — but it isn't a permanent floor like the two above:
  * it's a model an agent can fix. `tools/case.cjs` lifts it out into its own
  * structured list (`detailPagesMissing`) before it ever reaches
- * `report.avisos`'s undifferentiated pile, and section 5 gets a third
+ * `report.warnings`'s undifferentiated pile, and section 5 gets a third
  * bullet block for it.
  */
 

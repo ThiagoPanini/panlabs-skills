@@ -97,10 +97,10 @@ async function main() {
   console.log(`\n  APPROVE · ${session.title}\n`);
 
   const v = validate(session);
-  for (const a of v.avisos) console.log(`  ⚠ ${a}`);
+  for (const a of v.warnings) console.log(`  ⚠ ${a}`);
   if (!v.ok) {
     console.error(`\n  ✗ invalid model (${v.fase})`);
-    for (const e of v.erros) console.error(`      · ${e}`);
+    for (const e of v.errors) console.error(`      · ${e}`);
     process.exit(1);
   }
   console.log(`  validate    ok · stage=${session.stage} · ${session.nodes.length} nodes · ${session.edges.length} edges`);
@@ -131,8 +131,8 @@ async function main() {
   if (!d.ok) { for (const x of d.diferencas) console.error(`      · ${x.text}`); process.exit(2); }
 
   const r = await draw(approved, 'logical');
-  for (const a of r.relatorio.avisos) console.log(`  ⚠ ${a}`);
-  console.log(`  draw        path="${r.caminho}" · ${r.model.nodes.length} nodes projected`);
+  for (const a of r.report.warnings) console.log(`  ⚠ ${a}`);
+  console.log(`  draw        path="${r.path}" · ${r.model.nodes.length} nodes projected`);
 
   const output = opts.output || path.join(ROOT, 'output', `${session.id}.drawio`);
   fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
@@ -144,6 +144,6 @@ async function main() {
 
 main().catch(e => {
   console.error(`\n  ✗ ${e.message}`);
-  for (const l of e.erros || []) console.error(`      · ${l}`);
+  for (const l of e.errors || []) console.error(`      · ${l}`);
   process.exit(1);
 });

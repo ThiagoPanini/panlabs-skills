@@ -161,7 +161,7 @@ function main() {
     console.log(`    ${mut.name.padEnd(52)} ${caught ? '✓ caught' : '✗ PASSED'}  (${caught ? via : '—'})`);
     if (!caught) failures++;
     else if (r) for (const d of r.diferencas.slice(0, 2)) console.log(`        · ${d.text}`);
-    else console.log(`        · ${v.erros[0].slice(0, 110)}`);
+    else console.log(`        · ${v.errors[0].slice(0, 110)}`);
   }
 
   console.log('\n  3 · Control experiment — what MUST NOT break\n');
@@ -169,7 +169,7 @@ function main() {
     const m = clone(technical);
     mut.mutate(m);
     const v = validate(m);
-    const r = v.ok ? check(m) : { ok: false, motivo: v.erros[0] };
+    const r = v.ok ? check(m) : { ok: false, motivo: v.errors[0] };
     console.log(`    ${mut.name.padEnd(52)} ${r.ok ? '✓ passed' : '✗ BROKE'}`);
     if (!r.ok) { failures++; console.log(`        · ${(r.motivo || '').slice(0, 110)}`); for (const d of r.diferencas || []) console.log(`        · ${d.text}`); }
   }

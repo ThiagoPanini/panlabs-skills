@@ -1,8 +1,6 @@
 # O laudo e o portão
 
-O laudo sai **sempre**, em `relatorio.geometry` e no `--explain`. Bloquear é que é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
-
-> O nome híbrido é real e não é erro de digitação: a chave é portuguesa e a subchave inglesa, porque a #53 converteu os contratos e parou antes do vocabulário interno. Este guia nomeia o campo **como ele existe hoje**; a conversão está registrada na [#134](https://github.com/ThiagoPanini/panlabs-skills/issues/134), que também alcança o `calibravel` mais abaixo.
+O laudo sai **sempre**, em `report.geometry` e no `--explain`. Bloquear é que é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
 ```bash
 node tools/check-geometry.cjs <modelo.json>          # o laudo, legível
@@ -53,7 +51,7 @@ O nome, o que mede, o limiar e a **fonte** de cada uma estão em [`../validator/
 node -e "require('./validator/index.cjs').CHECKS.filter(c=>c.family==='A5').forEach(c=>console.log(c.id,c.severity,c.name))"
 ```
 
-**Os limiares não foram inventados.** As métricas contínuas estão calibradas nos percentis de 4.890 desenhos de especialistas. Oito checagens não têm base experimental e estão marcadas `calibravel: true`, com `because: null` em `thresholds.json` — o campo vazio é um pedido de medição, não um número respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
+**Os limiares não foram inventados.** As métricas contínuas estão calibradas nos percentis de 4.890 desenhos de especialistas. Oito checagens não têm base experimental e estão marcadas `calibratable: true`, com `because: null` em `thresholds.json` — o campo vazio é um pedido de medição, não um número respeitável: `A3.9` `A4.7` `A5.3` `A5.7` `A6.4` `A7.4` `A8.3` `A8.4`.
 
 ## Os quatro níveis, e quem nasce em qual
 
@@ -86,9 +84,9 @@ Medido nas **35 páginas** dos 20 modelos — em páginas e não em modelos, por
 |---|---|---|
 | `A1.2` `A1.3` | ✗ 35/35 | **nenhum diagrama emite legenda.** O vocabulário fechado do tema não contrai essa dívida — e não a contrai de propósito: legenda é a dívida de quem inventa notação, e o tema não deixa inventar |
 | `A1.11` | ⚠ 35/35 | pede `date`, `version`, `author`; `model@1` é `additionalProperties: false` e não tem esses campos |
-| `A3.9` | ⚠ 35/35 | `calibravel` — o limiar é default de engenharia |
+| `A3.9` | ⚠ 35/35 | `calibratable` — o limiar é default de engenharia |
 | `A4.5` | ⚠ 33/35 | padding de grupo uniforme |
-| `A7.4` | ⚠ 32/35 | `calibravel`, idem |
+| `A7.4` | ⚠ 32/35 | `calibratable`, idem |
 | `A7.2` | ✗ 21/35 | o quadrado do ícone de serviço fica em **2,71:1** contra o tingimento de subnet. O portão de contraste do tema **avisa** (trata como área); este validador **reprova** (trata como traço). As duas leituras convivem |
 | `A3.7` | ✗ 8/20 modelos | o caminho da grade dimensiona a largura só pela nuvem, e o desenho estoura o canvas. Contado em modelos porque é o CAMINHO que decide, e o caminho é do modelo |
 | `A1.5` `A1.12` | ✗ sempre que houver **nota com `about`** | ver abaixo |

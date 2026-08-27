@@ -93,7 +93,7 @@ console.log('\n2 · end to end — the measured width reaches the emitted XML\n'
     ],
     edges: [],
   };
-  const r = await generate(model, { tema: 'corporate' });
+  const r = await generate(model, { theme: 'corporate' });
   const res = resolverMod.create(themeMod.load('corporate'));
   const expected = res.leaf(model.nodes[1]).boxW;
 
@@ -102,9 +102,9 @@ console.log('\n2 · end to end — the measured width reaches the emitted XML\n'
   ok(emittedWidth === expected,
     'the emitted vertex geometry has the measured width, not a fixed 78px',
     `emitted=${emittedWidth} expected=${expected}`);
-  ok(!r.relatorio.avisos.some(a => /qualifier wider than the cell/.test(a)),
+  ok(!r.report.warnings.some(a => /qualifier wider than the cell/.test(a)),
     "and #29's warning no longer fires — the box now USES the measure instead of only warning",
-    JSON.stringify(r.relatorio.avisos));
+    JSON.stringify(r.report.warnings));
 }
 
 // ---------------------------------------------------------------------------

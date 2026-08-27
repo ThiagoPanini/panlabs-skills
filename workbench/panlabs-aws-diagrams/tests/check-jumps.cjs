@@ -114,7 +114,7 @@ const details = [];
 
 for (const { group, name, model } of corpus) {
   const d = derive(model, { cat });
-  const roles = [...layers.papeisDeSubnet(model, d.t, d.camadas).values()];
+  const roles = [...layers.papeisDeSubnet(model, d.t, d.layers).values()];
   const privateRoles = roles.filter(p => p.access === 'private');
   if (privateRoles.length < 2) { details.push([group, name, '—', 'fewer than 2 private roles: the question does not apply']); continue; }
 

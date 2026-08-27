@@ -125,7 +125,32 @@ out="$(run verify)"; code=$?
 expect "a copy with no .js has no module scope to inherit" green "reads as CommonJS" "$out" "$code"
 mv "$PROOF_BENCH/elk-aside.js" "$COPY/engine/vendor/elk.bundled.js"
 
-# ── 7 . THE CORPUS, ONE FLOOR UP ──────────────────────────────────────────────
+# ── 7 . THE TREE THE RUN WAS NEVER SUPPOSED TO TOUCH ──────────────────────────
+# The blind agent's process starts wherever the operator opened it, and the
+# first run under this harness left three scratch files in this repository's
+# working tree. Criterion 9 of #47 caught it because someone typed `git status`;
+# these cases are what make it a line. The snapshot names the tree it watched,
+# so the proof points it at a throwaway repository instead of the real one.
+WATCHED="$PROOF_BENCH/watched"
+mkdir -p "$WATCHED"
+git -c init.defaultBranch=main init -q "$WATCHED"
+printf 'watching=%s\n' "$WATCHED" > "$SANDBOX/watched-tree.before"
+out="$(run verify)"; code=$?
+expect "a watched tree nothing touched stays green" green "nothing appeared in" "$out" "$code"
+
+: > "$WATCHED/.scratch-from-the-agent.cjs"
+out="$(run verify)"; code=$?
+expect "a file that appeared in the watched tree turns red" red "appeared in" "$out" "$code"
+rm -f "$WATCHED/.scratch-from-the-agent.cjs"
+
+# And a sandbox with no snapshot cannot see a leak at all, which is its own red
+# rather than a green that means nothing was measured.
+mv "$SANDBOX/watched-tree.before" "$PROOF_BENCH/watched-tree.aside"
+out="$(run verify)"; code=$?
+expect "a sandbox with no snapshot turns red instead of passing vacuously" red "setup never took one" "$out" "$code"
+mv "$PROOF_BENCH/watched-tree.aside" "$SANDBOX/watched-tree.before"
+
+# ── 8 . THE CORPUS, ONE FLOOR UP ──────────────────────────────────────────────
 # Nothing inside the sandbox changes: what changes is what sits ABOVE it. This
 # is the leak #47 could not close by hiding a directory on a branch — the
 # workbench was reachable by climbing, not by being linked to.
@@ -140,7 +165,7 @@ expect "setup refuses a sandbox root it could climb out of" red "refusing to bui
 expect "and builds nothing when it refuses" green "" "$([ -e "$PROOF_BENCH/second" ] && echo built)" "$([ -e "$PROOF_BENCH/second" ] && echo 1 || echo 0)"
 rm -rf "$PROOF_BENCH/workbench"
 
-# ── 8 . A RUN THAT NEVER TORE DOWN ────────────────────────────────────────────
+# ── 9 . A RUN THAT NEVER TORE DOWN ────────────────────────────────────────────
 # The parked record is the machine's only memory of what to restore. Setting up
 # over it would overwrite that memory with a link to a sandbox, and the original
 # target would be gone for good.
@@ -148,7 +173,7 @@ out="$("$HARNESS" setup --at "$PROOF_BENCH/third" --skill-home "$HOME_DIR" 2>&1)
 expect "setup refuses a skill home that is still parked from an earlier run" red "never tore down" "$out" "$code"
 expect "and builds nothing when it refuses" green "" "$([ -e "$PROOF_BENCH/third" ] && echo built)" "$([ -e "$PROOF_BENCH/third" ] && echo 1 || echo 0)"
 
-# ── 9 . TEARDOWN PUTS BACK THE TEXT, NOT THE RESOLUTION ───────────────────────
+# ── 10 . TEARDOWN PUTS BACK THE TEXT, NOT THE RESOLUTION ───────────────────────
 # The ~/.claude entry carries a RELATIVE target. Restoring the resolved path
 # would leave a working link that the skill's own installer never wrote, and
 # `install.sh --check` would start disagreeing with the machine.
@@ -158,7 +183,7 @@ expect "the skill home carries the original link text again" green "$ORIGINAL" "
 expect "the parked record is gone" green "" "" "$([ -e "$HOME_DIR/.panlabs-aws-diagrams.blind-run-parked" ] && echo 1 || echo 0)"
 expect "and the sandbox is gone" green "" "" "$([ -e "$SANDBOX" ] && echo 1 || echo 0)"
 
-# ── 10 . A HOME THAT HAD NOTHING INSTALLED COMES BACK EMPTY ───────────────────
+# ── 11 . A HOME THAT HAD NOTHING INSTALLED COMES BACK EMPTY ───────────────────
 # The other machine this has to work on: the skill was never installed globally,
 # so neutralising it means CREATING a door and then removing it again.
 EMPTY_HOME="$PROOF_BENCH/empty-home/.claude/skills"
@@ -168,7 +193,7 @@ out="$("$HARNESS" teardown --at "$SANDBOX" --skill-home "$EMPTY_HOME" 2>&1)"; co
 expect "teardown takes that door away instead of inventing one" green "nothing was installed here before" "$out" "$code"
 expect "leaving no entry behind" green "" "" "$([ -e "$EMPTY_HOME/panlabs-aws-diagrams" ] && echo 1 || echo 0)"
 
-# ── 11 . THE VERBS ────────────────────────────────────────────────────────────
+# ── 12 . THE VERBS ────────────────────────────────────────────────────────────
 out="$("$HARNESS" 2>&1)"; code=$?
 expect "no verb is an error, not a pass" red "usage" "$out" "$code"
 out="$("$HARNESS" verify --at "$PROOF_BENCH/nowhere" --skill-home "$HOME_DIR" 2>&1)"; code=$?

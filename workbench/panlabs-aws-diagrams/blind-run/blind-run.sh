@@ -87,6 +87,7 @@ REPO_NAME="$(basename "$(dirname "$(git -C "$REPO" rev-parse --path-format=absol
 PROJECT_NAME="labmove-platform"
 RECORD_NAME=".$SKILL_NAME.blind-run-parked"
 PARKED_SUFFIX="$SKILL_NAME.blind-run-parked"
+WATCH_RECORD="watched-tree.before"
 
 say()  { printf '  %s\n' "$1"; }
 ok()   { printf '  ✓ %s\n' "$1"; }
@@ -269,6 +270,17 @@ $(printf '%s\n' "$breach" | sed 's/^/      /')"
   # ── every door on the machine ───────────────────────────────────────────────
   for home in "${SKILL_HOMES[@]}"; do park_home "$home"; done
 
+  # ── the tree the run is not supposed to touch ───────────────────────────────
+  # The blind agent's PROCESS starts wherever the operator opened it, and this
+  # harness can hand it a project path but not a working directory. The first
+  # run under it left three scratch files in this repository's working tree —
+  # criterion 9 of #47, "the working tree came back clean", caught only because
+  # someone remembered to type `git status`. The snapshot makes it a line.
+  {
+    printf 'watching=%s\n' "$REPO"
+    git -C "$REPO" status --porcelain
+  } > "$SANDBOX/$WATCH_RECORD"
+
   # ── what the blind agent is handed ──────────────────────────────────────────
   cp "$HERE/brief.md" "$SANDBOX/brief.txt"
   awk -v project="$PROJECT" -v brief="$HERE/brief.md" '
@@ -437,6 +449,26 @@ cmd_verify() {
       bad "$entry does not exist — the skill is reachable from nowhere here"
     fi
   done
+
+  # 10 . and nothing appeared in the tree the run was never supposed to touch
+  local before="$SANDBOX/$WATCH_RECORD" watched appeared line
+  if [ ! -f "$before" ]; then
+    bad "no snapshot at $before — setup never took one, so a leak into the operator's tree cannot be seen"
+  else
+    watched="$(sed -n 's/^watching=//p' "$before" | head -1)"
+    if ! git -C "$watched" rev-parse --git-dir >/dev/null 2>&1; then
+      bad "$watched is not a git repository — the snapshot has nothing to compare against"
+    else
+      appeared="$(comm -13 <(tail -n +2 "$before" | sort) <(git -C "$watched" status --porcelain | sort))"
+      if [ -n "$appeared" ]; then
+        while IFS= read -r line; do
+          [ -n "$line" ] && bad "appeared in $watched while the sandbox existed: $line"
+        done <<< "$appeared"
+      else
+        ok "nothing appeared in $watched while the sandbox existed"
+      fi
+    fi
+  fi
 
   printf '\n'
   if [ "$failures" -eq 0 ]; then

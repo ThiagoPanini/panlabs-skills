@@ -20,13 +20,18 @@ A primeira corrida do #47 rodou **dentro deste repositório**, e duas coisas der
 workbench/panlabs-aws-diagrams/blind-run/blind-run.sh setup      # monta e imprime o prompt
 workbench/panlabs-aws-diagrams/blind-run/blind-run.sh verify     # audita o isolamento
 workbench/panlabs-aws-diagrams/blind-run/blind-run.sh teardown   # devolve a máquina
+workbench/panlabs-aws-diagrams/blind-run/blind-run.sh paths      # os nomes que ele decide, key=value
 ```
+
+O `paths` existe porque a **prova** precisa deles, e prova que soletra de novo o que mede é uma segunda cópia que diverge: a primeira versão dela repetia o nome do registro de estacionamento, e renomeá-lo no harness deixava a prova verde com o caso *"o registro sumiu"* olhando para um caminho que não existia sob nome nenhum. De quebra, é a resposta honesta a *"onde é que isso põe as coisas?"*.
 
 **Um projeto de chamador que não é este repositório.** [`project/`](project/) é a árvore da `labmove-platform` — uma plataforma de coleta domiciliar de exames, com README próprio, dois serviços e um `docs/architecture/` com um ADR dentro. O `setup` materializa essa árvore no sandbox e faz dela um repositório git com identidade própria. A objeção de confidencialidade se dissolve porque a arquitetura que vai ser desenhada **é a daquele projeto**.
 
 **Uma cópia da skill, cortada da origem.** A cópia sai do que o `git ls-files` diz que a skill carrega — nada de lista paralela de exclusões para divergir do `tools/package.sh` — e é **cópia, não link**. O `tools/install.sh` linka de propósito, para a skill instalada nunca ficar velha; aqui o requisito é o oposto, porque link sobe de volta na árvore de onde veio.
 
-**Toda porta da máquina apontando para essa cópia.** Cada skill home — por padrão `~/.claude/skills` e `~/.agents/skills`, os dois que o `install.sh` escreve — tem a sua entrada repontada para a cópia, e o original fica registrado num arquivo ao lado (`.panlabs-aws-diagrams.blind-run-parked`). **O registro fica junto do skill home, não dentro do sandbox**: o sandbox mora no temporário do sistema e a máquina pode varrê-lo, e restauração que depende do sandbox é restauração que para de funcionar justamente quando é necessária.
+**Toda porta da máquina apontando para essa cópia.** Cada skill home — por padrão `~/.claude/skills` e `~/.agents/skills`, os dois que o `install.sh` escreve — tem a sua entrada repontada para a cópia, e o original fica registrado num arquivo ao lado. **O registro fica junto do skill home, não dentro do sandbox**: o sandbox mora no temporário do sistema e a máquina pode varrê-lo, e restauração que depende do sandbox é restauração que para de funcionar justamente quando é necessária. O `teardown` também aceita não ser informado de quais portas fechar — o sandbox guarda a lista, para uma corrida montada com `--skill-home` não-padrão não deixar aquela porta estacionada apontando para um sandbox que ele mesmo está prestes a apagar.
+
+**E ele só apaga o que carimbou.** O `--at` aceita o que lhe derem, e uma versão anterior removia esse caminho sem perguntar: apontada para um diretório pessoal, ela o apagava e reportava *"the machine is back where it was"*. O carimbo é escrito no instante em que o `setup` cria o diretório — então um sandbox construído pela metade ainda é removível, e a árvore de outra pessoa nunca é. É a mesma regra que o `restore_home` já guardava uma função acima: nunca apagar o que este harness não pôs ali.
 
 ### O que o `verify` mede
 
@@ -45,6 +50,8 @@ Onze afirmações, cada uma com o seu vermelho plantado em [`blind-run.proof.sh`
 | toda porta declarada resolve para dentro do sandbox | |
 | cada uma delas tem o seu registro de restauração | sem ele o `teardown` não sabe o que devolver |
 | nada apareceu na árvore que a corrida não devia tocar | é o critério 9 do #47, e ele já falhou uma vez — ver abaixo |
+
+**As duas afirmações de identidade leem o commit do fixture, não a árvore de trabalho.** O `setup` fixa o SHA e o `verify` procura só ali. Elas são sobre o que o **fixture** diz; a árvore de trabalho também carrega o que o agente cego escreveu, e uma corrida que legitimamente gravasse as palavras `docs/architecture/diagrams` no próprio `case.md` seria reprovada por ter produzido exatamente aquilo que lhe pediram.
 
 **O escopo de módulo virou checagem porque a primeira corrida morreu nele.** O Node decide se um `.js` é CommonJS ou ESM pelo `package.json` mais próximo subindo a árvore, e o `engine/vendor/elk.bundled.js` era o único `.js` de uma árvore que no resto é `.cjs`. A corrida caiu num sandbox cujo `package.json` mais próximo era um `/tmp/package.json` esquecido por uma extração do draw.io desktop, `"type": "module"` — o bundle UMD foi avaliado como ESM, o `require` devolveu um namespace congelado e vazio, e o motor morreu em `ELK is not a constructor` sem nada na mensagem apontando para a causa. O defeito da skill virou o [#133](https://github.com/ThiagoPanini/panlabs-skills/issues/133) e **já aterrissou** no mesmo dia: o bundle passou a ser `.cjs`, e hoje não há `.js` nenhum na árvore para ser lido de um jeito ou de outro.
 
@@ -71,4 +78,4 @@ O `--at <dir>` troca a raiz do sandbox (padrão: `${TMPDIR:-/tmp}/panlabs-blind-
 
 **Não esconde que existe um harness.** `prompt.txt` e `brief.txt` ficam na raiz do sandbox, um nível acima do projeto. Um agente que suba um nível descobre que está numa simulação — e descobrir isso não lhe diz onde gravar, que é a única coisa medida. Fingir o contrário custaria complexidade e não compraria critério nenhum.
 
-**Não mede a skill.** Isso é a suíte, em [`../tests/run.sh`](../tests/run.sh). Aqui o verde só quer dizer *o mundo era o que dizia ser* — e foi para não confiar nesse verde de graça que a [prova](blind-run.proof.sh) planta cada uma das nove afirmações e exige o vermelho.
+**Não mede a skill.** Isso é a suíte, em [`../tests/run.sh`](../tests/run.sh). Aqui o verde só quer dizer *o mundo era o que dizia ser* — e foi para não confiar nesse verde de graça que a [prova](blind-run.proof.sh) planta cada uma das onze afirmações e exige o vermelho. **A camada 0 daquela suíte roda esta prova**, porque ela nasceu sem ninguém que a rodasse e apodreceu em menos de um dia: o #133 renomeou justamente o arquivo que um dos casos tomava emprestado, e nada ficou vermelho. Prova que servidor nenhum roda é prova só vista verde.

@@ -106,6 +106,16 @@ step "every contract key answers on both ends (#125)"  node "$HERE/check-contrac
 # file used to read as ESM under a `"type": "module"` package.json anywhere up
 # the caller's tree, and `new ELK()` threw with no clue why.
 step "the engine is host-agnostic (#133)"                  node "$HERE/check-esm-host.cjs"
+# The blind run's sandbox (#121) is measured here because nothing else measures
+# it. Its proof shipped with no runner: not in this file, not in the conveyor —
+# and it rotted inside a day, when #133 renamed the very file one of its cases
+# borrowed. A proof nobody runs is the vacuous green this repository named and
+# then built one of.
+#
+# ⚠️ It never touches the machine's own skill homes: every invocation inside it
+# passes `--skill-home` into its own throwaway bench, which REPLACES the default
+# pair rather than adding to it. Three seconds, no network, no draw.io.
+step "the blind run's sandbox proves its isolation (#121)"  bash "$WORKBENCH/blind-run/blind-run.proof.sh"
 
 echo
 echo "════ layer 1 · the boundary ════"

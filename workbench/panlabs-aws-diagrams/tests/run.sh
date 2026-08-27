@@ -94,6 +94,14 @@ step "the journey document holds (#43)"                 node "$HERE/check-journe
 # the old ones, green the whole way — a contract key has two ends, and until now
 # only one of them was ruled.
 step "the guide names the contract of today (#115/#123)"  node "$HERE/check-guide-contract.cjs"
+# The THIRD end of the same rule, and the one no document can see. The two above
+# rule prose against the contract; this one rules `.cjs` against `.cjs` — a key
+# one module writes and another reads, with no schema in between to disagree with.
+# `briefing.cjs` asked `policy()` for `.glifo` while `open.cjs` returned `.glyph`,
+# every page of the resume briefing printed `undefined` where the state glyph
+# belongs, and all 43 checks stayed green: the suite measured what the briefing
+# said, never the character it said it with.
+step "every contract key answers on both ends (#125)"  node "$HERE/check-contract-ends.cjs"
 
 echo
 echo "════ layer 1 · the boundary ════"

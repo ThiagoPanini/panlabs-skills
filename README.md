@@ -22,6 +22,8 @@ scripts/
   proof.sh               the proof library, sourced by every *.proof.sh
   checks/                one check family per file, each with its proof beside it
 skills/                  one directory per skill
+workbench/<skill>/       a skill's sibling workspace: the suite, the corpus and the
+                         bench that only that skill needs, kept out of what ships
 .github/workflows/       the conveyor — the same commands, run by the server
 ```
 

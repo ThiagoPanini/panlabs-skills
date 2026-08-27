@@ -96,14 +96,21 @@ async function caseFiles(session, slug, opts = {}) {
 
   // The ONLY validator output `case.md` reaches for — see `case-notes.cjs`'s
   // header for why `falhas`/`avisos` (which carry the two permanent, nobody-
-  // can-fix-it findings) never feed section 5.
+  // can-fix-it findings) never feed section 5. `detailPagesMissing` (#137)
+  // is a THIRD exception, structured rather than plucked from `avisos`: it
+  // is fixable — a model edit, not a floor of the engine — so it earns its
+  // own bullet instead of hiding among the nine other warnings.
   const semanticFailures = [];
-  for (const [view, drawn] of [['logical', logical], ['technical', technical]])
+  const detailPagesMissing = [];
+  for (const [view, drawn] of [['logical', logical], ['technical', technical]]) {
     for (const g of drawn.relatorio.geometry)
       for (const f of g.report.semanticas)
         semanticFailures.push({ id: f.id, name: f.name, message: f.mensagem, view });
+    for (const m of drawn.relatorio.detailPagesMissing)
+      detailPagesMissing.push({ ...m, view });
+  }
 
-  const md = caseNotes(session, { brief: opts.brief, semanticFailures });
+  const md = caseNotes(session, { brief: opts.brief, semanticFailures, detailPagesMissing });
 
   return {
     files: [

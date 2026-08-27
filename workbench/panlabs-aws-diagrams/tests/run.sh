@@ -139,6 +139,7 @@ step "bisection (the tool that isolates)"         node "$WORKBENCH/tools/bisect-
 step "resource wins over qualifier on the leaf (#38)"   node "$HERE/check-resource-label.cjs"
 step "the leaf queue centers in its final box (#40)"   node "$HERE/check-leaf-queue-center.cjs"
 step "a colliding edge label slides along its edge (#40)"  node "$HERE/check-edge-label-collision.cjs"
+step "a detail page's AZ grid draws the account as its root (#137)"  node "$HERE/check-detail-view-az.cjs"
 
 echo
 echo "════ layer 4 · the theme ════"

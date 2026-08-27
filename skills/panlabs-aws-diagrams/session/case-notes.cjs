@@ -23,6 +23,14 @@
  * only for `report.semanticas` — the drawing asserting what the model
  * denies, the one family the index marks `semantica: true` — which
  * structurally never contains them.
+ *
+ * A DETAIL PAGE THAT DIDN'T COME OUT IS THE EXCEPTION (#137). It also
+ * arrives through `report.avisos` today — one string among nine on a real
+ * multi-account model — but it isn't a permanent floor like the two above:
+ * it's a model an agent can fix. `tools/case.cjs` lifts it out into its own
+ * structured list (`detailPagesMissing`) before it ever reaches
+ * `report.avisos`'s undifferentiated pile, and section 5 gets a third
+ * bullet block for it.
  */
 
 const bullets = (items, empty) => (items.length ? items : [empty]);
@@ -77,7 +85,7 @@ function inferredResourcesBlock(nodes) {
   );
 }
 
-function attentionBlock(semanticFailures, findings) {
+function attentionBlock(semanticFailures, findings, detailPagesMissing) {
   return [
     '**Semantic failures**',
     ...bullets(
@@ -90,6 +98,12 @@ function attentionBlock(semanticFailures, findings) {
       findings.map(a => `- [${a.state}] ${a.rule}${a.target ? ` on \`${a.target}\`` : ''}${a.note ? ` — ${a.note}` : ''}`),
       '_No gap review was recorded for this case._'
     ),
+    '',
+    '**Detail views that didn\'t come out**',
+    ...bullets(
+      detailPagesMissing.map(m => `- "${m.account}" (${m.view}): ${m.because}`),
+      '_None — every account got its own detail page._'
+    ),
   ];
 }
 
@@ -100,6 +114,8 @@ function attentionBlock(semanticFailures, findings) {
  * @param {Array}  [opts.semanticFailures]     `{id, name, message, view}[]`, already
  *                                             flattened across both views and every
  *                                             page by the caller (`tools/case.cjs`)
+ * @param {Array}  [opts.detailPagesMissing]   `{account, because, view}[]`, same
+ *                                             flattening, from `report.detailPagesMissing` (#137)
  * @returns {string} `case.md`'s content
  */
 function caseNotes(session, opts = {}) {
@@ -113,7 +129,8 @@ function caseNotes(session, opts = {}) {
   L.push(...section(2, 'What I understood', factsBlock(d.facts || [])));
   L.push(...section(3, 'The decisions', decisionsBlock(d.candidates || [])));
   L.push(...section(4, 'What I inferred — please check', inferredResourcesBlock(session.nodes || [])));
-  L.push(...section(5, 'What deserves attention', attentionBlock(opts.semanticFailures || [], d.findings || [])));
+  L.push(...section(5, 'What deserves attention',
+    attentionBlock(opts.semanticFailures || [], d.findings || [], opts.detailPagesMissing || [])));
 
   return L.join('\n').replace(/\n+$/, '\n');
 }

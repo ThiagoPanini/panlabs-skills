@@ -28,8 +28,9 @@
  *   2  NOTHING IS UNDEFINED   no line of a briefing renders `undefined`,
  *                         `[object Object]` or `NaN`. The symptom, generalized:
  *                         this is what a dangling read looks like on the way out.
- *   3  EVERY READ HAS A WRITER   the sweep. Every `x.key` in the skill's own
- *                         sources answers to something that writes `key`.
+ *   3  EVERY READ HAS A WRITER   the sweep. Every key the skill's own sources
+ *                         read — `x.key` and `const { key } = …` alike —
+ *                         answers to something that writes `key`.
  *   4  CONTROL            each verdict, held against a planted defect.
  *
  * WHY VERDICT 1 IS NOT ENOUGH, AND VERDICT 3 EXISTS. Verdict 1 is a test of one
@@ -41,9 +42,18 @@
  * WHY THE SWEEP IS NOT A WORDLIST. A curated list of Portuguese names would age
  * the day someone writes a new one, and it would say nothing about a key retired
  * by some future rename that has nothing to do with #53. What is derived instead
- * is the PRODUCER SET: every identifier this tree writes anywhere — as an object
- * key, a binding, a function, a JSON field. A read whose name appears in the
- * whole tree only ever after a dot has no writer, in any language.
+ * is the PRODUCER SET, and it holds only what can actually NAME A PROPERTY: an
+ * object-literal key, a shorthand property, a method shorthand, an assignment
+ * target, a field declared in a schema. A key read against that set with nothing
+ * to answer it has no writer, in any language.
+ *
+ * ⚠️ AND THE PRODUCER SET IS NOT "EVERY IDENTIFIER", though the first draft made
+ * it that, and the difference is the whole check. Under the loose rule the tree
+ * offered 3 206 producers against 1 254, and every extra one was an alibi: a
+ * local variable named like a key excused a read of that key anywhere. It cost
+ * exactly the defect this file is named for — `const { glifo } = policy(p.state)`
+ * went GREEN, because using the binding on the next line put `glifo` back into
+ * the producer set. The pattern wrote its own excuse.
  */
 
 const fs = require('fs');
@@ -144,14 +154,14 @@ const rows = lines.filter(l => l.includes('view='));
   // name in `policy`'s switch, so it is named here by the state that lands on it.
   for (const p of opened.pages) {
     const glyph = policy(p.state).glyph;
-    const row = lines.find(l => l.includes(String(p.name || p.id)) && l.includes(`view=`));
+    const row = lines.find(l => l.includes(String(p.name || p.id)) && l.includes('view='));
     ok(!!row && row.trim().startsWith(glyph),
       `the \`${p.state}\` page carries its glyph \`${glyph}\``,
       row ? `"${row.trim().slice(0, 46)}"` : 'no row for this page at all');
   }
 
   const distinct = new Set(opened.pages.map(p => policy(p.state).glyph));
-  ok(distinct.size === 4,
+  ok(distinct.size === STATES.length,
     'and the four glyphs are four different characters — the point of having them',
     [...distinct].join(' '));
 }
@@ -200,7 +210,7 @@ const briefings = (() => {
   // the two agreement branches by name, because both are one line long and a
   // fixture that reached neither would still satisfy the section check above
   ok(everything.includes("still matches the approved one"), 'the agreement that holds prints its line');
-  const broke = briefings[2].L.filter(l => l.includes('✗') || l.trim().startsWith('·'));
+  const broke = briefings.find(b => b.what === 'an agreement that broke').L.filter(l => l.includes('✗') || l.trim().startsWith('·'));
   ok(broke.length >= 2, 'the agreement that broke prints its reason AND its differences',
     broke.map(l => l.trim().slice(0, 40)).join(' | ') || 'neither');
 
@@ -254,6 +264,18 @@ const FOREIGN_KEYS = {
   incomingShape: "ELK's JSON graph format (engine/vendor/elk.bundled.js)",
   outgoingShape: "ELK's JSON graph format (engine/vendor/elk.bundled.js)",
   symbol: 'the legend entry the engine does not emit yet — validator/scene.cjs:423',
+  // JSON Schema's own `if`/`then`/`else`. `engine/validate.cjs` implements the
+  // triple; no schema in this tree uses the `else` arm, so nothing writes it.
+  // Its siblings resolve on their own — `then` is a Promise method, `if` is
+  // spelled in a schema — which is why only one of the three is named here.
+  else: "JSON Schema's if/then/else — implemented in engine/validate.cjs, unused by any schema here",
+  // CIEDE2000's parametric weights. `validator/color.cjs` accepts them as an
+  // optional argument and every caller in this tree takes the defaults, so the
+  // read is against a shape nobody here fills in. Foreign vocabulary, and the
+  // formula spells them exactly this way.
+  kL: 'CIEDE2000 parametric weight — optional argument of deltaE00, defaulted by every caller here',
+  kC: 'CIEDE2000 parametric weight — optional argument of deltaE00, defaulted by every caller here',
+  kH: 'CIEDE2000 parametric weight — optional argument of deltaE00, defaulted by every caller here',
 };
 
 /**
@@ -282,6 +304,7 @@ function builtins() {
   own(hash); own(Object.getPrototypeOf(hash));      // .update / .digest
   own(cp.spawnSync(process.execPath, ['-e', '0'])); // .status / .stdout / .signal
   own(/x/.exec('x'));                               // .index / .input / .groups
+  own(new Error('x'));                              // .stack / .message — own to the INSTANCE, not the prototype
   own(module); own(require);
   return out;
 }
@@ -323,39 +346,101 @@ function sourcesUnder(dir, ext, out = []) {
 const RECEIVER = /([A-Za-z_$][\w$]*)\s*(?:\([^()]*\))?\s*$/;
 
 /**
+ * ⚠️ THE DOT IS NOT HOW THIS TREE READS MOST OF ITS OWN KEYS.
+ *
+ * `const { host, pages } = readPages(xml)`, `const { model } = project(...)`,
+ * `const { policy } = require('./open.cjs')` — 108 patterns naming 245 keys. Next
+ * to 8 251 dotted reads that is 3 % by volume and the wrong way to count it: 73
+ * of the 108 are `require`, so this shape is not a minority of the reads, it is
+ * ALL of the module seams. Every import in this skill is one of these.
+ *
+ * And a scanner that only knew the dot was blind in the worst direction: the
+ * destructured name reads like any other bare identifier, so
+ * `const { glifo } = policy(p.state)` did not merely slip past — it ENTERED THE
+ * PRODUCER SET and wrote its own alibi. The defect this whole file exists for,
+ * typed one line differently, went green.
+ *
+ * So a pattern's KEYS are reads, and the names it BINDS are neither — a local
+ * variable names no property, however it got its name:
+ *
+ *   const { glyph } = policy(s)               read  glyph
+ *   const { corrections: applied } = load()   read  corrections, not `applied`
+ *   const { id, ...tokens } = token           read  id, not `tokens`
+ *
+ * The alias arm of `FIELD` looks unused and is not: consuming `: applied` is what
+ * stops the next match from taking the local name as a key of its own.
+ *
+ * It reaches the module boundary too, which is the same seam one level up:
+ * `const { politica } = require('./open.cjs')` is a key nothing exports, and it
+ * is now a finding instead of a `undefined is not a function` at run time.
+ *
+ * Nested patterns and destructured PARAMETERS are not handled — and neither
+ * appears in this tree, which was measured before leaving them out rather than
+ * assumed. If one is written, its keys go on being read as bare identifiers, so
+ * the failure is a missed finding and not a false one.
+ */
+const BINDING = /\b(?:const|let|var)\s*\{([^{}]*)\}\s*=(?!=)/g;
+const FIELD = /(^|,)\s*(\.\.\.)?\s*([A-Za-z_$][\w$]*)\s*(?::\s*([A-Za-z_$][\w$]*))?/g;
+
+/** `name(args) {` is a method shorthand — unless the name is a keyword and the block is a body. */
+const KEYWORD = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'typeof', 'do', 'else']);
+
+/**
  * @param {(name: string, receiver: string) => boolean} excused
  * @returns {{reads: Map<string, object[]>, producers: Set<string>}}
  */
 function sweep(root, excused) {
   const producers = new Set();
   const reads = new Map();
+  const write = name => producers.add(name);
 
   for (const file of sourcesUnder(root, '.cjs')) {
-    const src = code(fs.readFileSync(file, 'utf8'));
+    let src = code(fs.readFileSync(file, 'utf8'));
     const rel = path.relative(root, file);
+    const lineAt = i => src.slice(0, i).split('\n').length;
+    const read = (name, i, receiver) => {
+      if (excused(name, receiver, bags)) return;
+      if (!reads.has(name)) reads.set(name, []);
+      reads.get(name).push({ at: `${rel}:${lineAt(i)}`, receiver });
+    };
     // one hop of aliasing, because `const s = e.style` is how the style bag is
     // actually read: without it, eight mxGraph keys come back as findings.
     const bags = new Set(Object.keys(FOREIGN_BAGS));
     for (const m of src.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[\w.$]*\.([A-Za-z_$][\w$]*)/g))
       if (bags.has(m[2])) bags.add(m[1]);
 
-    for (const m of src.matchAll(/(\.?)\b([A-Za-z_$][\w$]*)/g)) {
-      const name = m[2];
-      if (m[1] !== '.') { producers.add(name); continue; }
-      // `x.key = v` is a WRITE, and the only kind of write that hides behind a dot
-      if (/^\s*=(?!=)/.test(src.slice(m.index + m[0].length))) { producers.add(name); continue; }
-      const receiver = (RECEIVER.exec(src.slice(Math.max(0, m.index - 80), m.index)) || [, '?'])[1];
-      if (excused(name, receiver, bags)) continue;
-      const line = src.slice(0, m.index).split('\n').length;
-      if (!reads.has(name)) reads.set(name, []);
-      reads.get(name).push({ at: `${rel}:${line}`, receiver });
+    // ---- the destructured reads, taken first and then blanked, so the
+    // object-literal rules below never mistake a pattern for a literal
+    for (const b of [...src.matchAll(BINDING)]) {
+      const inner = b[1];
+      const start = b.index + b[0].indexOf(inner);
+      for (const f of [...inner.matchAll(FIELD)]) {
+        const [, , spread, name, alias] = f;
+        if (spread) continue;                        // `...tokens` binds a local, it names no key
+        read(name, b.index, 'const {');
+      }
+      src = src.slice(0, start) + blank(inner) + src.slice(start + inner.length);
+    }
+
+    // ---- the writers, and ONLY things that can name a property
+    for (const m of src.matchAll(/([A-Za-z_$][\w$]*)\s*:/g)) write(m[1]);                 // { key: v }
+    for (const m of src.matchAll(/[{,]\s*([A-Za-z_$][\w$]*)\s*(?=[,}])/g)) write(m[1]);   // { key }
+    for (const m of src.matchAll(/\.([A-Za-z_$][\w$]*)\s*=(?!=)/g)) write(m[1]);          // x.key = v
+    for (const m of src.matchAll(/(^|[^.\w$])([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/g))     // { key(a) {…} }
+      if (!KEYWORD.has(m[2])) write(m[2]);
+
+    // ---- the dotted reads
+    for (const m of src.matchAll(/\.([A-Za-z_$][\w$]*)/g)) {
+      if (src[m.index - 1] === '.') continue;                     // `...spread` is not a member read
+      if (/^\s*=(?!=)/.test(src.slice(m.index + m[0].length))) continue;          // handled as a write
+      read(m[1], m.index, (RECEIVER.exec(src.slice(Math.max(0, m.index - 80), m.index)) || [, '?'])[1]);
     }
   }
   // A schema field and a corpus key are writers too — `schema.json` declares
-  // `nodes`, and nothing in the `.cjs` has to spell it bare for `m.nodes` to be
-  // a read with a writer.
+  // `nodes`, and nothing in the `.cjs` has to spell it for `m.nodes` to be a
+  // read with a writer.
   for (const file of sourcesUnder(root, '.json'))
-    for (const m of fs.readFileSync(file, 'utf8').matchAll(/"([A-Za-z_$][\w$]*)"/g)) producers.add(m[1]);
+    for (const m of fs.readFileSync(file, 'utf8').matchAll(/"([A-Za-z_$][\w$]*)"\s*:/g)) write(m[1]);
 
   return { reads, producers };
 }
@@ -375,11 +460,19 @@ const dangling = (root, { bags = true, keys = true } = {}) => {
 
 {
   const found = dangling(ROOT);
+  // The counts are printed, not just the verdict: a sweep that quietly stopped
+  // seeing half the tree would still say "no property is read that nothing
+  // writes", and the only tell would be the number going quiet.
+  const all = sweep(ROOT, () => false);
+  let dotted = 0, destructured = 0;
+  for (const where of all.reads.values())
+    for (const w of where) (w.receiver === 'const {' ? destructured++ : dotted++);
   ok(found.length === 0,
     'no property is read that nothing in the skill writes',
     found.length
       ? found.map(f => `${f.where[0].receiver}.${f.key} (${f.where[0].at})`).join('; ')
-      : `${sweep(ROOT, () => true).producers.size} producers, and every read answers to one`);
+      : `${dotted} dotted + ${destructured} destructured read(s) of ${all.reads.size} distinct ` +
+        `key(s), against ${all.producers.size} producers`);
 }
 
 // ---------------------------------------------------------------------------
@@ -399,11 +492,33 @@ console.log('\n4 · control — each verdict knows how to fail\n');
       'CONTROL 1: the sweep finds `.glifo` replanted in the briefing',
       found.map(f => `${f.where[0].receiver}.${f.key}`).join('; ') || 'it found nothing');
 
+    // ⚠️ THE SAME DEFECT, DESTRUCTURED — and this one went green for a while.
+    // `const { glifo } = policy(p.state)` is the identical broken seam typed the
+    // way this tree reads by default, and under a producer set of "every
+    // identifier" the binding's own use on the next line excused it.
+    fs.writeFileSync(broken, fs.readFileSync(broken, 'utf8')
+      .replace('policy(p.state).glifo', 'policy(p.state).glyph')
+      .replace('const mark = policy(p.state).glyph;', 'const { glifo } = policy(p.state);\n    const mark = glifo;'));
+    const destructured = dangling(path.join(TMP, 'skill'));
+    ok(destructured.length === 1 && destructured[0].key === 'glifo',
+      'CONTROL 1: and finds the same defect written `const { glifo } = policy(…)`',
+      destructured.map(f => `${f.key} at ${f.where[0].at}`).join('; ') || 'it found nothing');
+
+    // the module boundary is the same seam one level up: a name nothing exports
+    fs.writeFileSync(broken, fs.readFileSync(broken, 'utf8')
+      .replace('const { glifo } = policy(p.state);\n    const mark = glifo;', 'const mark = policy(p.state).glyph;')
+      .replace("const { policy } = require('./open.cjs');", "const { politica } = require('./open.cjs');\nconst policy = politica;"));
+    const imported = dangling(path.join(TMP, 'skill'));
+    ok(imported.length === 1 && imported[0].key === 'politica',
+      'CONTROL 1: and a `require` destructuring a name nothing exports',
+      imported.map(f => f.key).join('; ') || 'it found nothing');
+
     // and the same rename applied to BOTH ends is not a finding: this rules the
     // seam, not the language. Which end is English is CLAUDE.md's rule and #124's
     // ticket, and a check that conflated the two would report a repo-wide opinion
     // as a defect.
-    fs.writeFileSync(broken, fs.readFileSync(broken, 'utf8').replace('policy(p.state).glifo', 'policy(p.state).glyph'));
+    fs.writeFileSync(broken, fs.readFileSync(broken, 'utf8')
+      .replace("const { politica } = require('./open.cjs');\nconst policy = politica;", "const { policy } = require('./open.cjs');"));
     for (const f of ['open.cjs', 'briefing.cjs']) {
       const p = path.join(TMP, 'skill', 'session', f);
       fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(/\bglyph\b/g, 'glifo'));
@@ -412,13 +527,35 @@ console.log('\n4 · control — each verdict knows how to fail\n');
       'CONTROL 1: and renaming BOTH ends is not a finding — this rules the seam, not the language');
   } finally { fs.rmSync(TMP, { recursive: true, force: true }); }
 
+  // 1b · the other direction: shapes that LOOK like a member read and are not.
+  // `...spread` was read as one for a while — the last dot of the three, plus the
+  // name — and every such name arrived as a finding until a producer happened to
+  // excuse it. Six of the tree's spreads were being counted as reads of a key.
+  {
+    const probe = fs.mkdtempSync(path.join(require('os').tmpdir(), 'contract-ends-spread-'));
+    try {
+      const dir = path.join(probe, 'skill', 'session');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'probe.cjs'),
+        "'use strict';\n" +
+        'const bag = { a: 1 };\n' +
+        'const out = [...spreadNotARead(bag)];\n' +          // a spread, not `x.spreadNotARead`
+        'function spreadNotARead(x) { return [x.a]; }\n' +
+        'module.exports = { out };\n');
+      const found = dangling(path.join(probe, 'skill'));
+      ok(found.length === 0,
+        'CONTROL 1: a `...spread` is not reported as a member read',
+        found.map(f => `${f.where[0].receiver}.${f.key}`).join('; ') || 'clean');
+    } finally { fs.rmSync(probe, { recursive: true, force: true }); }
+  }
+
   // 2 · the excuses have to keep earning themselves. Both lists are the only
   // hand-written thing here, so both are held to the same rule `check-guide-
   // contract.cjs` holds its own to: an exception for something that is no longer
   // a finding is deleted, not kept.
-  const withoutBags = dangling(ROOT, { bags: false }).map(f => f.where[0].receiver);
+  const withoutBags = dangling(ROOT, { bags: false }).flatMap(f => f.where.map(w => w.receiver));
   for (const bag of Object.keys(FOREIGN_BAGS))
-    ok(withoutBags.includes(bag) || withoutBags.includes('?'),
+    ok(withoutBags.includes(bag),
       `CONTROL 2: the \`${bag}\` bag is still read somewhere — otherwise the excuse goes`,
       FOREIGN_BAGS[bag].slice(0, 58));
 

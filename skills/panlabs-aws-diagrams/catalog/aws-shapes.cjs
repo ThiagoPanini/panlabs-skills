@@ -217,18 +217,24 @@ function load(dir) {
     //    one would be worse than falling back.
     //    The word boundary isn't fussiness: without it "trainium" matches the
     //    key "ai", because the raw substring is in there.
+    // A multi-word query decomposes into its own words on the `containsWord(n, k)`
+    // side, and each word can land on a DIFFERENT, unrelated catalog entry —
+    // "vpc endpoint" used to match "vpc" (the container) AND "endpoint" (the
+    // resource), and a tie-break used to hand the win to whichever of those was
+    // a service icon: "vpc" alone, discarding the endpoint the query actually
+    // named. #139 measured it on two real queries: "vpc endpoint" -> VPC, and
+    // "aurora serverless" -> ambiguous between "Aurora" and the unrelated
+    // "Serverless" category icon. Neither word is a typo or a fragment of the
+    // other; they are two real, competing matches, and a heuristic that resolves
+    // that competition by icon *kind* rather than by what the query said is a
+    // guess wearing the costume of a match. "exactly one candidate" is the whole
+    // rule — no tie-break survives it.
     const containsWord = (hay, needle) => (' ' + hay + ' ').includes(' ' + needle + ' ');
     const keys = [...byName.keys()].filter(
       k => containsWord(k, n) || containsWord(n, k));
     const targets = new Set();
     for (const k of keys) for (const c of byName.get(k)) targets.add(c);
     if (targets.size === 1) return { candidates: [...targets], via: 'substring' };
-    if (targets.size > 1) {
-      // tie-break: a single service icon among the candidates is still unambiguous
-      const svcs = [...targets].filter(c => c.kind === 'service');
-      const stencils = new Set(svcs.map(c => c.stencil));
-      if (stencils.size === 1) return { candidates: svcs, via: 'substring' };
-    }
 
     return null;
   }
@@ -300,11 +306,22 @@ if (require.main === module) {
     console.log(`usage: node aws-shapes.cjs <service or group name> ...`);
     process.exit(0);
   }
+  // A `generic` result IS a resolved `service()` return — nothing throws, nothing
+  // is falsy — so printing it on the same "service" line as a real match buries
+  // the one outcome that means "the catalog does not know this name" inside a
+  // tuple a skimming reader has to parse. #139: this line, unlike the engine's
+  // own `report.avisos`, printed exactly that silence.
+  let unresolved = 0;
   for (const a of args) {
     const s = cat.service(a);
     const g = cat.group(a);
     if (g) console.log(`group   ${a} -> ${g.title} [${g.corrections.join(' ') || 'no correction'}]\n  ${g.style}`);
+    else if (s && s.via === 'generic') {
+      unresolved++;
+      console.log(`⚠ generic ${a} -> no catalog match for "${a}" — fell back to Generic Application, not the requested service`);
+    }
     else if (s) console.log(`service ${a} -> ${s.title} (${s.stencil}, ${s.via}, ${s.fill})\n  ${s.style}`);
     else console.log(`?       ${a} -> not resolved`);
   }
+  if (unresolved) process.exit(1);
 }

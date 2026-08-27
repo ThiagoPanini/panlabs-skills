@@ -26,7 +26,7 @@ que a pesquisa corrigiu nele.
 | `corrections.json` | O delta para o que a **AWS prescreve**: cores de paleta legada, `container=1`, renomes, desambiguação. Cada entrada carrega a evidência. Escrito à mão. | a skill |
 | `aws-shapes.cjs` | Resolve nome → shape e monta a style. Aplica as correções. Também é CLI. | a skill |
 | `tools/extract-aws4-catalog.cjs` | Regenera o catálogo a partir de um clone do `jgraph/drawio`. | aqui |
-| `tools/check-catalog.cjs` | 24 checagens estáticas, incluindo o round-trip. | aqui |
+| `tools/check-catalog.cjs` | 27 checagens estáticas, incluindo o round-trip. | aqui |
 | `tools/render-sample.cjs` | Monta a amostra e o manifesto de posições. | aqui |
 | `tools/verify-render.py` | Verificação por pixel: cada shape mostra glifo, não caixa vazia. | aqui |
 | `tests/sample.drawio` · `.png` · `.manifest.json` | A amostra renderizada e conferida. Gerado. | aqui |
@@ -107,7 +107,7 @@ produz: **0 divergentes**. Compactar aqui é compressão, não aproximação.
 
 Três camadas:
 
-1. **`check-catalog.cjs`** — 24 checagens estáticas. Round-trip, referências de
+1. **`check-catalog.cjs`** — 27 checagens estáticas. Round-trip, referências de
    stencil, tabelas apontando e **resolvendo** para o stencil declarado, nenhuma
    cor legada sobrevivente, nenhum grupo sem `container=1`, toda ambiguidade
    coberta. Não precisa renderizar.

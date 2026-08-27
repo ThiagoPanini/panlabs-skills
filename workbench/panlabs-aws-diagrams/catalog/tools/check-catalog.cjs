@@ -154,6 +154,42 @@ const openTieBreaks = Object.entries(corrections.disambiguation)
   .filter(([k, d]) => !k.startsWith('_') && d.review).map(([k]) => k);
 notes.push(`  --    ${openTieBreaks.length} open arbitrary tie-breaks: ${openTieBreaks.join(', ')}`);
 
+// ------------------------------------------------- 4c. substring never guesses wrong
+//
+// #139: two real queries where a genuine second word — not a typo, not a
+// fragment of the first — collided with a DIFFERENT, unrelated catalog entry.
+// "aurora serverless" matched both "Aurora" and the standalone "Serverless"
+// category icon; "vpc endpoint" matched both "VPC" (the container) and
+// "Endpoint" (the resource), and a tie-break used to hand the win to whichever
+// candidate was a service icon — "VPC", discarding the endpoint the query
+// actually named. Both must now refuse (fall to the generic icon, visibly)
+// rather than confidently return the wrong shape.
+
+const neverWrong = [
+  ['aurora serverless', 'ambiguous between "Aurora" and the unrelated "Serverless" category icon'],
+  ['vpc endpoint', 'ambiguous between the VPC container and the Endpoint resource — used to return VPC'],
+];
+for (const [name, why] of neverWrong) {
+  const r = cat.service(name);
+  verify(`"${name}" refuses instead of guessing wrong (${why})`,
+    !!r && r.via === 'generic',
+    r ? `${r.title} (${r.stencil}, ${r.via})` : 'not resolved');
+}
+
+// And the control: a genuine qualifier that does NOT collide with another
+// catalog entry must keep resolving exactly as it did before — ambiguity
+// refusing is not license for the substring step to get trigger-happy the
+// other way and start refusing matches it used to get right.
+const qualifierSurvives = [['aurora', 'aurora postgresql', 'aurora']];
+for (const [base, qualified, stencil] of qualifierSurvives) {
+  const rBase = cat.service(base);
+  const rQualified = cat.service(qualified);
+  verify(`qualifier does not topple a real match: "${base}" vs "${qualified}"`,
+    !!rBase && !!rQualified && rBase.stencil === stencil && rQualified.stencil === stencil,
+    `${base} -> ${rBase && rBase.stencil} (${rBase && rBase.via}); ` +
+    `${qualified} -> ${rQualified && rQualified.stencil} (${rQualified && rQualified.via})`);
+}
+
 // ------------------------------------------------- 5. round-trip (needs a repo)
 
 const repo = process.argv[2];

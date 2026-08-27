@@ -28,7 +28,7 @@ workbench/panlabs-aws-diagrams/blind-run/blind-run.sh teardown   # devolve a má
 
 ### O que o `verify` mede
 
-Nove afirmações, cada uma com o seu vermelho plantado em [`blind-run.proof.sh`](blind-run.proof.sh):
+Dez afirmações, cada uma com o seu vermelho plantado em [`blind-run.proof.sh`](blind-run.proof.sh):
 
 | | |
 |---|---|
@@ -39,8 +39,11 @@ Nove afirmações, cada uma com o seu vermelho plantado em [`blind-run.proof.sh`
 | o git, perguntado de dentro da cópia, responde o projeto de chamador | é literalmente o que o `case.cjs` pergunta |
 | nenhum link dentro do sandbox resolve para fora dele | |
 | nenhum ancestral da cópia carrega `workbench/` ou uma segunda instalação | é o vazamento do #47, que se alcança **subindo**, não por link |
+| o escopo de módulo dos `.js` da cópia vem de dentro do sandbox | senão quem decide como o motor é lido é a máquina — ver abaixo |
 | toda porta declarada resolve para dentro do sandbox | |
 | e cada uma delas tem o seu registro de restauração | sem ele o `teardown` não sabe o que devolver |
+
+**O escopo de módulo virou checagem porque a primeira corrida morreu nele.** O Node decide se um `.js` é CommonJS ou ESM pelo `package.json` mais próximo subindo a árvore, e o `engine/vendor/elk.bundled.js` é o único `.js` de uma árvore que no resto é `.cjs`. A corrida caiu num sandbox cujo `package.json` mais próximo era um `/tmp/package.json` esquecido por uma extração do draw.io desktop, `"type": "module"` — o bundle UMD foi avaliado como ESM, o `require` devolveu um namespace congelado e vazio, e o motor morreu em `ELK is not a constructor` sem nada na mensagem apontando para a causa. O defeito da skill é o [#133](https://github.com/ThiagoPanini/panlabs-skills/issues/133); o que é problema **daqui** é que uma corrida cujo escopo de módulo veio da máquina é uma corrida que mediu a máquina. Por isso o [`project/package.json`](project/package.json) existe: ele **fixa** o escopo dentro do sandbox, e apagá-lo deixa o `verify` vermelho em vez de entregar em silêncio uma skill diferente para a próxima corrida.
 
 Rode `verify` **duas vezes**: antes de entregar o prompt e depois que a corrida terminar. Uma instalação repontada no meio do caminho — por outra sessão, por um `install.sh` rodado sem querer — só aparece na segunda.
 

@@ -54,6 +54,17 @@
 # climb out of the copy into a tree carrying `workbench/panlabs-aws-diagrams`,
 # and a link climbs straight back into one.
 #
+# ⚠️ THE CALLER PROJECT CARRIES A `package.json`, AND IT IS LOAD-BEARING.
+# Node reads a `.js` file as CommonJS or ESM by the nearest `package.json` above
+# it, and the skill ships exactly one `.js` — the vendored ELK bundle — in an
+# otherwise `.cjs` tree, with no `package.json` of its own. Without a pin inside
+# the sandbox, whatever the machine happens to have left above it decides how
+# the engine is read: the first run under this harness landed under a stray
+# `/tmp/package.json` from a draw.io extraction, `"type": "module"`, and the
+# engine died on `ELK is not a constructor`. The fixture pins the scope so the
+# run is reproducible, `verify` fails when the deciding file lives outside the
+# sandbox, and the skill's own defect is #133 — pinned here, not hidden.
+#
 # ⚠️ TEARDOWN RESTORES FROM A RECORD BESIDE THE SKILL HOME, NOT FROM THE
 # SANDBOX. The sandbox lives in the system temp and a machine may sweep it; a
 # restore that read from there would be a restore that stops working exactly
@@ -371,7 +382,40 @@ cmd_verify() {
     fi
   fi
 
-  # 8 . every door on the machine opens onto the copy
+  # 8 . and the module scope its `.js` files are read under belongs to the
+  #     sandbox, not to whatever the machine left lying above it
+  #
+  # Node decides whether a `.js` file is CommonJS or ESM by the NEAREST
+  # `package.json` above it, and the skill's vendored ELK bundle is the one
+  # `.js` in an otherwise `.cjs` tree. The first blind run under this harness
+  # landed in a sandbox whose nearest `package.json` was a stray
+  # `/tmp/package.json` left by a draw.io extraction, `"type": "module"` — the
+  # UMD bundle was evaluated as ESM, `require` handed back an empty frozen
+  # namespace, and the engine died on `ELK is not a constructor` with nothing in
+  # the message pointing at the cause. The defect in the skill is its own
+  # ticket; what belongs HERE is that a run whose module scope came from the
+  # machine is a run that measured the machine.
+  if [ -d "$COPY" ]; then
+    local js dir deciding scopes="" outside=0
+    while IFS= read -r js; do
+      deciding=""
+      while IFS= read -r dir; do
+        [ -f "$dir/package.json" ] && { deciding="$dir/package.json"; break; }
+      done < <(ancestors "$(dirname "$js")")
+      [ -n "$deciding" ] || continue
+      case "$scopes" in *"|$deciding|"*) continue ;; esac
+      scopes="$scopes|$deciding|"
+      local kind
+      kind="$(sed -n 's/.*"type"[[:space:]]*:[[:space:]]*"\([a-z]*\)".*/\1/p' "$deciding" | head -1)"
+      case "$deciding" in
+        "$sandbox_real"/*) ok "the module scope of $(basename "$js") is the sandbox's own: $deciding (${kind:-commonjs})" ;;
+        *) bad "the module scope of $(basename "$js") comes from OUTSIDE the sandbox: $deciding (${kind:-commonjs}) — the machine decides how the skill's .js is read, not the fixture"; outside=1 ;;
+      esac
+    done < <(find "$COPY" -type f -name '*.js' 2>/dev/null)
+    [ -z "$scopes" ] && [ "$outside" -eq 0 ] && ok "nothing above the copy declares a module type — its .js reads as CommonJS"
+  fi
+
+  # 9 . every door on the machine opens onto the copy
   local home entry resolved
   for home in "${SKILL_HOMES[@]}"; do
     entry="$home/$SKILL_NAME"

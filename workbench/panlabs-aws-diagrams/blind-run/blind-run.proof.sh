@@ -102,7 +102,30 @@ expect "and the same link is caught escaping the sandbox" red "escapes the sandb
 rm -f "$COPY"
 mv "$PROOF_BENCH/copy-aside" "$COPY"
 
-# ── 6 . THE CORPUS, ONE FLOOR UP ──────────────────────────────────────────────
+# ── 6 . THE MODULE SCOPE, DECIDED BY THE MACHINE ──────────────────────────────
+# The first run under this harness died on `ELK is not a constructor`, because
+# the nearest `package.json` above the copy was a stray `/tmp/package.json` from
+# a draw.io extraction, `"type": "module"`. Nothing in the sandbox was wrong;
+# what was wrong is that the machine got to decide how the skill's one `.js`
+# file is read. The caller project pins the scope, and removing that pin has to
+# turn this red rather than quietly hand the next run a different skill.
+mv "$PROJECT/package.json" "$PROOF_BENCH/package.json-aside"
+printf '{"type":"module"}' > "$PROOF_BENCH/package.json"
+out="$(run verify)"; code=$?
+expect "a module scope decided above the sandbox turns red" red "comes from OUTSIDE the sandbox" "$out" "$code"
+rm -f "$PROOF_BENCH/package.json"
+mv "$PROOF_BENCH/package.json-aside" "$PROJECT/package.json"
+out="$(run verify)"; code=$?
+expect "and the caller project's own pin is what puts it back inside" green "is the sandbox's own" "$out" "$code"
+
+# A copy with no `.js` at all has no scope to inherit -- the branch that would
+# otherwise only ever be read, never run.
+mv "$COPY/engine/vendor/elk.bundled.js" "$PROOF_BENCH/elk-aside.js"
+out="$(run verify)"; code=$?
+expect "a copy with no .js has no module scope to inherit" green "reads as CommonJS" "$out" "$code"
+mv "$PROOF_BENCH/elk-aside.js" "$COPY/engine/vendor/elk.bundled.js"
+
+# ── 7 . THE CORPUS, ONE FLOOR UP ──────────────────────────────────────────────
 # Nothing inside the sandbox changes: what changes is what sits ABOVE it. This
 # is the leak #47 could not close by hiding a directory on a branch — the
 # workbench was reachable by climbing, not by being linked to.
@@ -110,9 +133,8 @@ mkdir -p "$PROOF_BENCH/workbench/panlabs-aws-diagrams/models"
 out="$(run verify)"; code=$?
 expect "a workbench reachable by climbing out of the copy turns red" red "reachable by climbing out of the copy" "$out" "$code"
 
-# ── 7 . AND SETUP REFUSES TO BUILD THERE IN THE FIRST PLACE ───────────────────
-# The same rule, one step earlier: the cheapest place to fail is before the
-# sandbox exists.
+# And the same rule one step earlier: the cheapest place to fail is before the
+# sandbox exists at all.
 out="$("$HARNESS" setup --at "$PROOF_BENCH/second" --skill-home "$PROOF_BENCH/other-home" 2>&1)"; code=$?
 expect "setup refuses a sandbox root it could climb out of" red "refusing to build the sandbox" "$out" "$code"
 expect "and builds nothing when it refuses" green "" "$([ -e "$PROOF_BENCH/second" ] && echo built)" "$([ -e "$PROOF_BENCH/second" ] && echo 1 || echo 0)"

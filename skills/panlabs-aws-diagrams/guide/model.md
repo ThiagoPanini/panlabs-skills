@@ -37,14 +37,14 @@ Ele não é um segundo modelo — é o que a fase técnica **acrescenta** ao que
 | `nodes` | lista | infraestrutura nova. `layer: "technical"` obrigatória, e **casaco lógico é recusado** |
 | `facets` | `{ id: technicalFacet }` | veste um nó **aprovado** de serviço AWS |
 | `inside` | `{ id: newParentId }` | reparenta um nó aprovado para dentro de nível novo — **a operação de risco** |
-| `refines` | `{ edgeId: { by: [ids], rotulos: [...] } }` | transforma uma aresta aprovada num caminho técnico |
+| `refines` | `{ edgeId: { by: [ids], labels: [...] } }` | transforma uma aresta aprovada num caminho técnico |
 | `edges` | lista | aresta que só a camada técnica tem |
 | `facetEdges` | `{ edgeId: { label, protocol, order } }` | rótulo técnico numa aresta aprovada |
 | `notes` `dossier` | | acrescentam |
 
 Qualquer chave começada por `_` é comentário livre, em qualquer lugar do delta, e `elaborate()` não lê nenhuma.
 
-`refines` merece a explicação. Tecnicamente, *"A avisa B"* passa por um barramento de eventos. O reflexo é apagar a aresta aprovada e escrever duas novas — e aí o extremo aprovado depende de alguém reescrever certo. Declarando os **saltos** em `by`, os extremos continuam sendo os mesmos objetos: a primeira aresta continua sendo a aprovada, com o rótulo lógico intacto, e a contração da projeção reconstrói o par original. Repare no `rotulos` ao lado do `by`: essa chave mora dentro de um mapa que o esquema deixa aberto, e quem a lê é `session/elaborate.cjs:93` — escrever `labels` ali não faz nada. É resíduo do #53, registrado no #124 junto do `vistas` de `session@1`, e até lá o nome que funciona é este.
+`refines` merece a explicação. Tecnicamente, *"A avisa B"* passa por um barramento de eventos. O reflexo é apagar a aresta aprovada e escrever duas novas — e aí o extremo aprovado depende de alguém reescrever certo. Declarando os **saltos** em `by`, os extremos continuam sendo os mesmos objetos: a primeira aresta continua sendo a aprovada, com o rótulo lógico intacto, e a contração da projeção reconstrói o par original. Repare no `labels` ao lado do `by`: essa chave mora dentro de um mapa que o esquema deixa **aberto** (`refines` é `additionalProperties: true`), e por isso o esquema não a valida — quem a lê é `session/elaborate.cjs`, e um delta que a escreva com qualquer outro nome passa limpo e desenha os segmentos sem rótulo, calado. É a classe de chave que só o código guarda; o [#124](https://github.com/ThiagoPanini/panlabs-skills/issues/124) converteu a última que ainda vinha em português, nas duas pontas de uma vez.
 
 Nenhum campo alcança um casaco lógico, e isso é **gramática, não disciplina**: não existe onde escrever, `elaborate()` recusa nó novo que traga casaco lógico, e a projeção confere depois. Se a capacidade é mesmo nova, a vista lógica mudou e precisa de **aprovação nova**, não de um casaco a mais.
 

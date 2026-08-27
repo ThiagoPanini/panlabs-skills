@@ -32,9 +32,9 @@
         "logical",
         "technical"
       ],
-      "description": "Ate onde o modelo foi elaborado. `logica` = so casacos logicos existem (fase pre-servicos, #15 §5). `tecnica` = todo no tem casaco tecnico. Estagio e do MODELO; vista e do DESENHO. Um modelo no estagio tecnica emite as DUAS vistas; um no estagio logica emite so a logica."
+      "description": "Ate onde o modelo foi elaborado. `logical` = so casacos logicos existem (fase pre-servicos, #15 §5). `technical` = todo no tem casaco tecnico. Estagio e do MODELO; vista e do DESENHO. Um modelo no estagio tecnica emite as DUAS vistas; um no estagio logica emite so a logica."
     },
-    "vistas": {
+    "views": {
       "type": "object",
       "additionalProperties": false,
       "description": "Apresentacao por vista. NAO entra no acordo: trocar o titulo depois de aprovado nao desfaz aprovacao nenhuma, e um esquema de acordo que se quebra com isso vira ruido que o usuario aprende a ignorar.\n\nExiste porque a primeira volta deste prototipo emitiu as duas paginas com o MESMO titulo, e a pagina tecnica saiu do render dizendo \"vista logica\" no cabecalho. Um modelo so nao quer dizer uma apresentacao so.",
@@ -117,7 +117,7 @@
         "technical"
       ],
       "default": "both",
-      "description": "Onde o elemento existe. `ambas` = aparece nas duas vistas (o padrao). `tecnica` = so a vista tecnica tem — VPC, subnet, endpoint, papel de IAM: infraestrutura sem capacidade correspondente.\n\nE redundante com a presenca do casaco `logico`, e isso e de proposito. Sem ela, ESQUECER o casaco logico de um no aprovado se le como \"ah, e so tecnico\" e a capacidade some da projecao SEM ERRO NENHUM — que e exatamente a falha silenciosa que este ticket existe para impedir. Com o padrao em `ambas`, esquecer vira erro de validacao. Redundancia CONFERIDA e guarda, nao ruido."
+      "description": "Onde o elemento existe. `both` = aparece nas duas vistas (o padrao). `technical` = so a vista tecnica tem — VPC, subnet, endpoint, papel de IAM: infraestrutura sem capacidade correspondente.\n\nE redundante com a presenca do casaco `logical`, e isso e de proposito. Sem ela, ESQUECER o casaco logico de um no aprovado se le como \"ah, e so tecnico\" e a capacidade some da projecao SEM ERRO NENHUM — que e exatamente a falha silenciosa que este ticket existe para impedir. Com o padrao em `both`, esquecer vira erro de validacao. Redundancia CONFERIDA e guarda, nao ruido."
     },
     "node": {
       "type": "object",
@@ -138,7 +138,7 @@
         },
         "inside": {
           "$ref": "#/definitions/identifier",
-          "description": "Quem contem este no, no nivel MAIS FINO que o modelo conhece. Um so campo para as duas vistas: a contencao logica e obtida COLAPSANDO — sobe-se por `dentro` ate achar um ancestral que exista na vista logica.\n\nE por isso que a fase tecnica pode enfiar VPC e subnet entre a folha e a fronteira sem mexer no que foi aprovado: a projecao logica passa por cima dos niveis que so a camada tecnica tem."
+          "description": "Quem contem este no, no nivel MAIS FINO que o modelo conhece. Um so campo para as duas vistas: a contencao logica e obtida COLAPSANDO — sobe-se por `inside` ate achar um ancestral que exista na vista logica.\n\nE por isso que a fase tecnica pode enfiar VPC e subnet entre a folha e a fronteira sem mexer no que foi aprovado: a projecao logica passa por cima dos niveis que so a camada tecnica tem."
         },
         "logical": {
           "$ref": "#/definitions/logicalFacet"
@@ -221,7 +221,7 @@
             "application",
             "data"
           ],
-          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `no` em `model@1`, e mesmo NOME que o `camada` do `no` que envolve este casaco (que aqui significa onde o elemento existe na sessao — ambas|tecnica). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com tipo=subnet. Ausente ate o #37 — era o mesmo defeito que `qualificador`, `ou` e `habilita` tiveram ate o #29 (tests/check-technical-parity.cjs mede isto agora)."
+          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `node` em `model@1`, e mesmo NOME que o `layer` do `node` que envolve este casaco (que aqui significa onde o elemento existe na sessao — both|technical). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com tipo=subnet. Ausente ate o #37 — era o mesmo defeito que `qualifier`, `ou` e `enables` tiveram ate o #29 (tests/check-technical-parity.cjs mede isto agora)."
         },
         "cidr": {
           "type": "string"
@@ -533,7 +533,7 @@
         },
         "findings": {
           "type": "array",
-          "description": "#15 §4. A revisao de lacunas bloqueia em bloco, uma vez so; cada achado sai daqui aceito ou recusado. O RECUSADO e o que precisa sobreviver ate o diagrama — e ele sobrevive projetado em `notas` com origem `achado-recusado`.",
+          "description": "#15 §4. A revisao de lacunas bloqueia em bloco, uma vez so; cada achado sai daqui aceito ou recusado. O RECUSADO e o que precisa sobreviver ate o diagrama — e ele sobrevive projetado em `notes` com origin `rejected-finding`.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -561,7 +561,7 @@
               },
               "viaNote": {
                 "$ref": "#/definitions/identifier",
-                "description": "Id da entrada de `notas` que leva esta recusa ate o desenho. Obrigatorio quando `estado` e `recusado`: sem o elo, a recusa fica so no dossie e o diagrama volta a enganar calado. Elo explicito, e nao busca de substring no texto, porque quem edita o texto da nota nao pode quebrar a rastreabilidade sem perceber."
+                "description": "Id da entrada de `notes` que leva esta recusa ate o desenho. Obrigatorio quando `state` e `rejected`: sem o elo, a recusa fica so no dossie e o diagrama volta a enganar calado. Elo explicito, e nao busca de substring no texto, porque quem edita o texto da nota nao pode quebrar a rastreabilidade sem perceber."
               },
               "at": {
                 "type": "string",

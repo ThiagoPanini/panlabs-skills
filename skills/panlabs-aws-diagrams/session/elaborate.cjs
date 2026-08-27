@@ -87,26 +87,27 @@ function elaborate(base, el) {
     if (!a) { errors.push(`refines edge "${id}", which does not exist`); continue; }
     const jumps = r.by || [];
     for (const s of jumps) if (!byId.has(s)) errors.push(`refines "${id}" through "${s}", which does not exist`);
-    // NOTE: `rotulos` is the actual field name — in `elaboration.schema.json`,
-    // in the shipped `examples/session/retail-elaboration.json`, and here. It is
-    // the last Portuguese key #53 left behind on this side, and renaming it has
-    // TWO ENDS, so it waits for #124 rather than getting half done here.
-    const rotulos = r.rotulos || [];
-    if (rotulos.length && rotulos.length !== jumps.length + 1)
-      errors.push(`refines "${id}": ${jumps.length} jump(s) require ${jumps.length + 1} label(s), got ${rotulos.length}`);
+    // `labels` lives inside a map the schema leaves open (`refines` is
+    // `additionalProperties: true`), so nothing but this line validates the
+    // name: a delta spelling it any other way parses clean and silently draws
+    // unlabelled segments. #124 renamed it from `rotulos` on BOTH ends at once
+    // — here, the schema's `description`, and the shipped example.
+    const labels = r.labels || [];
+    if (labels.length && labels.length !== jumps.length + 1)
+      errors.push(`refines "${id}": ${jumps.length} jump(s) require ${jumps.length + 1} label(s), got ${labels.length}`);
 
     const chain = [a.from, ...jumps, a.to];
     // The first segment REMAINS the approved edge: same object, same id, same
     // logical label. Only the target changes and gains a technical facet.
     a.to = chain[1];
-    if (rotulos[0] !== undefined) a.technical = { ...(a.technical || {}), label: rotulos[0] };
+    if (labels[0] !== undefined) a.technical = { ...(a.technical || {}), label: labels[0] };
     for (let k = 1; k < chain.length - 1; k++) {
       const seg = { id: `${id}-s${k}`, from: chain[k], to: chain[k + 1], layer: 'both' };
       // The jump does NOT inherit `data` or `protocol`: it is plumbing, and the
       // approved edge (the first segment) is what carries the assertion.
       // Inheriting `data: "both"` would make the bus come out with a double
       // arrow, asserting a return path that runs somewhere else.
-      if (rotulos[k] !== undefined) seg.label = rotulos[k];
+      if (labels[k] !== undefined) seg.label = labels[k];
       m.edges.push(seg); byEdgeId.set(seg.id, seg);
     }
   }

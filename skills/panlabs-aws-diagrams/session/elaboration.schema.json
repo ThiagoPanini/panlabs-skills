@@ -22,9 +22,6 @@
     "subtitle": { "type": "string" },
 
     "_": { "type": "string", "description": "Comentário livre sobre o delta inteiro. Não lido por elaborate.cjs." },
-    "_reparenta": { "type": "string", "description": "Comentário livre sobre o bloco `inside`. Não lido por elaborate.cjs." },
-    "_arestas": { "type": "string", "description": "Comentário livre sobre o bloco `edges`. Não lido por elaborate.cjs." },
-    "_refina": { "type": "string", "description": "Comentário livre sobre o bloco `refines`. Não lido por elaborate.cjs." },
 
     "nodes": {
       "type": "array",
@@ -48,7 +45,7 @@
     "refines": {
       "type": "object",
       "additionalProperties": true,
-      "description": "{ edgeId: { by: [ids], rotulos: [...] } }. Transforma uma aresta aprovada num CAMINHO técnico, declarando os saltos — os extremos continuam sendo os mesmos objetos, e a contração da projeção reconstrói o par original."
+      "description": "{ edgeId: { by: [ids], labels: [...] } }. Transforma uma aresta aprovada num CAMINHO técnico, declarando os saltos — os extremos continuam sendo os mesmos objetos, e a contração da projeção reconstrói o par original."
     },
 
     "edges": {

@@ -24,9 +24,10 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { sweep, findAll } = require('../session/fingerprint.cjs');
+const SKILL = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { sweep, findAll } = require(path.join(SKILL, 'session', 'fingerprint.cjs'));
 
-const { binary } = require(path.join(__dirname, 'drawio.cjs'));
+const { binary } = require(path.join(SKILL, 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'host-'));
 

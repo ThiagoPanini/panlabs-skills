@@ -36,13 +36,18 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The suite moved out of the skill in #44, and it split ONE root into two:
-# WORKBENCH is this sibling directory (models/, and where this suite itself
-# lives); SKILL is the tree that gets installed (engine/, tools/, session/,
-# output/, examples/). A path that used to be "$ROOT/models/x.json" is now
-# "$WORKBENCH/models/x.json"; one that used to be "$ROOT/output/x.drawio" is
-# now "$SKILL/output/x.drawio" — output/ never moved, only the ruler did.
+# WORKBENCH is this sibling directory (models/, tests/, and — since #45 —
+# tools/, theme/ and catalog/ for the bancada that isn't part of the agent's
+# journey either); SKILL is the tree that gets installed. A path that used to
+# be "$ROOT/models/x.json" is now "$WORKBENCH/models/x.json". `output/` did
+# not move anywhere — #45 deleted it: it was scratch that happened to be
+# tracked, and the ruler now writes the render corpus to OUTPUT_DIR, a real
+# temp directory, below. `tools/render.sh` is the one bancada tool that did
+# NOT move: `tools/case.cjs`'s `--image` flag calls it at runtime, so it stays
+# in the skill, next to `drawio.cjs`, `install.sh` and `package.sh`.
 WORKBENCH="$(dirname "$HERE")"
 SKILL="$(cd "$HERE/../../../skills/panlabs-aws-diagrams" && pwd)"
+SCRIPTS="$(cd "$HERE/../../../scripts" && pwd)"
 # ⚠️ EXPORTED, and not just passed as an argument — the previous version passed the
 # binary to two of the four layer-7 checks and the other two fell back to a
 # DIFFERENT default (`AppRun` instead of `drawio`), possibly skipping silently
@@ -50,10 +55,16 @@ SKILL="$(cd "$HERE/../../../skills/panlabs-aws-diagrams" && pwd)"
 # (`tools/drawio.cjs`) and `render.sh` inherit the same value.
 DRAWIO="${1:-$HOME/.local/opt/drawio/squashfs-root/drawio}"
 export DRAWIO
-# `generate-themes.cjs`/`generate-trap.cjs` stayed in the skill's `tools/`
-# (#45's move, not #44's) but their models moved here with the rest of the
-# corpus — MODELS_DIR is how they're told where to read from now.
+# `generate-themes.cjs`/`generate-trap.cjs` moved to the workbench's own
+# `tools/` in #45, alongside their models — MODELS_DIR is how they're told
+# where to read from.
 export MODELS_DIR="$WORKBENCH/models"
+# The render corpus (#45): never versioned, so every step that used to write
+# into "$SKILL/output/" now writes here instead, and every check that used to
+# read from there reads OUTPUT_DIR.
+OUTPUT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/panlabs-aws-diagrams.XXXXXX")"
+export OUTPUT_DIR
+trap 'rm -rf "$OUTPUT_DIR"' EXIT
 failed=0
 declare -a REDS=()
 
@@ -69,7 +80,9 @@ step "model@1 × technical facet parity (#37)"   node "$HERE/check-technical-par
 step "production doesn't reach prototypes/"           node "$HERE/check-no-prototype.cjs"
 # The 30 MB ceiling is HARD and only shows up at upload time. Measuring it here is what
 # stops the tree from creeping back to 29 MB without anyone noticing — that's where it was.
-step "the package fits under the 30 MB ceiling"            "$SKILL/tools/package.sh" --check
+# Moved to the harness in #70/#45 — `tools/package.sh --check` still measures the same
+# thing by hand, but this is the one the suite runs, so the rule is not written twice.
+step "the package fits under the 30 MB ceiling"            "$SCRIPTS/checks/weight.sh" "$SKILL"
 # The front door, which until #43 nothing measured: three turns, no documented
 # command writing into this tree or reaching outside it, and /grilling named but
 # never invoked. It plants its own defects first — a document checker earns the
@@ -93,7 +106,7 @@ step "validation (fails what it should, and explains)"  node "$HERE/check-valida
 step "generation of the whole corpus"                  bash -c '
   for m in "'"$WORKBENCH"'"/models/*.json "'"$SKILL"'"/examples/*.json; do
     n="$(basename "$m" .json)"
-    node "'"$SKILL"'/engine/generate.cjs" "$m" --output "'"$SKILL"'/output/$n.drawio" > /dev/null || exit 1
+    node "'"$SKILL"'/engine/generate.cjs" "$m" --output "'"$OUTPUT_DIR"'/$n.drawio" > /dev/null || exit 1
   done
   echo "   ✓ $(ls "'"$WORKBENCH"'"/models/*.json "'"$SKILL"'"/examples/*.json | wc -l) models generated"'
 step "determinism (3 fronts, with reordering)"  node "$HERE/check-determinism.cjs"
@@ -104,7 +117,7 @@ step "the rival candidate (distance from the edge)"     node "$HERE/check-jumps.
 step "gap review: it fires AND stays quiet (#15)"   node "$HERE/check-gaps.cjs"
 step "multi-account triggers (OR, mode, level)"  node "$HERE/check-triggers.cjs"
 step "traversal: the decisions, in the file"         node "$HERE/check-traversal.cjs"
-step "bisection (the tool that isolates)"         node "$SKILL/tools/bisect-model.cjs" "$WORKBENCH/models/hub-tgw-3-accounts.json"
+step "bisection (the tool that isolates)"         node "$WORKBENCH/tools/bisect-model.cjs" "$WORKBENCH/models/hub-tgw-3-accounts.json"
 step "resource wins over qualifier on the leaf (#38)"   node "$HERE/check-resource-label.cjs"
 step "the leaf queue centers in its final box (#40)"   node "$HERE/check-leaf-queue-center.cjs"
 step "a colliding edge label slides along its edge (#40)"  node "$HERE/check-edge-label-collision.cjs"
@@ -117,11 +130,12 @@ step "partition: paint paints, metric measures"      node "$HERE/check-partition
 step "the 4 styles from #12 come out of tokens"          node "$HERE/check-tokens-of-12.cjs"
 step "the gate fails the wrong theme"             bash -c '
   M="'"$WORKBENCH"'/models/orders-serverless.json"
-  if node "'"$SKILL"'/engine/generate.cjs" "$M" --theme trap --output /dev/null > /dev/null 2>&1; then
+  TRAP="'"$WORKBENCH"'/theme/trap.json"
+  if node "'"$SKILL"'/engine/generate.cjs" "$M" --theme "$TRAP" --output /dev/null > /dev/null 2>&1; then
     echo "   ✗ the \"trap\" theme PASSED the gate"; exit 1
   fi
   echo "   ✓ \"trap\" failed without --force"
-  if node "'"$SKILL"'/engine/generate.cjs" "$M" --theme trap --force --output /dev/null > /dev/null 2>&1; then
+  if node "'"$SKILL"'/engine/generate.cjs" "$M" --theme "$TRAP" --force --output /dev/null > /dev/null 2>&1; then
     echo "   ✓ --force generates it anyway, so the damage can be seen"
   else
     echo "   ✗ --force did not generate — the escape valve broke"; exit 1
@@ -170,8 +184,8 @@ echo
 echo "════ layer 6 · the session ════"
 step "the production engine's manifest"           node "$HERE/check-engine-untouched.cjs"
 step "the projection, with 12 control mutations"    node "$HERE/check-projection.cjs"
-step "step 5 — the logical view, approved"        node "$SKILL/tools/approve.cjs" "$SKILL/examples/session/retail-logical.json" --at 2026-08-21 --output "$SKILL/output/retail.drawio"
-step "steps 1 and 6 — resume and technical view"   node "$SKILL/tools/resume.cjs" "$SKILL/output/retail.drawio" --delta "$SKILL/examples/session/retail-elaboration.json"
+step "step 5 — the logical view, approved"        node "$SKILL/tools/approve.cjs" "$SKILL/examples/session/retail-logical.json" --at 2026-08-21 --output "$OUTPUT_DIR/retail.drawio"
+step "steps 1 and 6 — resume and technical view"   node "$SKILL/tools/resume.cjs" "$OUTPUT_DIR/retail.drawio" --delta "$SKILL/examples/session/retail-elaboration.json"
 step "the arc end to end, on a new case (#26)"  node "$HERE/check-arc.cjs"
 step "the dossier's privacy"                    node "$HERE/check-dossier.cjs"
 step "the case verb writes at the caller's root (#41)"  node "$HERE/check-case.cjs"
@@ -193,9 +207,9 @@ else
   # and last the pixel — because pixel verification READS what render
   # wrote. Serial on purpose (finding from #13 about Electron concurrency).
   step "render the corpus" bash -c '
-    "'"$SKILL"'/tools/clean-render.sh" > /dev/null 2>&1 || true
+    "'"$WORKBENCH"'/tools/clean-render.sh" > /dev/null 2>&1 || true
     failed=0
-    for d in "'"$SKILL"'"/output/*.drawio; do
+    for d in "'"$OUTPUT_DIR"'"/*.drawio; do
       "'"$SKILL"'/tools/render.sh" "$d" "${d%.drawio}.png" || failed=1
     done
     exit $failed'
@@ -204,17 +218,19 @@ else
   # Until #29 `output/themes/*.drawio` was committed, and layer 7 rendered whatever
   # it found there. That put 6.7 MB of generated output inside the package the user
   # installs — and the official authoring convention is the opposite: eval output lives
-  # in a sibling workspace. `output/` became an ignored scratch directory, and whoever
-  # builds the variants has always known how to build them. Measured: the regeneration comes out
-  # byte for byte identical to what was committed.
+  # in a sibling workspace. `output/` became an ignored scratch directory that stayed
+  # tracked by accident anyway (three stray files, found and removed in #45) — the fix
+  # was to stop having a versioned `output/` at all: OUTPUT_DIR is a real temp
+  # directory, and whoever builds the variants has always known how to build them.
+  # Measured: the regeneration comes out byte for byte identical to what was committed.
   step "the theme variants, rebuilt"        bash -c '
-    node "'"$SKILL"'/tools/generate-themes.cjs" > /dev/null && node "'"$SKILL"'/tools/generate-trap.cjs" > /dev/null
-    n=$(ls "'"$SKILL"'"/output/themes/*.drawio | wc -l)
+    node "'"$WORKBENCH"'/tools/generate-themes.cjs" > /dev/null && node "'"$WORKBENCH"'/tools/generate-trap.cjs" > /dev/null
+    n=$(ls "'"$OUTPUT_DIR"'"/themes/*.drawio | wc -l)
     [ "$n" -ge 7 ] && echo "   ✓ $n variant(s)" || { echo "   ✗ only $n variant(s)"; exit 1; }'
   step "render the theme variants" bash -c '
-    "'"$SKILL"'/tools/clean-render.sh" > /dev/null 2>&1 || true
+    "'"$WORKBENCH"'/tools/clean-render.sh" > /dev/null 2>&1 || true
     failed=0
-    for d in "'"$SKILL"'"/output/themes/*.drawio; do
+    for d in "'"$OUTPUT_DIR"'"/themes/*.drawio; do
       name="$(basename "$d" .drawio)"
       # the animated one is only visible in SVG — #4 measured that its PNG turns into a
       # STATIC dashed line with no error, and a PNG here would be false proof
@@ -227,7 +243,7 @@ else
     done
     exit $failed'
   if command -v python3 > /dev/null && python3 -c "import PIL" 2>/dev/null; then
-    step "the theme landed on the PIXEL (the lesson from #17)"  python3 "$SKILL/tools/verify-theme.py" --all
+    step "the theme landed on the PIXEL (the lesson from #17)"  python3 "$WORKBENCH/tools/verify-theme.py" --all "$OUTPUT_DIR/themes"
   else
     echo "   Pillow missing — pixel verification skipped."
   fi

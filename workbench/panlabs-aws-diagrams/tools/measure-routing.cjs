@@ -29,16 +29,19 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..');
-const { generate } = require(path.join(ROOT, 'engine', 'generate.cjs'));
-const { validateGeometry } = require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
-const { approve } = require(path.join(ROOT, 'session', 'agreement.cjs'));
-const { elaborate } = require(path.join(ROOT, 'session', 'elaborate.cjs'));
-const { project } = require(path.join(ROOT, 'session', 'project.cjs'));
+const WORKBENCH = path.join(__dirname, '..');
+const SKILL = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { generate } = require(path.join(SKILL, 'engine', 'generate.cjs'));
+const { validateGeometry } = require(path.join(SKILL, 'validator', 'validate-geometry.cjs'));
+const { approve } = require(path.join(SKILL, 'session', 'agreement.cjs'));
+const { elaborate } = require(path.join(SKILL, 'session', 'elaborate.cjs'));
+const { project } = require(path.join(SKILL, 'session', 'project.cjs'));
 
 /** The technical model of the #14 session, without going through any file. */
 function sessionModels() {
-  const read = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'models', 'session', f), 'utf8'));
+  // retail-logical/retail-elaboration are the skill's own minimal examples
+  // (#44) — not part of the workbench corpus.
+  const read = f => JSON.parse(fs.readFileSync(path.join(SKILL, 'examples', 'session', f), 'utf8'));
   const approved = approve(read('retail-logical.json'), { at: '2026-08-21', by: 'user', candidate: 'cand-a' });
   const technical = elaborate(approved, read('retail-elaboration.json'));
   return [
@@ -48,7 +51,7 @@ function sessionModels() {
 }
 
 function inputs() {
-  const dir = path.join(ROOT, 'models');
+  const dir = path.join(WORKBENCH, 'models');
   const corpus = fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort()
     .map(f => ({ name: path.basename(f, '.json'), model: JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) }));
   return [...corpus, ...sessionModels()];

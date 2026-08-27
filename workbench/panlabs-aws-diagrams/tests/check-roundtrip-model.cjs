@@ -27,6 +27,9 @@ const WORKBENCH = path.join(__dirname, '..');
 const { binary } = require(path.join(ROOT, 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
 const TMP = process.env.TMPDIR || '/tmp';
+// The render corpus is scratch (#45) — the ruler exports OUTPUT_DIR once and
+// every check that reads a generated `.drawio` reads it from there.
+const OUTPUT_DIR = process.env.OUTPUT_DIR || TMP;
 
 const UNESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'" };
 function unescape(s) {
@@ -45,14 +48,14 @@ function extract(xml) {
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 let failures = 0;
-const files = fs.readdirSync(path.join(ROOT, 'output')).filter(f => f.endsWith('.drawio'));
-if (!files.length) { console.log('  (no .drawio in output/ — run the engine first)'); process.exit(1); }
+const files = fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('.drawio'));
+if (!files.length) { console.log(`  (no .drawio in ${OUTPUT_DIR} — run the engine first)`); process.exit(1); }
 
 const hasApp = fs.existsSync(DRAWIO);
 if (!hasApp) console.log(`  draw.io headless missing at ${DRAWIO} — static layer only.\n`);
 
 for (const file of files) {
-  const filePath = path.join(ROOT, 'output', file);
+  const filePath = path.join(OUTPUT_DIR, file);
   const xml = fs.readFileSync(filePath, 'utf8');
   const name = file.replace(/\.drawio$/, '');
   // style variants (dashed/animated flow) come out of the same model under a

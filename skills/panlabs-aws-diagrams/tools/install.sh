@@ -117,8 +117,6 @@ echo
 for base in "$HOME/.claude/skills/$NAME" "$HOME/.agents/skills/$NAME"; do
   if [ ! -r "$base/SKILL.md" ]; then bad "$base/SKILL.md unreadable"; continue; fi
   ok "$base/SKILL.md readable"
-  [ -r "$base/agents/openai.yaml" ] && ok "$base/agents/openai.yaml present" \
-    || bad "$base/agents/openai.yaml missing"
   # the test that matters: a skill command RUNNING from the link
   if output="$(cd "$base" && node catalog/aws-shapes.cjs lambda 2>&1)"; then
     echo "$output" | grep -q "mxgraph.aws4.lambda" \

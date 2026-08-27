@@ -16,7 +16,9 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const dir = path.join(__dirname, '..');
+// catalog/tools/ and catalog/tests/ moved to the workbench sibling in #45;
+// aws-shapes.cjs and the two JSON files it reads stayed in the skill.
+const dir = path.join(__dirname, '..', '..', '..', '..', 'skills', 'panlabs-aws-diagrams', 'catalog');
 const { load, applyTemplate, fixGroup } = require(path.join(dir, 'aws-shapes.cjs'));
 
 const cat = load(dir);

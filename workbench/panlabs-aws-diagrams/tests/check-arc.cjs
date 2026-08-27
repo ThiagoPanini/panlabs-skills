@@ -43,6 +43,7 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
@@ -67,8 +68,10 @@ const record = (ok, what, detail) => {
 
 const LOGICAL = path.join(WORKBENCH, 'models', 'session', 'fleet-logical.json');
 const DELTA = path.join(WORKBENCH, 'models', 'session', 'fleet-elaboration.json');
-const OUTPUT = path.join(ROOT, 'output', 'predictive-fleet.drawio');
-const PUBLISHED = path.join(ROOT, 'output', 'predictive-fleet.published.drawio');
+// Scratch (#45) — written and read within this same run, never versioned.
+const OUTPUT_DIR = process.env.OUTPUT_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'panlabs-aws-diagrams-'));
+const OUTPUT = path.join(OUTPUT_DIR, 'predictive-fleet.drawio');
+const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
 
 (async () => {
   const session = JSON.parse(fs.readFileSync(LOGICAL, 'utf8'));

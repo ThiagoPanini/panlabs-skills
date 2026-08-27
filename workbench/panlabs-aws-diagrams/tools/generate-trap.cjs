@@ -22,12 +22,20 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const { generate } = require('../engine/generate.cjs');
-const contrast = require('../engine/contrast.cjs');
 
 const ROOT = path.join(__dirname, '..');
-fs.mkdirSync(path.join(ROOT, 'output', 'themes'), { recursive: true });
+const SKILL = path.join(ROOT, '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { generate } = require(path.join(SKILL, 'engine', 'generate.cjs'));
+const contrast = require(path.join(SKILL, 'engine', 'contrast.cjs'));
+
+// theme/trap.json moved here in #45 — the trap is dev-only proof material,
+// never a nameable `--theme` in the published skill.
+const TRAP_THEME = path.join(ROOT, 'theme', 'trap.json');
+
+const OUTPUT_DIR = process.env.OUTPUT_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'panlabs-aws-diagrams-'));
+fs.mkdirSync(path.join(OUTPUT_DIR, 'themes'), { recursive: true });
 // The corpus moved to the workbench sibling in #44; MODELS_DIR is how the
 // ruler (which knows where that is) tells this tool where to read from.
 const MODELS_DIR = process.env.MODELS_DIR || path.join(ROOT, 'models');
@@ -48,17 +56,17 @@ function patch(xml) {
 
 async function main() {
   // --- d: sayable and wrong -------------------------------------------------
-  const d = await generate(MODEL, { tema: 'trap', force: true });
-  fs.writeFileSync(path.join(ROOT, 'output', 'themes', 'd-trap.drawio'), d.xml);
+  const d = await generate(MODEL, { tema: TRAP_THEME, force: true });
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'themes', 'd-trap.drawio'), d.xml);
   console.log('d-trap  — the gate would fail it like this:');
   for (const l of contrast.summarize(d.relatorio.contraste)) console.log('   ✗ ' + l);
-  fs.writeFileSync(path.join(ROOT, 'output', 'themes', 'd-trap.verdict.txt'),
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'themes', 'd-trap.verdict.txt'),
     contrast.summarize(d.relatorio.contraste).join('\n') + '\n');
 
   // --- e: unspeakable --------------------------------------------------------
   const e = await generate(MODEL, { tema: 'light' });
   const patched = patch(e.xml);
-  fs.writeFileSync(path.join(ROOT, 'output', 'themes', 'e-unspeakable.drawio'), patched);
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'themes', 'e-unspeakable.drawio'), patched);
   const howMany = k => (patched.match(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
   console.log('\ne-unspeakable  — patches that NO theme token can write:');
   console.log(`   sketch=1 injected into ${howMany('sketch=1')} AWS4 shape(s)`);

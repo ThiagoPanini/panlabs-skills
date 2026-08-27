@@ -5,28 +5,31 @@ subnet privada" numa style string do mxGraph que renderiza o ícone certo.
 
 Resolve o ticket
 [Extrair o catálogo de shapes AWS com as correções de cor e container](https://github.com/ThiagoPanini/panlabs-skills/issues/17).
-A matéria-prima foi a pesquisa de shapes do #17. Ela está cristalizada aqui:
-[`aws4.catalog.json`](aws4.catalog.json) é o extrato do `Sidebar-AWS4.js`, e
-[`corrections.json`](corrections.json) é o que a pesquisa corrigiu nele.
+A matéria-prima foi a pesquisa de shapes do #17. Ela está cristalizada em
+`aws4.catalog.json`, o extrato do `Sidebar-AWS4.js`, e `corrections.json`, o
+que a pesquisa corrigiu nele.
 
-> **Decidido: ele mora aqui.** A estrutura da skill deixou de ser névoa — o
-> documento que o agente lê é [`../SKILL.md`](../SKILL.md), com a prosa de
-> operação em [`../guide/`](../guide/), e `catalog/` continua sendo um diretório de
-> código irmão de `engine/`. Quem quiser saber como o motor resolve um nome por
-> aqui: [`../guide/model.md`](../guide/model.md).
+> **Este diretório é a bancada, não o catálogo.** O #45 moveu as ferramentas
+> que extraem e conferem o catálogo para cá, o workspace irmão — o mesmo
+> critério do #44: "o agente lê ou roda isto para executar a skill?". O
+> catálogo em si (`aws-shapes.cjs`, `aws4.catalog.json`, `corrections.json`) **é**
+> o que a execução consome, e continua em
+> [`skills/panlabs-aws-diagrams/catalog/`](../../../skills/panlabs-aws-diagrams/catalog/)
+> — o documento que o agente lê é o `SKILL.md` de lá, com a prosa de operação em
+> `guide/`. Quem quiser saber como o motor resolve um nome: `guide/model.md`.
 
 ## Os arquivos
 
-| Arquivo | O que é | Gerado? |
+| Arquivo | O que é | Mora em |
 |---|---|---|
-| `aws4.catalog.json` | Espelho **fiel** do que o draw.io entrega: 403 service icons, 606 resource icons, 20 grupos, 30 categorias. | **sim** — não edite |
-| `corrections.json` | O delta para o que a **AWS prescreve**: cores de paleta legada, `container=1`, renomes, desambiguação. Cada entrada carrega a evidência. | não — escrito à mão |
-| `aws-shapes.cjs` | Resolve nome → shape e monta a style. Aplica as correções. Também é CLI. | não |
-| `tools/extract-aws4-catalog.cjs` | Regenera o catálogo a partir de um clone do `jgraph/drawio`. | — |
-| `tools/check-catalog.cjs` | 24 checagens estáticas, incluindo o round-trip. | — |
-| `tools/render-sample.cjs` | Monta a amostra e o manifesto de posições. | — |
-| `tools/verify-render.py` | Verificação por pixel: cada shape mostra glifo, não caixa vazia. | — |
-| `tests/sample.drawio` · `.png` · `.manifest.json` | A amostra renderizada e conferida. | **sim** |
+| `aws4.catalog.json` | Espelho **fiel** do que o draw.io entrega: 403 service icons, 606 resource icons, 20 grupos, 30 categorias. Gerado — não edite. | a skill |
+| `corrections.json` | O delta para o que a **AWS prescreve**: cores de paleta legada, `container=1`, renomes, desambiguação. Cada entrada carrega a evidência. Escrito à mão. | a skill |
+| `aws-shapes.cjs` | Resolve nome → shape e monta a style. Aplica as correções. Também é CLI. | a skill |
+| `tools/extract-aws4-catalog.cjs` | Regenera o catálogo a partir de um clone do `jgraph/drawio`. | aqui |
+| `tools/check-catalog.cjs` | 24 checagens estáticas, incluindo o round-trip. | aqui |
+| `tools/render-sample.cjs` | Monta a amostra e o manifesto de posições. | aqui |
+| `tools/verify-render.py` | Verificação por pixel: cada shape mostra glifo, não caixa vazia. | aqui |
+| `tests/sample.drawio` · `.png` · `.manifest.json` | A amostra renderizada e conferida. Gerado. | aqui |
 
 A separação entre as duas primeiras linhas é o ponto do desenho: **reextrair não
 apaga correção**, e dá para responder "isto é assim porque o draw.io é assim" ou
@@ -35,7 +38,7 @@ apaga correção**, e dá para responder "isto é assim porque o draw.io é assi
 ## Usar
 
 ```js
-const cat = require('./aws-shapes.cjs').load();
+const cat = require('../../../skills/panlabs-aws-diagrams/catalog/aws-shapes.cjs').load();
 
 cat.service('lambda');
 // { style: 'sketch=0;points=[...];fillColor=#ED7100;...resIcon=mxgraph.aws4.lambda;',
@@ -47,10 +50,10 @@ cat.group('Availability Zone').corrections;
 // [ '#147EBA->#00A4A6', 'container=1' ]
 ```
 
-Como CLI, para conferir na mão:
+Como CLI, para conferir na mão — rodando de dentro da skill:
 
 ```bash
-node aws-shapes.cjs lambda opensearch "availability zone"
+node catalog/aws-shapes.cjs lambda opensearch "availability zone"
 ```
 
 ### A escada de resolução

@@ -2,6 +2,8 @@
 
 O laudo sai **sempre**, em `relatorio.geometry` e no `--explain`. Bloquear é que é opcional. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
+> O nome híbrido é real e não é erro de digitação: a chave é portuguesa e a subchave inglesa, porque a #53 converteu os contratos e parou antes do vocabulário interno. Este guia nomeia o campo **como ele existe hoje**; a conversão está registrada na [#134](https://github.com/ThiagoPanini/panlabs-skills/issues/134), que também alcança o `calibravel` mais abaixo.
+
 ```bash
 node tools/check-geometry.cjs <modelo.json>          # o laudo, legível
 node tools/check-geometry.cjs <modelo.json> --json    # para ler no código

@@ -635,7 +635,7 @@ async function porElk(model, d, res) {
 function eixoDaGrade(model) {
   const numbered = (model.edges || []).some(a => a.order !== undefined);
   return {
-    eixo: numbered ? 'lane' : 'column',
+    eixo: numbered ? 'swimlane' : 'column',
     because: numbered
       ? 'there is a numbered step — the ordered dimension takes the horizontal (#21)'
       : 'no numbered step — the AZ stays in the column, like the deck (#21)',
@@ -737,7 +737,7 @@ async function porGrade(model, d, res) {
   const elk = new ELK();
   const boxes = new Map();
   const { eixo, because: whyAxis } = eixoDaGrade(model);
-  const raia = eixo === 'lane';
+  const swimlane = eixo === 'swimlane';
 
   const vpcs = model.nodes.filter(n => n.kind === 'vpc');
   const subnets = model.nodes.filter(n => n.kind === 'subnet');
@@ -828,10 +828,10 @@ async function porGrade(model, d, res) {
 
   // 2. each zone's TRANSVERSAL extent: width with AZ in a column, height with
   //    AZ in a swimlane. This is the only place the transposition touches the measurement.
-  const extT = s => raia ? intra.get(s.id).h : intra.get(s.id).w;
-  const extP = s => raia ? intra.get(s.id).w : intra.get(s.id).h;
-  const minT = raia ? 90 : 200;
-  const minP = raia ? 200 : 90;
+  const extT = s => swimlane ? intra.get(s.id).h : intra.get(s.id).w;
+  const extP = s => swimlane ? intra.get(s.id).w : intra.get(s.id).h;
+  const minT = swimlane ? 90 : 200;
+  const minP = swimlane ? 200 : 90;
 
   /**
    * The PRINCIPAL gap, with the grid transposed, has to fit the edge's label.
@@ -844,8 +844,8 @@ async function porGrade(model, d, res) {
    * icon"), except here there's no ELK to hand it to: the grid itself reserves it.
    */
   const larguraDoRotulo = Math.max(0, ...d.edges.map(a => res.larguraDaAresta(textoDaAresta(a))));
-  const GAP_T = raia ? GAP.ROW_GAP : GAP.COL_GAP;
-  const GAP_P = raia ? Math.max(GAP.ROW_GAP, larguraDoRotulo + 24) : GAP.ROW_GAP;
+  const GAP_T = swimlane ? GAP.ROW_GAP : GAP.COL_GAP;
+  const GAP_P = swimlane ? Math.max(GAP.ROW_GAP, larguraDoRotulo + 24) : GAP.ROW_GAP;
 
   const tamT = new Map(zonas.map(z =>
     [z, Math.max(minT, ...subnets.filter(s => s.az === z).map(extT))]));
@@ -877,7 +877,7 @@ async function porGrade(model, d, res) {
       return { v, az: s.az, idx: rolesByVpc.get(v) ? rolesByVpc.get(v).indexOf(role(s)) : -1 };
     }).filter(x => x.idx >= 0);
 
-    if (raia) {
+    if (swimlane) {
       const idxs = members.map(l => zonas.indexOf(l.az)).filter(i => i >= 0);
       if (!idxs.length) continue;
       const first = Math.min(...idxs);
@@ -907,7 +907,7 @@ async function porGrade(model, d, res) {
   let t = 0;
   for (const [i, z] of zonas.entries()) {
     if (i > 0) t += GAP_T;
-    const reserve = raia ? SWIMLANE_LANE + (porRaia.get(i) || 0) : 0;
+    const reserve = swimlane ? SWIMLANE_LANE + (porRaia.get(i) || 0) : 0;
     reservaDaRaia.set(z, reserve);
     t += reserve;
     posT.set(z, t);
@@ -923,7 +923,7 @@ async function porGrade(model, d, res) {
   // swimlane, the zone's label lives in the lane BETWEEN swimlanes, so the
   // principal axis starts at the margin and it's the transversal one that
   // carries the reserve.
-  let p = raia ? GAP.PAD : HEAD + AZ_LANE;
+  let p = swimlane ? GAP.PAD : HEAD + AZ_LANE;
   for (const v of vpcs) {
     const roles = rolesByVpc.get(v.id);
     const ofVpc = porLinha.get(v.id) || new Map();
@@ -933,7 +933,7 @@ async function porGrade(model, d, res) {
     // the container's title band consumes the PRINCIPAL axis when the
     // principal is Y; with the grid transposed it consumes the transversal,
     // not the principal
-    let run = raia ? GAP.PAD : cV.titleH + GAP.PAD;
+    let run = swimlane ? GAP.PAD : cV.titleH + GAP.PAD;
     const posP = [], tamP = [];
     roles.forEach((pa, i) => {
       if (i > 0) run += GAP_P + calhaDaLinha(ofVpc.get(i) || [], zonas);
@@ -944,15 +944,15 @@ async function porGrade(model, d, res) {
 
     // the top of the content inside the VPC: title + padding, plus the first
     // swimlane's label lane when the grid is transposed
-    const shiftT = raia ? HEAD + cV.titleH + GAP.PAD : 2 * GAP.PAD;
-    vpcBox.set(v.id, raia
+    const shiftT = swimlane ? HEAD + cV.titleH + GAP.PAD : 2 * GAP.PAD;
+    vpcBox.set(v.id, swimlane
       ? { x: p, y: HEAD, w: run, h: cV.titleH + GAP.PAD + extensaoT + GAP.PAD }
       : { x: GAP.PAD, y: p, w: extensaoT + 2 * GAP.PAD, h: run });
 
     for (const s of subnets) {
       if (vpcOf(s) !== v.id) continue;
       const i = roles.indexOf(role(s));
-      pos.set(s.id, raia
+      pos.set(s.id, swimlane
         ? { x: p + posP[i], y: shiftT + posT.get(s.az), w: tamP[i], h: tamT.get(s.az) }
         : { x: 2 * GAP.PAD + posT.get(s.az), y: p + posP[i], w: tamT.get(s.az), h: tamP[i] });
     }
@@ -991,11 +991,11 @@ async function porGrade(model, d, res) {
     : HEAD;
 
   return {
-    pos, vpcBox, intra, boxes, calhas, zonas, azs: zonas, eixo, raia, whyAxis,
+    pos, vpcBox, intra, boxes, calhas, zonas, azs: zonas, eixo, swimlane, whyAxis,
     varreduraRaias, SWIMLANE_LANE, reservaDaRaia,
     colX: posT, colW: tamT, posT, tamT, extensaoT,
-    larguraGrade: raia ? fimP : extensaoT,
-    fim: raia ? alturaRaia : fimP,
+    larguraGrade: swimlane ? fimP : extensaoT,
+    fim: swimlane ? alturaRaia : fimP,
     AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, PAD: GAP.PAD,
   };
 }

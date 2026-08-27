@@ -39,16 +39,16 @@ const schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'session', 'schema.jso
 const props = new Set();
 const unclosed = [];
 
-(function tier(no, path) {
+(function tier(no, ptr) {
   if (!no || typeof no !== 'object') return;
-  if (Array.isArray(no)) return no.forEach((v, i) => tier(v, `${path}[${i}]`));
+  if (Array.isArray(no)) return no.forEach((v, i) => tier(v, `${ptr}[${i}]`));
   if (no.properties) {
     for (const k of Object.keys(no.properties)) props.add(k);
     // `acordo.recorte` guarda a projecao aprovada tal como ela saiu: e dado, nao
     // esquema, e nao tem `properties` — cai fora desta regra por construcao.
-    if (no.additionalProperties !== false && no.type === 'object') unclosed.push(path || '(raiz)');
+    if (no.additionalProperties !== false && no.type === 'object') unclosed.push(ptr || '(raiz)');
   }
-  for (const [k, v] of Object.entries(no)) tier(v, `${path}/${k}`);
+  for (const [k, v] of Object.entries(no)) tier(v, `${ptr}/${k}`);
 })(schema, '');
 
 for (const p of props)
@@ -68,13 +68,13 @@ const modelos = [
 ];
 for (const arq of modelos) {
   const bruto = JSON.parse(fs.readFileSync(arq, 'utf8'));
-  (function sweep(no, path) {
+  (function sweep(no, ptr) {
     if (!no || typeof no !== 'object') return;
-    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${path}[${i}]`));
+    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${ptr}[${i}]`));
     for (const [k, v] of Object.entries(no)) {
-      if (path.startsWith('dossier')) continue;      // opaco ao motor por contrato (#11)
-      if (GEOMETRY.includes(normal(k))) failures.push(`${arq}: chave "${k}" em ${path}`);
-      sweep(v, path ? `${path}.${k}` : k);
+      if (ptr.startsWith('dossier')) continue;      // opaco ao motor por contrato (#11)
+      if (GEOMETRY.includes(normal(k))) failures.push(`${arq}: chave "${k}" em ${ptr}`);
+      sweep(v, ptr ? `${ptr}.${k}` : k);
     }
   })(bruto, '');
 }
@@ -84,14 +84,14 @@ for (const arq of modelos) {
 // grande solto: coordenada de pagina vive na casa das centenas.
 for (const arq of modelos) {
   const bruto = JSON.parse(fs.readFileSync(arq, 'utf8'));
-  (function sweep(no, path) {
+  (function sweep(no, ptr) {
     if (!no || typeof no !== 'object') return;
-    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${path}[${i}]`));
+    if (Array.isArray(no)) return no.forEach((v, i) => sweep(v, `${ptr}[${i}]`));
     for (const [k, v] of Object.entries(no)) {
-      if (path.startsWith('dossier')) continue;
+      if (ptr.startsWith('dossier')) continue;
       if (typeof v === 'number' && Math.abs(v) > 100)
-        failures.push(`${arq}: numero ${v} em ${path}.${k} — grande demais para nao ser pixel`);
-      sweep(v, path ? `${path}.${k}` : k);
+        failures.push(`${arq}: numero ${v} em ${ptr}.${k} — grande demais para nao ser pixel`);
+      sweep(v, ptr ? `${ptr}.${k}` : k);
     }
   })(bruto, '');
 }

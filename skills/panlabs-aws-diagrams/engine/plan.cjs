@@ -373,7 +373,7 @@ function azBandBoxes(model, g) {
     // right through `CROSS_OUT` — that overflow is what makes the crossing
     // VISIBLE (#19, rule 3). The label lives in the strip reserved above.
     const lane = g.reservaDaRaia.get(z) || g.SWIMLANE_LANE;
-    boxes.set(z, g.raia
+    boxes.set(z, g.swimlane
       ? {
           x: left - 8,
           y: Math.min(...members.map(m => m.y)) - lane,
@@ -516,7 +516,7 @@ function drawOutsiders(layoutPlan, model, d, res, g, mo) {
  * the middle, go around the OUTSIDE. In column mode a band is a full-HEIGHT
  * strip, so "outside" means a row below every band — north was measured too
  * and rejected: it runs into the title block, which owns everything above
- * y=0 that isn't the grid's own `HEAD`/`AZ_LANE` reserve. In raia mode a
+ * y=0 that isn't the grid's own `HEAD`/`AZ_LANE` reserve. In swimlane mode a
  * band is a full-WIDTH strip, so "outside" means a column past every VPC —
  * which, for an outsider, is simply the side it already lives on (#5's O19).
  * A leg bound by the SAME axis as its own end never crosses anything that
@@ -600,7 +600,7 @@ function outsiderEdges(layoutPlan, model, d, res, g, mo) {
     // outsider is `a.from`) and reversed when it's `a.to` instead — the
     // waypoints have to walk from `a.from` to `a.to`, in that order, or the
     // implicit final segment connects the wrong pair of ends.
-    if (g.raia) {
+    if (g.swimlane) {
       // zones are Y-stacked, full WIDTH — "outside" is west, same side the
       // outsider already lives on: drop/rise straight there, at ITS x, then
       // enter the target horizontally at ITS own y (its own lane's only).
@@ -617,7 +617,7 @@ function outsiderEdges(layoutPlan, model, d, res, g, mo) {
       // down to the safe row happens at `west`, NOT at the outsider's own
       // edge — two outsiders share a column, and a sibling can sit between
       // one of them and the safe row (measured: banlist's own "checks"
-      // edges crossed agent's box before this, same shape as raia's own
+      // edges crossed agent's box before this, same shape as swimlane's own
       // west-first adjustment above).
       const outY = outEnd.y + outEnd.h * fy;
       const targetCenterX = gridEnd.x + gridEnd.w / 2;
@@ -683,7 +683,7 @@ function gridPlan(model, d, res, g, opts = {}) {
     // whatever's there. Anchoring left is the ENGINE's call by the same
     // criterion as the member bands' halo: the palette stays the catalog's,
     // the legibility is whoever positions it.
-    const style = res.faixaAz().style + (g.raia ? 'align=left;spacingLeft=10;' : '');
+    const style = res.faixaAz().style + (g.swimlane ? 'align=left;spacingLeft=10;' : '');
     layoutPlan.cells.push({
       kind: 'vertice', id: `az-${z}`, parent: cloudId,
       label: `Availability Zone · ${z}`, style, geo,
@@ -898,7 +898,7 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
    */
   const subnets = model.nodes.filter(n => n.kind === 'subnet').map(n => n.id);
   const bands = azBandBoxes(model, g);
-  const onAxis = g.raia ? boxOnX : boxOnY;
+  const onAxis = g.swimlane ? boxOnX : boxOnY;
   const barriers = a => {
     const mine = new Set([subnetOf(a.from), subnetOf(a.to)]);
     const myBands = new Set([laneOf(a.from), laneOf(a.to)]);
@@ -912,10 +912,10 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
     const o = abs.get(a.from), dst = abs.get(a.to);
     if (!o || !dst) continue;
     const same = laneOf(a.from) && laneOf(a.from) === laneOf(a.to);
-    const forward = g.raia ? dst.x >= o.x : dst.y >= o.y;
+    const forward = g.swimlane ? dst.x >= o.x : dst.y >= o.y;
 
     let anc, points = [];
-    if (g.raia) {
+    if (g.swimlane) {
       const y0 = o.y + o.h / 2, y1 = dst.y + dst.h / 2;
       anc = { output: { x: forward ? 1 : 0, y: 0.5 }, input: { x: forward ? 0 : 1, y: 0.5 } };
       if (!same) {

@@ -9,7 +9,7 @@
  * argument rather than measurement.
  *
  *   WHERE the model lives -> embedded (`<object>`), not a sidecar.
- *   HOW the views live    -> two `<diagram>` pages of the SAME file.
+ *   HOW the views live    -> the `<diagram>` pages of the SAME file.
  *
  * The sidecar falls for one reason only, and it is the same reason #11 used for
  * not having a second file: **two files drift apart**. A `.drawio` without its
@@ -18,7 +18,7 @@
  * breaks the first time. None of this is hypothetical: it is the normal way a
  * file travels inside a company.
  *
- * Two pages instead of two files is the same argument one level up.
+ * Pages instead of files is the same argument one level up.
  *
  * The model is written on EVERY page, not only the first. It costs bytes
  * (measured in `tools/measure-host.cjs`) and buys something concrete: deleting a

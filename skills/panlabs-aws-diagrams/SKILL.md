@@ -64,7 +64,9 @@ Grave a sessão e o descritivo fora desta árvore, e rode o verbo **de dentro do
 node <raiz-da-skill>/tools/case.cjs /tmp/<case-slug>.session.json <case-slug> --brief /tmp/<case-slug>.brief.txt
 ```
 
-Sai um diretório em `docs/architecture/diagrams/<case-slug>/`, a partir da raiz do repositório git de quem chamou — criado quando não existe, e fora de repositório git cai no diretório corrente **com aviso**. Dentro dele, **um** `.drawio` de duas abas, lógica primeiro, com a sessão embutida uma cópia por página — apagar uma aba não impede retomar pela outra —, e um `case.md` de cinco seções fixas. Com `--image`, e existindo o binário do draw.io, sai também o PNG; não existindo, **avisa e segue**.
+Sai um diretório em `docs/architecture/diagrams/<case-slug>/`, a partir da raiz do repositório git de quem chamou — criado quando não existe, e fora de repositório git cai no diretório corrente **com aviso**. Dentro dele, **um** `.drawio` com as duas vistas, lógica primeiro, com a sessão embutida uma cópia por página — apagar uma aba não impede retomar pelas outras —, e um `case.md` de cinco seções fixas. Com `--image`, e existindo o binário do draw.io, sai também o PNG; não existindo, **avisa e segue**.
+
+**Duas abas é o piso, não o teto.** A vista lógica sai em uma página — o casaco lógico não tem como declarar conta, `account` não está entre os três `kind` que ele aceita —, e a **técnica** sai em `1+N`: uma consolidada mais uma por conta, assim que o modelo tem **duas contas ou mais**. Com uma conta, ou nenhuma, `N` é zero e o arquivo abre com as duas abas de sempre; com as três contas do par de [`examples/session/`](examples/session/), abre com **cinco**. O corte é **estrutural**, não gatilho de saturação: as de detalhe saem no mesmo comando que a consolidada, e o porquê está em [`guide/model.md`](guide/model.md). Vista de detalhe que não sai **avisa e segue** — o arquivo grava sem ela, nomeando a conta e o motivo.
 
 **O portão de veracidade está ligado por padrão neste caminho** (`--gate truthfulness`). Sem humano entre as duas vistas, é ele que recusa gravar um desenho que afirma fronteira de rede que o modelo nega.
 
@@ -133,7 +135,7 @@ node -e "const {elaborate}=require('./session/elaborate.cjs');
 
 | | |
 |---|---|
-| `node tools/case.cjs <sessao.json> <slug> --brief <b.txt>` | o turno 2: as duas abas e o `case.md`, em `docs/architecture/diagrams/<slug>/` do projeto de quem chamou. **Rode do diretório desse projeto** — o destino sobe do diretório corrente. `--gate` (padrão `truthfulness`) · `--image` |
+| `node tools/case.cjs <sessao.json> <slug> --brief <b.txt>` | o turno 2: as duas vistas e o `case.md`, em `docs/architecture/diagrams/<slug>/` do projeto de quem chamou. **Rode do diretório desse projeto** — o destino sobe do diretório corrente. `--gate` (padrão `truthfulness`) · `--image` |
 | `node engine/generate.cjs <m.json> --output <x.drawio>` | desenha um `model@1` direto. `--theme light\|dark\|corporate` · `--flow solid\|dashed\|animated` · `--gate none\|truthfulness\|failure\|strict` · `--explain` |
 | `node tools/check-geometry.cjs <m.json>` | o laudo das 62 checagens. `--examples` roda os exemplos que a skill embarca, `--json` para ler no código, `--theme` avalia o tema pedido (padrão `light`) |
 | `node tools/review-gaps.cjs <m.json>` | a revisão de lacunas |
@@ -155,7 +157,7 @@ Recusa alto em vez de desenhar errado. Toda recusa vem com a lista do que conser
 | tema que reprova no contraste | rótulo que some não dá erro em lugar nenhum. `--force` gera assim mesmo, para o estrago poder ser visto |
 | subnet sem camada de rede, no caminho da grade | a ordem das linhas **é** o desenho, e ordem inventada põe a camada de dados em cima |
 | desenho que afirma fronteira que o modelo nega | é o portão de veracidade, ligado por padrão no verbo de caso. `--gate none` desliga, para o estrago poder ser visto |
-| sessão no estágio lógico, no verbo de caso | duas abas é o ponto de um caso, e uma sessão sem casaco técnico só tem uma vista para desenhar |
+| sessão no estágio lógico, no verbo de caso | as duas vistas são o ponto de um caso, e uma sessão sem casaco técnico só tem uma para desenhar |
 | laudo incompleto, em qualquer nível de portão | se uma família de checagem parou de rodar, o verde não quer dizer nada |
 
 Recusa é **para o agente, não para o humano**: é ida e volta de máquina, não uma pergunta nova.

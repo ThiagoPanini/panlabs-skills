@@ -343,6 +343,55 @@ function gridPositions(model, g) {
 }
 
 /**
+ * THE AZ BAND'S BOX, IN THE SAME SPACE `gridPositions` USES — and computed ONCE.
+ *
+ * There are two consumers, and #110 is the ticket that proves they have to be
+ * the same box: `gridPlan` DRAWS the band, and `gridEdges` has to route around
+ * a band it doesn't belong to. Two copies of this formula would be a contract
+ * with two ends, and the drawn band and the routed-around band would drift
+ * apart silently — the drawing crossing a strip the router believed it had
+ * cleared.
+ *
+ * The band is deliberately LARGER than the subnets it holds. It reserves a
+ * lane for its own label (`AZ_LANE` above the column, `reservaDaRaia` above
+ * the swimlane), it starts at the leftmost/topmost VPC edge, and it overflows
+ * the far end by `CROSS_OUT` — that overflow being what makes the crossing
+ * visible at all (#19, rule 3). Every one of those margins is a strip the
+ * subnet's own box does not cover, and every one of them is region an edge
+ * routed against the SUBNET alone will happily land in.
+ */
+function azBandBoxes(model, g) {
+  const boxes = new Map();
+  if (!g.vpcBox.size) return boxes;
+  const top = Math.min(...[...g.vpcBox.values()].map(b => b.y));
+  const left = Math.min(...[...g.vpcBox.values()].map(b => b.x));
+
+  for (const z of g.azs) {
+    const members = model.nodes.filter(n => n.az === z).map(n => g.pos.get(n.id)).filter(Boolean);
+    if (!members.length) continue;
+    // the swimlane starts at the leftmost VPC's edge and overflows to the
+    // right through `CROSS_OUT` — that overflow is what makes the crossing
+    // VISIBLE (#19, rule 3). The label lives in the strip reserved above.
+    const lane = g.reservaDaRaia.get(z) || g.SWIMLANE_LANE;
+    boxes.set(z, g.raia
+      ? {
+          x: left - 8,
+          y: Math.min(...members.map(m => m.y)) - lane,
+          w: Math.max(...members.map(m => m.x + m.w)) + g.CROSS_OUT - (left - 8),
+          h: Math.max(...members.map(m => m.y + m.h)) + 10 -
+             (Math.min(...members.map(m => m.y)) - lane),
+        }
+      : {
+          x: Math.min(...members.map(m => m.x)) - 14,
+          y: top - g.AZ_LANE,
+          w: Math.max(...members.map(m => m.x + m.w)) + 14 - (Math.min(...members.map(m => m.x)) - 14),
+          h: Math.max(...members.map(m => m.y + m.h)) + g.CROSS_OUT - (top - g.AZ_LANE),
+        });
+  }
+  return boxes;
+}
+
+/**
  * #31 — THE UNION'S BOX HUGS THE MEMBER'S WHOLE SUBNET, NOT JUST ITS ICON. The
  * grid only knows how to position at the grain of a subnet (`g.pos`); it has
  * no other way to say "where is the member" than "where is the subnet that
@@ -606,9 +655,6 @@ function gridPlan(model, d, res, g, opts = {}) {
 
   if (g.outsiders) drawOutsiders(layoutPlan, model, d, res, g, mo);
 
-  const top = Math.min(...[...g.vpcBox.values()].map(b => b.y));
-  const left = Math.min(...[...g.vpcBox.values()].map(b => b.x));
-
   // 1. AZ bands FIRST: z-order is document order, and they sit behind
   //
   // The band runs along the axis the VPCs stack on — that's what makes it
@@ -616,27 +662,11 @@ function gridPlan(model, d, res, g, opts = {}) {
   // With the AZ in a column the band is vertical and the label is born ABOVE;
   // transposed, it's horizontal and the label is born ON THE LEFT. It's the
   // same lane, on the other axis.
-  for (const z of g.azs) {
-    const members = model.nodes.filter(n => n.az === z).map(n => g.pos.get(n.id)).filter(Boolean);
-    if (!members.length) continue;
-    const geo = g.raia
-      ? {
-          // the swimlane starts at the leftmost VPC's edge and overflows to
-          // the right through `CROSS_OUT` — that overflow is what makes the
-          // crossing VISIBLE (#19, rule 3). The label lives in the strip
-          // reserved above.
-          x: left - 8,
-          y: Math.min(...members.map(m => m.y)) - (g.reservaDaRaia.get(z) || g.SWIMLANE_LANE),
-          w: Math.max(...members.map(m => m.x + m.w)) + g.CROSS_OUT - (left - 8),
-          h: Math.max(...members.map(m => m.y + m.h)) + 10 -
-             (Math.min(...members.map(m => m.y)) - (g.reservaDaRaia.get(z) || g.SWIMLANE_LANE)),
-        }
-      : {
-          x: Math.min(...members.map(m => m.x)) - 14,
-          y: top - g.AZ_LANE,
-          w: Math.max(...members.map(m => m.x + m.w)) + 14 - (Math.min(...members.map(m => m.x)) - 14),
-          h: Math.max(...members.map(m => m.y + m.h)) + g.CROSS_OUT - (top - g.AZ_LANE),
-        };
+  //
+  // The box comes from `azBandBoxes` and not from a formula written here:
+  // `gridEdges` routes around this same band, and #110 is what happens when
+  // the two ends of that accounting are written twice.
+  for (const [z, geo] of azBandBoxes(model, g)) {
     // The catalog style doesn't carry `align`, so the label comes out
     // centered — which is right for a narrow column and wrong for a wide
     // swimlane, where the text falls in the middle of the drawing, on top of
@@ -721,8 +751,31 @@ function gridPlan(model, d, res, g, opts = {}) {
   gridEdges(layoutPlan, model, d, res, g, opts);
   if (g.outsiders) outsiderEdges(layoutPlan, model, d, res, g, mo);
 
+  /**
+   * THE NOTE BLOCK STARTS BELOW WHAT THE PAGE DREW, NOT BELOW THE CLOUD.
+   *
+   * Both routings above are allowed to go SOUTH of the cloud, and both do it
+   * on purpose: in column mode a band is a full-height strip, so getting
+   * around one means a row past its end, and the band already overflows the
+   * cloud by `CROSS_OUT`. "Below every band" is therefore outside the cloud by
+   * construction — there is no row inside it to use instead.
+   *
+   * The footer used to start at the CLOUD's bottom edge, which is a different
+   * number, and the note block landed on top of that row. #110 hit it: the
+   * far pair's detour cleared every band and then ran straight through the
+   * legend text. `outsiderEdges` had the same latent collision since #30 —
+   * no outsider model in the corpus happens to carry a loose note.
+   *
+   * Reading the drawn edges back is the honest measurement: whatever the
+   * routing decided, the footer sits under it. Anything else is a second copy
+   * of the routing's own arithmetic.
+   */
+  const drawnBottom = layoutPlan.cells.reduce((low, c) =>
+    c.kind === 'edge' ? (c.points || []).reduce((m, pt) => Math.max(m, pt.y), low) : low,
+  mo.topo + g.fim + f.PAD);
+
   const widthOf = mo.x * 2 + leftMargin + cloudWidth;
-  const end = footer(layoutPlan, model, widthOf - 2 * mo.x, res, mo.topo + g.fim + f.PAD);
+  const end = footer(layoutPlan, model, widthOf - 2 * mo.x, res, drawnBottom);
   layoutPlan.width = widthOf;
   layoutPlan.height = end + mo.rodape;
   layoutPlan.cells.push(modelCell(model, res));
@@ -779,15 +832,70 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
   };
 
   /**
-   * The groups the detour's leg CANNOT cross: every subnet that isn't the
-   * origin's or the destination's. Leaving the subnet it starts in and
-   * entering the destination's is the path; passing through a third one is
-   * `A5.5` — the drawing asserting a network path the model denies.
+   * What the detour's leg CANNOT cross — and it is TWO lists, not one.
+   *
+   * ┌ every SUBNET that is neither the origin's nor the destination's.
+   * │ Leaving the subnet it starts in and entering the destination's is the
+   * │ path; passing through a third one is `A5.5` — the drawing asserting a
+   * │ network path the model denies.
+   * │
+   * └ every AZ BAND that neither end belongs to. This is `F2`, and it is the
+   *   mirror of `A5.5` for a band instead of a group — the same sentence with
+   *   the noun swapped, which is exactly how the validator words it.
+   *
+   * #110 IS THE PROOF THAT ONE LIST WAS NOT TWO. Until it, the only obstacle
+   * here was the subnet, and the band was assumed to be covered by it. It is
+   * not: the band is deliberately larger (see `azBandBoxes`) — its own label
+   * lane, the `CROSS_OUT` overflow, the reach to the outermost VPC edge. So
+   * `corredorLivre` did its job, found a gap genuinely free of every subnet,
+   * and put the leg down inside the neighboring band anyway. `quorum-3-az`
+   * showed it: three brokers, one per zone, replicating to every peer — the
+   * far pair sits at distance 2 in ANY lane order (#21's measured fallback),
+   * its leg detoured into the row between the band's top and the VPC's title,
+   * and that row is free of subnets and inside band `b`.
+   *
+   * ⚠️ AND IT IS AN ADDITION, NOT A SUBSTITUTION. Replacing subnet-with-band
+   * here closes `quorum-3-az` and reopens `A5.5` on `web-flow-3-az` — a zone
+   * there stacks THREE subnets, so its band is the union of all three, and
+   * handing that union over as the only obstacle widens the search until the
+   * corridor lands inside a subnet that the narrower obstacle had kept it out
+   * of. Both lists, or one zero-tolerance failure is traded for another.
+   *
+   * Excluding the ENDS' OWN bands is what keeps this from being that same
+   * over-widening: in swimlane mode a band is a full-WIDTH strip, and feeding
+   * the origin's own band in would block every candidate the leg has.
+   *
+   * ⚠️ AND THE FOREIGN BAND STAYS A BOX — WHICH MEANS THE LEG MAY GO NORTH.
+   *
+   * In column mode a band runs the full height of the grid, so blocking one
+   * leaves `corredorLivre` exactly two candidates: a row above every band or a
+   * row below, whichever the midpoint sits nearer. `quorum-3-az` lands south.
+   * A grid with the VPCs stacked TWO rows deep and the edge in the top row
+   * lands north instead — the crossbar in the cloud's own label row, the two
+   * verticals through the VPC's title row, which `A3.4` reports and which does
+   * not block. The same model reports that same single `A3.4` WITHOUT this
+   * change, alongside the `F2` this change removes: north is not a new defect
+   * here, it is the old one minus the lie.
+   *
+   * Forcing south instead — opening the obstacle upward so north cannot win —
+   * was tried and MEASURED on exactly that two-row grid: the leg clears every
+   * band, and then its two verticals descend from the top row's icons past the
+   * bottom row's subnets, `A5.5` ×3. That trades a readability finding for
+   * three zero-tolerance lies. And #30's own rejection of north ("it runs into
+   * the title block") was measured for the OUTSIDER leg, which travels above
+   * the whole cloud — not for this one, which stops inside it. So the obstacle
+   * stays a box, and the primitive keeps choosing the nearer margin.
    */
   const subnets = model.nodes.filter(n => n.kind === 'subnet').map(n => n.id);
+  const bands = azBandBoxes(model, g);
+  const onAxis = g.raia ? boxOnX : boxOnY;
   const barriers = a => {
     const mine = new Set([subnetOf(a.from), subnetOf(a.to)]);
-    return subnets.filter(id => !mine.has(id)).map(id => abs.get(id)).filter(Boolean);
+    const myBands = new Set([laneOf(a.from), laneOf(a.to)]);
+    return [
+      ...subnets.filter(id => !mine.has(id)).map(id => abs.get(id)).filter(Boolean),
+      ...[...bands].filter(([z]) => !myBands.has(z)).map(([, box]) => box),
+    ].map(onAxis);
   };
 
   for (const a of d.edges) {
@@ -804,7 +912,7 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
         // detours along the margin closest to the ORIGIN (#21) — but through a
         // GAP, not through the midpoint between the icons. See `corredorLivre`.
         const near = forward ? (o.x + o.w + dst.x) / 2 : (dst.x + dst.w + o.x) / 2;
-        const where = dispor.corredorLivre([y0, y1], barriers(a).map(boxOnX), near);
+        const where = dispor.corredorLivre([y0, y1], barriers(a), near);
         points = [{ x: where, y: y0 }, { x: where, y: y1 }];
       }
     } else {
@@ -812,7 +920,7 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
       anc = { output: { x: 0.5, y: forward ? 1 : 0 }, input: { x: 0.5, y: forward ? 0 : 1 } };
       if (!same) {
         const near = forward ? (o.y + o.h + dst.y) / 2 : (dst.y + dst.h + o.y) / 2;
-        const where = dispor.corredorLivre([x0, x1], barriers(a).map(boxOnY), near);
+        const where = dispor.corredorLivre([x0, x1], barriers(a), near);
         points = [{ x: x0, y: where }, { x: x1, y: where }];
       }
     }

@@ -5,6 +5,7 @@
 #   blind-run.sh setup      build the sandbox and print the prompt to hand over
 #   blind-run.sh verify     audit the isolation; one line per breach
 #   blind-run.sh teardown   put the skill homes back, remove the sandbox
+#   blind-run.sh paths      print every name this harness decides, as key=value
 #
 #   --at <dir>          the sandbox root  (default: ${TMPDIR:-/tmp}/panlabs-blind-run)
 #   --skill-home <dir>  a directory some harness reads skills from. Repeatable,
@@ -72,9 +73,10 @@
 # ⚠️ TEARDOWN RESTORES FROM A RECORD BESIDE THE SKILL HOME, NOT FROM THE
 # SANDBOX. The sandbox lives in the system temp and a machine may sweep it; a
 # restore that read from there would be a restore that stops working exactly
-# when it is needed. The record is `.panlabs-aws-diagrams.blind-run-parked`
-# inside each skill home -- a dot-prefixed FILE, so nothing that discovers
-# skills by scanning directories ever sees it as one.
+# when it is needed. The record is `RECORD_NAME` below, inside each skill home
+# -- a dot-prefixed FILE, so nothing that discovers skills by scanning
+# directories ever sees it as one. `blind-run.sh paths` prints it rather than
+# anyone spelling it out a second time.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -87,11 +89,22 @@ SKILL_SOURCE="$REPO/skills/$SKILL_NAME"
 # repository's name" would then be looking for a string nobody has ever typed.
 # `--git-common-dir` resolves to the main checkout's `.git` from anywhere.
 REPO_NAME="$(basename "$(dirname "$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)")" 2>/dev/null)"
-[ -z "$REPO_NAME" ] || [ "$REPO_NAME" = "." ] && REPO_NAME="$(basename "$REPO")"
+# Spelled as an `if` and not as `[ ] || [ ] && …`: that chain parses as
+# `(A||B) && C`, which is right today and one `set -e` away from skipping the
+# fallback in silence.
+if [ -z "$REPO_NAME" ] || [ "$REPO_NAME" = "." ]; then REPO_NAME="$(basename "$REPO")"; fi
 PROJECT_NAME="labmove-platform"
 RECORD_NAME=".$SKILL_NAME.blind-run-parked"
 PARKED_SUFFIX="$SKILL_NAME.blind-run-parked"
 WATCH_RECORD="watched-tree.before"
+FIXTURE_RECORD="fixture-commit"
+HOMES_RECORD="skill-homes"
+# ⚠️ THE PROOF THAT THIS SANDBOX IS OURS, and the only thing that licenses
+# `teardown` to `rm -rf` anything. Written the moment the directory exists, so a
+# setup that dies halfway still leaves a sandbox teardown is allowed to remove —
+# and a `--at` pointed at somebody's home directory is refused instead of
+# deleted.
+STAMP=".blind-run"
 
 say()  { printf '  %s\n' "$1"; }
 ok()   { printf '  ✓ %s\n' "$1"; }
@@ -110,10 +123,24 @@ while [ $# -gt 0 ]; do
     *) die "unknown argument: $1" ;;
   esac
 done
-[ "${#SKILL_HOMES[@]}" -eq 0 ] && SKILL_HOMES=("$HOME/.claude/skills" "$HOME/.agents/skills")
+HOMES_WERE_GIVEN=1
+if [ "${#SKILL_HOMES[@]}" -eq 0 ]; then
+  HOMES_WERE_GIVEN=0
+  SKILL_HOMES=("$HOME/.claude/skills" "$HOME/.agents/skills")
+fi
 
 PROJECT="$SANDBOX/$PROJECT_NAME"
 COPY="$PROJECT/.claude/skills/$SKILL_NAME"
+
+# Literal containment, never a `case` glob. `case "$p" in "$root"/*)` reads the
+# root as a PATTERN, so a sandbox path carrying `[` or `*` — `--at` takes
+# whatever it is given — is misjudged in whichever direction the glob happens to
+# fall. `${p#"$root"/}` strips a quoted prefix, which is the literal test.
+inside() { # inside <root> <path>
+  local root="$1" p="$2"
+  [ "$p" = "$root" ] && return 0
+  [ "${p#"$root"/}" != "$p" ]
+}
 
 # ── where a blind run may and may not stand ───────────────────────────────────
 
@@ -152,40 +179,56 @@ read_record() { # read_record <record-file> <key>
   sed -n "s/^$2=//p" "$1"
 }
 
+# Where the original gets parked when a home holds a real directory rather than
+# a link. Beside the skills directory, never inside it: anything that discovers
+# skills by scanning would read a second directory in there as a second skill.
+parked_slot() { # parked_slot <home>
+  printf '%s/%s\n' "$(dirname "$1")" "$PARKED_SUFFIX"
+}
+
 park_home() { # park_home <home>
-  local home="$1" entry record parked created=no
+  local home="$1" entry record created=no kind target=""
   entry="$home/$SKILL_NAME"
   record="$home/$RECORD_NAME"
-
-  [ -e "$record" ] && die "$record already exists — an earlier blind run never tore down. Run teardown first."
 
   if [ ! -d "$home" ]; then
     mkdir -p "$home" || die "could not create the skill home $home"
     created=yes
   fi
 
-  { printf 'home-created=%s\n' "$created"; } > "$record"
-
+  # ⚠️ WHAT GETS RECORDED IS DECIDED BEFORE ANYTHING MOVES, and the record lands
+  # in ONE write. The first version appended `kind=` after the fact: a setup
+  # that died in between left a record carrying only `home-created`, and
+  # teardown then had nothing to restore from but a "restore by hand".
   if [ -L "$entry" ]; then
+    kind=symlink
     # `readlink` and not `readlink -f`: the ~/.claude entry carries a RELATIVE
     # text (`../../.agents/skills/<name>`), and restoring the resolved path
     # instead would silently rewrite the machine's install into a shape its own
     # installer never wrote.
-    printf 'kind=symlink\ntarget=%s\n' "$(readlink "$entry")" >> "$record"
-    ln -sfn "$COPY" "$entry" || die "could not repoint $entry"
-    ok "$entry → the copy (was a link to $(read_record "$record" target))"
+    target="$(readlink "$entry")"
   elif [ -e "$entry" ]; then
-    parked="$(dirname "$home")/$PARKED_SUFFIX"
-    [ -e "$parked" ] && die "$parked is occupied — clear it before running"
-    mv "$entry" "$parked" || die "could not park $entry"
-    printf 'kind=moved\ntarget=%s\n' "$parked" >> "$record"
-    ln -s "$COPY" "$entry" || die "could not link $entry"
-    ok "$entry → the copy (a real directory was parked at $parked)"
+    kind=moved
+    target="$(parked_slot "$home")"
   else
-    printf 'kind=absent\n' >> "$record"
-    ln -s "$COPY" "$entry" || die "could not link $entry"
-    ok "$entry → the copy (nothing was installed here)"
+    kind=absent
   fi
+
+  printf 'home-created=%s\nkind=%s\ntarget=%s\n' "$created" "$kind" "$target" > "$record" \
+    || die "could not write the parked record at $record"
+
+  case "$kind" in
+    symlink)
+      ln -sfn "$COPY" "$entry" || die "could not repoint $entry"
+      ok "$entry → the copy (was a link to $target)" ;;
+    moved)
+      mv "$entry" "$target" || die "could not park $entry at $target"
+      ln -s "$COPY" "$entry" || die "could not link $entry"
+      ok "$entry → the copy (a real directory was parked at $target)" ;;
+    absent)
+      ln -s "$COPY" "$entry" || die "could not link $entry"
+      ok "$entry → the copy (nothing was installed here)" ;;
+  esac
 }
 
 restore_home() { # restore_home <home>
@@ -226,12 +269,17 @@ cmd_setup() {
   [ -e "$SANDBOX" ] && die "the sandbox already exists at $SANDBOX — run teardown first"
   [ -f "$SKILL_SOURCE/SKILL.md" ] || die "no skill to copy at $SKILL_SOURCE"
 
-  # Every reason to refuse is collected BEFORE the first byte is written. A
-  # setup that dies halfway leaves a sandbox the next setup then refuses to
-  # overwrite — one failure turning into two.
+  # Every reason to refuse is collected BEFORE the first byte is written — and
+  # that sentence used to be false. The occupied-parking check lived inside
+  # `park_home`, so with two homes and the second one blocked, setup aborted
+  # having already repointed the first and built the sandbox. Half a machine
+  # moved, and a message that did not even say to run teardown.
   local home
   for home in "${SKILL_HOMES[@]}"; do
     [ -e "$home/$RECORD_NAME" ] && die "$home/$RECORD_NAME exists — an earlier blind run never tore down. Run teardown first."
+    if [ ! -L "$home/$SKILL_NAME" ] && [ -e "$home/$SKILL_NAME" ] && [ -e "$(parked_slot "$home")" ]; then
+      die "$home/$SKILL_NAME is a real directory and would have to be parked at $(parked_slot "$home"), which is occupied. Clear it, or run teardown."
+    fi
   done
 
   local parent breach staging untracked
@@ -243,14 +291,30 @@ $(printf '%s\n' "$breach" | sed 's/^/      /')"
 
   printf '\n  BLIND RUN · setup\n\n'
 
+  # The stamp goes down BEFORE anything else, and it is what licenses teardown
+  # to remove this directory at all.
+  mkdir -p "$SANDBOX" || die "could not create $SANDBOX"
+  printf 'harness=%s\n' "$HERE" > "$SANDBOX/$STAMP" || die "could not stamp $SANDBOX"
+  # And the homes this run touched, so a teardown invoked without the same
+  # `--skill-home` list still knows which doors to close instead of orphaning
+  # one pointing into a sandbox that is about to stop existing.
+  printf '%s\n' "${SKILL_HOMES[@]}" > "$SANDBOX/$HOMES_RECORD" || die "could not record the skill homes"
+
   # ── the caller project ──────────────────────────────────────────────────────
   mkdir -p "$PROJECT" || die "could not create $PROJECT"
   cp -R "$HERE/project/." "$PROJECT/" || die "could not materialise the caller project"
   git -c init.defaultBranch=main init -q "$PROJECT" || die "could not init the caller project"
-  git -C "$PROJECT" config user.name  'LabMove Engenharia'
-  git -C "$PROJECT" config user.email 'eng@labmove.example'
+  git -C "$PROJECT" config user.name  'LabMove Engenharia' || die "could not name the caller project's author"
+  git -C "$PROJECT" config user.email 'eng@labmove.example' || die "could not address the caller project's author"
   git -C "$PROJECT" add -A >/dev/null || die "could not stage the caller project"
   git -C "$PROJECT" commit -q -m 'A plataforma como ela está hoje' || die "could not commit the caller project"
+  # ⚠️ The FIXTURE's commit, pinned. The two identity assertions — "nothing here
+  # names this repository", "nothing here names the destination path" — are
+  # about the fixture, and reading them off the working tree would judge the
+  # blind agent's own output too: a run that legitimately wrote the words
+  # `docs/architecture/diagrams` into its `case.md` would report a breach that
+  # is not one. They read this commit instead.
+  git -C "$PROJECT" rev-parse HEAD > "$SANDBOX/$FIXTURE_RECORD" || die "could not pin the fixture commit"
   ok "the caller project is a git repository of its own at $PROJECT"
 
   # ── the severed copy ────────────────────────────────────────────────────────
@@ -263,7 +327,7 @@ $(printf '%s\n' "$breach" | sed 's/^/      /')"
   git -C "$REPO" ls-files -z -- "skills/$SKILL_NAME" \
     | tar -C "$REPO" --null --files-from=- -cf - \
     | tar -C "$staging" -xf - || die "could not copy the skill"
-  mkdir -p "$(dirname "$COPY")"
+  mkdir -p "$(dirname "$COPY")" || die "could not create $(dirname "$COPY")"
   mv "$staging/skills/$SKILL_NAME" "$COPY" || die "could not place the copy"
   rm -rf "$staging"
   ok "the skill is copied — not linked — into $COPY"
@@ -286,7 +350,7 @@ $(printf '%s\n' "$breach" | sed 's/^/      /')"
   } > "$SANDBOX/$WATCH_RECORD"
 
   # ── what the blind agent is handed ──────────────────────────────────────────
-  cp "$HERE/brief.md" "$SANDBOX/brief.txt"
+  cp "$HERE/brief.md" "$SANDBOX/brief.txt" || die "could not copy the brief"
   awk -v project="$PROJECT" -v brief="$HERE/brief.md" '
     /\{\{brief\}\}/ { while ((getline line < brief) > 0) print line; next }
     { gsub(/\{\{project\}\}/, project); print }
@@ -333,25 +397,32 @@ cmd_verify() {
     else
       ok "the caller project is named $(basename "$project_real"), not $REPO_NAME"
     fi
-    # ⚠️ The options come BEFORE `-e`, and there is no `--`: `--` ends option
-    # parsing, so `--exclude-dir` written after it is read as a FILE to search.
-    # That mistake made this sweep read the installed skill and report the
-    # project for a string only the skill carries.
-    local named
-    named="$(grep -rIl --exclude-dir=.git --exclude-dir=.claude -e "$REPO_NAME" "$project_real" 2>/dev/null)"
-    if [ -n "$named" ]; then
-      bad "the caller project names $REPO_NAME in: $(printf '%s' "$named" | tr '\n' ' ')"
+    # ⚠️ THE FIXTURE'S COMMIT, NOT THE WORKING TREE. Both sweeps below are about
+    # what the fixture says; the working tree also holds whatever the blind
+    # agent wrote, and a `case.md` that legitimately spelled
+    # `docs/architecture/diagrams` would then be reported as a breach that is
+    # not one. `git grep <sha>` reads that one commit and nothing else.
+    local fixture
+    fixture="$(cat "$SANDBOX/$FIXTURE_RECORD" 2>/dev/null)"
+    if [ -z "$fixture" ]; then
+      bad "no fixture commit pinned at $SANDBOX/$FIXTURE_RECORD — the caller project's identity cannot be read"
     else
-      ok "nothing in the caller project names $REPO_NAME"
-    fi
+      local named
+      named="$(git -C "$PROJECT" grep -lI -e "$REPO_NAME" "$fixture" 2>/dev/null | sed "s/^$fixture://")"
+      if [ -n "$named" ]; then
+        bad "the caller project names $REPO_NAME in: $(printf '%s' "$named" | tr '\n' ' ')"
+      else
+        ok "nothing in the caller project names $REPO_NAME"
+      fi
 
-    # 3 . and it does not dictate the very path the run is measuring
-    local dictates
-    dictates="$(grep -rIl --exclude-dir=.git --exclude-dir=.claude -e 'docs/architecture/diagrams' "$project_real" 2>/dev/null)"
-    if [ -n "$dictates" ]; then
-      bad "the caller project names docs/architecture/diagrams in: $(printf '%s' "$dictates" | tr '\n' ' ') — the criterion would pass by construction"
-    else
-      ok "the caller project never names docs/architecture/diagrams — the skill's convention is what has to produce it"
+      # 3 . and it does not dictate the very path the run is measuring
+      local dictates
+      dictates="$(git -C "$PROJECT" grep -lI -e 'docs/architecture/diagrams' "$fixture" 2>/dev/null | sed "s/^$fixture://")"
+      if [ -n "$dictates" ]; then
+        bad "the caller project names docs/architecture/diagrams in: $(printf '%s' "$dictates" | tr '\n' ' ') — the criterion would pass by construction"
+      else
+        ok "the caller project never names docs/architecture/diagrams — the skill's convention is what has to produce it"
+      fi
     fi
   fi
 
@@ -379,10 +450,8 @@ cmd_verify() {
   local escapes=0 link target
   while IFS= read -r link; do
     target="$(readlink -f "$link" 2>/dev/null)"
-    case "$target" in
-      "$sandbox_real"|"$sandbox_real"/*) ;;
-      *) bad "a symlink escapes the sandbox: $link → ${target:-<broken>}"; escapes=1 ;;
-    esac
+    inside "$sandbox_real" "${target:-}" \
+      || { bad "a symlink escapes the sandbox: $link → ${target:-<broken>}"; escapes=1; }
   done < <(find "$sandbox_real" -type l 2>/dev/null)
   [ "$escapes" -eq 0 ] && ok "no symlink inside the sandbox resolves outside it"
 
@@ -411,24 +480,38 @@ cmd_verify() {
   # the message pointing at the cause. The defect in the skill is its own
   # ticket; what belongs HERE is that a run whose module scope came from the
   # machine is a run that measured the machine.
+  #
+  # ⚠️ THE COPY'S OWN ROOT IS ALWAYS ONE OF THE PLACES ASKED, and not only the
+  # directories that happen to hold a `.js` today. #133 renamed the bundle to
+  # `.cjs` the day after this check was written, and a version that asked only
+  # about `.js` files then went quiet and reported "nothing above the copy
+  # declares a module type" while the fixture's `package.json` sat right there,
+  # unread. Green for the wrong reason is the failure this whole file exists to
+  # refuse.
   if [ -d "$COPY" ]; then
-    local js dir deciding scopes="" outside=0
-    while IFS= read -r js; do
+    local from dir deciding scopes="" kind
+    while IFS= read -r from; do
       deciding=""
       while IFS= read -r dir; do
         [ -f "$dir/package.json" ] && { deciding="$dir/package.json"; break; }
-      done < <(ancestors "$(dirname "$js")")
+      done < <(ancestors "$from")
       [ -n "$deciding" ] || continue
       case "$scopes" in *"|$deciding|"*) continue ;; esac
       scopes="$scopes|$deciding|"
-      local kind
       kind="$(sed -n 's/.*"type"[[:space:]]*:[[:space:]]*"\([a-z]*\)".*/\1/p' "$deciding" | head -1)"
-      case "$deciding" in
-        "$sandbox_real"/*) ok "the module scope of $(basename "$js") is the sandbox's own: $deciding (${kind:-commonjs})" ;;
-        *) bad "the module scope of $(basename "$js") comes from OUTSIDE the sandbox: $deciding (${kind:-commonjs}) — the machine decides how the skill's .js is read, not the fixture"; outside=1 ;;
-      esac
-    done < <(find "$COPY" -type f -name '*.js' 2>/dev/null)
-    [ -z "$scopes" ] && [ "$outside" -eq 0 ] && ok "nothing above the copy declares a module type — any .js in it reads as CommonJS"
+      if inside "$sandbox_real" "$deciding"; then
+        ok "the module scope over the copy is the fixture's: $deciding (${kind:-commonjs})"
+      else
+        bad "the module scope over the copy is not the fixture's: $deciding is outside the sandbox (${kind:-commonjs}) — the machine decides how the skill's .js is read"
+      fi
+    done < <( { printf '%s\n' "$COPY"; find "$COPY" -type f -name '*.js' -exec dirname {} \; 2>/dev/null; } | sort -u)
+    # ⚠️ NO PIN AT ALL IS A BREACH, not a green. Node's default without any
+    # `package.json` is CommonJS, so the run would work today — and the first
+    # machine to drop one above the sandbox changes how the skill is read, with
+    # nothing saying so. The two failures share a stem on purpose: removing the
+    # fixture's pin turns this red whichever of the two the machine happens to
+    # produce, so the proof does not depend on what sits above /tmp.
+    [ -z "$scopes" ] && bad "the module scope over the copy is not the fixture's: nothing pins it, and the next package.json to appear above the sandbox decides"
   fi
 
   # 9 . every door on the machine opens onto the copy
@@ -445,10 +528,11 @@ cmd_verify() {
     # thing worth judging.
     if [ -L "$entry" ] || [ -e "$entry" ]; then
       resolved="$(readlink -f "$entry" 2>/dev/null)"
-      case "$resolved" in
-        "$sandbox_real"|"$sandbox_real"/*) ok "$entry resolves inside the sandbox" ;;
-        *) bad "$entry resolves to ${resolved:-<broken>} — outside the sandbox" ;;
-      esac
+      if inside "$sandbox_real" "${resolved:-}"; then
+        ok "$entry resolves inside the sandbox"
+      else
+        bad "$entry resolves to ${resolved:-<broken>} — outside the sandbox"
+      fi
     else
       bad "$entry does not exist — the skill is reachable from nowhere here"
     fi
@@ -489,12 +573,35 @@ cmd_verify() {
 cmd_teardown() {
   local failed=0 home
   printf '\n  BLIND RUN · teardown\n\n'
+
+  # ⚠️ THE HOMES COME FROM THE SANDBOX WHEN THE CALLER DID NOT NAME THEM. A run
+  # set up with a non-default `--skill-home` and torn down without it used to
+  # leave that door parked and pointing into a sandbox that this same command
+  # was about to delete — a record nobody would ever read again, and a skill
+  # home resolving to nothing.
+  if [ "$HOMES_WERE_GIVEN" -eq 0 ] && [ -f "$SANDBOX/$HOMES_RECORD" ]; then
+    mapfile -t SKILL_HOMES < "$SANDBOX/$HOMES_RECORD"
+    say "closing the doors this sandbox recorded: ${SKILL_HOMES[*]}"
+  fi
   for home in "${SKILL_HOMES[@]}"; do restore_home "$home" || failed=1; done
 
-  if [ -e "$SANDBOX" ]; then
-    rm -rf "$SANDBOX" && ok "the sandbox at $SANDBOX is gone" || { printf '  ✗ could not remove %s\n' "$SANDBOX"; failed=1; }
-  else
+  # ⚠️ NOTHING IS REMOVED WITHOUT PROOF THIS HARNESS BUILT IT. `--at` takes
+  # whatever it is handed, and an earlier version removed that path outright:
+  # pointed at a home directory it deleted the home directory and reported "the
+  # machine is back where it was". The stamp is written the moment setup creates
+  # the directory, so a half-built sandbox is still removable and somebody
+  # else's tree never is. It is the same rule `restore_home` already keeps one
+  # function up — never delete what this harness did not put there.
+  if [ ! -e "$SANDBOX" ]; then
     say "no sandbox at $SANDBOX"
+  elif [ ! -f "$SANDBOX/$STAMP" ]; then
+    printf '  ✗ %s carries no %s stamp — this harness did not build it, and will not remove it\n' "$SANDBOX" "$STAMP"
+    failed=1
+  elif rm -rf "$SANDBOX"; then
+    ok "the sandbox at $SANDBOX is gone"
+  else
+    printf '  ✗ could not remove %s\n' "$SANDBOX"
+    failed=1
   fi
 
   printf '\n'
@@ -503,9 +610,31 @@ cmd_teardown() {
   return 1
 }
 
+# ── paths ─────────────────────────────────────────────────────────────────────
+
+# Every name this harness decides, printed as `key=value`. It exists because the
+# PROOF needs them, and a proof that spells them out again is a second copy that
+# drifts: renaming `RECORD_NAME` here once left the proof still green while
+# "the parked record is gone" had stopped looking at any record at all. It is
+# also the honest answer to "where does this thing put things?".
+cmd_paths() {
+  printf 'sandbox=%s\n'      "$SANDBOX"
+  printf 'project=%s\n'      "$PROJECT"
+  printf 'copy=%s\n'         "$COPY"
+  printf 'skill-name=%s\n'   "$SKILL_NAME"
+  printf 'record-name=%s\n'  "$RECORD_NAME"
+  printf 'watch-record=%s\n' "$WATCH_RECORD"
+  printf 'fixture-record=%s\n' "$FIXTURE_RECORD"
+  printf 'homes-record=%s\n' "$HOMES_RECORD"
+  printf 'stamp=%s\n'        "$STAMP"
+  local home
+  for home in "${SKILL_HOMES[@]}"; do printf 'skill-home=%s\n' "$home"; done
+}
+
 case "$VERB" in
   setup)    cmd_setup ;;
   verify)   cmd_verify ;;
+  paths)    cmd_paths ;;
   teardown) cmd_teardown ;;
-  *) printf 'usage: %s setup|verify|teardown [--at <dir>] [--skill-home <dir>]...\n' "$(basename "$0")" >&2; exit 2 ;;
+  *) printf 'usage: %s setup|verify|teardown|paths [--at <dir>] [--skill-home <dir>]...\n' "$(basename "$0")" >&2; exit 2 ;;
 esac

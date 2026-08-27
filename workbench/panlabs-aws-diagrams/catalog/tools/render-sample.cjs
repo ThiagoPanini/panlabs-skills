@@ -19,10 +19,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { load } = require(path.join(__dirname, '..', 'aws-shapes.cjs'));
+// catalog/tools/ and catalog/tests/ moved to the workbench sibling in #45;
+// aws-shapes.cjs stayed in the skill.
+const SKILL_CATALOG = path.join(__dirname, '..', '..', '..', '..', 'skills', 'panlabs-aws-diagrams', 'catalog');
+const { load } = require(path.join(SKILL_CATALOG, 'aws-shapes.cjs'));
 
 const output = process.argv[2] || path.join(__dirname, '..', 'tests');
-const cat = load(path.join(__dirname, '..'));
+const cat = load(SKILL_CATALOG);
 
 const MARKER = '#FF00FF';
 

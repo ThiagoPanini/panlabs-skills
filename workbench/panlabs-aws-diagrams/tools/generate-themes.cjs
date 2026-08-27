@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * The theme variants, in one place — `output/themes/`.
+ * The theme variants, in one place — `$OUTPUT_DIR/themes/` (scratch, #45).
  *
  *   node tools/generate-themes.cjs
  *
@@ -15,12 +15,18 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { generate } = require('../engine/generate.cjs');
 
 const ROOT = path.join(__dirname, '..');
-const DIR = path.join(ROOT, 'output', 'themes');
+const SKILL = path.join(ROOT, '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { generate } = require(path.join(SKILL, 'engine', 'generate.cjs'));
+
+// The render corpus is scratch, never versioned (#45) — the ruler exports
+// OUTPUT_DIR once and every tool that draws inherits it.
+const OUTPUT_DIR = process.env.OUTPUT_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'panlabs-aws-diagrams-'));
+const DIR = path.join(OUTPUT_DIR, 'themes');
 // The corpus moved to the workbench sibling in #44; MODELS_DIR is how the
 // ruler (which knows where that is) tells this tool where to read from.
 const MODELS_DIR = process.env.MODELS_DIR || path.join(ROOT, 'models');
@@ -44,7 +50,8 @@ async function main() {
     fs.writeFileSync(path.join(DIR, v.name + '.drawio'), r.xml);
     console.log(`  ${v.name.padEnd(18)} theme=${v.theme}${v.flow ? ` flow=${v.flow}` : ''}  ${r.xml.length} bytes`);
   }
-  execFileSync(process.execPath, [path.join(__dirname, 'generate-trap.cjs')], { stdio: 'inherit' });
+  execFileSync(process.execPath, [path.join(__dirname, 'generate-trap.cjs')],
+    { stdio: 'inherit', env: { ...process.env, OUTPUT_DIR } });
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

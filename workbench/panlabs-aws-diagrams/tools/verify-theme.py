@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Checks AT THE PIXEL that the theme reached the render — not just the style string.
 
-    python3 tools/verify-theme.py output/themes/a-light.png light
-    python3 tools/verify-theme.py --all
+    python3 tools/verify-theme.py <dir>/themes/a-light.png light
+    python3 tools/verify-theme.py --all <dir>/themes
 
 The lesson that forces this tool is #17's: 24 static checks were green when the
 PNG revealed SageMaker coming out with the wrong icon. A correct style string is
@@ -33,8 +33,6 @@ PRESENT_TOL = 10
 ABSENT_TOL = 3
 PRESENT_FLOOR = 40      # minimum pixels to call a colour "present"
 ABSENT_FLOOR = 400      # below this it is antialias dust, not a region
-
-HERE = Path(__file__).resolve().parent.parent
 
 
 def hex2rgb(h):
@@ -131,12 +129,16 @@ def verify(png, theme):
 
 def main():
     if '--all' in sys.argv:
+        idx = sys.argv.index('--all')
+        if len(sys.argv) <= idx + 1:
+            sys.exit('usage: verify-theme.py --all <themes-dir>')
+        themes_dir = Path(sys.argv[idx + 1])
         mapping = {'a-light': 'light', 'b-dark': 'dark',
                    'c-corporate': 'corporate', 'd-trap': 'trap',
                    'e-unspeakable': 'unspeakable', 'g-logical-view': 'logical'}
         failed = 0
         for name, theme in mapping.items():
-            png = HERE / 'output' / 'themes' / f'{name}.png'
+            png = themes_dir / f'{name}.png'
             if not png.exists():
                 print(f'\n{png.name} does not exist — render skipped (assumption 8)')
                 continue

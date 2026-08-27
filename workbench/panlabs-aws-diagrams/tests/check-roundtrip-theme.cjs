@@ -73,11 +73,17 @@ const VARIANTS = [
   { name: 'h-accounts-dark' },
 ];
 
+// The render corpus is scratch (#45) — reused from the ruler's export when run
+// through it, or created fresh for a standalone run and handed down so both
+// sides of the child process agree on where the variants landed.
+const OUTPUT_DIR = process.env.OUTPUT_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'panlabs-aws-diagrams-'));
+
 /** The one place that knows how to build the variants is `tools/generate-themes.cjs`. */
 async function generateVariants() {
   const { execFileSync } = require('child_process');
-  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'generate-themes.cjs')], { stdio: 'ignore' });
-  return path.join(ROOT, 'output', 'themes');
+  execFileSync(process.execPath, [path.join(WORKBENCH, 'tools', 'generate-themes.cjs')],
+    { stdio: 'ignore', env: { ...process.env, OUTPUT_DIR } });
+  return path.join(OUTPUT_DIR, 'themes');
 }
 
 async function main() {

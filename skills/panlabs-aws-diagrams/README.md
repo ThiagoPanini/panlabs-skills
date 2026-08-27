@@ -6,18 +6,20 @@ Skill de diagramas de arquitetura AWS no draw.io: uma rodada de perguntas sobre 
 > ao lado. Este README é o mapa da árvore, para quem vai mexer no código.
 
 ```bash
-node engine/generate.cjs examples/web-multi-az.json --output output/x.drawio
+node engine/generate.cjs examples/web-multi-az.json --output /tmp/x.drawio
 node tools/check-geometry.cjs examples/web-multi-az.json    # o laudo das 62
 node tools/review-gaps.cjs examples/web-multi-az.json    # a revisão de lacunas
-node tools/approve.cjs examples/session/retail-logical.json    # o arco sequencial: aprovar a lógica
-node tools/resume.cjs output/retail.drawio --delta examples/session/retail-elaboration.json
+node tools/approve.cjs examples/session/retail-logical.json --output /tmp/retail.drawio    # o arco sequencial: aprovar a lógica
+node tools/resume.cjs /tmp/retail.drawio --delta examples/session/retail-elaboration.json
 ./tools/install.sh                                        # expor nos dois harnesses
 ./tools/package.sh --check                            # o pacote cabe nos 30 MB?
-./tools/measure-candidates.sh                                # a medição que escolheu o motor
 ```
 
 A régua de 8 camadas mora no workspace irmão e roda de lá, contra esta árvore:
-`workbench/panlabs-aws-diagrams/tests/run.sh` (#44).
+`workbench/panlabs-aws-diagrams/tests/run.sh` (#44). É lá também que mora a
+bancada — medição, geração de variantes, bisseção, recorte, demonstração — e o
+catálogo de extração/conferência, desde o #45; `./tools/measure-candidates.sh`
+virou `workbench/panlabs-aws-diagrams/tools/measure-candidates.sh`.
 
 ## Instalar
 
@@ -52,13 +54,11 @@ do Node).
 | **`schema.json`** | **O contrato.** `model@1` — o IR que o agente escreve. Na raiz de propósito: é de quem escreve o modelo, e o motor é só o primeiro leitor |
 | `engine/` | O pipeline. `gerar` › `validar` › `resolver` › `derivar` › `dispor` › `planejar` › `emitir` › `conferir`, mais o portão de contraste |
 | `validator/` | As 62 checagens da rubrica viradas código — 60 no validador obrigatório, 2 no render. É **portão**, não otimizador |
-| `theme/` | O vocabulário FECHADO de estilo e os quatro temas. `schema.json` aqui é `theme@1` |
+| `theme/` | O vocabulário FECHADO de estilo e os três temas nomeáveis — `light`, `dark`, `corporate`. `schema.json` aqui é `theme@1`. O tema-armadilha do portão de contraste mora no workspace irmão desde o #45 |
 | `session/` | Vista lógica → vista técnica, o `.drawio` como formato de persistência, e a cópia publicável. `schema.json` aqui é `session@1`. `gaps.cjs` é o vizinho de fora da regra: ele come `model@1`, não `session@1` — mora aqui porque a revisão de lacunas é passo do arco, e quem a chama é a camada de sessão |
-| `catalog/` | 403 service icons + 606 resource icons do draw.io 31.3.1, com o delta de correções escrito à mão |
+| `catalog/` | `aws-shapes.cjs` resolve nome → shape sobre 403 service icons + 606 resource icons do draw.io 31.3.1, com o delta de correções escrito à mão. As ferramentas que extraem e conferem esse catálogo moram no workspace irmão desde o #45 |
 | `examples/` | **Diretório de exemplos mínimo** — só o suficiente para os comandos documentados acima rodarem sem baixar nada. `examples/session/` guarda o único par pronto de `session@1` (lógica + delta) |
-| `agents/` | O empacotamento multi-harness. `openai.yaml` copia a forma das outras 25 skills instaladas em `~/.claude/skills/*/agents/` — `interface.display_name` + `interface.short_description`, e nada mais. É **metadado de vitrine**, não instrução: um harness não-Claude aprende o NOME da skill por aqui e o resto por `SKILL.md`. Se algum harness precisar de mais, é aqui que cresce |
-| `tools/` | Os comandos da jornada (`case.cjs`, `approve.cjs`, `resume.cjs`, `check-geometry.cjs`, `review-gaps.cjs`, `install.sh`) e as ferramentas de bancada — bisseção, render, as medições. `drawio.cjs` é o único lugar que sabe onde o binário mora |
-| `output/` | **Rascunho, e ignorado pelo git.** É onde a régua do workspace irmão escreve o corpus gerado e o render |
+| `tools/` | Os comandos da jornada (`case.cjs`, `approve.cjs`, `resume.cjs`, `check-geometry.cjs`, `review-gaps.cjs`) mais `install.sh`, `package.sh` e `drawio.cjs` — o único lugar que sabe onde o binário do draw.io mora. `case.cjs --image` é quem chama `render.sh`, e é por isso que ele é o único item de bancada que não saiu no #45: a jornada publicada depende dele em tempo de execução |
 
 `guide/` é o que o agente lê para **operar** a skill — nada aqui se lê para
 modificá-la, e nada daqui aponta para fora da árvore.
@@ -77,6 +77,7 @@ leva o diretório inteiro (menos `__pycache__`, `node_modules`, `*.pyc`,
 | o corpus renderizado | 6,7 MB de `.drawio` e PNG commitados. Também **apagados no #62**, e a medição que decidiu foi esta: 4 de 4 modelos regenerados divergiam do commitado, e nada na régua os comparava. A régua escreve em `output/` e nunca leu aquele diretório — não era fixture, era foto vencida |
 | os casos de uso | 3,2 MB de prosa, modelo, desenho e laudo. Idem, com a mesma medição. Os defeitos que eles acharam já eram ticket e os repros já tinham sido promovidos para `models/` — que, por sua vez, saiu no #44 (ver abaixo). A tabela de cobertura sobreviveu, na auditoria do registro |
 | a suíte de testes e o corpus de modelos | A suíte inteira (8 camadas) e os ~28 modelos que ela come — **movidos no #44** para `workbench/panlabs-aws-diagrams/`, que é quem os lê e roda agora. Não são apagados: a régua continua verde, rodando de fora da árvore e apontando para dentro dela, que é a única direção permitida. Ficou um diretório de exemplos mínimo (`examples/`) — só o suficiente para os comandos documentados no topo deste README rodarem sem baixar nada |
+| a bancada, o catálogo de extração/conferência, o manifesto multi-harness e o tema-armadilha | **Movidos no #45**: 14 ferramentas de `tools/` (medição, geração de variantes, bisseção, recorte, demonstração) e as quatro de `catalog/tools/` foram para `workbench/panlabs-aws-diagrams/`, junto com `catalog/tests/` e `theme/trap.json` — o mesmo critério executável do #44, aplicado ao resto. `agents/openai.yaml` **saiu**, sem substituto: nada na jornada o lia, e nenhum harness não-Claude jamais chegou a existir para o consumir. `output/` também saiu inteiro — três arquivos gerados (`predictive-fleet*.drawio`, `retail.drawio`) tinham ficado tracked por acidente apesar do `.gitignore`, e a régua passou a escrever o corpus renderizado num diretório de temporário de verdade (`OUTPUT_DIR`, via `mktemp`), nunca mais dentro de árvore nenhuma. `render.sh` foi a única exceção: `case.cjs --image` o chama em tempo de execução, então ficou em `tools/` |
 
 O git guarda os três, e o #62 registra os endereços. **Nada aqui aponta para lá** —
 é a direção que o #46 exige, e a razão de a lista congelada do
@@ -97,16 +98,32 @@ mexeu — 78,6 KB antes, 78,9 KB depois —, porque nenhuma das duas árvores qu
 saíram era lida pelo agente: a suíte e o corpus sempre foram carga de quem
 mantém, nunca de quem executa.
 
+**O #45 mediu de novo, a mesma régua.** Antes deste ticket a árvore estava nos
+mesmos **101 arquivos** do #44 (a #43 reescreveu `SKILL.md` sem mudar
+contagem), **3,4 MB**. Depois, **73 arquivos e 2,5 MB** (8% do teto): 28
+arquivos saíram — os 25 de `tools/`, `catalog/tools/`, `catalog/tests/`,
+`catalog/README.md` e `theme/trap.json` que foram para
+`workbench/panlabs-aws-diagrams/`, mais os quatro apagados
+(`agents/openai.yaml` e os três de `output/`), menos o `render.sh` que voltou
+— ele é bancada, mas `case.cjs --image` o chama em tempo de execução, e mover
+um comando publicado para fora da árvore que ele mesmo precisa em produção
+seria repetir o defeito que abriu a spec #35. A carga de leitura não se mexeu
+— 78,9 KB —, pelo mesmo motivo de sempre: nada do que saiu era lido pelo
+agente. `workbench/panlabs-aws-diagrams/` ganhou 30 arquivos e 676 KB.
+
 E o teto deixou de ser a razão de qualquer coisa sair. Já não aperta ninguém;
 o que ainda manda material para fora é a **carga de leitura**, e o critério
 dos #44/#45 é o executável: *"o agente lê ou roda isto para executar a
 skill?"*.
 
-E o teto deixou de ser fé: `tools/package.sh --check` mede, e a camada 0 da
-régua o roda. Ele também acusa a armadilha que custou este ticket — **`.gitignore`
-não protege o pacote**. O empacotador oficial varre o diretório e exclui exatamente
-`__pycache__`, `node_modules`, `*.pyc`, `.DS_Store` e um `evals/` de raiz; um
-`output/` cheio de render sobe junto mesmo o git ignorando.
+E o teto deixou de ser fé: `tools/package.sh --check` mede à mão, com a mesma
+regra; quem a camada 0 da régua roda, desde o #45, é `scripts/checks/weight.sh`
+— a régua do harness (#70), para a regra não viver escrita duas vezes. Os dois
+acusam a mesma armadilha — **`.gitignore` não protege o pacote**. O empacotador
+oficial varre o diretório e exclui exatamente `__pycache__`, `node_modules`,
+`*.pyc`, `.DS_Store` e um `evals/` de raiz; um `output/` cheio de render subiria
+junto mesmo o git ignorando — e é exatamente por isso que o #45 tirou o
+`output/` da árvore em vez de só ignorá-lo melhor.
 
 ## Os contratos
 

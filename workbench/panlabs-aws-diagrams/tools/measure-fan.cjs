@@ -31,8 +31,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { generate } = require(path.join(__dirname, '..', 'engine', 'generate.cjs'));
-const { derive } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
+const SKILL = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { generate } = require(path.join(SKILL, 'engine', 'generate.cjs'));
+const { derive } = require(path.join(SKILL, 'engine', 'derive.cjs'));
 
 const LETTERS = 'abcdefghij';
 

@@ -28,7 +28,9 @@ const { canonicalize } = require('../../../skills/panlabs-aws-diagrams/session/f
 
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
 const WORKBENCH = path.join(__dirname, '..');
-const FILE = path.join(ROOT, 'output', 'retail.drawio');
+// The render corpus is scratch (#45) — the ruler exports OUTPUT_DIR once and
+// every check that reads a generated `.drawio` reads it from there.
+const FILE = path.join(process.env.OUTPUT_DIR || os.tmpdir(), 'retail.drawio');
 const { binary } = require(path.join(ROOT, 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
 

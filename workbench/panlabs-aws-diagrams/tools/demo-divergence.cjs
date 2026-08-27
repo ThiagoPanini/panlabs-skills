@@ -6,28 +6,28 @@
  *   > What happens when the human edited the `.drawio` by hand between two
  *   > sessions — is the model still valid? Does the skill detect divergence?
  *
- *   node tools/demo-divergence.cjs
+ *   node tools/demo-divergence.cjs <retail.drawio>
  *
  * It does what a human really does to a diagram they received: drags a box,
  * renames a service that had the wrong name, deletes one that no longer exists
  * and draws one that was missing. Then saves and sends it back.
  *
- * There are two output files, and the difference between them is the decision of
- * this ticket:
+ * There are two output files, written alongside the input, and the difference
+ * between them is the decision of this ticket:
  *
- *   output/retail-only-dragged.drawio   — only dragged. The model still holds.
- *   output/retail-hand-edited.drawio    — touched the content. The model became a lie.
+ *   retail-only-dragged.drawio   — only dragged. The model still holds.
+ *   retail-hand-edited.drawio    — touched the content. The model became a lie.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const { open, differ, policy, canRegenerate } = require('../session/open.cjs');
-const { draw } = require('../session/draw.cjs');
-const { readPages } = require('../session/fingerprint.cjs');
+const SKILL = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { open, differ, policy, canRegenerate } = require(path.join(SKILL, 'session', 'open.cjs'));
+const { draw } = require(path.join(SKILL, 'session', 'draw.cjs'));
+const { readPages } = require(path.join(SKILL, 'session', 'fingerprint.cjs'));
 
-const ROOT = path.join(__dirname, '..');
-const FILE = path.join(ROOT, 'output', 'retail.drawio');
+const FILE = process.argv[2];
 
 /**
  * Applies a swap to the LAST cell with this id — the file has two pages and the
@@ -93,11 +93,15 @@ async function describe(label, file) {
 }
 
 async function main() {
-  if (!fs.existsSync(FILE)) { console.error('  run tools/approve.cjs and tools/resume.cjs first.'); process.exit(1); }
+  if (!FILE || !fs.existsSync(FILE)) {
+    console.error('  usage: node demo-divergence.cjs <retail.drawio>  (run tools/approve.cjs and tools/resume.cjs first)');
+    process.exit(1);
+  }
   const base = fs.readFileSync(FILE, 'utf8');
 
-  const a = path.join(ROOT, 'output', 'retail-only-dragged.drawio');
-  const b = path.join(ROOT, 'output', 'retail-hand-edited.drawio');
+  const dir = path.dirname(FILE);
+  const a = path.join(dir, 'retail-only-dragged.drawio');
+  const b = path.join(dir, 'retail-hand-edited.drawio');
   fs.writeFileSync(a, ONLY_DRAGGED(base));
   fs.writeFileSync(b, TOUCHED_CONTENT(base));
 

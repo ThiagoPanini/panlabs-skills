@@ -20,7 +20,10 @@ const vm = require('vm');
 const { execFileSync } = require('child_process');
 
 const repo = process.argv[2];
-const outPath = process.argv[3] || path.join(__dirname, '..', 'aws4.catalog.json');
+// catalog/tools/ moved to the workbench sibling in #45; aws4.catalog.json
+// stayed in the skill.
+const outPath = process.argv[3] ||
+  path.join(__dirname, '..', '..', '..', '..', 'skills', 'panlabs-aws-diagrams', 'catalog', 'aws4.catalog.json');
 
 if (!repo || !fs.existsSync(repo)) {
   console.error('usage: node extract-aws4-catalog.cjs <drawio-repo> [output.json]');

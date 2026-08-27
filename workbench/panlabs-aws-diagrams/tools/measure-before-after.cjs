@@ -21,9 +21,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..');
-const BEFORE = path.join(ROOT, 'prototypes', 'q11', 'engine', 'generate.cjs');
-const { validateGeometry } = require(path.join(ROOT, 'validator', 'validate-geometry.cjs'));
+const WORKBENCH = path.join(__dirname, '..');
+const SKILL = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
+const BEFORE = path.join(SKILL, 'prototypes', 'q11', 'engine', 'generate.cjs');
+const { validateGeometry } = require(path.join(SKILL, 'validator', 'validate-geometry.cjs'));
 
 async function main() {
   if (!fs.existsSync(BEFORE)) {
@@ -33,10 +34,10 @@ async function main() {
   }
   const engines = {
     before: require(BEFORE).generate,
-    after: require(path.join(ROOT, 'engine', 'generate.cjs')).generate,
+    after: require(path.join(SKILL, 'engine', 'generate.cjs')).generate,
   };
   const withBytes = process.argv.includes('--bytes');
-  const models = fs.readdirSync(path.join(ROOT, 'models')).filter(f => f.endsWith('.json')).sort();
+  const models = fs.readdirSync(path.join(WORKBENCH, 'models')).filter(f => f.endsWith('.json')).sort();
 
   console.log('\n  the same model through both engines — report from the #18 validator\n');
   const L = withBytes ? 32 : 26;
@@ -45,7 +46,7 @@ async function main() {
 
   let semanticsChanged = 0, failureCountChanged = 0, didNotGenerate = 0;
   for (const file of models) {
-    const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'models', file), 'utf8'));
+    const m = JSON.parse(fs.readFileSync(path.join(WORKBENCH, 'models', file), 'utf8'));
     const col = {};
     for (const [label, generate] of Object.entries(engines)) {
       try {

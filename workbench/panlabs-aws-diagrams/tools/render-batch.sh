@@ -9,12 +9,15 @@
 #   tools/render-batch.sh a.drawio b.drawio ...
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# render.sh stayed in the skill's tools/ (#45) — case.cjs's `--image` depends
+# on it at runtime, so it could not move with the rest of the bancada.
+RENDER="$HERE/../../../skills/panlabs-aws-diagrams/tools/render.sh"
 failed=0
 
 for d in "$@"; do
   "$HERE/clean-render.sh" >/dev/null 2>&1
   png="${d%.drawio}.png"
-  if "$HERE/render.sh" "$d" "$png" 2>&1 | tail -3; then :; else failed=1; fi
+  if "$RENDER" "$d" "$png" 2>&1 | tail -3; then :; else failed=1; fi
 done
 
 "$HERE/clean-render.sh" >/dev/null 2>&1

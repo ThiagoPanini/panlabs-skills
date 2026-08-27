@@ -12,13 +12,16 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { generate } = require('../engine/generate.cjs');
+const SKILL = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { generate } = require(path.join(SKILL, 'engine', 'generate.cjs'));
 
-const HERE = path.join(__dirname, '..');
-const RENDER = path.join(__dirname, 'render.sh');
+// render.sh stayed in the skill's tools/ (#45) — case.cjs's `--image` depends
+// on it at runtime, so it could not move with the rest of the bancada.
+const RENDER = path.join(SKILL, 'tools', 'render.sh');
 
 /** Removes a node and everything that depends on it — descendants, edges, bands. */
 function prune(model, ids) {
@@ -37,12 +40,13 @@ function prune(model, ids) {
   };
 }
 
-const { binary } = require('./drawio.cjs');
+const { binary } = require(path.join(SKILL, 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[3]);
 const HAS_APP = fs.existsSync(DRAWIO) && fs.existsSync(RENDER);
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'bisect-'));
 
 async function test(name, model) {
-  const drawio = path.join(HERE, 'output', `_bis-${name}.drawio`);
+  const drawio = path.join(TMP, `_bis-${name}.drawio`);
   let r;
   try { r = await generate(model); }
   catch (e) { return { name, state: 'rejected', txt: `${name.padEnd(24)} engine refused: ${e.message}` }; }

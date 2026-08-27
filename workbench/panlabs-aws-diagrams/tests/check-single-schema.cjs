@@ -55,7 +55,7 @@ function requireReads(modulePath) {
 }
 
 /** Every .json in the production tree that declares itself a JSON Schema. */
-function schemas(dir, excluded = new Set(['prototypes', 'node_modules', 'output'])) {
+function schemas(dir, excluded = new Set(['prototypes', 'node_modules'])) {
   const findings = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (excluded.has(e.name)) continue;

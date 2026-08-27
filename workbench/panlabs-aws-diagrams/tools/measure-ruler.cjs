@@ -16,9 +16,11 @@
  *   node tools/measure-ruler.cjs
  */
 
-const { ratio, luminance } = require('../engine/contrast.cjs');
-const cat = require('../catalog/aws-shapes.cjs').load();
-const theme = require('../theme/theme.cjs');
+const path = require('path');
+const SKILL = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
+const { ratio, luminance } = require(path.join(SKILL, 'engine', 'contrast.cjs'));
+const cat = require(path.join(SKILL, 'catalog', 'aws-shapes.cjs')).load();
+const theme = require(path.join(SKILL, 'theme', 'theme.cjs'));
 
 const gray = g => '#' + Math.max(0, Math.min(255, g)).toString(16).padStart(2, '0').repeat(3).toUpperCase();
 

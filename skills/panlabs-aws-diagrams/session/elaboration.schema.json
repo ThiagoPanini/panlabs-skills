@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "panlabs-aws-diagrams/elaboration@1",
   "title": "Elaboração — o delta da fase técnica sobre o modelo aprovado",
-  "description": "NÃO é um segundo modelo. É o que a fase técnica ACRESCENTA ao `session@1` que a sessão anterior aprovou — session/elaborate.cjs aplica este delta e devolve outro `session@1`. Nenhum campo daqui alcança um casaco lógico: a fase técnica não inventa capacidade, e essa regra é gramática (esquema fechado), não disciplina de quem escreve. A forma está descrita em guide/model.md; o corpus tem dois exemplos completos em models/session/*-elaboracao.json.\n\nOs mapas (`casacos`, `dentro`, `refina`, `arestasCasaco`) ficam com valor `object` solto: as chaves são ids de nó/aresta aprovados, imprevisíveis aqui. A forma de cada valor — em particular a de um casaco técnico — é validada de novo, junto com o resto do modelo fundido, por session/validate.cjs contra `session@1` (que TEM `casacoTecnico` fechado). Duplicar aquele fechamento aqui seria uma terceira cópia da mesma decisão — e cada cópia é mais um lugar para as três divergirem em silêncio, que é a classe de defeito que este próprio ticket existe para fechar (ver tests/check-technical-parity.cjs).",
+  "description": "NÃO é um segundo modelo. É o que a fase técnica ACRESCENTA ao `session@1` que a sessão anterior aprovou — session/elaborate.cjs aplica este delta e devolve outro `session@1`. Nenhum campo daqui alcança um casaco lógico: a fase técnica não inventa capacidade, e essa regra é gramática (esquema fechado), não disciplina de quem escreve. A forma está descrita em guide/model.md; o exemplo embarcado é examples/session/retail-elaboration.json.\n\nOs mapas (`facets`, `inside`, `refines`, `facetEdges`) ficam com valor `object` solto: as chaves são ids de nó/aresta aprovados, imprevisíveis aqui. A forma de cada valor — em particular a de um casaco técnico — é validada de novo, junto com o resto do modelo fundido, por session/validate.cjs contra `session@1` (que TEM `technicalFacet` fechado). Duplicar aquele fechamento aqui seria uma terceira cópia da mesma decisão — e cada cópia é mais um lugar para as três divergirem em silêncio, que é a classe de defeito que este próprio ticket existe para fechar (ver tests/check-technical-parity.cjs).",
   "type": "object",
   "additionalProperties": false,
   "patternProperties": {
@@ -22,33 +22,33 @@
     "subtitle": { "type": "string" },
 
     "_": { "type": "string", "description": "Comentário livre sobre o delta inteiro. Não lido por elaborate.cjs." },
-    "_reparenta": { "type": "string", "description": "Comentário livre sobre o bloco `dentro`. Não lido por elaborate.cjs." },
-    "_arestas": { "type": "string", "description": "Comentário livre sobre o bloco `arestas`. Não lido por elaborate.cjs." },
-    "_refina": { "type": "string", "description": "Comentário livre sobre o bloco `refina`. Não lido por elaborate.cjs." },
+    "_reparenta": { "type": "string", "description": "Comentário livre sobre o bloco `inside`. Não lido por elaborate.cjs." },
+    "_arestas": { "type": "string", "description": "Comentário livre sobre o bloco `edges`. Não lido por elaborate.cjs." },
+    "_refina": { "type": "string", "description": "Comentário livre sobre o bloco `refines`. Não lido por elaborate.cjs." },
 
     "nodes": {
       "type": "array",
       "default": [],
       "items": { "$ref": "#/definitions/newNode" },
-      "description": "Infraestrutura nova (VPC, subnet, endpoint, papel de IAM...). camada:\"tecnica\" é obrigatória — tudo que a elaboração acrescenta é infraestrutura, nunca capacidade."
+      "description": "Infraestrutura nova (VPC, subnet, endpoint, papel de IAM...). layer:\"technical\" é obrigatória — tudo que a elaboração acrescenta é infraestrutura, nunca capacidade."
     },
 
     "facets": {
       "type": "object",
       "additionalProperties": true,
-      "description": "{ id: casacoTecnico }. Veste um nó JÁ APROVADO de serviço AWS. Cada valor tem a forma de `casacoTecnico` (session@1) — validada depois do merge, não aqui. `additionalProperties: true` é deliberado, mesmo idioma de `model@1.dossie`: aberto por contrato, não por esquecimento."
+      "description": "{ id: technicalFacet }. Veste um nó JÁ APROVADO de serviço AWS. Cada valor tem a forma de `technicalFacet` (session@1) — validada depois do merge, não aqui. `additionalProperties: true` é deliberado, mesmo idioma de `model@1.dossier`: aberto por contrato, não por esquecimento."
     },
 
     "inside": {
       "type": "object",
       "additionalProperties": true,
-      "description": "{ id: novoPai }. Reparenta um nó aprovado para dentro de um nível que só a camada técnica tem — a operação de risco: a projeção lógica tem de sair idêntica mesmo assim."
+      "description": "{ id: newParentId }. Reparenta um nó aprovado para dentro de um nível que só a camada técnica tem — a operação de risco: a projeção lógica tem de sair idêntica mesmo assim."
     },
 
     "refines": {
       "type": "object",
       "additionalProperties": true,
-      "description": "{ idAresta: { por: [ids], rotulos: [...] } }. Transforma uma aresta aprovada num CAMINHO técnico, declarando os saltos — os extremos continuam sendo os mesmos objetos, e a contração da projeção reconstrói o par original."
+      "description": "{ edgeId: { by: [ids], rotulos: [...] } }. Transforma uma aresta aprovada num CAMINHO técnico, declarando os saltos — os extremos continuam sendo os mesmos objetos, e a contração da projeção reconstrói o par original."
     },
 
     "edges": {
@@ -61,7 +61,7 @@
     "facetEdges": {
       "type": "object",
       "additionalProperties": true,
-      "description": "{ idAresta: { rotulo, protocolo, ordem } }. Dá rótulo técnico a uma aresta aprovada, sem mexer nos extremos."
+      "description": "{ edgeId: { label, protocol, order } }. Dá rótulo técnico a uma aresta aprovada, sem mexer nos extremos."
     },
 
     "notes": {
@@ -73,7 +73,7 @@
     "dossier": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Mesma forma de dossie.estacionamento e dossie.achados em session@1 — elaborate.cjs funde por chave (nome/regra+alvo) em vez de substituir a lista inteira."
+      "description": "Mesma forma de dossier.parking e dossier.findings em session@1 — elaborate.cjs funde por chave (nome/regra+alvo) em vez de substituir a lista inteira."
     }
   },
 
@@ -93,13 +93,13 @@
         "id": { "$ref": "#/definitions/identifier" },
         "layer": {
           "const": "technical",
-          "description": "Único valor aceito num nó novo da elaboração — elaborate.cjs recusa qualquer outro (inclusive ausência, que herdaria \"ambas\"). Nó novo é sempre infraestrutura."
+          "description": "Único valor aceito num nó novo da elaboração — elaborate.cjs recusa qualquer outro (inclusive ausência, que herdaria \"both\"). Nó novo é sempre infraestrutura."
         },
         "inside": { "$ref": "#/definitions/identifier" },
         "technical": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Casaco técnico do nó novo — forma de `casacoTecnico` (session@1), validada depois do merge."
+          "description": "Casaco técnico do nó novo — forma de `technicalFacet` (session@1), validada depois do merge."
         }
       }
     },

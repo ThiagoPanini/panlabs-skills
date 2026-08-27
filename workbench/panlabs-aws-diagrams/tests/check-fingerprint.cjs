@@ -81,8 +81,13 @@ const EDITS = [
     apply: x => inFirstCell(x, 'sub-app', c => c.replace('#00A4A6', '#7AA116').replace('#E6F6F7', '#F2F6E8')),
     because: 'same shape, same grIcon — the public/private boundary only exists in the hex' },
 
+  // The rename lands on the leaf's ITALIC line, which is where the shipped
+  // example says what this bucket is called (#123). Before that ticket the
+  // whole thing was glued into one string — `value="S3 · zona curada"` — and
+  // the rename had to rewrite the name and the description together.
   { name: 'rename a service', expected: 'divergent',
-    apply: x => inFirstCell(x, 'reter-objeto', c => c.replace('value="S3 · zona curada"', 'value="S3 · archived zone"')) },
+    apply: x => inFirstCell(x, 'reter-objeto', c =>
+      c.replace('&lt;i&gt;retail-lake-curado&lt;/i&gt;', '&lt;i&gt;retail-lake-arquivado&lt;/i&gt;')) },
 
   { name: 'delete a node', expected: 'divergent',
     apply: x => x.replace(/ *<mxCell id="papel-leitura"[\s\S]*?<\/mxCell>\n/, '') },

@@ -90,18 +90,37 @@ const WRITE_ONLY_DIR = 'output';
 function split(text) {
   const blocks = [];
   const prose = [];
-  let open = null;
+  let open = null, lang = '';
   for (const line of text.split('\n')) {
-    if (/^\s*```/.test(line)) {
-      if (open === null) open = [];
-      else { blocks.push(open.join('\n')); open = null; }
+    const f = /^\s*```(\w*)/.exec(line);
+    if (f) {
+      if (open === null) { open = []; lang = f[1].toLowerCase(); }
+      else { blocks.push({ lang, body: open.join('\n') }); open = null; lang = ''; }
       continue;
     }
     (open ?? prose).push(line);
   }
-  if (open !== null) blocks.push(open.join('\n'));   // an unclosed fence is still a block
+  if (open !== null) blocks.push({ lang, body: open.join('\n') });   // an unclosed fence is still a block
   return { blocks, prose: prose.join('\n') };
 }
+
+/**
+ * A fence declaring a DATA format is data; everything else is a command. The
+ * difference started mattering when #123 put an `elaboration@1` example into
+ * `guide/model.md`: the contract's own `$id`, `panlabs-aws-diagrams/elaboration@1`,
+ * reads as a path to the scanner below, and rule 3 called it a file that does
+ * not exist.
+ *
+ * Narrowing a rule is the move that USUALLY hides a defect, so this is a DENY
+ * list and not an allow list — the first draft allowed `bash|sh|shell|zsh|console`
+ * and the review pointed out what that quietly excused: a ```js fence calling
+ * `writeFileSync('examples/new.json')` is the very defect rule 2 exists for, and
+ * an allow list stops seeing it. Unknown language means command, which fails
+ * toward measuring. Two planted defects below hold that open, and the control
+ * after them proves both directions on rules 2 AND 3.
+ */
+const DATA_FENCE = new Set(['json', 'yaml', 'yml', 'xml', 'toml', 'csv', 'ini']);
+const isCommandFence = b => !DATA_FENCE.has(b.lang);
 
 /** Inline code spans that read as a command — the "Os comandos" table's rows. */
 function commandSpans(prose) {
@@ -151,7 +170,7 @@ function writeTargets(block) {
 /** Every command a document documents, fenced or inline. */
 function commandsIn(text) {
   const { blocks, prose } = split(text);
-  return [...blocks, ...commandSpans(prose)];
+  return [...blocks.filter(isCommandFence).map(b => b.body), ...commandSpans(prose)];
 }
 
 /** The guides, which the front door points at and whose commands it stands behind. */
@@ -212,7 +231,7 @@ function measure(md, surfaces = []) {
     escapes: unique(escapes),
     dangling: unique(dangling),
     grillingNamed: /grilling/i.test(prose),
-    grillingInvoked: /grilling/i.test(blocks.join('\n')),
+    grillingInvoked: /grilling/i.test(blocks.map(b => b.body).join('\n')),
   };
 }
 
@@ -240,7 +259,8 @@ function verdicts(m) {
 
 // ------------------------------------------------------------------ the proof
 
-const fence = body => `\n\`\`\`bash\n${body}\n\`\`\`\n`;
+const inLang = (lang, body) => `\n\`\`\`${lang}\n${body}\n\`\`\`\n`;
+const fence = body => inLang('bash', body);
 const row = body => `\n| \`${body}\` | uma linha da tabela de comandos |\n`;
 
 /**
@@ -278,6 +298,12 @@ const DEFECTS = [
     md => md.replace(/grilling/gi, 'outra-skill')],
   ['a command invoking /grilling', '4 · and no command invokes it',
     md => md + fence('/grilling a necessidade')],
+  // The two that keep DATA_FENCE from growing into an allow list again. A
+  // non-shell fence is still code, and rules 2 and 3 have to keep reading it.
+  ['writeFileSync into the skill tree, in a js fence', '2 · every documented write lands outside the skill tree',
+    md => md + inLang('js', `require('fs').writeFileSync('examples/new.json', x)`)],
+  ['a js fence naming a path that does not exist', '3 · every concrete path a command names exists',
+    md => md + inLang('js', `require('./tools/does-not-exist.cjs')`)],
 ];
 
 // ------------------------------------------------------------------ the report
@@ -299,6 +325,23 @@ for (const [name, target, plant] of DEFECTS) {
   const caught = !row[1];
   console.log(`  ${caught ? '✓' : '✗'} planting "${name}" turns "${target}" red`);
   if (!caught) failed = 1;
+}
+
+// The narrowing of #123, proven in BOTH directions on the same token. A rule
+// that stops looking somewhere is the shape a hidden defect takes, so it is not
+// enough that the json fence goes quiet: the bash fence carrying the identical
+// path still has to go red.
+for (const [rule, token, command] of [
+  ['3 · every concrete path a command names exists', 'tools/does-not-exist.cjs', t => `node ${t}`],
+  ['2 · every documented write lands outside the skill tree', 'output/retail.drawio', t => `node engine/generate.cjs m.json --output ${t}`],
+]) {
+  const verdictFor = doc => read(doc).find(([desc]) => desc === rule)[1];
+  const quiet = verdictFor(`${md}\n\`\`\`json\n{ "schema": "${token}" }\n\`\`\`\n`);
+  const red = !verdictFor(`${md}\n\`\`\`bash\n${command(token)}\n\`\`\`\n`);
+  console.log(`  ${quiet && red ? '✓' : '✗'} "${rule}" reads a data fence as data, and "${token}" still red in bash`);
+  if (!quiet) console.log('      · a json fence was read as a command');
+  if (!red) console.log('      · and the bash fence stopped being read as one');
+  if (!(quiet && red)) failed = 1;
 }
 
 // The rule that keeps the rules honest: a verdict nobody plants against is a

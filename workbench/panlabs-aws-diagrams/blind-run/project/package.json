@@ -1,0 +1,8 @@
+{
+  "name": "labmove-platform",
+  "private": true,
+  "scripts": {
+    "lint": "eslint services",
+    "test": "node --test services"
+  }
+}

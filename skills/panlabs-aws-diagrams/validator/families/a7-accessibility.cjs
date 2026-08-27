@@ -161,7 +161,7 @@ module.exports = function a7(scene) {
       }
       output.push(matches('A7.4', cases, {
         measured: { colors: colors.length, channels: 'fill and stroke', worstPair: worst.deltaE === Infinity ? null : worst, minimum },
-        mensagem: cases.length ? `${cases.length} pair(s) of colors indistinguishable under some deficiency` : 'colors of distinct meanings stay apart under all three simulations',
+        message: cases.length ? `${cases.length} pair(s) of colors indistinguishable under some deficiency` : 'colors of distinct meanings stay apart under all three simulations',
       }));
     }
   }
@@ -203,7 +203,7 @@ module.exports = function a7(scene) {
       }
       output.push(matches('A7.5', cases, {
         measured: { entries: scene.legend.length, belowFloor: cases.length },
-        mensagem: cases.length ? `${cases.length} legend entries below the floor` : `${scene.legend.length} legend entries within the floors`,
+        message: cases.length ? `${cases.length} legend entries below the floor` : `${scene.legend.length} legend entries within the floors`,
       }));
     }
   }

@@ -79,7 +79,7 @@ async function main() {
     delete require.cache[require.resolve(path.join(ROOT, 'catalog', 'aws-shapes.cjs'))];
     require(path.join(ROOT, 'catalog', 'aws-shapes.cjs')).load();
     await generate(JSON.parse(realFs.call(fs, path.join(ROOT, 'examples', 'web-multi-az.json'), 'utf8')),
-      { tema: 'corporate' });
+      { theme: 'corporate' });
   } finally { fs.readFileSync = realFs; }
   // and the spy has to have seen SOMETHING — a spy that observes nothing makes
   // the next assertion vacuously true

@@ -163,7 +163,7 @@ async function main() {
     } catch (e) {
       check(`"${name}" draws under the truthfulness gate`, false);
       console.log(`      · ${e.message}`);
-      for (const l of e.erros || []) console.log(`        ${l}`);
+      for (const l of e.errors || []) console.log(`        ${l}`);
     }
   }
 
@@ -231,7 +231,7 @@ async function main() {
     // RAW report (not `result`, which never carries it) so the exclusion below
     // is proven against real findings, not against an accidentally-empty list.
     const rawTechnical = await draw(technical, 'technical', { gate: 'truthfulness' });
-    const allResults = rawTechnical.relatorio.geometry.flatMap(g => g.report.resultados);
+    const allResults = rawTechnical.report.geometry.flatMap(g => g.report.resultados);
     const floorFires = ['A1.2', 'A1.11'].every(id =>
       allResults.some(r => r.id === id && (r.state === 'failure' || r.state === 'warning')));
     check(`"${name}": the known floor (A1.2, A1.11) genuinely fires in the report`, floorFires);

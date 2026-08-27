@@ -309,7 +309,7 @@ function reescreverSelos(xml, make) {
     throw new Error(`the XML has ${pages.length} page(s) but ${i} ${SEAL_ID} cell(s) — ` +
       'some page was left without a seal');
   const errors = checkXml(output);
-  if (errors.length) { const e = new Error('rewriting the seal produced malformed XML'); e.erros = errors; throw e; }
+  if (errors.length) { const e = new Error('rewriting the seal produced malformed XML'); e.errors = errors; throw e; }
   return { xml: output, pages };
 }
 

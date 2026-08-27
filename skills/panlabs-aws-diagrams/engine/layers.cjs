@@ -133,9 +133,9 @@ function categoriaDoNo(no, cat) {
 function camadaDaSubnet(subnet, descendants, cat) {
   const evidence = [];
   for (const n of descendants) {
-    const categoria = categoriaDoNo(n, cat);
-    const layer = categoria ? (CATEGORY_LAYER[categoria] || null) : null;
-    if (layer) evidence.push({ id: n.id, service: n.service || n.kind, categoria, layer });
+    const category = categoriaDoNo(n, cat);
+    const layer = category ? (CATEGORY_LAYER[category] || null) : null;
+    if (layer) evidence.push({ id: n.id, service: n.service || n.kind, category, layer });
   }
 
   const declared = subnet.layer || null;
@@ -197,7 +197,7 @@ function chaveDePapel(subnet, t) {
   return `${vpc}|${subnet.access || '?'}|${subnet.label || ''}`;
 }
 
-function papeisDeSubnet(model, t, camadas) {
+function papeisDeSubnet(model, t, layers) {
   const papeis = new Map();
   for (const s of model.nodes.filter(n => n.kind === 'subnet')) {
     const key = chaveDePapel(s, t);
@@ -215,7 +215,7 @@ function papeisDeSubnet(model, t, camadas) {
     papeis.get(key).subnets.push(s.id);
   }
   for (const p of papeis.values())
-    p.layer = camadaDeGrupo(p.subnets.map(id => (camadas.get(id) || {}).layer || null));
+    p.layer = camadaDeGrupo(p.subnets.map(id => (layers.get(id) || {}).layer || null));
   return papeis;
 }
 
@@ -229,9 +229,9 @@ function papeisDeSubnet(model, t, camadas) {
  *
  * Returns one gap per group (vpc × exposure), with the orphaned roles.
  */
-function layerGaps(model, t, camadas) {
+function layerGaps(model, t, layers) {
   const groups = new Map();
-  for (const p of papeisDeSubnet(model, t, camadas).values()) {
+  for (const p of papeisDeSubnet(model, t, layers).values()) {
     const key = `${p.vpc}|${p.access}`;
     if (!groups.has(key)) groups.set(key, { vpc: p.vpc, access: p.access, papeis: [] });
     groups.get(key).papeis.push(p);
@@ -247,7 +247,7 @@ function layerGaps(model, t, camadas) {
       orfaos: orfaos.map(o => ({
         papel: o.label || `(no label: ${o.subnets.join(', ')})`,
         subnets: o.subnets,
-        vazio: o.subnets.every(id => !((camadas.get(id) || {}).evidence || []).length),
+        vazio: o.subnets.every(id => !((layers.get(id) || {}).evidence || []).length),
       })).sort((a, b) => a.papel.localeCompare(b.papel, 'pt')),
     });
   }

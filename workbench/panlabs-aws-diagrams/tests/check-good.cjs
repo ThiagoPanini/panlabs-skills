@@ -91,11 +91,11 @@ async function main() {
     }
 
     const report = validateGeometry(r.layoutPlan);
-    const s = report.resumo;
+    const s = report.summary;
 
     // 1. zero tolerance for what is semantic — save for a named quarantine,
     //    and it demands EXACT equality, not "less than or equal"
-    const lies = report.semanticas;
+    const lies = report.semantic;
     const signature = lies.map(m => `${m.id}×${m.occurrences.length}`).sort();
     const q = QUARANTINE[name];
     const quarantined = q && JSON.stringify(signature) === JSON.stringify([...q.expected].sort());
@@ -106,7 +106,7 @@ async function main() {
       console.log(`  ${lies.length ? '✗' : '✓'} ${name}: ${lies.length ? `${lies.length} SEMANTIC FAILURE(S)` : 'no semantic failure'}`);
       for (const m of lies) {
         failed = 1;
-        console.log(`      ${m.id} ${m.name}: ${m.mensagem}`);
+        console.log(`      ${m.id} ${m.name}: ${m.message}`);
         for (const o of m.occurrences.slice(0, 3)) console.log(`        · ${o.o_que}`);
       }
       if (q) {
@@ -123,12 +123,12 @@ async function main() {
       console.log(`      ✗ did not run: ${report.cobertura.naoRodaram.join(', ')}`);
     }
     const blownUp = report.resultados.filter(x => x.state === 'erro');
-    for (const e of blownUp) { failed = 1; console.log(`      ✗ ${e.mensagem}`); }
+    for (const e of blownUp) { failed = 1; console.log(`      ✗ ${e.message}`); }
 
     // 3. the snapshot, which is what gets compared between sessions
     console.log(`      ${s.ok} ok · ${s.warning} warning · ${s.failure} failure · ${s.notApplicable} not applicable · ${s.skipped} from render`);
-    if (report.falhas.length)
-      console.log(`      findings (do not block the suite): ${report.falhas.map(f => f.id).join(', ')}`);
+    if (report.failures.length)
+      console.log(`      findings (do not block the suite): ${report.failures.map(f => f.id).join(', ')}`);
   }
 
   // ---------------------------------------------------------- the separation, made explicit
@@ -169,7 +169,7 @@ async function main() {
       // KEEPS blocking `web-flow-3-az`, which is the correct behavior. What the
       // quarantine does is not call a named debt a regression.
       if (QUARANTINE[name]) { quarantinedAtGate++; console.log(`  ⚠ ${file} blocked by the gate — quarantine ${QUARANTINE[name].ticket}`); }
-      else { failed = 1; console.log(`  ✗ ${file} was blocked: ${e.erros.join(' | ')}`); }
+      else { failed = 1; console.log(`  ✗ ${file} was blocked: ${e.errors.join(' | ')}`); }
     }
   }
   const expected = models.length - Object.keys(QUARANTINE).length;

@@ -100,7 +100,7 @@ async function testOutput() {
       // theme that didn't even get to generate — and this file's header says
       // a check that doesn't know how to fail proves nothing.
       try {
-        r = await generate(model, { tema: id, force: true });
+        r = await generate(model, { theme: id, force: true });
       } catch (e) {
         findings.push(`${file} + theme ${id}: generation failed (${e.message}) — can't check the output`);
         continue;

@@ -125,7 +125,7 @@ function readFile(idOrPath) {
     const available = fs.readdirSync(DIR).filter(f => f.endsWith('.json') && f !== 'schema.json')
       .map(f => f.replace(/\.json$/, ''));
     const e = new Error(`theme "${idOrPath}" does not exist`);
-    e.erros = [`available themes: ${available.join(', ')}`];
+    e.errors = [`available themes: ${available.join(', ')}`];
     throw e;
   }
   return JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -141,11 +141,11 @@ function load(idOrPath = 'light', seen = []) {
   const raw = readFile(idOrPath);
 
   const errors = againstSchema(raw, SCHEMA, SCHEMA);
-  if (errors.length) { const e = new Error(`theme "${idOrPath}" is invalid`); e.erros = errors; throw e; }
+  if (errors.length) { const e = new Error(`theme "${idOrPath}" is invalid`); e.errors = errors; throw e; }
 
   if (seen.includes(raw.id)) {
     const e = new Error('inheritance cycle between themes');
-    e.erros = [[...seen, raw.id].join(' -> ')];
+    e.errors = [[...seen, raw.id].join(' -> ')];
     throw e;
   }
 
@@ -154,7 +154,7 @@ function load(idOrPath = 'light', seen = []) {
     const parent = load(raw.inherits, [...seen, raw.id]);
     if (parent.background !== raw.background) {
       const e = new Error(`theme "${raw.id}" inherits from "${raw.inherits}", which has a different background`);
-      e.erros = [`${raw.background} != ${parent.background} — inheriting across the normative switch would carry over the wrong ink`];
+      e.errors = [`${raw.background} != ${parent.background} — inheriting across the normative switch would carry over the wrong ink`];
       throw e;
     }
     base = parent.tokens;

@@ -68,12 +68,12 @@ const note = (ok, what, detail) => {
     } catch (e) { thrown = e; }
 
     note(!!thrown, `"truthfulness" level blocks the plan that lies via ${id} ("${lying.name}")`,
-      thrown ? `→ ${thrown.erros[0]}` : 'passed, and it should not have');
+      thrown ? `→ ${thrown.errors[0]}` : 'passed, and it should not have');
     if (!thrown) continue;
-    note(Array.isArray(thrown.erros) && thrown.erros.length > 0,
-      `${id}: the error carries readable lines in \`.erros\`, like the rest of the engine`);
+    note(Array.isArray(thrown.errors) && thrown.errors.length > 0,
+      `${id}: the error carries readable lines in \`.errors\`, like the rest of the engine`);
     note(!!thrown.report, `${id}: the error carries the whole report for whoever wants the detail`);
-    note(thrown.erros.some(l => l.includes(id)), `${id}: the message names the check that blocked it`);
+    note(thrown.errors.some(l => l.includes(id)), `${id}: the message names the check that blocked it`);
   }
 }
 
@@ -112,7 +112,7 @@ const note = (ok, what, detail) => {
     } catch (e) { blocked = e; }
 
     note(!blocked, "#11's good diagram passes the truthfulness gate",
-      blocked ? blocked.erros.join(' | ') : `${report.resumo.ok} ok, ${report.resumo.failure} failure, 0 semantic`);
+      blocked ? blocked.errors.join(' | ') : `${report.summary.ok} ok, ${report.summary.failure} failure, 0 semantic`);
 
     // and the pipeline continues: the gate did not consume or alter the plan
     const xml = emit(r.layoutPlan);

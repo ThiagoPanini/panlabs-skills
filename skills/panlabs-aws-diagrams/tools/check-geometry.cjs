@@ -62,32 +62,32 @@ async function main() {
     const name = path.basename(input, '.json');
     let r;
     try {
-      r = await generate(JSON.parse(fs.readFileSync(input, 'utf8')), { tema: themeName });
+      r = await generate(JSON.parse(fs.readFileSync(input, 'utf8')), { theme: themeName });
     } catch (error) {
       console.error(`\n✗ ${name}: the engine did not generate — ${error.message}`);
-      for (const row of error.erros || []) console.error(`    · ${row}`);
+      for (const row of error.errors || []) console.error(`    · ${row}`);
       bad++;
       continue;
     }
 
     const report = validateGeometry(r.layoutPlan);
-    const failed = report.falhas.length > 0 || (strict && report.avisos.length > 0);
+    const failed = report.failures.length > 0 || (strict && report.warnings.length > 0);
     if (failed || report.cobertura.naoRodaram.length) bad++;
 
     if (json) {
       reports.push({
-        diagram: name, path: r.caminho, ok: report.ok, summary: report.resumo,
+        diagram: name, path: r.path, ok: report.ok, summary: report.summary,
         coverage: report.cobertura,
         checks: [...report.resultados, ...report.extras].map(x => ({
           id: x.id, name: x.name, state: x.state, semantic: x.semantica,
-          message: x.mensagem, measured: x.measured,
+          message: x.message, measured: x.measured,
           occurrences: x.occurrences.map(o => o.o_que),
         })),
       });
       continue;
     }
 
-    console.log(`\n${'='.repeat(72)}\n${name}  (path "${r.caminho}", ${r.layoutPlan.cells.length} cells)\n${'='.repeat(72)}`);
+    console.log(`\n${'='.repeat(72)}\n${name}  (path "${r.path}", ${r.layoutPlan.cells.length} cells)\n${'='.repeat(72)}`);
     console.log(format(report, { all }));
   }
 

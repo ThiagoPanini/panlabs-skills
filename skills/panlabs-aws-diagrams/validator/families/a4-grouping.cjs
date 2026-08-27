@@ -68,7 +68,7 @@ module.exports = function a4(scene) {
     }
     output.push(matches('A4.2', cases, {
       measured: { violations: cases.length },
-      mensagem: cases.length
+      message: cases.length
         ? `${cases.length} false membership(s) — tolerance is zero`
         : 'no non-member inside someone else\'s group',
     }));
@@ -104,7 +104,7 @@ module.exports = function a4(scene) {
     }
     output.push(matches('A4.4', cases, {
       measured: { elements: solid.length, divergences: cases.length },
-      mensagem: cases.length
+      message: cases.length
         ? `${cases.length} element(s) where the drawing and the model tell different topologies`
         : 'the drawn tree is the declared tree',
     }));
@@ -178,7 +178,7 @@ module.exports = function a4(scene) {
     else {
       const rho = mean(intra) / mean(inter);
       output.push(rho <= ceiling
-        ? ok('A4.7', { measured: { rho: roundTo(rho), intra: roundTo(mean(intra), 1), inter: roundTo(mean(inter), 1) }, mensagem: `ρ = ${roundTo(rho)} ≤ ${ceiling}` })
+        ? ok('A4.7', { measured: { rho: roundTo(rho), intra: roundTo(mean(intra), 1), inter: roundTo(mean(inter), 1) }, message: `ρ = ${roundTo(rho)} ≤ ${ceiling}` })
         : matches('A4.7', [{ o_que: `ρ = ${roundTo(rho)} > ${ceiling}: nodes in the same group are not closer to each other than to outside nodes`, ids: [] }],
           { measured: { rho: roundTo(rho), intra: roundTo(mean(intra), 1), inter: roundTo(mean(inter), 1) } }));
     }

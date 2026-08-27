@@ -72,29 +72,29 @@ testCase('a single account is not a multi-account diagram',
 
 testCase('two accounts with no crossing — it is inventory (E1: no edge)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b')]),
-  { modo: 'inventario' }, modoDeContas);
+  { modo: 'inventory' }, modoDeContas);
 
 testCase('three accounts with two crossings — integration (X1)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('c'), inside('z', 'c')],
     [crossing('x', 'y'), crossing('x', 'z')]),
-  { modo: 'integracao' }, modoDeContas);
+  { modo: 'integration' }, modoDeContas);
 
 testCase('five accounts — above what the integration view can hold (X1: 2 to 4)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('c'), inside('z', 'c'),
     account('d'), inside('w', 'd'), account('e'), inside('v', 'e')],
     [crossing('x', 'y')]),
-  { modo: 'inventario' }, modoDeContas);
+  { modo: 'inventory' }, modoDeContas);
 
 testCase('an edge coming in from the street is not an account crossing',
   mod([{ id: 'actor', kind: 'actor', service: 'users' }, account('a'), inside('x', 'a'), account('b'), inside('y', 'b')],
     [crossing('actor', 'x')]),
-  { modo: 'inventario' }, modoDeContas);
+  { modo: 'inventory' }, modoDeContas);
 
 testCase('two accounts, eight crossings — beyond what the official corpus shows (2 to 7)',
   mod([account('a'), ...Array.from({ length: 8 }, (_, i) => inside('x' + i, 'a')),
     account('b'), ...Array.from({ length: 8 }, (_, i) => inside('y' + i, 'b'))],
     Array.from({ length: 8 }, (_, i) => crossing('x' + i, 'y' + i))),
-  { modo: 'inventario' }, modoDeContas);
+  { modo: 'inventory' }, modoDeContas);
 
 // ------------------------------------------------- 6-level hierarchy (#6)
 
@@ -110,37 +110,37 @@ testCase('inventory suppresses everything — the sovereign rule (E1)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('c'), inside('z', 'c'),
     account('d'), inside('w', 'd'), account('e'), inside('v', 'e')],
     [crossing('x', 'y')]),
-  { level: 1, mecanismo: 'suprimir' }, policy);
+  { level: 1, mechanism: 'suppress' }, policy);
 
 testCase('fan-in of 2 accounts into the same destination collapses into one labeled edge (E3)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('log'), inside('bucket', 'log')],
     [crossing('x', 'bucket'), crossing('y', 'bucket')]),
-  { level: 3, mecanismo: 'agregada' }, policy);
+  { level: 3, mechanism: 'aggregated' }, policy);
 
 testCase('the same origin to 2 sibling accounts becomes a bus (E4)',
   mod([account('hub'), inside('tgw', 'hub'), account('a'), inside('x', 'a'), account('b'), inside('y', 'b')],
     [crossing('tgw', 'x'), crossing('tgw', 'y')]),
-  { level: 4, mecanismo: 'bus' }, policy);
+  { level: 4, mechanism: 'bus' }, policy);
 
 testCase('two accounts and one crossing — direct edge, no ceremony (E10)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b')],
     [crossing('x', 'y')]),
-  { level: 6, mecanismo: 'direta' }, policy);
+  { level: 6, mechanism: 'direct' }, policy);
 
 testCase('same origin, but DIFFERENT relationships — a bus would lie (E4 requires the same link)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('c'), inside('z', 'c')],
     [crossing('x', 'y', 'VPC peering'), crossing('x', 'z', 'PutEvents')]),
-  { level: 6, mecanismo: 'direta' }, policy);
+  { level: 6, mechanism: 'direct' }, policy);
 
 testCase('same origin and the SAME labeled link — now a bus, yes',
   mod([account('hub'), inside('tgw', 'hub'), account('a'), inside('x', 'a'), account('b'), inside('y', 'b')],
     [crossing('tgw', 'x', 'VPC peering'), crossing('tgw', 'y', 'VPC peering')]),
-  { level: 4, mecanismo: 'bus' }, policy);
+  { level: 4, mechanism: 'bus' }, policy);
 
 testCase('fan-in with different relationships does not aggregate — one label would lie (E3)',
   mod([account('a'), inside('x', 'a'), account('b'), inside('y', 'b'), account('log'), inside('bucket', 'log')],
     [crossing('x', 'bucket', 'access logs'), crossing('y', 'bucket', 'nightly backup')]),
-  { level: 6, mecanismo: 'direta' }, policy);
+  { level: 6, mechanism: 'direct' }, policy);
 
 console.log();
 if (failures) { console.log(`${failures} case(s) wrong`); process.exit(1); }

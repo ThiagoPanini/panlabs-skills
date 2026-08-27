@@ -82,7 +82,7 @@ function create(theme, catalogDir) {
     const name = groupOfNode(node);
     const g = cat.group(name);
     if (!g) throw new Error(`group "${name}" missing from the catalog`);
-    used.push({ id: node.id, pediu: node.kind, virou: g.title, via: 'group', corrections: g.corrections });
+    used.push({ id: node.id, asked: node.kind, became: g.title, via: 'group', corrections: g.corrections });
     const style = theme.group(g.style, g.title);
     // `spacingLeft=30` in the group style is the icon window: the label starts
     // after it. The title band is the child's area (#2 §3.2), so the one who
@@ -113,7 +113,7 @@ function create(theme, catalogDir) {
       // engine's history keeps finding one layer at a time (#14, #23, #37).
       const label = theme.rotuloDeFolha(node.label || node.id, node.resource || node.qualifier);
       const lines = labelLines(label, width - 16, M.largCar);
-      used.push({ id: node.id, pediu: 'block', virou: '(logical block)', via: 'block' });
+      used.push({ id: node.id, asked: 'block', became: '(logical block)', via: 'block' });
       return {
         // logical view: pre-services, therefore out of reach of the AWS
         // convention. It is the only place where the house picks a box colour
@@ -130,7 +130,7 @@ function create(theme, catalogDir) {
     const s = cat.service(key);
     if (!s) throw new Error(`service "${key}" did not resolve, not even to the generic one`);
     used.push({
-      id: node.id, pediu: key, virou: s.title, via: s.via,
+      id: node.id, asked: key, became: s.title, via: s.via,
       fallback: s.via === 'generic' || String(s.via).includes(':'),
     });
 
@@ -167,7 +167,7 @@ function create(theme, catalogDir) {
   function band(f) {
     const name = f.kind === 'auto-scaling' ? 'Auto Scaling group' : 'Generic group';
     const g = cat.group(name);
-    used.push({ id: f.id, pediu: f.kind || 'generic', virou: g.title, via: 'band', corrections: g.corrections });
+    used.push({ id: f.id, asked: f.kind || 'generic', became: g.title, via: 'band', corrections: g.corrections });
     // A band exists to CROSS other boxes, so its label is born on top of somebody
     // else's borders — with 2 AZ columns the centre of the band falls exactly on
     // the divide between the zones, and the dashed line strikes through the text.
@@ -186,7 +186,7 @@ function create(theme, catalogDir) {
   }
 
   return {
-    container, leaf, band, faixaAz: azBand, cat, usados: used, tema: theme,
+    container, leaf, band, faixaAz: azBand, cat, used, theme,
     labelLines: (t, l) => labelLines(t, l, M.largCar),
     textWidth: t => textWidth(t, M.largCar),
     larguraDaAresta: t => textWidth(t, M.largCarAresta),

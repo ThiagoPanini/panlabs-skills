@@ -70,15 +70,15 @@ async function main() {
       r = await generate(model);
     } catch (e) {
       console.log(`${name} :: DID NOT GENERATE :: ${e.message}`);
-      for (const l of e.erros || []) console.log(`${name} ::   · ${l}`);
+      for (const l of e.errors || []) console.log(`${name} ::   · ${l}`);
       continue;
     }
-    console.log(`${name} :: path=${r.caminho} pages=${1 + r.pages.length}`);
+    console.log(`${name} :: path=${r.path} pages=${1 + r.pages.length}`);
     for (const p of [r.layoutPlan, ...r.pages]) {
       const report = validateGeometry(p);
       const page = p.id || '(no id)';
-      totalSemantic += report.semanticas.length;
-      totalFailure += report.falhas.length;
+      totalSemantic += report.semantic.length;
+      totalFailure += report.failures.length;
       const lines = [...report.resultados, ...report.extras]
         .filter(x => !targetOnly || TARGET.includes(x.id))
         .map(x => `${name}/${page} :: ${x.id.padEnd(5)} ${SYMBOL[x.state] || x.state} ` +

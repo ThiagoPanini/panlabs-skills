@@ -345,7 +345,7 @@ console.log('\n2 · every JSON example in the guide runs against the contracts (
         elaborations++;
         let applied = null;
         try { applied = elaborate(approved(), block.doc); }
-        catch (e) { ok(false, `${where}: survives elaborate() on the shipped model`, (e.erros || [e.message]).slice(0, 3).join('; ')); }
+        catch (e) { ok(false, `${where}: survives elaborate() on the shipped model`, (e.errors || [e.message]).slice(0, 3).join('; ')); }
         if (applied) ok(true, `${where}: survives elaborate() on the shipped model`, `${applied.nodes.length} nodes`);
       }
     }
@@ -414,7 +414,7 @@ console.log('\n4 · the shipped example puts the italic on its technical leaves 
     'the shipped elaboration declares `resource` on its concrete resources',
     `${declared.length} of ${model.nodes.filter(n => n.kind === 'service').length} service node(s)`);
 
-  const { xml } = await generate(model, { tema: 'corporate' });
+  const { xml } = await generate(model, { theme: 'corporate' });
   const missed = declared.filter(n => {
     const m = xml.match(new RegExp(`<mxCell id="${n.id}"[^>]*value="([^"]*)"`));
     return !(m && m[1].includes(`&lt;i&gt;${n.resource}&lt;/i&gt;`));
@@ -552,9 +552,9 @@ console.log('\n6 · control — each verdict knows how to fail\n');
     nodes: shipped.nodes.map(n => ({ ...n, technical: { ...n.technical, resource: undefined } })),
   };
   const gluedModel = project(elaborate(approved(), glued), 'technical').model;
-  const gluedXml = (await generate(gluedModel, { tema: 'corporate' })).xml;
+  const gluedXml = (await generate(gluedModel, { theme: 'corporate' })).xml;
   const before = (gluedXml.match(/&lt;i&gt;/g) || []).length;
-  const after = ((await generate(project(elaborate(approved(), readExample('retail-elaboration.json')), 'technical').model, { tema: 'corporate' })).xml.match(/&lt;i&gt;/g) || []).length;
+  const after = ((await generate(project(elaborate(approved(), readExample('retail-elaboration.json')), 'technical').model, { theme: 'corporate' })).xml.match(/&lt;i&gt;/g) || []).length;
   ok(after > before,
     'CONTROL 3: stripping `resource` back out drops the italic count — the example is what carries it',
     `with=${after} without=${before}`);

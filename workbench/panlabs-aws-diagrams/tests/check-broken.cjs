@@ -22,18 +22,18 @@ let failures = 0;
 console.log('  cases broken on purpose:\n');
 for (const testCase of CASES) {
   const r = validateGeometry(testCase.layoutPlan, { model: testCase.model });
-  const flagged = new Set([...r.falhas, ...r.avisos].map(x => x.id));
+  const flagged = new Set([...r.failures, ...r.warnings].map(x => x.id));
   const missing = testCase.expect.filter(id => !flagged.has(id));
   const ok = missing.length === 0;
   if (!ok) failures++;
   console.log(`  ${ok ? '✓' : '✗'} ${testCase.name}`);
   if (ok) {
     const which = testCase.expect.map(id => {
-      const finding = [...r.falhas, ...r.avisos].find(x => x.id === id);
+      const finding = [...r.failures, ...r.warnings].find(x => x.id === id);
       return `${id} ${finding.state === 'failure' ? 'failed' : 'warned'}`;
     });
     console.log(`      ${which.join(', ')}`);
-    const first = [...r.falhas, ...r.avisos].find(x => testCase.expect.includes(x.id) && x.occurrences.length);
+    const first = [...r.failures, ...r.warnings].find(x => testCase.expect.includes(x.id) && x.occurrences.length);
     if (first) console.log(`      → ${first.occurrences[0].o_que}`);
   } else {
     console.log(`      expected ${missing.join(', ')} and it did not come; flagged: ${[...flagged].join(', ') || '(none)'}`);
@@ -45,16 +45,16 @@ for (const testCase of CASES) {
 console.log('\n  positive control (same vocabulary, correct geometry):\n');
 {
   const r = validateGeometry(CONTROL.layoutPlan, { model: CONTROL.model });
-  const flagged = new Set(r.falhas.map(x => x.id));
+  const flagged = new Set(r.failures.map(x => x.id));
   const undue = HARD.filter(id => flagged.has(id));
   const ok = undue.length === 0;
   if (!ok) failures++;
   console.log(`  ${ok ? '✓' : '✗'} no hard check flags the correct drawing`);
-  if (ok) console.log(`      ${HARD.length} hard checks verified, ${r.resumo.ok} ok overall`);
+  if (ok) console.log(`      ${HARD.length} hard checks verified, ${r.summary.ok} ok overall`);
   else {
     console.log(`      flagged without cause: ${undue.join(', ')}`);
     for (const id of undue) {
-      const x = r.falhas.find(f => f.id === id);
+      const x = r.failures.find(f => f.id === id);
       for (const o of x.occurrences.slice(0, 3)) console.log(`        · ${id}: ${o.o_que}`);
     }
   }
@@ -62,10 +62,10 @@ console.log('\n  positive control (same vocabulary, correct geometry):\n');
   // The control has to have ZERO semantic failures. That is what separates
   // "the drawing is ugly" from "the drawing is lying", and it is #18's
   // central promise.
-  const semanticClean = r.semanticas.length === 0;
+  const semanticClean = r.semantic.length === 0;
   if (!semanticClean) failures++;
   console.log(`  ${semanticClean ? '✓' : '✗'} zero semantic failures on the correct drawing`);
-  if (!semanticClean) for (const s of r.semanticas) console.log(`        · ${s.id}: ${s.mensagem}`);
+  if (!semanticClean) for (const s of r.semantic) console.log(`        · ${s.id}: ${s.message}`);
 }
 
 // -------------------------------------------- the validator may not pass silently
@@ -80,7 +80,7 @@ console.log('\n  coverage:\n');
 
   // A check that blows up becomes state `erro`, not silence.
   const blownUp = r.resultados.filter(x => x.state === 'erro');
-  if (blownUp.length) { failures++; console.log(`  ✗ ${blownUp.length} famil(y/ies) blew up: ${blownUp.map(e => e.mensagem).join(' | ')}`); }
+  if (blownUp.length) { failures++; console.log(`  ✗ ${blownUp.length} famil(y/ies) blew up: ${blownUp.map(e => e.message).join(' | ')}`); }
   else console.log('  ✓ no family blew up');
 }
 

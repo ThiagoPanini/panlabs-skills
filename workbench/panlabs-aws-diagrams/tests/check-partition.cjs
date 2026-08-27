@@ -133,9 +133,9 @@ function differences(a, b) {
 }
 
 async function main() {
-  const base = await generate(MODEL, { tema: 'light', force: true });
+  const base = await generate(MODEL, { theme: 'light', force: true });
   const g0 = geometry(base.layoutPlan);
-  const baseLog = await generate(LOGICAL_VIEW, { tema: 'light', force: true });
+  const baseLog = await generate(LOGICAL_VIEW, { theme: 'light', force: true });
   const gLog = geometry(baseLog.layoutPlan);
   let failed = 0;
 
@@ -145,7 +145,7 @@ async function main() {
     const model = isLogical ? LOGICAL_VIEW : MODEL;
     const ref = isLogical ? gLog : g0;
     const refXml = isLogical ? baseLog.xml : base.xml;
-    const r = await generate(model, { tema: themeMod.withPatch('light', patch), force: true });
+    const r = await generate(model, { theme: themeMod.withPatch('light', patch), force: true });
     const d = differences(ref, geometry(r.layoutPlan));
     const inert = withoutPayload(r.xml) === withoutPayload(refXml);
     if (d.length) {
@@ -162,7 +162,7 @@ async function main() {
 
   console.log('\nMETRIC — must move something');
   for (const [name, patch] of METRIC) {
-    const r = await generate(MODEL, { tema: themeMod.withPatch('light', patch), force: true });
+    const r = await generate(MODEL, { theme: themeMod.withPatch('light', patch), force: true });
     const d = differences(g0, geometry(r.layoutPlan));
     if (!d.length) { console.log(`  ✗ ${name.padEnd(20)} moved NOTHING — the engine is ignoring the token`); failed = 1; }
     else console.log(`  ✓ ${name.padEnd(20)} moved ${String(d.length).padStart(2)} cell(s)`);

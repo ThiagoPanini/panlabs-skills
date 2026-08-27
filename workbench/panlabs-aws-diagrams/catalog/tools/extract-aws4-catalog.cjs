@@ -279,9 +279,9 @@ const catalog = {
   },
   templates: {
     svc: { style: svcTpl.template, cobre: svcTpl.hits, from: services.length,
-           note: 'Service Icon (quadrado colorido). ${FILL} = cor da categoria; ${STENCIL} = resIcon.' },
+           note: 'Service Icon (quadrado colorido). ${FILL} = cor da category; ${STENCIL} = resIcon.' },
     res: { style: resTpl.template, cobre: resTpl.hits, from: resources.length,
-           note: 'Resource Icon plano (sem quadrado). ${FILL} = cor da categoria; ${STENCIL} = shape.' }
+           note: 'Resource Icon plano (sem quadrado). ${FILL} = cor da category; ${STENCIL} = shape.' }
   },
   categories,
   services,

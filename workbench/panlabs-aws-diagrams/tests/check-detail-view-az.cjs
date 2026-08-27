@@ -38,11 +38,11 @@ async function main() {
   const r = await generate(model, {});
 
   check('both detail views come out (1 consolidated + 2 accounts)', r.pages.length === 2);
-  check('nothing is reported missing', r.relatorio.detailPagesMissing.length === 0);
+  check('nothing is reported missing', r.report.detailPagesMissing.length === 0);
   check('no aviso says a detail view didn\'t come out',
-    !r.relatorio.avisos.some(a => a.includes("didn't come out")));
+    !r.report.warnings.some(a => a.includes("didn't come out")));
 
-  const planStep = r.relatorio.passos.find(s => s.name === 'plan');
+  const planStep = r.report.steps.find(s => s.name === 'plan');
   check('the plan milestone counts the full fan-out (3/3)', planStep && planStep.pages === '3/3');
 
   for (const account of ['c-agendamento', 'c-resultados']) {
@@ -84,17 +84,17 @@ async function main() {
 
   check('only the placeable account\'s detail view comes out', rb.pages.length === 1 &&
     rb.pages[0].id === 'unit-detail-view-unsupported-good');
-  check('the unplaceable one is reported, structured — not just buried in avisos',
-    rb.relatorio.detailPagesMissing.length === 1 &&
-    rb.relatorio.detailPagesMissing[0].account === 'broken' &&
-    /grid path cannot yet draw/.test(rb.relatorio.detailPagesMissing[0].because));
-  const rbPlanStep = rb.relatorio.passos.find(s => s.name === 'plan');
+  check('the unplaceable one is reported, structured — not just buried in warnings',
+    rb.report.detailPagesMissing.length === 1 &&
+    rb.report.detailPagesMissing[0].account === 'broken' &&
+    /grid path cannot yet draw/.test(rb.report.detailPagesMissing[0].because));
+  const rbPlanStep = rb.report.steps.find(s => s.name === 'plan');
   check('the plan milestone shows the partial fan-out (2/3)', rbPlanStep && rbPlanStep.pages === '2/3');
 
   // 3 · case.md's new bullet block — the human-facing side of the same fix.
   // `tools/case.cjs` flattens `report.detailPagesMissing` across both views
   // into `opts.detailPagesMissing`; `case-notes.cjs` renders it as its own
-  // block instead of leaving it inside the nine-line `avisos` pile.
+  // block instead of leaving it inside the nine-line `warnings` pile.
   console.log('\n  case.md — the missing-page block, in isolation\n');
   const fakeSession = {
     schema: 'panlabs-aws-diagrams/session@1', id: 'unit-detail-missing', title: 'Unit test', stage: 'technical', nodes: [],
@@ -114,7 +114,7 @@ async function main() {
   console.log(failed
     ? '\n  ✗ the detail-view fan-out has a red assertion above'
     : '\n  ✓ two AZ-redundant accounts both get a detail page · a genuinely unplaceable ' +
-      'node still refuses, structured · case.md surfaces it without nine avisos');
+      'node still refuses, structured · case.md surfaces it without nine warnings');
   process.exit(failed ? 1 : 0);
 }
 

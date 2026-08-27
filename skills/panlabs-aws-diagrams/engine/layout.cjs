@@ -141,8 +141,8 @@ function calhaDaFaixa(style) {
  * with nobody noticing. Compatibility nobody exercises isn't compatibility,
  * it's weight.
  */
-function folgas(tema) {
-  const g = tema.g;
+function folgas(theme) {
+  const g = theme.g;
   return {
     PAD: g(1), COL_GAP: g(4), ROW_GAP: g(2),
     nodeNode: g(4), entreCamadas: g(6), edgeNode: g(3), edgeEdge: g(2), edgeLabel: g(1),
@@ -434,7 +434,7 @@ function notasPorPai(model, d, res, boxes) {
     const id = idDaNota(n, i);
     const lines = res.labelLines(n.text, NOTE_W - 16);
     const cellBox = {
-      container: false, note: true, label: n.text, style: res.tema.note(),
+      container: false, note: true, label: n.text, style: res.theme.note(),
       shapeW: NOTE_W, shapeH: Math.max(NOTE_MIN_H, 12 + lines * 16),
     };
     boxes.set(id, cellBox);
@@ -475,7 +475,7 @@ function clean(o) {
  *   - at the container's foot, through `padding.bottom`.
  */
 function buildElkGraph(model, d, res, measure) {
-  const GAP = folgas(res.tema);
+  const GAP = folgas(res.theme);
   const boxes = new Map();
   const paddings = new Map();     // the alignment pass needs to know each box's limit
 
@@ -635,7 +635,7 @@ async function porElk(model, d, res) {
 function eixoDaGrade(model) {
   const numbered = (model.edges || []).some(a => a.order !== undefined);
   return {
-    eixo: numbered ? 'raia' : 'column',
+    eixo: numbered ? 'lane' : 'column',
     because: numbered
       ? 'there is a numbered step — the ordered dimension takes the horizontal (#21)'
       : 'no numbered step — the AZ stays in the column, like the deck (#21)',
@@ -710,7 +710,7 @@ function calhaDaLinha(faixasDaLinha, zonas) {
 }
 
 async function porGrade(model, d, res) {
-  const GAP = folgas(res.tema);
+  const GAP = folgas(res.theme);
   /**
    * The grid REFUSES when the order depends on a fact the model doesn't have
    * (#22), and refuses BEFORE laying out anything.
@@ -730,14 +730,14 @@ async function porGrade(model, d, res) {
    */
   if (d.gaps.length) {
     const e = new Error("the grid doesn't know how to stack these rows — the subnets' network layer is missing");
-    e.erros = layersMod.textoDaLacuna(d.gaps);
+    e.errors = layersMod.textoDaLacuna(d.gaps);
     throw e;
   }
 
   const elk = new ELK();
   const boxes = new Map();
   const { eixo, because: whyAxis } = eixoDaGrade(model);
-  const raia = eixo === 'raia';
+  const raia = eixo === 'lane';
 
   const vpcs = model.nodes.filter(n => n.kind === 'vpc');
   const subnets = model.nodes.filter(n => n.kind === 'subnet');
@@ -815,7 +815,7 @@ async function porGrade(model, d, res) {
    * of text. `papeisDeSubnet` already returns the role as an object; it's just
    * a matter of querying it.
    */
-  const byRole = layersMod.papeisDeSubnet(model, d.t, d.camadas);
+  const byRole = layersMod.papeisDeSubnet(model, d.t, d.layers);
   const orderOf = key => {
     const p = byRole.get(key) || {};
     return [layersMod.ordemDeAcesso(p.access), layersMod.layerOrder(p.layer), p.label || ''];
@@ -1082,7 +1082,7 @@ function ordemDeContas(accounts, cruz, modo) {
     rankOu(a.ou) - rankOu(b.ou) ||
     String(a.label || a.id).localeCompare(String(b.label || b.id), 'pt'));
 
-  if (modo !== 'integracao' || !cruz.length) return { order: canonical, custo: null, varridas: 0 };
+  if (modo !== 'integration' || !cruz.length) return { order: canonical, custo: null, varridas: 0 };
 
   const costOf = (perm) => {
     const pos = new Map(perm.map((c, i) => [c.id, i]));
@@ -1095,8 +1095,8 @@ function ordemDeContas(accounts, cruz, modo) {
       // `analytics | data | stores` — the whole drawing read backward because
       // two queries point back at the data's origin.
       const rev = a.data === 'back';
-      const i = pos.get(rev ? a.contaPara : a.contaDe);
-      const j = pos.get(rev ? a.contaDe : a.contaPara);
+      const i = pos.get(rev ? a.accountTo : a.accountFrom);
+      const j = pos.get(rev ? a.accountFrom : a.accountTo);
       if (i === undefined || j === undefined) continue;
       if (Math.abs(i - j) > 1) jump += Math.abs(i - j) - 1;
       if (j < i) againstFlow++;
@@ -1147,7 +1147,7 @@ function ordemDeContas(accounts, cruz, modo) {
  * proposes and which can touch a sibling).
  */
 async function layoutDaConta(elk, account, d, res, boxes, metrica, measure = new Map(), notes = new Map()) {
-  const GAP = folgas(res.tema);
+  const GAP = folgas(res.theme);
   const spacing = {
     ...spacingOf(GAP),
     'elk.spacing.nodeNode': String(GAP.ROW_GAP),
@@ -1269,15 +1269,15 @@ async function porContas(model, d, res) {
   // distinguish is noise. Hub = whoever participates in the most crossings.
   const grau = new Map(accounts.map(c => [c.id, 0]));
   for (const a of d.travessias) {
-    grau.set(a.contaDe, (grau.get(a.contaDe) || 0) + 1);
-    grau.set(a.contaPara, (grau.get(a.contaPara) || 0) + 1);
+    grau.set(a.accountFrom, (grau.get(a.accountFrom) || 0) + 1);
+    grau.set(a.accountTo, (grau.get(a.accountTo) || 0) + 1);
   }
   const ranking = [...grau.entries()].sort((a, b) => b[1] - a[1]);
   // and ONLY in the integration view: `X6` comes from the diagrams where the
   // crossing is actually drawn, and in the inventory it isn't. Thickening an
   // account's border because of edges the view suppressed would assert an
   // emphasis the reader has no way to check.
-  const hub = modo === 'integracao' && ranking.length > 1 &&
+  const hub = modo === 'integration' && ranking.length > 1 &&
     ranking[0][1] > ranking[1][1] && ranking[0][1] >= 2
     ? ranking[0][0] : null;
 
@@ -1288,7 +1288,7 @@ async function porContas(model, d, res) {
   let larguraTotal = 0, alturaTotal = 0;
   const colunas = [];
 
-  if (modo === 'integracao') {
+  if (modo === 'integration') {
     let x = 0;
     const alt = Math.max(...order.map(c => interno.get(c.id).height));
     order.forEach((c, i) => {
@@ -1390,7 +1390,7 @@ async function layoutOutsiders(model, d, res, g, outsiders) {
     interno.set(n.id, r);
   }
 
-  const GAP = folgas(res.tema);
+  const GAP = folgas(res.theme);
   const ROW_GAP = 40;   // same vertical rhythm as the accounts path's outsider column
   const columnWidth = Math.max(...order.map(n => interno.get(n.id).width));
   const totalHeight = order.reduce((s, n) => s + interno.get(n.id).height, 0) +

@@ -45,7 +45,7 @@ const ROW = px => Math.round(px * 1.4);
  * line in a diagram with no subtitle; the corpus's 15 have one.
  */
 function frame(res) {
-  const t = res.tema;
+  const t = res.theme;
   const m = t.tokens.page.margin;
   const titleHeight = ROW(t.tokens.text.title) + ROW(t.tokens.text.subtitle) +
     (t.tokens.card.revision ? Math.round(t.tokens.text.subtitle * 1.3) : 0);
@@ -54,7 +54,7 @@ function frame(res) {
 
 /** The slice of the theme this module uses. */
 function paint(res) {
-  const t = res.tema;
+  const t = res.theme;
   return {
     background: t.tokens.page.color,
     title: t.title(), subtitle: t.subtitle(), revision: t.revision(), note: t.note(),
@@ -155,7 +155,7 @@ function header(layoutPlan, model, res) {
  * own persistence format and there's no second file to fall out of sync.
  */
 function modelCell(model, res) {
-  const t = res.tema;
+  const t = res.theme;
   return {
     kind: 'vertice', id: 'panlabs-modelo', parent: '1', label: '', visible: false,
     style: 'text;html=1;', geo: { x: 0, y: 0, w: 1, h: 1 },
@@ -249,7 +249,7 @@ function elkPlan(model, d, res, layout, opts = {}) {
   const p = paint(res);
   const { output, boxes } = layout;
   const layoutPlan = { id: model.id, name: model.title, cells: [], background: p.background,
-    tema: res.tema.id };
+    theme: res.theme.id };
   header(layoutPlan, model, res);
 
   const abs = new Map();
@@ -305,7 +305,7 @@ function elkPlan(model, d, res, layout, opts = {}) {
     };
     layoutPlan.cells.push({
       kind: 'edge', id: e.id, parent: '1', from: a.from, to: a.to,
-      label: edgeLabel(a), style: edgeStyle(a, anc, res.tema),
+      label: edgeLabel(a), style: edgeStyle(a, anc, res.theme),
       points: (sec.bendPoints || []).map(shift),
     });
   }
@@ -492,7 +492,7 @@ function drawOutsiders(layoutPlan, model, d, res, g, mo) {
       };
       layoutPlan.cells.push({
         kind: 'edge', id: e.id, parent: '1', from: edge.from, to: edge.to,
-        label: edgeLabel(edge), style: edgeStyle(edge, anc, res.tema),
+        label: edgeLabel(edge), style: edgeStyle(edge, anc, res.theme),
         points: (sec.bendPoints || []).map(eshift),
       });
     }
@@ -572,7 +572,7 @@ function outsiderEdges(layoutPlan, model, d, res, g, mo) {
 
   const push = (a, anc, points) => layoutPlan.cells.push({
     kind: 'edge', id: a.id, parent: '1', from: a.from, to: a.to,
-    label: edgeLabel(a), style: edgeStyle(a, anc, res.tema),
+    label: edgeLabel(a), style: edgeStyle(a, anc, res.theme),
     points: points.map(fromGridToPage),
   });
 
@@ -633,9 +633,9 @@ function outsiderEdges(layoutPlan, model, d, res, g, mo) {
 function gridPlan(model, d, res, g, opts = {}) {
   const mo = frame(res);
   const p = paint(res);
-  const f = folgas(res.tema);
+  const f = folgas(res.theme);
   const layoutPlan = { id: model.id, name: model.title, cells: [], background: p.background,
-    tema: res.tema.id };
+    theme: res.theme.id };
   header(layoutPlan, model, res);
 
   /**
@@ -736,7 +736,7 @@ function gridPlan(model, d, res, g, opts = {}) {
       const text = f.label || '';
       layoutPlan.cells.push({
         kind: 'vertice', id: `${f.id}-degradada`, parent: cloudId, label: text,
-        style: res.tema.faixaRotulo(),
+        style: res.theme.faixaRotulo(),
         geo: { x: x1, y: y1, w: Math.max(40, res.textWidth(text) + 8), h: lane },
       });
       continue;
@@ -937,7 +937,7 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
 
     layoutPlan.cells.push({
       kind: 'edge', id: a.id, parent: '1', from: a.from, to: a.to,
-      label: edgeLabel(a), style: edgeStyle(a, anc, res.tema),
+      label: edgeLabel(a), style: edgeStyle(a, anc, res.theme),
       points: points.map(fromGridToPage),
     });
   }
@@ -958,10 +958,10 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
  * rectangle, the union becomes the anchor the label is pinned to. One
  * constructor, two renderings.
  */
-const S_OU = res => res.tema.ou();
+const S_OU = res => res.theme.ou();
 /** `E4`'s bus: a line parallel to the row, offset OUTSIDE it. */
-const S_BUS = res => res.tema.bus();
-const S_STUB = res => res.tema.stub();
+const S_BUS = res => res.theme.bus();
+const S_STUB = res => res.theme.stub();
 
 /**
  * `E9` — a permission enabler is an ATTACHED NODE, with a short arrow pointing
@@ -969,14 +969,14 @@ const S_STUB = res => res.tema.stub();
  * independent official patterns (the Flow Logs bucket policy; the EventBridge
  * cross-account Role).
  */
-const S_ENABLES = res => res.tema.habilitador();
+const S_ENABLES = res => res.theme.habilitador();
 
 function accountPlan(model, d, res, g, opts = {}) {
   const mo = frame(res);
   const p = paint(res);
-  const f = folgas(res.tema);
+  const f = folgas(res.theme);
   const layoutPlan = { id: model.id, name: model.title, cells: [], background: p.background,
-    tema: res.tema.id };
+    theme: res.theme.id };
   header(layoutPlan, model, res);
 
   const abs = new Map();          // id -> absolute box, for edges and bands
@@ -1022,11 +1022,11 @@ function accountPlan(model, d, res, g, opts = {}) {
    * for the height. It was a latent bug because no model exercised it — the
    * `hub-tgw` and `logs-centralizados` models exist so it no longer is.
    */
-  const detoured = d.policy.mecanismo === 'direta'
-    ? d.travessias.filter(t => accountIdx.get(t.contaPara) !== accountIdx.get(t.contaDe) + 1).length
+  const detoured = d.policy.mechanism === 'direct'
+    ? d.travessias.filter(t => accountIdx.get(t.accountTo) !== accountIdx.get(t.accountFrom) + 1).length
     : 0;
   const bottomReserve =
-    d.policy.mecanismo === 'bus' ? 46 + 34
+    d.policy.mechanism === 'bus' ? 46 + 34
     : detoured ? 40 + detoured * 34
     : 0;
   /**
@@ -1036,8 +1036,8 @@ function accountPlan(model, d, res, g, opts = {}) {
    * cardinality"): shrinking the run until it overflows on top of the
    * destination icon undoes the mechanism.
    */
-  const aggregatedText = d.policy.mecanismo === 'agregada'
-    ? (d.policy.grupos || []).map(group => {
+  const aggregatedText = d.policy.mechanism === 'aggregated'
+    ? (d.policy.groups || []).map(group => {
         const ex = d.travessias.find(t => t.to === group.to);
         return `${ex && ex.label ? ex.label : 'from'} · ${group.accounts.length} accounts`;
       })
@@ -1088,7 +1088,7 @@ function accountPlan(model, d, res, g, opts = {}) {
   // row, ordered by the crossing, which is its subject. `generate.cjs` knows
   // the same rule and adjusts the warning so it doesn't announce a band this
   // block doesn't emit.
-  if (d.ou.draw && g.modo !== 'integracao') {
+  if (d.ou.draw && g.modo !== 'integration') {
     for (const col of g.colunas) {
       if (!col.ou) continue;
       const band = d.faixasOu.find(f => f.members.includes(col.accounts[0]));
@@ -1148,7 +1148,7 @@ function accountPlan(model, d, res, g, opts = {}) {
       };
       layoutPlan.cells.push({
         kind: 'edge', id: e.id, parent: '1', from: a.from, to: a.to,
-        label: edgeLabel(a), style: edgeStyle(a, anc, res.tema),
+        label: edgeLabel(a), style: edgeStyle(a, anc, res.theme),
         points: (sec.bendPoints || []).map(shift),
       });
     }
@@ -1294,7 +1294,7 @@ function verticalClear(no, y, abs, d, noId) {
  */
 function crossingsInPlan(layoutPlan, model, d, res, g, abs, opts) {
   const pol = d.policy;
-  if (pol.mecanismo === 'suprimir') return;
+  if (pol.mechanism === 'suppress') return;
 
   const cellBox = id => abs.get(id);
   const accountOfNode = id => {
@@ -1303,12 +1303,12 @@ function crossingsInPlan(layoutPlan, model, d, res, g, abs, opts) {
     return c ? c.id : null;
   };
 
-  if (pol.mecanismo === 'bus') {
+  if (pol.mechanism === 'bus') {
     // `E4` + `X3`: ONE line parallel to the row, offset outside it, with
     // short perpendicular stubs entering each account. 1 line + N stubs,
     // never N lines — it's literally the AMS MALZ drawing.
     const y = Math.max(...g.order.map(c => cellBox(c.id).y + cellBox(c.id).h)) + 46;
-    for (const group of pol.grupos) {
+    for (const group of pol.groups) {
       const targets = group.accounts.map(id => cellBox(id)).filter(Boolean);
       if (targets.length < 2) continue;
       const x1 = Math.min(...targets.map(a => a.x + a.w / 2));
@@ -1332,7 +1332,7 @@ function crossingsInPlan(layoutPlan, model, d, res, g, abs, opts) {
       for (const id of group.accounts) {
         const a = cellBox(id);
         const cx = a.x + a.w / 2;
-        const crossing = d.travessias.find(t => t.from === group.from && t.contaPara === id);
+        const crossing = d.travessias.find(t => t.from === group.from && t.accountTo === id);
         layoutPlan.cells.push({
           kind: 'edge', id: `stub-${id}`, parent: '1', from: null, to: id,
           label: crossing ? edgeLabel(crossing) : '', style: S_STUB(res),
@@ -1345,12 +1345,12 @@ function crossingsInPlan(layoutPlan, model, d, res, g, abs, opts) {
     return;
   }
 
-  if (pol.mecanismo === 'agregada') {
+  if (pol.mechanism === 'aggregated') {
     // `E3`: fan-in from N accounts collapses into ONE edge entering the
     // destination's box from outside, with the TEXT carrying the cardinality
     // — never N edges. It's what the SRA does at the Log Archive ("From
     // CloudTrail organization trail").
-    for (const group of pol.grupos) {
+    for (const group of pol.groups) {
       const target = cellBox(group.to);
       if (!target) continue;
       const targetAccount = accountOfNode(group.to);
@@ -1393,17 +1393,17 @@ function crossingsInPlan(layoutPlan, model, d, res, g, abs, opts) {
   for (const t of d.travessias) {
     const o = cellBox(t.from), dst = cellBox(t.to);
     if (!o || !dst) continue;
-    const ia = orderIdx.get(t.contaDe), ib = orderIdx.get(t.contaPara);
+    const ia = orderIdx.get(t.accountFrom), ib = orderIdx.get(t.accountTo);
     const adjacentForward = ib === ia + 1;
 
     if (adjacentForward) {
-      const cA = cellBox(t.contaDe), cB = cellBox(t.contaPara);
+      const cA = cellBox(t.accountFrom), cB = cellBox(t.accountTo);
       const laneX = (cA.x + cA.w + cB.x) / 2;
       const y0 = o.y + o.h / 2, y1 = dst.y + dst.h / 2;
       layoutPlan.cells.push({
         kind: 'edge', id: t.id, parent: '1', from: t.from, to: t.to,
         label: edgeLabel(t),
-        style: edgeStyle(t, { output: { x: 1, y: 0.5 }, input: { x: 0, y: 0.5 } }, res.tema),
+        style: edgeStyle(t, { output: { x: 1, y: 0.5 }, input: { x: 0, y: 0.5 } }, res.theme),
         points: y0 === y1 ? [] : [{ x: laneX, y: y0 }, { x: laneX, y: y1 }],
       });
       continue;
@@ -1416,8 +1416,8 @@ function crossingsInPlan(layoutPlan, model, d, res, g, abs, opts) {
     // the sibling boxes.
     channelLane += 1;
     const laneY = rowBackground + 40 + (channelLane - 1) * 34;
-    const cA = { ...cellBox(t.contaDe), id: t.contaDe };
-    const cB = { ...cellBox(t.contaPara), id: t.contaPara };
+    const cA = { ...cellBox(t.accountFrom), id: t.accountFrom };
+    const cB = { ...cellBox(t.accountTo), id: t.accountTo };
     const sideO = freeSide(o, dst, cA, abs, d, t.from);
     const sideD = freeSide(dst, o, cB, abs, d, t.to);
     // when both sides are dirty, dropping straight to the channel is the
@@ -1454,7 +1454,7 @@ function crossingsInPlan(layoutPlan, model, d, res, g, abs, opts) {
       style: edgeStyle(t, {
         output: downO ? { x: 0.5, y: 1 } : { x: sideO.side === 'left' ? 0 : 1, y: 0.5 },
         input: downD ? { x: 0.5, y: 1 } : { x: sideD.side === 'left' ? 0 : 1, y: 0.5 },
-      }, res.tema),
+      }, res.theme),
       points: sameLane
         ? [{ x: xo, y: yo }, { x: xo, y: yd }]
         : [{ x: xo, y: yo }, { x: xo, y: laneY }, { x: xd, y: laneY }, { x: xd, y: yd }],
@@ -1507,7 +1507,7 @@ function outsideEdges(layoutPlan, d, res, g, abs, opts) {
       layoutPlan.cells.push({
         kind: 'edge', id: a.id, parent: '1', from: a.from, to: a.to,
         label: edgeLabel(a),
-        style: edgeStyle(a, { output: { x: 1, y: 0.5 }, input: { x: 0, y: 0.5 } }, res.tema),
+        style: edgeStyle(a, { output: { x: 1, y: 0.5 }, input: { x: 0, y: 0.5 } }, res.theme),
         points: y0 === y1 ? [] : [{ x: mid, y: y0 }, { x: mid, y: y1 }],
       });
       continue;
@@ -1605,7 +1605,7 @@ function outsideEdges(layoutPlan, d, res, g, abs, opts) {
       style: edgeStyle(a, {
         output: { x: exitsFromTheRight ? 1 : 0, y: 0.5 },
         input: { x: entersFromTheRight ? 1 : 0, y: 0.5 },
-      }, res.tema),
+      }, res.theme),
       // the bend at `y0` only exists when the corridor LEFT the border: without
       // it, it coincides with the tip and becomes a zero-length segment, which
       // counts as a bend in `A5.3` and draws nothing

@@ -222,12 +222,12 @@ function measure(layoutPlan) {
   findings.push(...fillIsNotTheOnlyChannel(layoutPlan.cells).map(v => ({ ...v, id: '(palette)', ratio: null, passa: false, target: null })));
 
   const below = findings.filter(a => !a.passa);
-  const falhas = below.filter(a => !a.warning);
-  const avisos = below.filter(a => a.warning);
+  const failures = below.filter(a => !a.warning);
+  const warnings = below.filter(a => a.warning);
   return {
-    ok: falhas.length === 0,
+    ok: failures.length === 0,
     total: findings.length,
-    falhas, avisos,
+    failures, warnings,
     piorTexto: Math.min(Infinity, ...findings.filter(a => a.rule === 'A7.1').map(a => a.ratio)),
     piorGrafismo: Math.min(Infinity, ...findings.filter(a => a.rule === 'A7.2').map(a => a.ratio)),
     piorArea: Math.min(Infinity, ...findings.filter(a => a.rule === 'A7.2a').map(a => a.ratio)),
@@ -255,8 +255,8 @@ function measureAll(pages) {
   return {
     ok: parts.every(p => p.ok),
     total: parts.reduce((n, p) => n + p.total, 0),
-    falhas: parts.flatMap(p => p.falhas),
-    avisos: parts.flatMap(p => p.avisos),
+    failures: parts.flatMap(p => p.failures),
+    warnings: parts.flatMap(p => p.warnings),
     piorTexto: parts.map(p => p.piorTexto).reduce(min, Infinity),
     piorGrafismo: parts.map(p => p.piorGrafismo).reduce(min, Infinity),
     piorArea: parts.map(p => p.piorArea).reduce(min, Infinity),
@@ -268,7 +268,7 @@ function measureAll(pages) {
 /** One line per failure, grouped — 40 labels with the same ink are one problem, not 40. */
 function summarize(r, which) {
   const groups = new Map();
-  for (const f of (which || r.falhas)) {
+  for (const f of (which || r.failures)) {
     const k = `${f.rule}|${f.o_que}|${f.frente}|${f.background}`;
     if (!groups.has(k)) groups.set(k, { ...f, quantos: 0, ids: [] });
     const g = groups.get(k);

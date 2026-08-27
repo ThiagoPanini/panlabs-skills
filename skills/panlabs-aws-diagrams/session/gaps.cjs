@@ -60,7 +60,7 @@
 
 const path = require('path');
 const { CATEGORY_LAYER, categoriaDoNo, chaveDePapel } = require(path.join(__dirname, '..', 'engine', 'layers.cjs'));
-const { arvore, contaDe, travessias } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
+const { arvore, accountFrom, travessias } = require(path.join(__dirname, '..', 'engine', 'derive.cjs'));
 
 const CATALOG = path.join(__dirname, '..', 'catalog', 'aws-shapes.cjs');
 let _cat = null;
@@ -159,8 +159,8 @@ function ruleSpof(model, ctx) {
   const edges = model.edges || [];
   if (!actors.length || !edges.length)
     return { findings: [], silent: silence('spof', !actors.length
-      ? 'nenhum ator: o modelo não afirma ninguém de fora, e sem fora não há caminho de entrada'
-      : 'nenhuma aresta: é vista de inventário, e inventário não tem caminho para quebrar') };
+      ? 'nenhum ator: o modelo não afirma ninguém de fora, e sem fora não há path de entrada'
+      : 'nenhuma aresta: é vista de inventário, e inventário não tem path para quebrar') };
 
   const adj = adjacency(model);
   const bandMembers = new Set((model.bands || []).flatMap(f => f.members || []));
@@ -196,7 +196,7 @@ function ruleSpof(model, ctx) {
   const findings = maximal.map(c => {
     const behind = candidates.filter(o => o !== c && contained(o.orphans, c.orphans)).length;
     return finding('spof', c.id,
-      `sem par, e é o único caminho de "${c.actor}" até ${c.orphans.size} outros componentes` +
+      `sem par, e é o único path de "${c.actor}" até ${c.orphans.size} outros componentes` +
       (behind ? ` — e ${behind} deles também não tem par, atrás deste` : ''));
   });
   return { findings, silent: null };
@@ -336,7 +336,7 @@ function ruleTrust(model, ctx) {
   for (const a of crossings) {
     if (authorized.has(a.from) || authorized.has(a.to)) continue;
     findings.push(finding('cross-account-sem-confianca', a.id || `${a.from}→${a.to}`,
-      `"${a.contaDe}" alcança "${a.contaPara}" e nenhum habilitador está desenhado nas pontas`));
+      `"${a.accountFrom}" alcança "${a.accountTo}" e nenhum habilitador está desenhado nas pontas`));
   }
   return { findings, silent: null };
 }
@@ -365,7 +365,7 @@ function ruleDlq(model, ctx) {
   });
   if (!feeds.length)
     return { findings: [], silent: silence('assincrono-sem-dlq',
-      'nenhuma aresta sai de fila, tópico ou barramento: não há caminho assíncrono') };
+      'nenhuma aresta sai de fila, tópico ou barramento: não há path assíncrono') };
 
   const findings = [];
   const alreadySeen = new Set();
@@ -383,7 +383,7 @@ function ruleDlq(model, ctx) {
     alreadySeen.add(consumer.id);
     findings.push(finding('assincrono-sem-dlq', consumer.id,
       `consome de "${queue.id}" e não escreve em nenhuma outra fila — ` +
-      `a mensagem que ele não conseguir processar não tem para onde ir`));
+      `a message que ele não conseguir processar não tem para onde ir`));
   }
   return { findings, silent: null };
 }

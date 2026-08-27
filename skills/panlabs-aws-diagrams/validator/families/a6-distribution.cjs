@@ -91,16 +91,16 @@ module.exports = function a6(scene) {
         reconstructedAngles: someUnanchored,
       };
       output.push(tight.length
-        ? failure('A6.1', { measured, mensagem: `${tight.length} pair(s) of incident edges are indistinguishable`, occurrences: tight })
+        ? failure('A6.1', { measured, message: `${tight.length} pair(s) of incident edges are indistinguishable`, occurrences: tight })
         : reconstructed.length
           ? warning('A6.1', {
             measured,
-            mensagem: `${reconstructed.length} pair(s) of edges look like they leave together, but the ends were reconstructed — ` +
+            message: `${reconstructed.length} pair(s) of edges look like they leave together, but the ends were reconstructed — ` +
               'the renderer pulls the two apart (jettySize=auto). Declare the anchor to turn this into a measurement',
             occurrences: reconstructed,
           })
-          : AR < q1 ? warning('A6.1', { measured, mensagem: `AR = ${AR} < ${q1} (Q1)`, occurrences: [{ o_que: 'edges fan out unevenly from the nodes', ids: [] }] })
-            : ok('A6.1', { measured, mensagem: `AR = ${AR}` }));
+          : AR < q1 ? warning('A6.1', { measured, message: `AR = ${AR} < ${q1} (Q1)`, occurrences: [{ o_que: 'edges fan out unevenly from the nodes', ids: [] }] })
+            : ok('A6.1', { measured, message: `AR = ${AR}` }));
     }
   }
 
@@ -129,8 +129,8 @@ module.exports = function a6(scene) {
       const q1 = lim('nodeUniformityQ1');
       const measured = { NU, grid: `${columns}×${rows}`, nodes: V };
       output.push(NU < q1
-        ? warning('A6.2', { measured, mensagem: `NU = ${NU} < ${q1} (Q1) — there's clumping and empty space`, occurrences: [{ o_que: `${[...bucket.values()].filter(v => v === 0).length || T - bucket.size} grid cell(s) are empty`, ids: [] }] })
-        : ok('A6.2', { measured, mensagem: `NU = ${NU}` }));
+        ? warning('A6.2', { measured, message: `NU = ${NU} < ${q1} (Q1) — there's clumping and empty space`, occurrences: [{ o_que: `${[...bucket.values()].filter(v => v === 0).length || T - bucket.size} grid cell(s) are empty`, ids: [] }] })
+        : ok('A6.2', { measured, message: `NU = ${NU}` }));
     }
   }
 
@@ -158,8 +158,8 @@ module.exports = function a6(scene) {
       const reasons = [];
       if (asp < q1) reasons.push({ o_que: `Asp = ${asp} < ${q1} (Q1): the drawing is a very elongated strip`, ids: [] });
       if (difference > tol) reasons.push({ o_que: `the drawing's ratio differs from the canvas's by ${roundTo(difference * 100, 0)}% (tolerance ${roundTo(tol * 100, 0)}%): there's empty space left over`, ids: [] });
-      output.push(reasons.length ? warning('A6.3', { measured, mensagem: reasons.map(m => m.o_que).join('; '), occurrences: reasons })
-        : ok('A6.3', { measured, mensagem: `Asp = ${asp}` }));
+      output.push(reasons.length ? warning('A6.3', { measured, message: reasons.map(m => m.o_que).join('; '), occurrences: reasons })
+        : ok('A6.3', { measured, message: `Asp = ${asp}` }));
     }
   }
 
@@ -178,8 +178,8 @@ module.exports = function a6(scene) {
       const measured = { alignedFraction: fraction, minimum, step, nodes: nodes.length };
       const loose = nodes.filter(n => !aligned.includes(n)).map(n => ({ o_que: `${n.id} shares no axis with any other node`, ids: [n.id] }));
       output.push(fraction >= minimum
-        ? ok('A6.4', { measured, mensagem: `${roundTo(fraction * 100, 0)}% of nodes aligned with at least one other` })
-        : warning('A6.4', { measured, mensagem: `only ${roundTo(fraction * 100, 0)}% aligned (minimum ${roundTo(minimum * 100, 0)}%)`, occurrences: loose }));
+        ? ok('A6.4', { measured, message: `${roundTo(fraction * 100, 0)}% of nodes aligned with at least one other` })
+        : warning('A6.4', { measured, message: `only ${roundTo(fraction * 100, 0)}% aligned (minimum ${roundTo(minimum * 100, 0)}%)`, occurrences: loose }));
     }
   }
 
@@ -234,8 +234,8 @@ module.exports = function a6(scene) {
         if (NP < q1NP) reasons.push({ o_que: `NP = ${NP} < ${q1NP} (Q1)`, ids: [] });
         if (KSM < q1KSM) reasons.push({ o_que: `KSM = ${KSM} < ${q1KSM} (Q1)`, ids: [] });
         output.push(reasons.length
-          ? warning('A6.5', { measured, mensagem: `${reasons.map(m => m.o_que).join('; ')} — but see the caveat: here position comes from the groups, not the graph`, occurrences: reasons })
-          : ok('A6.5', { measured, mensagem: `NP = ${NP}, KSM = ${KSM}` }));
+          ? warning('A6.5', { measured, message: `${reasons.map(m => m.o_que).join('; ')} — but see the caveat: here position comes from the groups, not the graph`, occurrences: reasons })
+          : ok('A6.5', { measured, message: `NP = ${NP}, KSM = ${KSM}` }));
       }
     }
   }

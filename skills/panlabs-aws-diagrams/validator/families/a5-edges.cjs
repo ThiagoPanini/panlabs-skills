@@ -75,9 +75,9 @@ module.exports = function a5(scene) {
     const budget = Math.ceil(E / 10);
     const measured = { crossings: crossings.length, cInPairs: c, EC, failBudget: budget, c_max: cMax };
     const occurrences = crossings.map(c => ({ o_que: `"${c.a}" crosses "${c.b}" at (${roundTo(c.point.x, 0)}, ${roundTo(c.point.y, 0)}) at ${roundTo(c.angle, 1)}°`, ids: [c.a, c.b] }));
-    output.push(!crossings.length ? ok('A5.1', { measured, mensagem: `0 crossings, EC = ${EC}` })
-      : crossings.length > budget ? failure('A5.1', { measured, mensagem: `${crossings.length} crossings, above the budget of ⌈${E}/10⌉ = ${budget}`, occurrences })
-        : warning('A5.1', { measured, mensagem: `${crossings.length} crossing(s), EC = ${EC} (target 0)`, occurrences }));
+    output.push(!crossings.length ? ok('A5.1', { measured, message: `0 crossings, EC = ${EC}` })
+      : crossings.length > budget ? failure('A5.1', { measured, message: `${crossings.length} crossings, above the budget of ⌈${E}/10⌉ = ${budget}`, occurrences })
+        : warning('A5.1', { measured, message: `${crossings.length} crossing(s), EC = ${EC} (target 0)`, occurrences }));
   }
 
   // ---------------------------------------------------------------- A5.2
@@ -91,9 +91,9 @@ module.exports = function a5(scene) {
       const measured = { CA, minAngle, ideal: lim('idealCrossingAngle') };
       const shallow = crossings.filter(c => c.angle < floor)
         .map(c => ({ o_que: `"${c.a}" and "${c.b}" cross at ${roundTo(c.angle, 1)}° (floor ${floor}°)`, ids: [c.a, c.b] }));
-      output.push(shallow.length ? failure('A5.2', { measured, mensagem: `crossing at ${minAngle}°, below the floor of ${floor}°`, occurrences: shallow })
-        : CA < q1 ? warning('A5.2', { measured, mensagem: `CA = ${CA} < ${q1} (Q1)`, occurrences: [{ o_que: `smallest angle ${minAngle}°, ideal ${lim('idealCrossingAngle')}°`, ids: [] }] })
-          : ok('A5.2', { measured, mensagem: `CA = ${CA}, smallest angle ${minAngle}°` }));
+      output.push(shallow.length ? failure('A5.2', { measured, message: `crossing at ${minAngle}°, below the floor of ${floor}°`, occurrences: shallow })
+        : CA < q1 ? warning('A5.2', { measured, message: `CA = ${CA} < ${q1} (Q1)`, occurrences: [{ o_que: `smallest angle ${minAngle}°, ideal ${lim('idealCrossingAngle')}°`, ids: [] }] })
+          : ok('A5.2', { measured, message: `CA = ${CA}, smallest angle ${minAngle}°` }));
     }
   }
 
@@ -107,9 +107,9 @@ module.exports = function a5(scene) {
     const measured = { maximum, mean: roundTo(mean(count.map(c => c.bends)), 2), target, warning: ceiling, failure: failFloor };
     const severe = count.filter(c => c.bends > failFloor).map(c => ({ o_que: `"${c.id}" has ${c.bends} bends (fail above ${failFloor})`, ids: [c.id] }));
     const warned = count.filter(c => c.bends > ceiling && c.bends <= failFloor).map(c => ({ o_que: `"${c.id}" has ${c.bends} bends (target ≤ ${target})`, ids: [c.id] }));
-    output.push(severe.length ? failure('A5.3', { measured, mensagem: `${severe.length} edge(s) with more than ${failFloor} bends`, occurrences: severe })
-      : warned.length ? warning('A5.3', { measured, mensagem: `${warned.length} edge(s) above ${ceiling} bends`, occurrences: warned })
-        : ok('A5.3', { measured, mensagem: `at most ${maximum} bend(s) per edge` }));
+    output.push(severe.length ? failure('A5.3', { measured, message: `${severe.length} edge(s) with more than ${failFloor} bends`, occurrences: severe })
+      : warned.length ? warning('A5.3', { measured, message: `${warned.length} edge(s) above ${ceiling} bends`, occurrences: warned })
+        : ok('A5.3', { measured, message: `at most ${maximum} bend(s) per edge` }));
   }
 
   // ---------------------------------------------------------------- A5.4
@@ -126,9 +126,9 @@ module.exports = function a5(scene) {
       const measured = { minAngle: roundTo(smallest, 1), target, floor, bends: angles.length };
       const sharp = angles.filter(x => x.angle < floor).map(x => ({ o_que: `"${x.id}" bends at ${roundTo(x.angle, 1)}° (floor ${floor}°)`, ids: [x.id] }));
       const mild = angles.filter(x => x.angle >= floor && x.angle < target).map(x => ({ o_que: `"${x.id}" bends at ${roundTo(x.angle, 1)}° (target ${target}°)`, ids: [x.id] }));
-      output.push(sharp.length ? failure('A5.4', { measured, mensagem: `bend of ${roundTo(smallest, 1)}°, below the floor of ${floor}°`, occurrences: sharp })
-        : mild.length ? warning('A5.4', { measured, mensagem: `${mild.length} bend(s) below ${target}°`, occurrences: mild })
-          : ok('A5.4', { measured, mensagem: `smallest bend ${roundTo(smallest, 1)}°` }));
+      output.push(sharp.length ? failure('A5.4', { measured, message: `bend of ${roundTo(smallest, 1)}°, below the floor of ${floor}°`, occurrences: sharp })
+        : mild.length ? warning('A5.4', { measured, message: `${mild.length} bend(s) below ${target}°`, occurrences: mild })
+          : ok('A5.4', { measured, message: `smallest bend ${roundTo(smallest, 1)}°` }));
     }
   }
 
@@ -153,7 +153,7 @@ module.exports = function a5(scene) {
     }
     output.push(matches('A5.5', cases, {
       measured: { edges: edges.length, groups: scene.groups.length, spuriousCrossings: cases.length },
-      mensagem: cases.length ? `${cases.length} crossing(s) of someone else's boundary — tolerance is zero` : 'no edge cuts through someone else\'s group',
+      message: cases.length ? `${cases.length} crossing(s) of someone else's boundary — tolerance is zero` : 'no edge cuts through someone else\'s group',
     }));
   }
 
@@ -180,10 +180,10 @@ module.exports = function a5(scene) {
     const q1 = lim('orthogonalityQ1');
     const measured = { EO, style: orthogonal ? 'orthogonal' : 'straight', target: orthogonal ? target : q1 };
     output.push(orthogonal
-      ? (EO >= target ? ok('A5.6', { measured, mensagem: `EO = ${EO} ≥ ${target}` })
-        : warning('A5.6', { measured, mensagem: `orthogonal style declared and EO = ${EO} < ${target}`, occurrences: [{ o_que: 'there are off-axis segments in a routing that claims to be orthogonal', ids: [] }] }))
-      : (EO >= q1 ? ok('A5.6', { measured, mensagem: `EO = ${EO}` })
-        : warning('A5.6', { measured, mensagem: `EO = ${EO} < ${q1} — a disordered mix of angles`, occurrences: [{ o_que: 'neither orthogonal nor consistently straight', ids: [] }] })));
+      ? (EO >= target ? ok('A5.6', { measured, message: `EO = ${EO} ≥ ${target}` })
+        : warning('A5.6', { measured, message: `orthogonal style declared and EO = ${EO} < ${target}`, occurrences: [{ o_que: 'there are off-axis segments in a routing that claims to be orthogonal', ids: [] }] }))
+      : (EO >= q1 ? ok('A5.6', { measured, message: `EO = ${EO}` })
+        : warning('A5.6', { measured, message: `EO = ${EO} < ${q1} — a disordered mix of angles`, occurrences: [{ o_que: 'neither orthogonal nor consistently straight', ids: [] }] })));
   }
 
   // ---------------------------------------------------------------- A5.7
@@ -212,10 +212,10 @@ module.exports = function a5(scene) {
       const best = candidates.sort((a, b) => b.flow - a.flow || b.considered - a.considered)[0];
       const flow = roundTo(best.flow);
       const measured = { axis: best.axis === 'x' ? 'left→right' : 'top→bottom', flow, considered: best.considered, minimum };
-      output.push(flow >= minimum ? ok('A5.7', { measured, mensagem: `${roundTo(flow * 100, 0)}% of edges follow ${measured.axis}` })
+      output.push(flow >= minimum ? ok('A5.7', { measured, message: `${roundTo(flow * 100, 0)}% of edges follow ${measured.axis}` })
         : warning('A5.7', {
           measured,
-          mensagem: `only ${roundTo(flow * 100, 0)}% follow ${measured.axis} (minimum ${roundTo(minimum * 100, 0)}%)`,
+          message: `only ${roundTo(flow * 100, 0)}% follow ${measured.axis} (minimum ${roundTo(minimum * 100, 0)}%)`,
           occurrences: best.against.map(v => ({ o_que: `"${v.id}" runs against the dominant flow`, ids: [v.id] })),
         }));
     }

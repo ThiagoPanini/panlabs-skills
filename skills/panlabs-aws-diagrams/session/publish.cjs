@@ -86,15 +86,15 @@ const PUBLISHED_SCHEMA = 'panlabs-aws-diagrams/published@1';
 const DELIBERATION = [
   { onde: 'candidates', filtro: c => c.state === 'discarded',
     campos: ['because', 'pays', 'buys', 'chooseIf', 'wrongIf', 'differsIn'],
-    because: 'as candidatas descartadas somem; da escolhida sobra o que descreve o desenho' },
+    because: 'the discarded candidates disappear; of the chosen one, what describes the drawing remains' },
   { onde: 'findings', campos: ['note'],
-    because: 'o QUE foi achado é técnico; o texto costuma citar a conversa' },
+    because: 'WHAT was found is technical; the text tends to cite the conversation' },
   { onde: 'parking', filtro: () => true, campos: ['note'],
-    because: 'é fala de pessoa em reunião, com aspas' },
+    because: 'it\'s something someone said in a meeting, in quotes' },
   { onde: 'facts', campos: ['from'],
-    because: 'a citação sai; o fato fica, é premissa da arquitetura' },
+    because: 'the citation leaves; the fact stays, it\'s the architecture\'s premise' },
   { onde: 'agreement', campos: ['by', 'snapshot'],
-    because: 'nome de pessoa, e a deliberação da fase lógica' },
+    because: 'a person\'s name, and the logical phase\'s deliberation' },
 ];
 
 const listOf = (d, key) => (Array.isArray(d[key]) ? d[key] : d[key] ? [d[key]] : []);
@@ -144,8 +144,8 @@ function countDeliberation(session) {
  * still give.
  */
 const DEFAULT_BECAUSE =
-  'copia publicada: a deliberacao da sessao (candidatas descartadas, motivo das recusas, ' +
-  'estacionamento, quem aprovou) foi podada. Retome a partir do arquivo de trabalho.';
+  'published copy: the session\'s deliberation (discarded candidates, rejection reasons, ' +
+  'parking, who approved it) was pruned. Resume from the working file.';
 
 function publish(xml) {
   const r = reescreverSelos(xml, p => {
@@ -188,9 +188,9 @@ function dossierWarning(session) {
    */
   const count = countDeliberation(session);
   if (!count) return null;
-  return `este arquivo carrega ${count} item(ns) de deliberacao no selo — candidata descartada, ` +
-    'recusa com motivo, estacionamento ou quem aprovou. Legiveis em Extras > Editar diagrama. ' +
-    'Para mandar para fora, gere a copia publicada (session/publish.cjs).';
+  return `this file carries ${count} deliberation item(s) in the seal — discarded candidate, ` +
+    'rejection with reason, parking, or who approved it. Readable via Extras > Edit Diagram. ' +
+    'To send it out, generate the published copy (session/publish.cjs).';
 }
 
 // ------------------------------------------------------------------- CLI
@@ -224,7 +224,7 @@ function main() {
   const xml = fs.readFileSync(input, 'utf8');
   let copy;
   try { copy = publish(xml); }
-  catch (e) { console.error(`\n✗ ${e.message}`); for (const l of e.erros || []) console.error(`    · ${l}`); process.exit(1); }
+  catch (e) { console.error(`\n✗ ${e.message}`); for (const l of e.errors || []) console.error(`    · ${l}`); process.exit(1); }
 
   let session = null;
   try {

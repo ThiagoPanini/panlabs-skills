@@ -46,7 +46,7 @@ async function main() {
   fs.mkdirSync(DIR, { recursive: true });
   for (const v of VARIANTS) {
     const m = JSON.parse(fs.readFileSync(path.join(MODELS_DIR, v.model), 'utf8'));
-    const r = await generate(m, { tema: v.theme, flow: v.flow });
+    const r = await generate(m, { theme: v.theme, flow: v.flow });
     fs.writeFileSync(path.join(DIR, v.name + '.drawio'), r.xml);
     console.log(`  ${v.name.padEnd(18)} theme=${v.theme}${v.flow ? ` flow=${v.flow}` : ''}  ${r.xml.length} bytes`);
   }

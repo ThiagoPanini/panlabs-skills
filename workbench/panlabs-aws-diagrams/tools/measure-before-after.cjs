@@ -52,8 +52,8 @@ async function main() {
       try {
         const r = await generate(JSON.parse(JSON.stringify(m)));
         const l = validateGeometry(r.layoutPlan);
-        col[label] = { failure: l.resumo.failure, sem: l.semanticas.map(s => `${s.id}×${s.occurrences.length}`),
-          ids: l.falhas.map(f => f.id), bytes: r.xml.length };
+        col[label] = { failure: l.summary.failure, sem: l.semantic.map(s => `${s.id}×${s.occurrences.length}`),
+          ids: l.failures.map(f => f.id), bytes: r.xml.length };
       } catch (e) { col[label] = { error: e.message.slice(0, 40) }; }
     }
     const show = c => c.error ? `DID NOT GENERATE (${c.error})`

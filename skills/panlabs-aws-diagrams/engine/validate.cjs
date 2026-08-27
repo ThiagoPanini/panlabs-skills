@@ -253,26 +253,25 @@ function domain(m, byId) {
 
 // ------------------------------------------------------------ facade
 
-// ⚠️ THE RETURN SHAPE KEEPS ITS PORTUGUESE KEYS (`erros`, `avisos`, `fase`) ON
-// PURPOSE. This facade is a contract read by callers across the whole tree —
-// validator/gate.cjs, theme/theme.cjs, session/*, tools/*, tests/* — that
-// destructure `.erros`/`.avisos`/`.fase` by that exact name. Renaming the keys
-// here without renaming every one of those call sites would repeat the exact
+// ⚠️ `fase` STAYS PORTUGUESE ON PURPOSE, for now. This facade is a contract read
+// by callers across the whole tree — validator/gate.cjs, theme/theme.cjs,
+// session/*, tools/*, tests/* — that destructure `.fase` by that exact name.
+// #134 converted `erros`/`avisos` to `errors`/`warnings` here and at every one
+// of those call sites at once; `fase` was left outside that ticket's list, and
+// renaming it without renaming every reading end would repeat the exact
 // mistake this codebase already paid for once: a contract key changed on one
 // end and not the other, silently producing `undefined` on the reading side.
-// The VALUES and the message strings inside `erros`/`avisos` are English; only
-// the three field names stay as they are until every consumer moves together.
 function validate(model, schema) {
   const shapeErrors = againstSchema(model, schema, schema);
-  if (shapeErrors.length) return { ok: false, erros: shapeErrors, avisos: [], fase: 'schema' };
+  if (shapeErrors.length) return { ok: false, errors: shapeErrors, warnings: [], fase: 'schema' };
 
   const { errors: refErrors, byId } = references(model);
-  if (refErrors.length) return { ok: false, erros: refErrors, avisos: [], fase: 'references', byId };
+  if (refErrors.length) return { ok: false, errors: refErrors, warnings: [], fase: 'references', byId };
 
   const { errors: domainErrors, warnings } = domain(model, byId);
-  if (domainErrors.length) return { ok: false, erros: domainErrors, avisos: warnings, fase: 'domain', byId };
+  if (domainErrors.length) return { ok: false, errors: domainErrors, warnings, fase: 'domain', byId };
 
-  return { ok: true, erros: [], avisos: warnings, fase: null, byId };
+  return { ok: true, errors: [], warnings, fase: null, byId };
 }
 
 module.exports = { validate, againstSchema, CONTAINERS, LEAVES };

@@ -32,8 +32,8 @@ async function draw(session, view, opts = {}) {
   // the way out. It goes into the report and not to stdout because printing is
   // the CLI's job.
   const warning = dossierWarning(session);
-  if (warning) r.relatorio.avisos.push(warning);
-  return { xml, model, trail, relatorio: r.relatorio, caminho: r.caminho, tema: r.tema };
+  if (warning) r.report.warnings.push(warning);
+  return { xml, model, trail, report: r.report, path: r.path, theme: r.theme };
 }
 
 module.exports = { draw };

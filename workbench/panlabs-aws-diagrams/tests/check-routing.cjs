@@ -248,9 +248,9 @@ async function main() {
   // band ever stopped being an obstacle at all.
   console.log('\n  the detour clears every band it does not belong to, on either margin\n');
   const twoRow = validateGeometry((await generate(twoRowGrid())).layoutPlan);
-  const lies = twoRow.semanticas.map(m => `${m.id}×${m.occurrences.length}`);
+  const lies = twoRow.semantic.map(m => `${m.id}×${m.occurrences.length}`);
   if (lies.length) failed = 1;
-  for (const m of twoRow.semanticas) for (const o of m.occurrences) console.log(`      · ${o.o_que}`);
+  for (const m of twoRow.semantic) for (const o of m.occurrences) console.log(`      · ${o.o_que}`);
   console.log(`  ${lies.length ? '✗' : '✓'} two stacked VPC rows, triangle in the top one: ` +
     `${lies.length ? lies.join(', ') : 'no semantic failure'} — the budget is 0`);
 

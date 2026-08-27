@@ -78,7 +78,7 @@ console.log('\n2 · control — the pre-#38 behaviour would have produced a DIFF
   const node = { id: 'n5', kind: 'service', service: 'dynamodb', resource: RESOURCE, qualifier: QUALIFIER };
   const today = res.leaf(node).label;
   const preTicket = themeMod.load('corporate');
-  const oldStyleLabel = resolverMod.create(preTicket).tema.rotuloDeFolha(
+  const oldStyleLabel = resolverMod.create(preTicket).theme.rotuloDeFolha(
     node.label || 'DynamoDB', node.qualifier);   // what resolve.cjs called BEFORE #38
   ok(today !== oldStyleLabel,
     'CONTROL: resource-first differs from the old qualifier-only call — the fix changes real output',
@@ -117,13 +117,13 @@ console.log("\n3 · end to end — through session@1's projection, both views\n"
   ok(lNode.qualifier === QUALIFIER,
     'and the logical leaf falls back to qualifier');
 
-  const rTechnical = await generate(technical, { tema: 'corporate' });
+  const rTechnical = await generate(technical, { theme: 'corporate' });
   const mTechnical = rTechnical.xml.match(/<mxCell id="orders"[^>]*value="([^"]*)"/);
   ok(mTechnical && mTechnical[1].includes(`&lt;i&gt;${RESOURCE}&lt;/i&gt;`),
     'technical view XML: the leaf shows the resource in italics',
     mTechnical && mTechnical[1]);
 
-  const rLogical = await generate(logical, { tema: 'corporate' });
+  const rLogical = await generate(logical, { theme: 'corporate' });
   const mLogical = rLogical.xml.match(/<mxCell id="orders"[^>]*value="([^"]*)"/);
   ok(mLogical && mLogical[1].includes(`&lt;i&gt;${QUALIFIER}&lt;/i&gt;`) && !mLogical[1].includes(RESOURCE),
     'logical view XML: the leaf shows the qualifier, never the resource',

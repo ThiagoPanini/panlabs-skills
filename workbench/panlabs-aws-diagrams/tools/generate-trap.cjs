@@ -56,15 +56,15 @@ function patch(xml) {
 
 async function main() {
   // --- d: sayable and wrong -------------------------------------------------
-  const d = await generate(MODEL, { tema: TRAP_THEME, force: true });
+  const d = await generate(MODEL, { theme: TRAP_THEME, force: true });
   fs.writeFileSync(path.join(OUTPUT_DIR, 'themes', 'd-trap.drawio'), d.xml);
   console.log('d-trap  — the gate would fail it like this:');
-  for (const l of contrast.summarize(d.relatorio.contraste)) console.log('   ✗ ' + l);
+  for (const l of contrast.summarize(d.report.contraste)) console.log('   ✗ ' + l);
   fs.writeFileSync(path.join(OUTPUT_DIR, 'themes', 'd-trap.verdict.txt'),
-    contrast.summarize(d.relatorio.contraste).join('\n') + '\n');
+    contrast.summarize(d.report.contraste).join('\n') + '\n');
 
   // --- e: unspeakable --------------------------------------------------------
-  const e = await generate(MODEL, { tema: 'light' });
+  const e = await generate(MODEL, { theme: 'light' });
   const patched = patch(e.xml);
   fs.writeFileSync(path.join(OUTPUT_DIR, 'themes', 'e-unspeakable.drawio'), patched);
   const howMany = k => (patched.match(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;

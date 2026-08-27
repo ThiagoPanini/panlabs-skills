@@ -76,7 +76,7 @@ console.log('\n2 · end to end — A4.5 reports equal left/right padding for the
 
 {
   const model = JSON.parse(fs.readFileSync(MODEL_PATH, 'utf8'));
-  const r = await generate(model, { tema: 'light' });
+  const r = await generate(model, { theme: 'light' });
   const report = validateGeometry(r.layoutPlan);
   const a45 = report.resultados.find(c => c.id === 'A4.5');
   const line = a45.occurrences.map(o => o.o_que || o).find(o => o.includes(`"${NARROW_SUBNET}"`));

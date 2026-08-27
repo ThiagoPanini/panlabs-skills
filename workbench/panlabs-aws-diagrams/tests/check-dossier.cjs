@@ -160,7 +160,7 @@ async function main() {
   ok(a.ours === true, 'the skill still recognizes the file as its own');
   ok(a.published === true, 'and knows it is a published copy');
   ok(a.session === null, 'does not return a session — there is nothing to resume');
-  ok(/publicada/i.test(a.because || ''), 'and says why', (a.because || '').slice(0, 70) + '…');
+  ok(/published/i.test(a.because || ''), 'and says why', (a.because || '').slice(0, 70) + '…');
 
   const t = open(working);
   ok(t.published !== true && t.session !== null,
@@ -169,7 +169,7 @@ async function main() {
   // ------------------------------------------------------------- 5 · the warning
   console.log('\n5 · the one-line warning (#16 pattern: warns, never blocks)\n');
   const warning = dossierWarning(technical);
-  ok(!!warning && /deliberacao/i.test(warning), 'the session with deliberation produces a warning', (warning || '').slice(0, 62) + '…');
+  ok(!!warning && /deliberation/i.test(warning), 'the session with deliberation produces a warning', (warning || '').slice(0, 62) + '…');
   ok(dossierWarning(prune(technical)) === null,
     'and the already-pruned session does NOT produce a warning — the warning measures, it does not decorate');
   /**
@@ -197,7 +197,7 @@ async function main() {
     'a discarded candidate WITH `because` and `pays` counts 1, not 3',
     `counted ${countDeliberation(duplicate)}`);
   const r = await draw(technical, 'logical');
-  ok(r.relatorio.avisos.some(x => /Editar diagrama/.test(x)),
+  ok(r.report.warnings.some(x => /Edit Diagram/.test(x)),
     'and it reaches the report of whoever drew it');
 
   // ------------------------------------------------- 6 · the pruning is deterministic

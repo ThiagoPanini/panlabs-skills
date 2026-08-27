@@ -63,7 +63,7 @@ const RUBRIC_SEVERITY = {
 };
 
 // The ones the rubric writes with TWO levels, and that therefore have to
-// carry `escalona: true` — the concrete case is decided by the check, not by
+// carry `escalates: true` — the concrete case is decided by the check, not by
 // the table.
 const SCALE_WITH = ['A2.1', 'A5.1', 'A5.2', 'A5.3', 'A5.4', 'A6.1', 'A8.1'];
 
@@ -92,8 +92,8 @@ for (const c of CHECKS) {
   if (!SEVERITIES.includes(c.severity)) note(`${c.id} has severity "${c.severity}", outside ${SEVERITIES.join('|')}`);
   else if (RUBRIC_SEVERITY[c.id] && c.severity !== RUBRIC_SEVERITY[c.id])
     note(`${c.id} is set to "${c.severity}" and the rubric says "${RUBRIC_SEVERITY[c.id]}"`);
-  if (SCALE_WITH.includes(c.id) && !c.escalona) note(`${c.id} has two levels in the rubric and does not carry escalona: true`);
-  if (!SCALE_WITH.includes(c.id) && c.escalona) note(`${c.id} calls itself scalable, and the rubric gives it a single level`);
+  if (SCALE_WITH.includes(c.id) && !c.escalates) note(`${c.id} has two levels in the rubric and does not carry escalates: true`);
+  if (!SCALE_WITH.includes(c.id) && c.escalates) note(`${c.id} calls itself scalable, and the rubric gives it a single level`);
   if (!INPUTS.includes(c.input)) note(`${c.id} has input "${c.input}", outside ${INPUTS.join('|')}`);
   if (!c.mede) note(`${c.id} does not say what it measures`);
   if (!c.fonte) note(`${c.id} does not cite a source — the rubric cites one, the index has to cite one`);
@@ -111,14 +111,14 @@ const TUNABLE = ['A3.9', 'A4.7', 'A5.3', 'A5.7', 'A6.4', 'A7.4', 'A8.3', 'A8.4']
 for (const id of TUNABLE) {
   const c = byId(id);
   if (!c) continue;                       // already reported above
-  if (!c.calibravel) note(`${id} is an "engineering default" in the rubric and the index did not mark it as calibravel`);
-  if (!c.limiar || !c.limiar.key) note(`${id} is calibravel and does not point to a thresholds.json key`);
+  if (!c.calibratable) note(`${id} is an "engineering default" in the rubric and the index did not mark it as calibratable`);
+  if (!c.limiar || !c.limiar.key) note(`${id} is calibratable and does not point to a thresholds.json key`);
   else if (!(c.limiar.key in THRESHOLDS)) note(`${id} points to key "${c.limiar.key}", missing from thresholds.json`);
 }
 
 for (const c of CHECKS) {
-  if (c.calibravel && !TUNABLE.includes(c.id))
-    note(`${c.id} calls itself calibravel, but the rubric did not mark it as an engineering default`);
+  if (c.calibratable && !TUNABLE.includes(c.id))
+    note(`${c.id} calls itself calibratable, but the rubric did not mark it as an engineering default`);
 }
 
 // ------------------------------------------- 4. the validator × render split
@@ -146,7 +146,7 @@ console.log(`  validator's (mandatory):    ${validatorOwned.length}`);
 console.log(`  render's (opportunistic):   ${CHECKS.length - validatorOwned.length}`);
 console.log(`  fail / warn:                ${CHECKS.filter(c => c.severity === 'fail').length} / ` +
   `${CHECKS.filter(c => c.severity === 'warn').length}`);
-console.log(`  calibratable thresholds:    ${CHECKS.filter(c => c.calibravel).length}`);
+console.log(`  calibratable thresholds:    ${CHECKS.filter(c => c.calibratable).length}`);
 
 if (failures.length) {
   console.log('\n  ✗ the index does not match the rubric:');

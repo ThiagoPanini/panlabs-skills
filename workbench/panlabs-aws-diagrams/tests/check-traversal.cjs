@@ -54,7 +54,7 @@ function countIntrusions(cells, crossings, accountBox) {
     for (let i = 1; i < pts.length; i++) {
       const [a, b] = [pts[i - 1], pts[i]];
       for (const [id, cx] of accountBox) {
-        if (id === t.contaDe || id === t.contaPara) continue;
+        if (id === t.accountFrom || id === t.accountTo) continue;
         const inside = p => p.x > cx.x && p.x < cx.x + cx.w && p.y > cx.y && p.y < cx.y + cx.h;
         // orthogonal segment: endpoints inside, or the segment piercing straight through the rectangle
         const crossesH = a.y === b.y && a.y > cx.y && a.y < cx.y + cx.h &&
@@ -154,9 +154,9 @@ async function main() {
   console.log("\n5. X1/E8/E10 — in the integration view the crossing is drawn, and doesn't turn into spaghetti");
   const integ = model('platform-3-accounts.json');
   const rInt = await generate(integ);
-  ok('the engine entered integration mode', rInt.derived.modo.modo === 'integracao', rInt.derived.modo.because);
+  ok('the engine entered integration mode', rInt.derived.modo.modo === 'integration', rInt.derived.modo.because);
   ok("picked a level from #6 §6.4's hierarchy", rInt.derived.policy.level > 1,
-    `level ${rInt.derived.policy.level} — ${rInt.derived.policy.mecanismo}`);
+    `level ${rInt.derived.policy.level} — ${rInt.derived.policy.mechanism}`);
 
   const crossingIds = new Set(rInt.derived.travessias.map(t => t.id));
   const drawn = rInt.layoutPlan.cells.filter(c => c.kind === 'edge' && crossingIds.has(c.id));
@@ -223,7 +223,7 @@ async function main() {
   const destCell = rInt.layoutPlan.cells.find(c => c.id === first.to);
   if (originCell && destCell) {
     const middle = [...accountBox.entries()].find(([id]) =>
-      id !== first.contaDe && id !== first.contaPara);
+      id !== first.accountFrom && id !== first.accountTo);
     if (middle) {
       const [, cx] = middle;
       const y = cx.y + cx.h / 2;
@@ -249,7 +249,7 @@ async function main() {
   const ouInXml = (rInt.xml.match(/OU – /g) || []).length;
   ok('the OU band is not in the .drawio (integration mode suppresses it)', ouInXml === 0,
     `${ouInXml} occurrence(s) of "OU – " in the output`);
-  const ouWarning = rInt.relatorio.avisos.find(a => a.startsWith('OU bands'));
+  const ouWarning = rInt.report.warnings.find(a => a.startsWith('OU bands'));
   ok('there is a warning about the OU band', Boolean(ouWarning), ouWarning);
   ok("the warning SAYS integration mode doesn't draw it — it doesn't assert what the XML denies",
     Boolean(ouWarning) && /doesn't draw an OU band/.test(ouWarning), ouWarning);

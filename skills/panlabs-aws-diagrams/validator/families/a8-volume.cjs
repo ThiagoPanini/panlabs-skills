@@ -24,9 +24,9 @@ module.exports = function a8(scene) {
     const ceiling = lim('elementsFail');
     const measured = { nodes: V, groups: scene.groups.length, bands: scene.bands.length, target, ceiling };
     const decompose = { o_que: `the literature's remedy is decomposing into smaller diagrams, not deleting elements (Moody & Heymans, RE'09)`, ids: [] };
-    output.push(V <= target ? ok('A8.1', { measured, mensagem: `${V} first-class node(s) (target ≤ ${target})` })
-      : V <= ceiling ? warning('A8.1', { measured, mensagem: `${V} nodes — above the target of ${target}`, occurrences: [decompose] })
-        : failure('A8.1', { measured, mensagem: `${V} nodes — above the cutoff of ${ceiling}, where node-link loses to a matrix on most tasks`, occurrences: [decompose] }));
+    output.push(V <= target ? ok('A8.1', { measured, message: `${V} first-class node(s) (target ≤ ${target})` })
+      : V <= ceiling ? warning('A8.1', { measured, message: `${V} nodes — above the target of ${target}`, occurrences: [decompose] })
+        : failure('A8.1', { measured, message: `${V} nodes — above the cutoff of ${ceiling}, where node-link loses to a matrix on most tasks`, occurrences: [decompose] }));
   }
 
   // ---------------------------------------------------------------- A8.2
@@ -45,10 +45,10 @@ module.exports = function a8(scene) {
       output.push(d > ceiling && V > target
         ? warning('A8.2', {
           measured,
-          mensagem: `density ${d} > ${ceiling} with ${V} nodes — the combination the literature avoids`,
+          message: `density ${d} > ${ceiling} with ${V} nodes — the combination the literature avoids`,
           occurrences: [{ o_que: 'above 20% density the literature only uses a matrix or edge bundling', ids: [] }],
         })
-        : ok('A8.2', { measured, mensagem: `density ${d} (${E} edges for ${V} nodes)` }));
+        : ok('A8.2', { measured, message: `density ${d} (${E} edges for ${V} nodes)` }));
     }
   }
 
@@ -65,8 +65,8 @@ module.exports = function a8(scene) {
         .map(([id, d]) => ({ o_que: `"${id}" has degree ${d} (above ${ceiling}, A6.1's angular resolution becomes mechanically impossible)`, ids: [id] }));
       const measured = { maxDegree: maximum, ceiling, nodesWithEdge: degree.size };
       output.push(exceeded.length
-        ? warning('A8.3', { measured, mensagem: `max degree ${maximum}, above ${ceiling}`, occurrences: exceeded })
-        : ok('A8.3', { measured, mensagem: `max degree ${maximum}` }));
+        ? warning('A8.3', { measured, message: `max degree ${maximum}, above ${ceiling}`, occurrences: exceeded })
+        : ok('A8.3', { measured, message: `max degree ${maximum}` }));
     }
   }
 

@@ -21,13 +21,13 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const { open } = require('../../../skills/panlabs-aws-diagrams/session/open.cjs');
 const { canonicalize } = require('../../../skills/panlabs-aws-diagrams/session/fingerprint.cjs');
 
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
 const WORKBENCH = path.join(__dirname, '..');
+const { callRender, indent } = require(path.join(WORKBENCH, 'tools', 'call-render.cjs'));
 // The render corpus is scratch (#45) — the ruler exports OUTPUT_DIR once and
 // every check that reads a generated `.drawio` reads it from there.
 const FILE = path.join(process.env.OUTPUT_DIR || os.tmpdir(), 'retail.drawio');
@@ -74,17 +74,23 @@ const output = path.join(TMP, 'back.drawio');
  * code doesn't count. That's why the attempt is retried before flagging a
  * design failure — otherwise a loaded machine produces a red run that isn't
  * about the code.
+ *
+ * #144: the export itself used to dial `xvfb-run` with no timeout at all — a
+ * hang here froze the whole suite, the exact failure `render.sh` exists to
+ * prevent (#128). It goes through `render.sh` now, which bounds the wait and
+ * retries only a non-answer; the loop below is a different question — draw.io
+ * DID answer, just with the wrong page count — and stays as it was.
  */
 let raw = null;
 for (let attempt = 1; attempt <= 2 && raw === null; attempt++) {
-  try {
-    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, FILE],
-      { stdio: ['ignore', 'ignore', 'ignore'] });
-  } catch (e) {
-    console.log('    the app failed to export — on this machine electron dies under memory pressure.');
+  const exported = callRender(FILE, output, 'xml', DRAWIO);
+  if (!exported.ok) {
+    console.log(`    the app failed to export (render.sh exit ${exported.code}) — on this machine electron dies under memory pressure.`);
+    console.log(indent(exported.log));
     fs.rmSync(TMP, { recursive: true, force: true });
     process.exit(failures ? 1 : 0);
   }
+  if (exported.flaked) console.log(indent(exported.out));
   const readBack = fs.readFileSync(output, 'utf8');
   const pages = (readBack.match(/<diagram\b/g) || []).length;
   if (pages === before.pages.length) { raw = readBack; break; }

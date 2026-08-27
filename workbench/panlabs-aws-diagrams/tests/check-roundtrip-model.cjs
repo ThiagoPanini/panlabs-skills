@@ -20,10 +20,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
 const WORKBENCH = path.join(__dirname, '..');
+const { callRender, indent } = require(path.join(WORKBENCH, 'tools', 'call-render.cjs'));
 const { binary } = require(path.join(ROOT, 'tools', 'drawio.cjs'));
 const DRAWIO = binary(process.argv[2]);
 const TMP = process.env.TMPDIR || '/tmp';
@@ -77,10 +77,16 @@ for (const file of files) {
   // 2. the app decodes and re-serializes through its own codec
   if (!hasApp) continue;
   const output = path.join(TMP, `rt-${name}.drawio`);
-  try {
-    execFileSync('xvfb-run', ['-a', DRAWIO, '-x', '-f', 'xml', '--no-sandbox', '--disable-gpu', '-o', output, filePath],
-      { stdio: ['ignore', 'ignore', 'ignore'] });
-  } catch (e) { console.log(`    round-trip through the app          ✗ (failed to export)`); failures++; continue; }
+  // #144: this used to dial `xvfb-run` with no timeout — a hang here froze
+  // the suite. `render.sh` bounds it, and its own retry (never a blind one —
+  // see call-render.cjs) is what "flaked" below reports.
+  const exported = callRender(filePath, output, 'xml', DRAWIO);
+  if (!exported.ok) {
+    console.log(`    round-trip through the app          ✗ (render.sh exit ${exported.code})`);
+    console.log(indent(exported.log));
+    failures++; continue;
+  }
+  if (exported.flaked) console.log(indent(exported.out));
 
   const after = fs.readFileSync(output, 'utf8');
   const readBack2 = extract(after);

@@ -382,12 +382,19 @@ const RECEIVER = /([A-Za-z_$][\w$]*)\s*(?:\([^()]*\))?\s*$/;
 const BINDING = /\b(?:const|let|var)\s*\{([^{}]*)\}\s*=(?!=)/g;
 const FIELD = /(^|,)\s*(\.\.\.)?\s*([A-Za-z_$][\w$]*)\s*(?::\s*([A-Za-z_$][\w$]*))?/g;
 
-/** `name(args) {` is a method shorthand — unless the name is a keyword and the block is a body. */
+/**
+ * `name(args) {` is a method shorthand — `{ leafLabel(a, b) { … } }` names a key
+ * as surely as `leafLabel: (a, b) => …` does, and missing it made
+ * `theme.rotuloDeFolha` look like a read with no writer when `theme/theme.cjs`
+ * writes it in exactly that form. These names are the ones that wear the same
+ * shape without naming anything.
+ */
 const KEYWORD = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'typeof', 'do', 'else']);
 
 /**
- * @param {(name: string, receiver: string) => boolean} excused
- * @returns {{reads: Map<string, object[]>, producers: Set<string>}}
+ * @param {string} root
+ * @param {(name: string, receiver: string, bags: Set<string>) => boolean} excused
+ * @returns {{reads: Map<string, {at: string, receiver: string}[]>, producers: Set<string>}}
  */
 function sweep(root, excused) {
   const producers = new Set();
@@ -398,16 +405,16 @@ function sweep(root, excused) {
     let src = code(fs.readFileSync(file, 'utf8'));
     const rel = path.relative(root, file);
     const lineAt = i => src.slice(0, i).split('\n').length;
-    const read = (name, i, receiver) => {
-      if (excused(name, receiver, bags)) return;
-      if (!reads.has(name)) reads.set(name, []);
-      reads.get(name).push({ at: `${rel}:${lineAt(i)}`, receiver });
-    };
     // one hop of aliasing, because `const s = e.style` is how the style bag is
     // actually read: without it, eight mxGraph keys come back as findings.
     const bags = new Set(Object.keys(FOREIGN_BAGS));
     for (const m of src.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[\w.$]*\.([A-Za-z_$][\w$]*)/g))
       if (bags.has(m[2])) bags.add(m[1]);
+    const read = (name, i, receiver) => {
+      if (excused(name, receiver, bags)) return;
+      if (!reads.has(name)) reads.set(name, []);
+      reads.get(name).push({ at: `${rel}:${lineAt(i)}`, receiver });
+    };
 
     // ---- the destructured reads, taken first and then blanked, so the
     // object-literal rules below never mistake a pattern for a literal

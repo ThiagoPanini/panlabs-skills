@@ -111,6 +111,8 @@ seria repetir o defeito que abriu a spec #35. A carga de leitura não se mexeu
 — 78,9 KB —, pelo mesmo motivo de sempre: nada do que saiu era lido pelo
 agente. `workbench/panlabs-aws-diagrams/` ganhou 30 arquivos e 676 KB.
 
+**O #46 fechou o que #44 e #45 deixaram em aberto.** A checagem de autocontenção não nasce mais aqui — migrou para o harness em `scripts/checks/references.sh`, varrendo todo link e toda imagem em Markdown pela árvore inteira, cerca de código excluída, com dois veredictos: resolve para fora da skill é autocontenção quebrada, resolve para dentro mas não existe é ponteiro morto. Contra os 73 arquivos e 2,5 MB que o #45 deixou, a régua roda limpa — nenhuma referência escapa da árvore, nenhuma aponta para o que o #44 e o #45 já moveram ou apagaram. Nenhum arquivo saiu, nenhum entrou, e a carga de leitura ficou onde estava — 78,9 KB, o mesmo número do #45.
+
 E o teto deixou de ser a razão de qualquer coisa sair. Já não aperta ninguém;
 o que ainda manda material para fora é a **carga de leitura**, e o critério
 dos #44/#45 é o executável: *"o agente lê ou roda isto para executar a

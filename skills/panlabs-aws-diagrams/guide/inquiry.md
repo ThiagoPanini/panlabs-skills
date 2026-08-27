@@ -1,32 +1,20 @@
 # A sabatina
 
-O protocolo que leva de *"quero um sistema que faz X"* a um modelo completo.
-Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
+O protocolo que leva de *"quero um sistema que faz X"* a um modelo completo. Comando aqui roda da raiz da skill, como no [`SKILL.md`](../SKILL.md).
 
 É o que separa esta skill de um gerador de diagrama, e a razão é estrutural:
 
 > **Nenhuma checagem geométrica sabe se a arquitetura desenhada existe.**
 
-O substituto que a literatura propõe — diferença contra o IaC — está fora do
-escopo desta skill. Logo a sabatina é a **única guarda de veracidade do
-conteúdo**: o validador guarda o desenho, a sabatina guarda o fato. Daí decorre
-todo o desenho do protocolo: ela extrai exatamente o que o validador **não**
-alcança.
+O substituto que a literatura propõe — diferença contra o IaC — está fora do escopo desta skill. Logo a sabatina é a **única guarda de veracidade do conteúdo**: o validador guarda o desenho, a sabatina guarda o fato. Daí decorre todo o desenho do protocolo: ela extrai exatamente o que o validador **não** alcança.
 
-Três julgamentos que precisariam de olho humano ficam satisfeitos **por
-construção**, e é a sabatina que os satisfaz: o rótulo de aresta bate com a
-intenção (a pergunta *"quem inicia?"*), o nome é significativo, e a legenda
-explica em vez de listar.
+Três julgamentos que precisariam de olho humano ficam satisfeitos **por construção**, e é a sabatina que os satisfaz: o rótulo de aresta bate com a intenção (a pergunta *"quem inicia?"*), o nome é significativo, e a legenda explica em vez de listar.
 
 ## Fase 0 · Entrada
 
-Aceite ata de reunião, notas soltas, documento e foto de quadro branco. A foto é
-o insumo mais rico — entrega o **grafo** direto —, e todo rótulo nela é ilegível
-até ser confirmado.
+Aceite ata de reunião, notas soltas, documento e foto de quadro branco. A foto é o insumo mais rico — entrega o **grafo** direto —, e todo rótulo nela é ilegível até ser confirmado.
 
-**Material de entrada pré-preenche e nunca abaixa a régua.** Todo fato extraído
-entra como `procedencia: "inferido"` e **não conta** até `confirmado: true`.
-Confirme **em bloco**, não uma pergunta por fato.
+**Material de entrada pré-preenche e nunca abaixa a régua.** Todo fato extraído entra como `procedencia: "inferido"` e **não conta** até `confirmado: true`. Confirme **em bloco**, não uma pergunta por fato.
 
 | o que veio | como entra |
 |---|---|
@@ -37,24 +25,17 @@ Confirme **em bloco**, não uma pergunta por fato.
 
 ### Estacionamento
 
-O usuário diz "Lambda" no minuto um — sempre. Se o nome entrar agora, quebra *um
-nível de abstração* (`A1.10`) e contamina a vista lógica, que é mostrada também a
-gente não-AWS.
+O usuário diz "Lambda" no minuto um — sempre. Se o nome entrar agora, quebra *um nível de abstração* (`A1.10`) e contamina a vista lógica, que é mostrada também a gente não-AWS.
 
-Guarde em `dossie.estacionamento` com `estado: "estacionado"` e a `capacidade`
-contra a qual ele volta. Na fase técnica ele reaparece como **sugestão inferida**,
-para confirmar — não para assumir. Sem esse campo o retorno não sobrevive a uma
-sessão nova.
+Guarde em `dossie.estacionamento` com `estado: "estacionado"` e a `capacidade` contra a qual ele volta. Na fase técnica ele reaparece como **sugestão inferida**, para confirmar — não para assumir. Sem esse campo o retorno não sobrevive a uma sessão nova.
 
 ## Fases 1 e 2 · As rodadas
 
-Entregue a **rodada inteira de uma vez**, cada pergunta numerada e com uma
-recomendação. Nunca pergunte fato que dá para descobrir sozinho.
+Entregue a **rodada inteira de uma vez**, cada pergunta numerada e com uma recomendação. Nunca pergunte fato que dá para descobrir sozinho.
 
 ### Os cinco eixos de forma
 
-Teste de admissão, e ele é o que fecha a lista em cinco: **um eixo é obrigatório
-se, e só se, a resposta dele muda o desenho.**
+Teste de admissão, e ele é o que fecha a lista em cinco: **um eixo é obrigatório se, e só se, a resposta dele muda o desenho.**
 
 | | eixo | exemplo de resposta, do corpus |
 |---|---|---|
@@ -64,36 +45,22 @@ se, e só se, a resposta dele muda o desenho.**
 | `E4` | exposição de rede | *privado, com ponto de entrega controlado* |
 | `E5` | fronteira de responsabilidade | *três fronteiras: aterrissagem, processamento, consumo* |
 
-Orçamento, maturidade do time, latência, janela de manutenção, lock-in, RTO/RPO
-**não reformatam o desenho — escolhem entre candidatas**. São desempate, e o
-lugar deles é a fase 3.
+Orçamento, maturidade do time, latência, janela de manutenção, lock-in, RTO/RPO **não reformatam o desenho — escolhem entre candidatas**. São desempate, e o lugar deles é a fase 3.
 
-`E5` fala **fronteira de responsabilidade**, não *conta AWS*. Decidido contra
-render real: as duas molduras saem geometricamente idênticas, mesmas caixas e
-mesmas coordenadas, então a escolha nunca foi de layout — é de **vocabulário e
-audiência**. A vista lógica vai para diretoria, produto e jurídico. A fronteira
-vira conta na transição para a vista técnica, e isso é troca de estilo, não de
-estrutura.
+`E5` fala **fronteira de responsabilidade**, não *conta AWS*. Decidido contra render real: as duas molduras saem geometricamente idênticas, mesmas caixas e mesmas coordenadas, então a escolha nunca foi de layout — é de **vocabulário e audiência**. A vista lógica vai para diretoria, produto e jurídico. A fronteira vira conta na transição para a vista técnica, e isso é troca de estilo, não de estrutura.
 
 ### Sondas condicionais
 
-Entram **destravadas por uma resposta**, nunca antes — perguntar antes é
-adivinhar. Padrão: *resposta de `Ex` → o que ela contradiz ou obriga*.
+Entram **destravadas por uma resposta**, nunca antes — perguntar antes é adivinhar. Padrão: *resposta de `Ex` → o que ela contradiz ou obriga*.
 
 - retenção longa + auditoria → residência de dados, imutabilidade, chave própria?
-- *"manda fora de hora"* + *"o painel está velho"* → o gatilho é a chegada, não o
-  relógio? (contradiz `E2`, e muda o desenho)
-- protocolo legado citado → é requisito do cliente, ou só o que existe hoje? (se
-  é do cliente, vira componente do desenho, não detalhe)
-- multi-fronteira → **quem inicia** a travessia? (direção errada inverte a leitura
-  de confiança)
+- *"manda fora de hora"* + *"o painel está velho"* → o gatilho é a chegada, não o relógio? (contradiz `E2`, e muda o desenho)
+- protocolo legado citado → é requisito do cliente, ou só o que existe hoje? (se é do cliente, vira componente do desenho, não detalhe)
+- multi-fronteira → **quem inicia** a travessia? (direção errada inverte a leitura de confiança)
 
 ### Quando o usuário já sabe o que quer
 
-A fase lógica **sempre começa, e colapsa numa confirmação** quando o material de
-entrada já determina a arquitetura. Pular de vez contradiz a progressão que é o
-coração do produto; sabatina inteira para quem já decidiu é atrito que mata
-adoção. Mesmo mecanismo do material de entrada: pré-preenche, confirmação valida.
+A fase lógica **sempre começa, e colapsa numa confirmação** quando o material de entrada já determina a arquitetura. Pular de vez contradiz a progressão que é o coração do produto; sabatina inteira para quem já decidiu é atrito que mata adoção. Mesmo mecanismo do material de entrada: pré-preenche, confirmação valida.
 
 ## Fase 3 · A parada
 
@@ -129,9 +96,7 @@ node tools/check-geometry.cjs /tmp/proj.json
 
 ### O piso — as checagens que fato nenhum fecha
 
-Medido nas **35 páginas** que os 20 modelos do corpus produzem — em páginas e não
-em modelos, porque o multi-conta sai em 1+N: `A1.2`, `A1.3` e `A1.11` acusam em
-**35 de 35**, e não porque falta informação.
+Medido nas **35 páginas** que os 20 modelos do corpus produzem — em páginas e não em modelos, porque o multi-conta sai em 1+N: `A1.2`, `A1.3` e `A1.11` acusam em **35 de 35**, e não porque falta informação.
 
 | | o que pede | por que não fecha |
 |---|---|---|
@@ -146,18 +111,13 @@ E o piso **sobe duas** assim que qualquer nota tiver `sobre`:
 | `A1.5` todo elemento tipado | `A1.5` e `A1.12` acusam a **nota presa a nó**, que desenha como nó e vive em `notas[]`, não em `nos[]` |
 | `A1.12` nenhum shape órfão | idem — isoladas em experimento: sem nota, limpo; nota de rodapé, limpo; nota com `sobre`, as duas acusam |
 
-Isto morde o protocolo de frente: a **fase 5 exige** uma nota ligada por `viaNota`
-para cada achado recusado. Se ela for presa ao nó, essas duas passam a fazer parte
-do piso — e não são perguntas.
+Isto morde o protocolo de frente: a **fase 5 exige** uma nota ligada por `viaNota` para cada achado recusado. Se ela for presa ao nó, essas duas passam a fazer parte do piso — e não são perguntas.
 
 **Pare de consertar quando `A1` chegar a exatamente o piso do seu modelo.** Tratar entrada de piso como defeito faz o ajuste rodar para sempre; a dívida tem dono e endereço em [`report.md`](report.md).
 
 ### As que viram ajuste
 
-`A1.1` título · `A1.4` todo elemento nomeado · `A1.6` toda aresta rotulada ·
-`A1.7` toda aresta unidirecional · `A1.8` nenhuma linha sem seta · `A1.9` siglas
-expandidas · `A1.10` um nível de abstração. Mais `A1.5` e `A1.12` **quando não há
-nota presa a nó** — aí elas voltam a acusar de verdade.
+`A1.1` título · `A1.4` todo elemento nomeado · `A1.6` toda aresta rotulada · `A1.7` toda aresta unidirecional · `A1.8` nenhuma linha sem seta · `A1.9` siglas expandidas · `A1.10` um nível de abstração. Mais `A1.5` e `A1.12` **quando não há nota presa a nó** — aí elas voltam a acusar de verdade.
 
 Nenhuma delas precisa de uma volta ao usuário: são fatos que o próprio modelo já carrega ou que o agente escreve. Prova de que fechar é barato: um modelo de 3 nós acusava `A1.6` em duas arestas; escrever os dois `label` levou `A1` ao piso na mesma rodada.
 
@@ -167,23 +127,17 @@ Estourado o teto de complexidade (`A2.1`, `A8.1`), a resposta **não** é *"me c
 
 ### Duas réguas, não uma
 
-*Decidir* fecha na rodada de perguntas: os eixos em aberto foram perguntados.
-*Desenhar* fecha depois do desenho: `A1` no piso.
+*Decidir* fecha na rodada de perguntas: os eixos em aberto foram perguntados. *Desenhar* fecha depois do desenho: `A1` no piso.
 
 ## Fase 4 · As candidatas
 
 **Elas mudaram de posição, não de conteúdo.** No caminho normal o agente escolhe a que recomendaria, desenha, e apresenta as alternativas **junto** do desenho — o humano compara formas olhando uma delas pronta, em vez de escolher entre três parágrafos. No arco sequencial elas voltam a vir **antes**, e é para isso que os dois gatilhos do [`SKILL.md`](../SKILL.md) existem. Tudo abaixo vale igual nos dois casos.
 
-**Teto 3, piso 2, e diga por quê quando entregar menos.** O número cai do
-invariante, não é constante: forçar uma terceira quando o espaço real tem duas
-produz exatamente as "três variações da mesma coisa" que o protocolo existe para
-evitar.
+**Teto 3, piso 2, e diga por quê quando entregar menos.** O número cai do invariante, não é constante: forçar uma terceira quando o espaço real tem duas produz exatamente as "três variações da mesma coisa" que o protocolo existe para evitar.
 
 ### O invariante de tupla
 
-Cada candidata carrega sua tupla `E1–E5`. **Todo par difere em ≥1 eixo de forma, e
-você tem de saber dizer qual** — o campo `difereEm` guarda isso. Tuplas iguais
-colapsam e são descartadas: é o guarda mecânico contra distinção só de intenção.
+Cada candidata carrega sua tupla `E1–E5`. **Todo par difere em ≥1 eixo de forma, e você tem de saber dizer qual** — o campo `difereEm` guarda isso. Tuplas iguais colapsam e são descartadas: é o guarda mecânico contra distinção só de intenção.
 
 Do corpus, três candidatas e a distinção explícita entre elas:
 
@@ -195,8 +149,7 @@ cand-c  descartada   conteineres            · evento        · relacional-geren
 
 ### Como apresentar
 
-**compra / paga / escolha se / errada se**, mais a sua recomendação. Sem matriz de
-estrelas: estrela convida a tirar média, e média destrói decisão.
+**compra / paga / escolha se / errada se**, mais a sua recomendação. Sem matriz de estrelas: estrela convida a tirar média, e média destrói decisão.
 
 - **compra** — o que essa forma entrega que as outras não
 - **paga** — o custo, dito sem eufemismo
@@ -205,8 +158,7 @@ estrelas: estrela convida a tirar média, e média destrói decisão.
 
 ### As descartadas ficam
 
-Com o `porque` do descarte. Sem elas a sessão seguinte re-propõe uma forma já
-recusada, e ninguém sabe responder *"por que não a B?"*.
+Com o `porque` do descarte. Sem elas a sessão seguinte re-propõe uma forma já recusada, e ninguém sabe responder *"por que não a B?"*.
 
 ## Fase 5 · A revisão de lacunas
 
@@ -216,14 +168,9 @@ Roda **depois do desenho**, porque estas não são respostas a perguntas — sã
 node tools/review-gaps.cjs <modelo.json>       # o laudo
 ```
 
-A régua contra o corpus inteiro — `--corpus` — saiu com ele no #44: mora em
-`workbench/panlabs-aws-diagrams/tests/check-gaps.cjs`, e é lá que o L2/L3
-roda.
+A régua contra o corpus inteiro — `--corpus` — saiu com ele no #44: mora em `workbench/panlabs-aws-diagrams/tests/check-gaps.cjs`, e é lá que o L2/L3 roda.
 
-São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura que o
-modelo precisa afirmar para a regra ter o que dizer. Onde o modelo não afirma, a
-regra fica **muda** — e muda aparece no laudo com o motivo, porque *"não acusou"*
-não pode se confundir com *"não rodou"*.
+São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura que o modelo precisa afirmar para a regra ter o que dizer. Onde o modelo não afirma, a regra fica **muda** — e muda aparece no laudo com o motivo, porque *"não acusou"* não pode se confundir com *"não rodou"*.
 
 | regra | dispara quando | e é muda quando |
 |---|---|---|
@@ -234,10 +181,7 @@ não pode se confundir com *"não rodou"*.
 | `cross-account-sem-confianca` | travessia entre contas sem `habilita` em nenhuma ponta | <2 contas, ou nenhuma travessia |
 | `assincrono-sem-dlq` | consumidor de fila que não escreve em nenhuma **outra fila** | nada sai de fila, tópico ou barramento |
 
-**"Estado" e "fila" não são listas novas** — saem da mesma tabela de categoria
-AWS do [#22](https://github.com/ThiagoPanini/panlabs-skills/issues/22) que decide
-o andar da subnet. Se ela estiver errada, está errada nos dois lugares e
-conserta-se num só.
+**"Estado" e "fila" não são listas novas** — saem da mesma tabela de categoria AWS do [#22](https://github.com/ThiagoPanini/panlabs-skills/issues/22) que decide o andar da subnet. Se ela estiver errada, está errada nos dois lugares e conserta-se num só.
 
 > **Relata, propõe, e conserta apenas o que o usuário mandar consertar.**
 
@@ -245,10 +189,7 @@ conserta-se num só.
 
 ### A recusa tem de chegar ao desenho
 
-Todo achado com `estado: "recusado"` precisa de `viaNota` apontando para uma
-entrada de `notas` com `origem: "achado-recusado"`. O elo é **explícito**, e não
-busca de substring no texto, para que quem edita o texto da nota não quebre a
-rastreabilidade sem perceber.
+Todo achado com `estado: "recusado"` precisa de `viaNota` apontando para uma entrada de `notas` com `origem: "achado-recusado"`. O elo é **explícito**, e não busca de substring no texto, para que quem edita o texto da nota não quebre a rastreabilidade sem perceber.
 
 ```
 achado   spof · alvo receber-arquivo · recusado · viaNota: n-spof
@@ -260,20 +201,13 @@ Sem esse elo a recusa fica só no dossiê e o diagrama volta a enganar calado.
 
 ### A calibração, e o que ela consertou
 
-O protótipo do #15 fazia **4 achados num modelo de 3 nós** — 1,33 por nó. Contra
-o corpus de 22 modelos e 247 nós, estas regras fazem **0,101 por nó**: treze vezes
-menos.
+O protótipo do #15 fazia **4 achados num modelo de 3 nós** — 1,33 por nó. Contra o corpus de 22 modelos e 247 nós, estas regras fazem **0,101 por nó**: treze vezes menos.
 
-E o que consertou não foi apertar número, foi mudar a forma. Três das quatro
-regras do protótipo disparavam sobre **ausência** (*"nenhum componente declara
-redundância"*), e regra que dispara sobre ausência dispara em todo modelo
-pequeno, porque modelo pequeno é quase todo ausência.
+E o que consertou não foi apertar número, foi mudar a forma. Três das quatro regras do protótipo disparavam sobre **ausência** (*"nenhum componente declara redundância"*), e regra que dispara sobre ausência dispara em todo modelo pequeno, porque modelo pequeno é quase todo ausência.
 
-> **Um achado só nasce sobre um fato que o modelo AFIRMA, nunca sobre um fato que
-> ele não menciona.**
+> **Um achado só nasce sobre um fato que o modelo AFIRMA, nunca sobre um fato que ele não menciona.**
 
-**Três** limiares dentro das regras foram medidos contra o corpus, não escolhidos,
-e cada um matou um falso positivo concreto:
+**Três** limiares dentro das regras foram medidos contra o corpus, não escolhidos, e cada um matou um falso positivo concreto:
 
 | | e o que ele matou |
 |---|---|
@@ -281,24 +215,13 @@ e cada um matou um falso positivo concreto:
 | egresso conta **ligado**, não só contido | no `hub-tgw-3-accounts` o Transit Gateway **é** a saída controlada e mora fora das VPCs que serve. A regra reprovava as duas spokes pelo motivo que as torna certas |
 | `spof` **só os maximais** | numa cadeia toda ligação é ponto de articulação, com os órfãos encaixados. A `predictive-fleet` acusava **seis** num modelo de 11 nós — pior que o protótipo que motivou esta calibração inteira |
 
-A régua está em `check-gaps.cjs`, na régua do workspace irmão, e ela cobra dos **dois lados**: toda
-regra tem de disparar em ≥1 modelo do corpus **e** calar em ≥1. Regra que dispara
-em todos não está medindo nada — está afirmando uma constante.
+A régua está em `check-gaps.cjs`, na régua do workspace irmão, e ela cobra dos **dois lados**: toda regra tem de disparar em ≥1 modelo do corpus **e** calar em ≥1. Regra que dispara em todos não está medindo nada — está afirmando uma constante.
 
-**Nenhum modelo do corpus estoura o teto** de ⌈nós÷4⌉ — 22 de 22. Houve uma
-exceção nomeada, o `platform-3-accounts` a 6 achados contra teto 5, e ela
-**expirou sozinha** quando a cláusula dos maximais entrou: o teste ficou vermelho
-com a mensagem que ele mesmo tinha preparado, e a entrada foi apagada.
+**Nenhum modelo do corpus estoura o teto** de ⌈nós÷4⌉ — 22 de 22. Houve uma exceção nomeada, o `platform-3-accounts` a 6 achados contra teto 5, e ela **expirou sozinha** quando a cláusula dos maximais entrou: o teste ficou vermelho com a mensagem que ele mesmo tinha preparado, e a entrada foi apagada.
 
-Fica registrado o que aquela exceção mediu, porque continua verdadeiro e não tem
-mais quem prove: o **denominador do teto está errado** — achado escala com
-superfície de arquitetura (contas, VPCs, pontos de entrada), não com contagem de
-nós.
+Fica registrado o que aquela exceção mediu, porque continua verdadeiro e não tem mais quem prove: o **denominador do teto está errado** — achado escala com superfície de arquitetura (contas, VPCs, pontos de entrada), não com contagem de nós.
 
-**`retencao-sem-regra` não virou regra**, e é bom dizer por quê: ele aparece no
-dossiê do corpus de sessão, mas retenção é fato de política de dado que o
-`model@1` não tem onde afirmar. Sai da sabatina, não do grafo — e este módulo só
-lê o grafo.
+**`retencao-sem-regra` não virou regra**, e é bom dizer por quê: ele aparece no dossiê do corpus de sessão, mas retenção é fato de política de dado que o `model@1` não tem onde afirmar. Sai da sabatina, não do grafo — e este módulo só lê o grafo.
 
 ## Fase 6 · O acordo e a transição
 

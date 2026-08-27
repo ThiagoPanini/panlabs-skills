@@ -56,14 +56,18 @@
 #
 # ⚠️ THE CALLER PROJECT CARRIES A `package.json`, AND IT IS LOAD-BEARING.
 # Node reads a `.js` file as CommonJS or ESM by the nearest `package.json` above
-# it, and the skill ships exactly one `.js` — the vendored ELK bundle — in an
-# otherwise `.cjs` tree, with no `package.json` of its own. Without a pin inside
-# the sandbox, whatever the machine happens to have left above it decides how
-# the engine is read: the first run under this harness landed under a stray
-# `/tmp/package.json` from a draw.io extraction, `"type": "module"`, and the
-# engine died on `ELK is not a constructor`. The fixture pins the scope so the
-# run is reproducible, `verify` fails when the deciding file lives outside the
-# sandbox, and the skill's own defect is #133 — pinned here, not hidden.
+# it. The skill shipped exactly one `.js` — the vendored ELK bundle, in an
+# otherwise `.cjs` tree, with no `package.json` of its own — and the first run
+# under this harness landed beneath a stray `/tmp/package.json` from a draw.io
+# extraction, `"type": "module"`. The bundle was read as ESM and the engine died
+# on `ELK is not a constructor`. #133 renamed it to `.cjs` the same day, so
+# today there is no `.js` left to be read either way.
+#
+# The pin and the check stay, because the property they hold is the SANDBOX's,
+# not the skill's: the day a `.js` comes back — a vendored bundle, something
+# generated — the machine must not be the one deciding how it is read. `verify`
+# fails when the deciding `package.json` lives outside the sandbox, and the
+# fixture's own `package.json` is what keeps it inside.
 #
 # ⚠️ TEARDOWN RESTORES FROM A RECORD BESIDE THE SKILL HOME, NOT FROM THE
 # SANDBOX. The sandbox lives in the system temp and a machine may sweep it; a
@@ -424,7 +428,7 @@ cmd_verify() {
         *) bad "the module scope of $(basename "$js") comes from OUTSIDE the sandbox: $deciding (${kind:-commonjs}) — the machine decides how the skill's .js is read, not the fixture"; outside=1 ;;
       esac
     done < <(find "$COPY" -type f -name '*.js' 2>/dev/null)
-    [ -z "$scopes" ] && [ "$outside" -eq 0 ] && ok "nothing above the copy declares a module type — its .js reads as CommonJS"
+    [ -z "$scopes" ] && [ "$outside" -eq 0 ] && ok "nothing above the copy declares a module type — any .js in it reads as CommonJS"
   fi
 
   # 9 . every door on the machine opens onto the copy

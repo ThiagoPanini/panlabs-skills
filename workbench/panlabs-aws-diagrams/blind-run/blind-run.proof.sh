@@ -109,21 +109,26 @@ mv "$PROOF_BENCH/copy-aside" "$COPY"
 # what was wrong is that the machine got to decide how the skill's one `.js`
 # file is read. The caller project pins the scope, and removing that pin has to
 # turn this red rather than quietly hand the next run a different skill.
+# ⚠️ THE PROBE IS PLANTED, NOT BORROWED FROM THE COPY. When this case was
+# written the skill shipped exactly one `.js` — the vendored ELK bundle — and
+# taking it aside was the obvious way to reach the empty branch. #133 renamed it
+# to `.cjs` the same day, and a proof that borrowed it stopped running. What is
+# measured here is a property of the SANDBOX, so it has to keep measuring
+# whatever the skill happens to ship today.
+out="$(run verify)"; code=$?
+expect "a copy with no .js has no module scope to inherit" green "any .js in it reads as CommonJS" "$out" "$code"
+
+: > "$COPY/probe.js"
+out="$(run verify)"; code=$?
+expect "with a .js in the copy, the caller project's own pin is what decides" green "is the sandbox's own" "$out" "$code"
+
 mv "$PROJECT/package.json" "$PROOF_BENCH/package.json-aside"
 printf '{"type":"module"}' > "$PROOF_BENCH/package.json"
 out="$(run verify)"; code=$?
 expect "a module scope decided above the sandbox turns red" red "comes from OUTSIDE the sandbox" "$out" "$code"
 rm -f "$PROOF_BENCH/package.json"
 mv "$PROOF_BENCH/package.json-aside" "$PROJECT/package.json"
-out="$(run verify)"; code=$?
-expect "and the caller project's own pin is what puts it back inside" green "is the sandbox's own" "$out" "$code"
-
-# A copy with no `.js` at all has no scope to inherit -- the branch that would
-# otherwise only ever be read, never run.
-mv "$COPY/engine/vendor/elk.bundled.js" "$PROOF_BENCH/elk-aside.js"
-out="$(run verify)"; code=$?
-expect "a copy with no .js has no module scope to inherit" green "reads as CommonJS" "$out" "$code"
-mv "$PROOF_BENCH/elk-aside.js" "$COPY/engine/vendor/elk.bundled.js"
+rm -f "$COPY/probe.js"
 
 # ── 7 . THE TREE THE RUN WAS NEVER SUPPOSED TO TOUCH ──────────────────────────
 # The blind agent's process starts wherever the operator opened it, and the

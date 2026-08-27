@@ -99,26 +99,46 @@ async function detailPages(model, d, res, opts, report) {
       const v = validate(sub, SCHEMA);
       if (!v.ok) throw Object.assign(new Error(`invalid submodel (${v.fase})`), { erros: v.erros });
       const ds = derive(sub, { cat: res.cat });
+      let p;
       if (ds.az.draw) {
-        // the AZ grid still doesn't draw the account box as its root
-        // container — see the README. Refusing loudly beats drawing the
-        // account in the wrong place.
-        throw new Error('the AZ grid does not draw an account as its root container');
+        // Same dispatch as the top-level path below (`else if (d.az.draw)`),
+        // scoped to the ACCOUNT instead of the cloud: on a detail page the
+        // sub-model's only root IS the account (#137), so it stands where
+        // the cloud stands in that check — the grid still refuses a node it
+        // genuinely can't place, it just no longer refuses the whole page
+        // over the account itself being the root.
+        const unsupported = sub.nodes.filter(n => {
+          if (['account', 'vpc', 'subnet'].includes(n.kind) || n.inside === undefined) return false;
+          const parent = ds.t.byId.get(n.inside);
+          return !(parent && parent.kind === 'subnet');
+        });
+        if (unsupported.length) {
+          const e = new Error('the grid path cannot yet draw these nodes');
+          e.erros = unsupported.map(n =>
+            `"${n.id}" (${n.kind}) — a detail page's grid only models account › VPC › subnet › content (#137)`);
+          throw e;
+        }
+        const g = await dispor.porGrade(sub, ds, res);
+        p = plan.gridPlan(sub, ds, res, g, opts);
+      } else {
+        const layout = await dispor.porElk(sub, ds, res);
+        p = plan.elkPlan(sub, ds, res, layout, opts);
       }
-      const layout = await dispor.porElk(sub, ds, res);
-      const p = plan.elkPlan(sub, ds, res, layout, opts);
       pages.push(p);
     } catch (e) {
-      report.avisos.push(
-        `detail view of "${account.id}" didn't come out: ${e.message}` +
-        (e.erros ? ` — ${e.erros[0]}` : ''));
+      const because = e.message + (e.erros ? ` — ${e.erros[0]}` : '');
+      report.avisos.push(`detail view of "${account.id}" didn't come out: ${because}`);
+      // Structured, alongside the string above — `report.avisos` is nine
+      // lines deep by the time a real multi-account model runs (#137), and
+      // the one thing worth knowing without reading all nine is THIS list.
+      report.detailPagesMissing.push({ account: account.id, because });
     }
   }
   return pages;
 }
 
 async function generate(model, opts = {}) {
-  const report = { avisos: [], passos: [] };
+  const report = { avisos: [], passos: [], detailPagesMissing: [] };
   const milestone = (name, extra) => report.passos.push({ name, ...extra });
 
   const v = validate(model, SCHEMA);
@@ -245,7 +265,10 @@ async function generate(model, opts = {}) {
   }
   milestone('plan', {
     caminho: layoutPath, celulas: layoutPlan.cells.length, page: `${layoutPlan.width}×${layoutPlan.height}`,
-    ...(pages.length ? { pages: 1 + pages.length } : {}),
+    // Always shown once the model IS multi-account, pages.length===0
+    // included: "1/3" says as much on its own as reading all nine avisos
+    // does, and it says it in the one milestone nobody skips (#137).
+    ...(layoutPath === 'accounts' ? { pages: `${1 + pages.length}/${1 + d.modo.accounts}` } : {}),
   });
 
   // #40 — a label that would collide with another's slides along its own

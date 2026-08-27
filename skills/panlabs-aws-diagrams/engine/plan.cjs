@@ -638,10 +638,20 @@ function gridPlan(model, d, res, g, opts = {}) {
     tema: res.tema.id };
   header(layoutPlan, model, res);
 
-  const cloud = model.nodes.find(n => n.kind === 'cloud');
+  /**
+   * The grid's outer box — `cloud` normally, `account` on a DETAIL PAGE
+   * (#137): `generate.cjs`'s `detailPages` slices one account out into its
+   * own sub-model and strips its `inside`, so it arrives here as the only
+   * root the sub-model has. Falling back to the generic "AWS Cloud" box in
+   * that case would draw the account in the wrong place — silently, with
+   * the account's own label and style gone — which is exactly what the
+   * refusal this replaces existed to avoid.
+   */
+  const root = model.nodes.find(n => n.kind === 'cloud') ||
+    model.nodes.find(n => n.kind === 'account' && n.inside === undefined);
   const cloudWidth = g.larguraGrade + 4 * f.PAD;
-  const cN = res.container(cloud || { id: 'cloud', kind: 'cloud' });
-  const cloudId = cloud ? cloud.id : 'aws-cloud';
+  const cN = res.container(root || { id: 'cloud', kind: 'cloud' });
+  const cloudId = root ? root.id : 'aws-cloud';
   // #30: a column of outsiders shifts the cloud right to make room, but
   // doesn't touch a single coordinate inside it — see `layoutOutsiders`.
   const leftMargin = g.outsiders ? g.outsiders.leftMargin : 0;
@@ -649,7 +659,7 @@ function gridPlan(model, d, res, g, opts = {}) {
 
   layoutPlan.cells.push({
     kind: 'vertice', id: cloudId, parent: '1',
-    label: (cloud && cloud.label) || 'AWS Cloud', style: cN.style,
+    label: (root && (root.label || root.id)) || 'AWS Cloud', style: cN.style,
     geo: { x: cloudX, y: mo.topo, w: cloudWidth, h: g.fim + f.PAD },
   });
 

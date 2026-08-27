@@ -1,0 +1,34 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "two-accounts-az-redundant",
+  "title": "Agendamento e resultados · duas contas com redundância de zona",
+  "subtitle": "Vista técnica T5 · cada conta traz VPC e sub-rede redundante entre AZs — a forma mais comum de multi-conta, e a que a #137 mediu quebrada",
+  "view": "technical",
+  "genre": "T5",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+
+    { "id": "c-agendamento", "kind": "account", "account": "111111111111", "label": "Agendamento", "inside": "cloud" },
+    { "id": "vpc-agendamento", "kind": "vpc", "label": "VPC de agendamento", "cidr": "10.10.0.0/16", "inside": "c-agendamento" },
+    { "id": "sub-agendamento-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "cidr": "10.10.1.0/24", "inside": "vpc-agendamento" },
+    { "id": "sub-agendamento-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "cidr": "10.10.2.0/24", "inside": "vpc-agendamento" },
+    { "id": "scheduler-a", "kind": "service", "service": "ecs", "label": "Scheduler", "inside": "sub-agendamento-a" },
+    { "id": "scheduler-b", "kind": "service", "service": "ecs", "label": "Scheduler", "inside": "sub-agendamento-b" },
+
+    { "id": "c-resultados", "kind": "account", "account": "222222222222", "label": "Resultados", "inside": "cloud" },
+    { "id": "vpc-resultados", "kind": "vpc", "label": "VPC de resultados", "cidr": "10.20.0.0/16", "inside": "c-resultados" },
+    { "id": "sub-resultados-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "cidr": "10.20.1.0/24", "inside": "vpc-resultados" },
+    { "id": "sub-resultados-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "cidr": "10.20.2.0/24", "inside": "vpc-resultados" },
+    { "id": "worker-a", "kind": "service", "service": "ecs", "label": "Worker", "inside": "sub-resultados-a" },
+    { "id": "worker-b", "kind": "service", "service": "ecs", "label": "Worker", "inside": "sub-resultados-b" }
+  ],
+
+  "edges": [
+    { "from": "scheduler-a", "to": "worker-a", "label": "despacha job", "order": 1 }
+  ],
+
+  "dossier": {
+    "_comentario": "Reprodução mínima do achado do #137: a simulação cega do #47 desenhou duas contas — agendamento e resultados —, cada uma com VPC e sub-rede redundante entre duas AZs, e as duas vistas de detalhe recusaram por conta do container raiz. Antes deste modelo, nenhum caso do corpus cruzava multi-conta com redundância de AZ dentro de uma conta ao mesmo tempo."
+  }
+}

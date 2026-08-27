@@ -218,17 +218,19 @@ function load(dir) {
     //    The word boundary isn't fussiness: without it "trainium" matches the
     //    key "ai", because the raw substring is in there.
     // A multi-word query decomposes into its own words on the `containsWord(n, k)`
-    // side, and each word can land on a DIFFERENT, unrelated catalog entry —
-    // "vpc endpoint" used to match "vpc" (the container) AND "endpoint" (the
-    // resource), and a tie-break used to hand the win to whichever of those was
+    // side, and each word can land on a DIFFERENT, unrelated catalog entry.
+    // "vpc endpoint" matched both "vpc" (the container) and "endpoint" (the
+    // resource), and a tie-break used to hand the win to whichever candidate was
     // a service icon: "vpc" alone, discarding the endpoint the query actually
-    // named. #139 measured it on two real queries: "vpc endpoint" -> VPC, and
-    // "aurora serverless" -> ambiguous between "Aurora" and the unrelated
-    // "Serverless" category icon. Neither word is a typo or a fragment of the
-    // other; they are two real, competing matches, and a heuristic that resolves
-    // that competition by icon *kind* rather than by what the query said is a
-    // guess wearing the costume of a match. "exactly one candidate" is the whole
-    // rule — no tie-break survives it.
+    // named — #139 measured this returning the wrong shape with full confidence.
+    // "aurora serverless" is the same shape of collision ("Aurora" vs. the
+    // unrelated "Serverless" category icon), but a different outcome: those two
+    // candidates never share a stencil, so even the old tie-break's own guard
+    // already rejected them — this step already fell through to `null` for that
+    // query before this change too. #139's fix for THAT query is the loud CLI
+    // warning on a generic fallback, not this removal. Either way, "exactly one
+    // candidate" is the whole rule for this step — no tie-break, clever or not,
+    // gets to override it.
     const containsWord = (hay, needle) => (' ' + hay + ' ').includes(' ' + needle + ' ');
     const keys = [...byName.keys()].filter(
       k => containsWord(k, n) || containsWord(n, k));

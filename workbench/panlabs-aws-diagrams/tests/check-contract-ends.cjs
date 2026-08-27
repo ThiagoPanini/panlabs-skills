@@ -260,9 +260,9 @@ const FOREIGN_BAGS = {
  * has no writer. Verdict 4 makes sure this stays true.
  */
 const FOREIGN_KEYS = {
-  sections: "ELK's JSON graph format (engine/vendor/elk.bundled.js)",
-  incomingShape: "ELK's JSON graph format (engine/vendor/elk.bundled.js)",
-  outgoingShape: "ELK's JSON graph format (engine/vendor/elk.bundled.js)",
+  sections: "ELK's JSON graph format (engine/vendor/elk.bundled.cjs)",
+  incomingShape: "ELK's JSON graph format (engine/vendor/elk.bundled.cjs)",
+  outgoingShape: "ELK's JSON graph format (engine/vendor/elk.bundled.cjs)",
   symbol: 'the legend entry the engine does not emit yet — validator/scene.cjs:423',
   // JSON Schema's own `if`/`then`/`else`. `engine/validate.cjs` implements the
   // triple; no schema in this tree uses the `else` arm, so nothing writes it.

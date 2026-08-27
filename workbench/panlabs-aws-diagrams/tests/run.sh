@@ -28,10 +28,44 @@
 #   6  THE SESSION    projection, manifest, fingerprint, and the dossier's privacy.
 #   7  THE APP        round-trip through draw.io's own codec, and render. DEVELOPMENT
 #                    DEPENDENCY (premise 8): without the binary, it warns and moves on.
+#                    REFUSES instead of entering if another render is already on
+#                    the machine (#141) — contention gets a name of its own.
 #
 # ⚠️ Two simultaneous headless draw.io exports HANG (finding from #13), and
 # `timeout` kills `xvfb-run` but not its Electron children. That's why layer 7 is
 # serial and never runs in parallel with anything.
+#
+# ⚠️ #128 stopped a HUNG render from leaking a whole Chromium and an Xvfb — it
+# did nothing for two SUITES racing the same machine from a clean start, which
+# is a different failure with the same symptom. #128's own measurement caught
+# it directly: three sessions of this repository rendering at once, the
+# `drawio` process count reaching 36, and one worktree's `render.sh` running in
+# the very instant another worktree's round-trip failed on the same model.
+#
+# ⚠️ THE POLICY IS REFUSE (#141), AND HERE IS WHY.
+#
+# Four shapes were on the table: WARN (say who and proceed — the red keeps
+# happening, only legibly now), WAIT (hold the layer until the machine clears
+# — needs a ceiling of its own, or two suites deadlock each other), REFUSE
+# (skip the layer and say why), and LOCK (a fixed-path lockfile — the only one
+# that also catches a manual draw.io this suite never started, and the only
+# one that has to reason about a lock orphaned by a killed process).
+#
+# REFUSE costs nothing this file doesn't already have: the missing-binary
+# branch two paragraphs up is the exact same shape — a partial verdict with a
+# named reason — and #128 already put a name on it, the contour of
+# `run.sh /nonexistent/drawio`. WAIT and LOCK both buy something WARN and
+# REFUSE don't (a suite that eventually finishes green; protection from a
+# renderer that isn't this suite), at a cost this repository has nowhere to
+# spend: one maintainer, one machine, and the question #141 exists to unblock
+# — "was that red contention or the drawing" — is answered by REFUSE before a
+# single render is spent, not after waiting on a busy machine or maintaining
+# a lockfile's failure modes.
+#
+# `tools/detect-neighbor.sh` is the first thing layer 7 runs, before even its
+# own render-contract proofs — see the reordering note at the head of the
+# layer below. It does not fix the contention (two suites still can't both
+# render at once); it stops the result from coming out as an unexplained red.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -221,10 +255,55 @@ step "the case verb writes at the caller's root (#41)"  node "$HERE/check-case.c
 
 echo
 echo "════ layer 7 · the app (development dependency) ════"
+# ⚠️ DETECTION RUNS FIRST — THE LITERAL FIRST LINE OF THE LAYER, BEFORE EVEN
+# ITS OWN RENDER-CONTRACT PROOFS. The policy (REFUSE) and why it beat WARN,
+# WAIT and LOCK are argued in the file header, above `set -uo pipefail`; this
+# is only the mechanics.
+#
+# `tools/detect-neighbor.sh`'s own self-exclusion argument depends on this
+# exact position: nothing in THIS execution has started a real render yet,
+# because nothing above this line does one — not layer 0-6, and, now, not
+# even the three proofs right below. Compute it any later — after
+# `check-render-verdict.cjs`, say, which genuinely drives `xvfb-run` to test
+# `render.sh`'s own hang-kill contract — and the claim would quietly start
+# depending on that check cleaning up after itself, instead of standing on
+# its own.
+NEIGHBOR="$("$WORKBENCH/tools/detect-neighbor.sh")"
+NEIGHBOR_STATUS=$?
+
+# ⚠️ ALL THREE STEPS BELOW RUN NEXT, NEEDING NEITHER draw.io NOR A CLEAR
+# MACHINE — this is the reordering #128 named as a debt and #141 pays.
+#
+# `render.sh`'s contract is what every render step in this layer, and the
+# layer-3 bisection, call — and this file's own rule is "the order of the
+# layers is the order in which one failure invalidates the ones that follow",
+# so its proof belongs before the renders it backs, not after them. #128
+# could not pay that cost alone: a registry in this repo is append-only
+# (CLAUDE.md § Registro é append-only), and a line inserted in the middle
+# merges green against a parallel branch and yields an order nobody chose. It
+# named the debt instead of hiding it: "moving it is a ticket of its own."
+#
+# #141 has to pay the SAME cost for a second reason: a neighbor gate that ran
+# AFTER the real renders below had already started would be too late to
+# refuse them. Paying the reordering once, for all three steps, is cheaper
+# than paying it twice — and #144 landed a THIRD step in this same tail spot
+# while this ticket was in flight, reasoning identically in its own comment
+# ("this needs no draw.io either... the same append-only rule keeps it here
+# instead of next to the four checks it is about"). The rebase that met that
+# step is what carries it up here too, rather than leaving it stranded alone
+# at the tail once its neighbor moved.
+step "render.sh names who ended the process (#128)"  node "$HERE/check-render-verdict.cjs"
+step "the four render.sh callers add no retry, no unscoped kill (#144)"  node "$HERE/check-render-callers.cjs"
+step "detect-neighbor.sh finds a planted neighbor (#141)"  node "$HERE/check-detect-neighbor.cjs"
+
 if [ ! -x "$DRAWIO" ]; then
   echo "   draw.io headless not found at $DRAWIO — layer 7 skipped."
   echo "   (development dependency: draw.io Desktop AppImage + xvfb;"
   echo "    tools/drawio.cjs is the one that knows where the binary lives)"
+elif [ "$NEIGHBOR_STATUS" -ne 0 ]; then
+  echo "   another render is already on this machine — layer 7 refused (#141):"
+  echo "$NEIGHBOR" | sed 's/^/     /'
+  echo "   (contention, not a defect — retry once it clears)"
 else
   step "fingerprint: 10 human edits × 3 schemas" node "$HERE/check-fingerprint.cjs" "$DRAWIO"
   step "model round-trip through the app's codec"     node "$HERE/check-roundtrip-model.cjs" "$DRAWIO"
@@ -278,33 +357,6 @@ else
   fi
   step "the case verb's image, with the binary (#41)"  node "$HERE/check-case.cjs" "$DRAWIO"
 fi
-
-# ⚠️ OUTSIDE THE GUARD, AND STILL AT THE END OF THE LAYER. Both halves are on
-# purpose, and one of them was a correction.
-#
-# OUTSIDE, because it needs no draw.io: the binary it drives is a stub it writes
-# itself, and `xvfb-run` is all it borrows. The documented way to skip layer 7 is
-# to pass a path that is not executable (`run.sh /nonexistent/drawio`, #128), and
-# that is exactly the moment someone is trying to separate "my change broke
-# something" from "the render fell over again" — the wrong moment to stop
-# measuring the render contract. The first draft of this step sat inside the
-# guard and a review caught it.
-#
-# AT THE END, because its subject comes BEFORE every render above it. `render.sh`
-# is what the three render steps of this layer and the layer-3 bisection all
-# call, so by this file's own rule — "the order of the layers is the order in
-# which one failure invalidates the ones that follow" — it belongs at the head.
-# A registry in this repo is append-only (CLAUDE.md § Registro é append-only): a
-# line inserted in the middle merges green against a parallel branch and yields
-# an order nobody chose. The debt is named rather than hidden; moving it is a
-# ticket of its own.
-step "render.sh names who ended the process (#128)"  node "$HERE/check-render-verdict.cjs"
-
-# Same reasoning as the step above, one level up: #144's four callers dial no
-# binary of their own, only `xvfb-run` through a stub `call-render.cjs`
-# writes, so this needs no draw.io either — and the same append-only rule
-# keeps it here instead of next to the four checks it is about.
-step "the four render.sh callers add no retry, no unscoped kill (#144)"  node "$HERE/check-render-callers.cjs"
 
 echo
 if [ "$failed" -ne 0 ]; then

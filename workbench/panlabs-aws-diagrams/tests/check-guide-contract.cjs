@@ -62,13 +62,14 @@
  * dead vocabulary. The mechanism stays for the next debt; the two guards below
  * are what keep an empty list from being decoration.
  *
- * #124 also grew RETIRED by half again, and the reason is worth keeping: the
- * original list was curated from ONE converted file, so it could only name the
- * debt that file happened to carry. Converting the other four against the 165
- * live names in the four schemas turned up 34 more — most of them the dossier's
- * vocabulary, which `model.md` never had to name — and the count this check
- * printed for two tickets ("45 occurrences") was therefore a floor, not a total.
- * A curated list measures what its author had in front of them.
+ * #124 more than doubled RETIRED — 37 names to 79 — and the reason is worth
+ * keeping: the original list was curated from ONE converted file, so it could
+ * only name the debt that file happened to carry. Converting the other four
+ * against the 165 live names in the four schemas turned up 42 more, most of
+ * them the dossier's vocabulary, which `model.md` never had to name. So the
+ * count this check printed for two tickets ("45 occurrences in four files") was
+ * a FLOOR, not a total. A curated list measures what its author had in front of
+ * them, and says nothing about the rest.
  *
  * WHAT THIS STILL DOES NOT SEE, said out loud rather than left to be
  * rediscovered: `backticked()` strips every fenced block first, so a fence that
@@ -167,8 +168,11 @@ const MEASURED = 'model.md';
  *
  * EMPTY since #124, and the machinery below stays: the two rot-guards are what
  * make an empty list mean something. One refuses a file that is excused and
- * already clean; the other refuses a file that is neither measured nor excused,
- * which is how a NEW guide file would otherwise be born measured by nothing.
+ * already CLEAN — a fix that never came off the list. The other refuses an
+ * entry naming a file that is GONE, which excuses nothing and reads as debt
+ * still standing. The third guard this used to need — a new guide file born
+ * measured by nothing — is gone because verdict 1 no longer names one file by
+ * hand: it measures everything the quarantine does not excuse.
  */
 const QUARANTINE = {};
 

@@ -39,6 +39,9 @@
 #                                      green about a different engine.
 #   2  THE ARCHITECTURE                the six families of #97/#120, against
 #                                      the bytes layer 1 actually wrote.
+#   3  THE STATIC GATE                 the nine families of #93/#156 — bytes
+#                                      only, no browser — against the same
+#                                      bytes layer 1 wrote.
 #
 # ⚠️ THIS FILE IS A REGISTRY, AND REGISTRIES HERE ARE APPEND-ONLY
 # (CLAUDE.md § Registro é append-only). #156 (the static gate, nine families)
@@ -151,6 +154,15 @@ echo "════ layer 2 · the architecture ════"
 # the suite it reads the bytes that reached disk, so the artifact the skill
 # actually produces is the one being measured.
 step "the six families hold (#97/#120)"  python3 "$HERE/check-architecture.py" --corpus "$OUTPUT_DIR"
+
+echo
+echo "════ layer 3 · the static gate ════"
+# The nine families prove themselves here rather than up in layer 0, because
+# they are this layer's own rulers and layer 0 is already spent on the two
+# that came before them — a shared layer edited to say "three" instead of
+# "both" is the silent-reorder failure the append-only note above refuses.
+step "the nine families each go red on a planted defect"  python3 "$HERE/check-static.proof.py"
+step "the nine families hold (#93)"  python3 "$HERE/check-static.py" --corpus "$OUTPUT_DIR"
 
 echo
 if [ "$failed" -ne 0 ]; then

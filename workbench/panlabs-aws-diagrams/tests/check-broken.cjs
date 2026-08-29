@@ -11,7 +11,7 @@
  */
 
 const path = require('path');
-const { CASES, CONTROL } = require(path.join(__dirname, 'cases', 'broken.cjs'));
+const { CASES, CONTROL, build, v, icon, mod } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 const { validateGeometry } = require(path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams', 'validator', 'validate-geometry.cjs'));
 
 /** The checks that must pass on a geometrically correct drawing. */
@@ -38,6 +38,34 @@ for (const testCase of CASES) {
   } else {
     console.log(`      expected ${missing.join(', ')} and it did not come; flagged: ${[...flagged].join(', ') || '(none)'}`);
   }
+}
+
+// --------------------------------------------------- A2.5 icon-vs-box (#166)
+
+/**
+ * The other half of #166's fix, and the one no `CASES` entry can express:
+ * `CASES` proves what MUST fire. This proves what must NOT — two nodes of
+ * the same class, same catalog icon (`lambda` twice), boxed to visibly
+ * different widths (78 vs 260 px), the way a longer label widens the box
+ * with today's engine. A validator still reading `cellBox.w` would flag this
+ * as an A2.5 violation; one reading the catalog's icon width sees the same
+ * 78 px on both and stays quiet.
+ */
+console.log('\n  regression — same icon, box widened only by the label (#166):\n');
+{
+  const plan = build('a2.5-regression', [
+    v('short-label', '1', 60, 100, 78, 78, icon()),
+    v('long-label', '1', 300, 100, 260, 78, icon(), 'A much longer service label'),
+  ], mod([
+    { id: 'short-label', kind: 'service', service: 'lambda' },
+    { id: 'long-label', kind: 'service', service: 'lambda' },
+  ]));
+  const r = validateGeometry(plan.layoutPlan, { model: plan.model });
+  const a25 = [...r.failures, ...r.warnings].find(x => x.id === 'A2.5');
+  const ok = !a25;
+  if (!ok) failures++;
+  console.log(`  ${ok ? '✓' : '✗'} A2.5 stays quiet when only the box widened, same catalog icon`);
+  if (!ok) console.log(`      unexpectedly ${a25.state}: ${a25.occurrences[0] ? a25.occurrences[0].o_que : '(no occurrence detail)'}`);
 }
 
 // ------------------------------------------------------------------- control

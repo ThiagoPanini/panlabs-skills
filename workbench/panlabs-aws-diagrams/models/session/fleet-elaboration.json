@@ -13,7 +13,18 @@
       "technical": { "kind": "subnet", "label": "Private subnet", "access": "private", "cidr": "10.30.1.0/24" } },
 
     { "id": "endpoint-s3", "layer": "technical", "inside": "sub-modelo",
-      "technical": { "kind": "service", "service": "endpoints", "label": "VPC endpoint (S3)" } }
+      "technical": { "kind": "service", "service": "endpoints", "label": "VPC endpoint (S3)" } },
+
+    { "id": "worker-a", "layer": "technical", "inside": "vpc-modelo",
+      "technical": { "kind": "service", "service": "ec2", "qualifier": "pré-processa a janela antes do modelo" } },
+    { "id": "worker-b", "layer": "technical", "inside": "vpc-modelo",
+      "technical": { "kind": "service", "service": "ec2", "qualifier": "pré-processa a janela antes do modelo" } }
+  ],
+
+  "_bands": "O #170: `bands` não existia em `elaboration@1`, e não havia como um delta do arco de duas vistas declarar um Auto Scaling group — só quem escrevia `model@1` direto conseguia. `worker-a`/`worker-b` são os dois nós que o grupo cruza.",
+  "bands": [
+    { "id": "asg-workers", "kind": "auto-scaling", "label": "ASG · pré-processamento",
+      "members": ["worker-a", "worker-b"] }
   ],
 
   "facets": {

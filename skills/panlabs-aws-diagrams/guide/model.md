@@ -40,6 +40,7 @@ Ele não é um segundo modelo — é o que a fase técnica **acrescenta** ao que
 | `refines` | `{ edgeId: { by: [ids], labels: [...] } }` | transforma uma aresta aprovada num caminho técnico |
 | `edges` | lista | aresta que só a camada técnica tem |
 | `facetEdges` | `{ edgeId: { label, protocol, order } }` | rótulo técnico numa aresta aprovada |
+| `bands` | lista | faixa que cruza a árvore de contenção — Auto Scaling group é o caso frequente |
 | `notes` `dossier` | | acrescentam |
 
 Qualquer chave começada por `_` é comentário livre, em qualquer lugar do delta, e `elaborate()` não lê nenhuma.

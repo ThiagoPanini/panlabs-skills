@@ -22,6 +22,7 @@
  *   refines       turn an approved edge into a technical PATH
  *   edges         add an edge only the technical layer has
  *   facetEdges    give an approved edge a technical label
+ *   bands         add a group that crosses containment (an Auto Scaling group, typically)
  *   notes, dossier  add
  *
  * `refines` deserves the explanation. Technically, "store-raw notifies arrival to
@@ -128,7 +129,16 @@ function elaborate(base, el) {
     a.technical = { ...(a.technical || {}), ...clone(facet) };
   }
 
-  // 6 · notes and dossier ---------------------------------------------------------
+  // 6 · bands ---------------------------------------------------------------------
+  m.bands = m.bands || [];
+  const byBandId = new Map(m.bands.map(f => [f.id, f]));
+  for (const f of (el.bands || [])) {
+    if (byBandId.has(f.id)) { errors.push(`new band "${f.id}" already exists`); continue; }
+    const copy = clone(f);
+    m.bands.push(copy); byBandId.set(copy.id, copy);
+  }
+
+  // 7 · notes and dossier ---------------------------------------------------------
   m.notes = [...(m.notes || []), ...clone(el.notes || [])];
   if (el.dossier) {
     m.dossier = m.dossier || {};
@@ -148,7 +158,7 @@ function elaborate(base, el) {
   if (el.title) m.title = el.title;
   if (el.subtitle) m.subtitle = el.subtitle;
 
-  // 7 · the guard -----------------------------------------------------------------
+  // 8 · the guard -----------------------------------------------------------------
   // Not paranoia: it is the same control experiment as #11. The elaboration has NO
   // field that reaches a logical facet, and the check exists anyway, because that
   // is how #17 learned that 24 green checks did not catch the wrong icon. Cheap,

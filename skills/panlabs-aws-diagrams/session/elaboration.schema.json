@@ -61,6 +61,13 @@
       "description": "{ edgeId: { label, protocol, order } }. Dá rótulo técnico a uma aresta aprovada, sem mexer nos extremos."
     },
 
+    "bands": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/definitions/band" },
+      "description": "Faixa que cruza a árvore de contenção (#19) — mesma forma do `band` em `model@1`. Auto Scaling group é o caso frequente, e até este campo existir só quem escrevia `model@1` direto conseguia declarar um: o arco de duas vistas não tinha onde. Mesma assimetria que `ou` teve até o #12 (a `description` de `ou` em session/schema.json registra o precedente) — acidente, não política. Os membros existirem é conferido depois do merge, por session/validate.cjs contra `session@1` — mesmo argumento que o resto deste esquema usa para não duplicar aquela checagem aqui."
+    },
+
     "notes": {
       "type": "array",
       "default": [],
@@ -127,6 +134,24 @@
         "about": { "$ref": "#/definitions/identifier" },
         "layer": { "enum": ["both", "technical"], "default": "both" },
         "origin": { "enum": ["rejected-finding", "assumption", "legend"] }
+      }
+    },
+
+    "band": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "members"],
+      "description": "Grupo que cruza a árvore de contenção (#19) — só existe na vista técnica, mesma forma do `band` em `model@1` e `session@1`.",
+      "properties": {
+        "id": { "$ref": "#/definitions/identifier" },
+        "kind": { "enum": ["auto-scaling", "generic"], "default": "generic" },
+        "label": { "type": "string" },
+        "members": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/identifier" },
+          "minItems": 2,
+          "description": "Ids de nós — aprovados ou novos, acrescentados por este mesmo delta — que a faixa cruza. A caixa é a UNIÃO calculada dos membros: o delta diz QUEM, o motor calcula ONDE."
+        }
       }
     }
   }

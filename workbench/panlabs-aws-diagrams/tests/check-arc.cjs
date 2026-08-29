@@ -252,6 +252,21 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
     record(!leaked.length, 'no AWS service name leaked into the logical view',
       leaked.length ? leaked.map(n => `${n.id}=${n.service}`).join(' · ')
         : `${logical.nodes.length} logical nodes, zero \`service\` outside an actor`);
+
+    // #170 · the delta's `bands` merges into the session model — the arc's only
+    // proof that an Auto Scaling group declared through the two-view arc is not
+    // second-class next to one written straight into `model@1`
+    const band = (technical.bands || []).find(f => f.id === 'asg-workers');
+    record(!!band, 'the delta\'s band merged into the elaborated session model',
+      band ? `members: ${band.members.join(', ')}` : `bands: ${(technical.bands || []).map(f => f.id).join(', ') || 'none'}`);
+
+    const technicalBands = (project(technical, 'technical').model.bands || []);
+    record(technicalBands.some(f => f.id === 'asg-workers'),
+      'the band reaches the technical view', `${technicalBands.length} band(s) projected`);
+
+    record(!(logical.bands || []).length,
+      'the band stays OUT of the logical view — it is a topology concept, not a capability',
+      `logical model carries ${(logical.bands || []).length} band(s)`);
   }
 
   // ───── an unknown key inside a `refines` value is refused, not silently dropped (#171)

@@ -339,6 +339,19 @@ const CASES = [
       { id: 'leaking', kind: 'service', service: 'lambda', inside: 'vpc' },
     ])),
   },
+
+  {
+    name: 'technical leaf with no second line',
+    because: '#164 — `resource` is forbidden on an actor by the model@1 contract (schema.json:108-111), and nothing ' +
+      'here writes `qualifier` either, so the leaf draws with just its service name — indistinguishable from any ' +
+      'other actor on the same page',
+    expect: ['L1'],
+    ...build('l1', [
+      v('lojas', '1', 100, 100, 78, 78, icon('#8C4FFF', 'users')),
+    ], mod([
+      { id: 'lojas', kind: 'actor', service: 'users' },
+    ])),
+  },
 ];
 
 /**
@@ -360,9 +373,9 @@ const CONTROL = build('control', [
   { id: 'cloud', kind: 'cloud' },
   { id: 'vpc', kind: 'vpc', inside: 'cloud' },
   { id: 'sub', kind: 'subnet', access: 'private', inside: 'vpc' },
-  { id: 'app', kind: 'service', service: 'lambda', inside: 'sub' },
-  { id: 'db', kind: 'service', service: 'rds', inside: 'sub' },
-  { id: 'external', kind: 'service', service: 'vpc_endpoints', inside: 'cloud' },
+  { id: 'app', kind: 'service', service: 'lambda', inside: 'sub', qualifier: 'processa o pedido' },
+  { id: 'db', kind: 'service', service: 'rds', inside: 'sub', resource: 'pedidos-db' },
+  { id: 'external', kind: 'service', service: 'vpc_endpoints', inside: 'cloud', qualifier: 'acesso privado ao S3' },
 ], { edges: [{ from: 'app', to: 'db', label: 'query', protocol: 'sql' }] }), 900, 560);
 
 module.exports = { CASES, CONTROL };

@@ -61,7 +61,9 @@ Quem alimenta a segunda linha são dois campos, e a precedência é fixa — `re
 | `resource` | como este recurso **se chama** | só no casaco **técnico** | `pedidos-2024`, `lake-bruto`, `dlq-parse` |
 | `qualifier` | o que este nó **faz aqui** | nas **duas** vistas | `guarda os pedidos`, `fila de retentativa` |
 
-A vista lógica não tem `resource` de propósito: ela não conhece recurso, só capacidade — `logicalFacet` sequer declara o campo. Por isso a folha lógica sempre cai em `qualifier`, e a técnica quase sempre tem um `resource` a dizer.
+A vista lógica não tem `resource` de propósito: ela não conhece recurso, só capacidade — `logicalFacet` sequer declara o campo. Por isso a folha lógica sempre cai em `qualifier`.
+
+**Toda folha da vista técnica precisa da segunda linha — sem exceção, e a exceção é de onde ela vem.** `kind: "service"` escreve `resource`; `kind: "actor"` não pode: o `model@1` amarra `resource` a `kind: "service"` ([`../schema.json`](../schema.json):108-111), e um ator é folha sem ser serviço. Para um ator, o único caminho para a segunda linha é `qualifier` — o que ele **faz aqui**, não como ele se chama. Escrever só `{ "kind": "actor", "service": "users" }` e parar aí produz uma folha muda: o nome do ícone e nada embaixo. `L1` (`validator/families/a1-completeness.cjs`, [#164](https://github.com/ThiagoPanini/panlabs-skills/issues/164)) é a régua disso — mede exatamente essa cobertura, folha a folha da vista técnica.
 
 **O erro que este campo existe para impedir é colar a descrição dentro do nome.** `"CloudTrail · trilha de auditoria dedicada"` numa string só produz uma linha comprida, sem itálico, que o motor não consegue medir nem quebrar, e que a projeção lógica não sabe descartar. Duas chaves, não uma:
 

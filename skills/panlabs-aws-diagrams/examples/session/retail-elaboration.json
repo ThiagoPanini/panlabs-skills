@@ -23,8 +23,8 @@
   ],
 
   "facets": {
-    "loja":       { "kind": "actor", "service": "users" },
-    "diretoria":  { "kind": "actor", "service": "users" },
+    "loja":       { "kind": "actor", "service": "users", "qualifier": "envia arquivo via SFTP" },
+    "diretoria":  { "kind": "actor", "service": "users", "qualifier": "abre o painel pela manhã" },
 
     "aterrissagem":   { "kind": "account", "account": "111122223333", "label": "Conta lojas · 111122223333" },
     "processamento":  { "kind": "account", "account": "222233334444", "label": "Conta dados · 222233334444" },

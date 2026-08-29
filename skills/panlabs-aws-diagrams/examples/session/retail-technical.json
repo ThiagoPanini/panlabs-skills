@@ -24,7 +24,8 @@
       },
       "technical": {
         "kind": "actor",
-        "service": "users"
+        "service": "users",
+        "qualifier": "envia arquivo via SFTP"
       }
     },
     {
@@ -35,7 +36,8 @@
       },
       "technical": {
         "kind": "actor",
-        "service": "users"
+        "service": "users",
+        "qualifier": "abre o painel pela manhã"
       }
     },
     {

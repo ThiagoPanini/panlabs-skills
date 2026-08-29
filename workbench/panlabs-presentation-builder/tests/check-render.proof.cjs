@@ -39,6 +39,21 @@ function _real() {
   return REAL_HTML;
 }
 
+// ONE RETRY, around the whole browser pass. Eleven launches in one run (ten
+// cases plus the green baseline) is eleven chances for a transient CDP
+// hiccup under load -- a dropped WebSocket frame, a slow paint -- that has
+// nothing to do with the defect under test. A retry absorbs that without
+// weakening any of the four assertions: a REAL logic defect in the plant or
+// the family fails the same way twice.
+async function _measureWithRetry(filePath, attempt = 1) {
+  try {
+    return await gate.measureFile(filePath);
+  } catch (e) {
+    if (attempt >= 2) throw e;
+    return _measureWithRetry(filePath, attempt + 1);
+  }
+}
+
 // The one shape every plant below returns: the real file's bytes, with a
 // defect mutated in. Measured by copying it into a throwaway directory --
 // `measureFile` needs a real `file://` URL, and the tracked corpus is never
@@ -48,7 +63,7 @@ async function _measurePlanted(html) {
   const tmpFile = path.join(dir, path.basename(REAL_PATH));
   fs.writeFileSync(tmpFile, html);
   try {
-    return await gate.measureFile(tmpFile);
+    return await _measureWithRetry(tmpFile);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -246,9 +261,21 @@ async function main(argv) {
 
   let greenFiles;
   try {
-    greenFiles = [await gate.measureFile(REAL_PATH)];
+    greenFiles = [await _measureWithRetry(REAL_PATH)];
   } catch (e) {
     return new Proof({ title: 'render.proof' }).refuse(`could not measure the real corpus: ${e.message}`);
+  }
+
+  // Distinct messages only, and capped: a defect that reads the same on
+  // every one of thirteen beats (a stray <img>, say) is one fact, not
+  // thirteen, and the mustSay check below only needs ONE of them to carry
+  // the fix -- checking fails[0] alone made the assertion depend on which
+  // beat happened to be measured first, which is exactly what varied under
+  // load.
+  function summarize(fails) {
+    const uniq = [...new Set(fails)];
+    const shown = uniq.slice(0, 3).join(' | ');
+    return uniq.length > 3 ? `${shown} (+${uniq.length - 3} more)` : shown;
   }
 
   const PROOF = new Proof({
@@ -257,12 +284,12 @@ async function main(argv) {
     invoke: async (family, html) => {
       const measured = await _measurePlanted(html);
       const fails = gate.BY_NAME[family]([measured]);
-      return [fails.length === 0, fails[0] || '(no message)'];
+      return [fails.length === 0, summarize(fails) || '(no message)'];
     },
     planted: (html) => html !== REAL_HTML,
     control: async (family) => {
       const fails = gate.BY_NAME[family](greenFiles);
-      return [fails.length === 0, fails[0] || ''];
+      return [fails.length === 0, summarize(fails)];
     },
   });
 

@@ -61,6 +61,8 @@ Rode `verify` **duas vezes**: antes de entregar o prompt e depois que a corrida 
 
 ## Como rodar
 
+**Enquanto a corrida está de pé, nenhuma outra sessão pode estar usando a skill.** Sem `--skill-home`, o `setup` reponta as portas padrão da máquina — `~/.claude/skills` e `~/.agents/skills` — para a cópia dentro do sandbox, e qualquer sessão paralela que invoque `panlabs-aws-diagrams` nesse intervalo pega essa cópia em vez do checkout vivo. Com sessões paralelas — que é a doutrina deste repositório —, a saída é `--skill-home` repetido, apontando para um `HOME` de mentira em vez das portas da máquina.
+
 1. `blind-run.sh setup` — ele imprime o prompt, e o prompt é o **único** insumo do agente cego: o caminho do projeto mais o descritivo de [`brief.md`](brief.md), deliberadamente incompleto.
 2. `blind-run.sh verify` — não entregue o prompt antes disso ficar verde.
 3. Abra um sub-agente **sem nenhum contexto** desta conversa e entregue o prompt, sem mais nada. Não nomeie a skill: descobri-la é parte do que se mede.

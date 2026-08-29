@@ -6,4 +6,4 @@ Os laudos chegam dos laboratórios parceiros por integração, e cada laboratór
 
 O aplicativo do paciente é um cliente móvel que fala com uma API nossa, e o portal do técnico é web. Nada disso responde sem autenticação, e o banco onde o laudo fica não pode estar exposto à internet de jeito nenhum.
 
-Não temos preferência de tecnologia — o time sabe Python e um pouco de Node, e ninguém aqui é especialista em AWS. Queremos o desenho para levar à reunião de arquitetura da semana que vem.
+Não temos preferência de tecnologia — o time sabe Python e um pouco de Node, e ninguém aqui é especialista em AWS. Queremos o desenho para levar à reunião de arquitetura da semana que vem — o arquivo do diagrama já resolve, não precisamos de imagem renderizada agora.

@@ -42,6 +42,11 @@
 #   3  THE STATIC GATE                 the nine families of #93/#156 — bytes
 #                                      only, no browser — against the same
 #                                      bytes layer 1 wrote.
+#   4  THE RENDER GATE                 the ten families of #93/#157 — a real
+#                                      headless Chromium, against the same
+#                                      bytes layer 1 wrote. Degrades to a
+#                                      named SKIP (not a red) where no
+#                                      Chromium is on the machine running it.
 #
 # ⚠️ THIS FILE IS A REGISTRY, AND REGISTRIES HERE ARE APPEND-ONLY
 # (CLAUDE.md § Registro é append-only). #156 (the static gate, nine families)
@@ -163,6 +168,17 @@ echo "════ layer 3 · the static gate ════"
 # "both" is the silent-reorder failure the append-only note above refuses.
 step "the nine families each go red on a planted defect"  python3 "$HERE/check-static.proof.py"
 step "the nine families hold (#93)"  python3 "$HERE/check-static.py" --corpus "$OUTPUT_DIR"
+
+echo
+echo "════ layer 4 · the render gate ════"
+# The ten families prove themselves here, in their own layer, for the same
+# reason layer 3's did: layer 0 belongs to the two rulers everything else
+# stands on, and a shared layer edited to add a third silently reorders what
+# came before it. Node, not python3 — `check-render.cjs` drives a real
+# headless Chromium over CDP, which is why this suite carries a `.cjs` pair
+# alongside every `.py` one rather than a subprocess wrapper around either.
+step "the ten families each go red on a planted defect"  node "$HERE/check-render.proof.cjs" --corpus "$OUTPUT_DIR"
+step "the ten families hold (#157)"  node "$HERE/check-render.cjs" --corpus "$OUTPUT_DIR"
 
 echo
 if [ "$failed" -ne 0 ]; then

@@ -1,0 +1,519 @@
+{
+  "schema": "panlabs-aws-diagrams/session@1",
+  "id": "retail-300-stores",
+  "title": "Varejo · 300 lojas",
+  "stage": "technical",
+  "views": {
+    "logical": {
+      "genre": "L2",
+      "title": "Varejo · 300 lojas · vista lógica",
+      "subtitle": "Capacidades e fronteiras de responsabilidade — zero nome de serviço AWS. Continuação direta da sabatina do #15."
+    },
+    "technical": {
+      "genre": "T5",
+      "title": "Varejo · 300 lojas · vista técnica",
+      "subtitle": "T5 multi-conta · a MESMA vista aprovada, agora com serviços AWS e topologia de rede."
+    }
+  },
+  "nodes": [
+    {
+      "id": "loja",
+      "label": "Lojas (300)",
+      "logical": {
+        "kind": "actor"
+      },
+      "technical": {
+        "kind": "actor",
+        "service": "users"
+      }
+    },
+    {
+      "id": "diretoria",
+      "label": "Diretoria",
+      "logical": {
+        "kind": "actor"
+      },
+      "technical": {
+        "kind": "actor",
+        "service": "users"
+      }
+    },
+    {
+      "id": "aterrissagem",
+      "label": "Aterrissagem de arquivos",
+      "logical": {
+        "kind": "group"
+      },
+      "technical": {
+        "kind": "account",
+        "account": "111122223333",
+        "label": "Conta lojas · 111122223333"
+      },
+      "inside": "cloud"
+    },
+    {
+      "id": "processamento",
+      "label": "Processamento e guarda",
+      "logical": {
+        "kind": "group"
+      },
+      "technical": {
+        "kind": "account",
+        "account": "222233334444",
+        "label": "Conta dados · 222233334444"
+      },
+      "inside": "cloud"
+    },
+    {
+      "id": "consumo",
+      "label": "Consumo analítico",
+      "logical": {
+        "kind": "group"
+      },
+      "technical": {
+        "kind": "account",
+        "account": "333344445555",
+        "label": "Conta analytics · 333344445555"
+      },
+      "inside": "cloud"
+    },
+    {
+      "id": "receber-arquivo",
+      "label": "Receber arquivo da loja",
+      "inside": "aterrissagem",
+      "logical": {
+        "kind": "block"
+      },
+      "technical": {
+        "kind": "service",
+        "service": "transfer family",
+        "resource": "sftp-lojas"
+      }
+    },
+    {
+      "id": "guardar-bruto",
+      "label": "Guardar arquivo bruto",
+      "inside": "aterrissagem",
+      "logical": {
+        "kind": "block",
+        "qualifier": "zona de aterrissagem"
+      },
+      "technical": {
+        "kind": "service",
+        "service": "s3",
+        "label": "S3",
+        "resource": "retail-lake-bruto"
+      }
+    },
+    {
+      "id": "processar-na-chegada",
+      "label": "Processar na chegada",
+      "inside": "sub-app",
+      "logical": {
+        "kind": "block"
+      },
+      "technical": {
+        "kind": "service",
+        "service": "lambda",
+        "resource": "parse-e-curadoria"
+      }
+    },
+    {
+      "id": "tratar-falha",
+      "label": "Tratar arquivo que falhou",
+      "inside": "processamento",
+      "logical": {
+        "kind": "block"
+      },
+      "technical": {
+        "kind": "service",
+        "service": "sqs",
+        "label": "SQS",
+        "resource": "dlq-parse"
+      }
+    },
+    {
+      "id": "reter-objeto",
+      "label": "Reter objeto curado",
+      "inside": "processamento",
+      "logical": {
+        "kind": "block",
+        "qualifier": "zona curada, 5 anos"
+      },
+      "technical": {
+        "kind": "service",
+        "service": "s3",
+        "label": "S3",
+        "resource": "retail-lake-curado",
+        "note": "ciclo de vida 5 anos"
+      }
+    },
+    {
+      "id": "consultar",
+      "label": "Consultar histórico",
+      "inside": "consumo",
+      "logical": {
+        "kind": "block"
+      },
+      "technical": {
+        "kind": "service",
+        "service": "athena",
+        "qualifier": "consulta ad hoc"
+      }
+    },
+    {
+      "id": "painel",
+      "label": "Painel da diretoria",
+      "inside": "consumo",
+      "logical": {
+        "kind": "block"
+      },
+      "technical": {
+        "kind": "service",
+        "service": "quicksight",
+        "resource": "operacao-diaria"
+      }
+    },
+    {
+      "id": "cloud",
+      "layer": "technical",
+      "technical": {
+        "kind": "cloud",
+        "label": "AWS Cloud"
+      }
+    },
+    {
+      "id": "papel-leitura",
+      "layer": "technical",
+      "inside": "aterrissagem",
+      "technical": {
+        "kind": "service",
+        "service": "role",
+        "resource": "retail-cross-account-leitura"
+      }
+    },
+    {
+      "id": "barramento",
+      "layer": "technical",
+      "inside": "processamento",
+      "technical": {
+        "kind": "service",
+        "service": "eventbridge",
+        "resource": "retail-eventos"
+      }
+    },
+    {
+      "id": "vpc-dados",
+      "layer": "technical",
+      "inside": "processamento",
+      "technical": {
+        "kind": "vpc",
+        "label": "VPC de processamento · 10.20.0.0/16",
+        "cidr": "10.20.0.0/16"
+      }
+    },
+    {
+      "id": "sub-app",
+      "layer": "technical",
+      "inside": "vpc-dados",
+      "technical": {
+        "kind": "subnet",
+        "label": "Private subnet",
+        "access": "private",
+        "az": "us-east-1a",
+        "cidr": "10.20.1.0/24"
+      }
+    },
+    {
+      "id": "endpoint-s3",
+      "layer": "technical",
+      "inside": "sub-app",
+      "technical": {
+        "kind": "service",
+        "service": "endpoints",
+        "label": "VPC endpoint (S3)",
+        "resource": "vpce-s3-gateway"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "a-envia",
+      "from": "loja",
+      "to": "receber-arquivo",
+      "label": "envia arquivo",
+      "protocol": "sftp",
+      "order": 1,
+      "technical": {
+        "label": "SFTP · porta 22"
+      }
+    },
+    {
+      "id": "a-deposita",
+      "from": "receber-arquivo",
+      "to": "guardar-bruto",
+      "label": "deposita",
+      "order": 2
+    },
+    {
+      "id": "a-avisa",
+      "from": "guardar-bruto",
+      "to": "barramento",
+      "label": "chegou arquivo novo",
+      "order": 3,
+      "technical": {
+        "label": "ObjectCreated"
+      }
+    },
+    {
+      "id": "a-falha",
+      "from": "processar-na-chegada",
+      "to": "tratar-falha",
+      "label": "arquivo que não faz parse",
+      "order": 4
+    },
+    {
+      "id": "a-grava",
+      "from": "processar-na-chegada",
+      "to": "reter-objeto",
+      "label": "grava curado",
+      "order": 5
+    },
+    {
+      "id": "a-abre",
+      "from": "diretoria",
+      "to": "painel",
+      "label": "abre de manhã",
+      "order": 6
+    },
+    {
+      "id": "a-consulta",
+      "from": "painel",
+      "to": "consultar",
+      "label": "consulta",
+      "data": "back",
+      "order": 7
+    },
+    {
+      "id": "a-varre",
+      "from": "consultar",
+      "to": "reter-objeto",
+      "label": "varre o histórico",
+      "data": "back",
+      "order": 8,
+      "technical": {
+        "label": "varre o prefixo curado"
+      }
+    },
+    {
+      "id": "a-avisa-s1",
+      "from": "barramento",
+      "to": "processar-na-chegada",
+      "layer": "both",
+      "label": "dispara"
+    },
+    {
+      "id": "a-le",
+      "from": "processar-na-chegada",
+      "to": "endpoint-s3",
+      "layer": "technical",
+      "label": "GetObject",
+      "data": "back"
+    },
+    {
+      "id": "a-le2",
+      "from": "endpoint-s3",
+      "to": "guardar-bruto",
+      "layer": "technical",
+      "label": "sem sair da rede AWS",
+      "data": "back"
+    },
+    {
+      "id": "a-confia",
+      "from": "processar-na-chegada",
+      "to": "papel-leitura",
+      "layer": "technical",
+      "label": "assume papel",
+      "protocol": "sts"
+    }
+  ],
+  "notes": [
+    {
+      "id": "n-spof",
+      "origin": "rejected-finding",
+      "text": "SPOF conhecido e aceito: o ponto de entrada de arquivo não tem par. Decisão de orçamento, revisar antes do go-live."
+    },
+    {
+      "id": "n-retencao",
+      "origin": "assumption",
+      "about": "reter-objeto",
+      "text": "Histórico de 5 anos por exigência de auditoria, com regra de ciclo de vida."
+    },
+    {
+      "id": "n-donos",
+      "origin": "legend",
+      "text": "Donos das fronteiras — aterrissagem: time de integração · processamento e guarda: time de dados · consumo analítico: BI."
+    },
+    {
+      "id": "n-kms",
+      "layer": "technical",
+      "origin": "assumption",
+      "text": "Chave gerenciada pelo cliente (KMS) nas duas zonas do lago — Q7 da sabatina."
+    }
+  ],
+  "dossier": {
+    "axes": {
+      "E1": "gerenciado sem compute próprio",
+      "E2": "assíncrono por evento (chegada do arquivo)",
+      "E3": "objeto / data lake com camada analítica",
+      "E4": "privado, com ponto de entrega controlado",
+      "E5": "três fronteiras: aterrissagem, processamento, consumo"
+    },
+    "facts": [
+      {
+        "fact": "300 lojas enviam arquivo de venda",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "os arquivos caem de madrugada, mas há loja que envia fora de hora",
+        "provenance": "inferred",
+        "confirmed": true,
+        "from": "ata de kickoff + Q6"
+      },
+      {
+        "fact": "4 GB por dia",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "histórico de 5 anos por auditoria",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "as lojas entregam por SFTP e isso não muda",
+        "provenance": "asked",
+        "confirmed": true
+      },
+      {
+        "fact": "sem norma escrita de residência; chave gerenciada pelo cliente",
+        "provenance": "inferred",
+        "confirmed": true,
+        "from": "Q7"
+      },
+      {
+        "fact": "quem inicia a travessia entre fronteiras é o processamento",
+        "provenance": "asked",
+        "confirmed": true,
+        "from": "Q9"
+      }
+    ],
+    "parking": [
+      {
+        "name": "Lambda",
+        "capability": "processar-na-chegada",
+        "state": "returned",
+        "note": "voltou na fase técnica como sugestão inferida contra a capacidade, e foi confirmado (#15 §5)."
+      },
+      {
+        "name": "S3",
+        "capability": "reter-objeto",
+        "state": "returned",
+        "note": "voltou e foi confirmado, nas duas zonas do lago."
+      }
+    ],
+    "candidates": [
+      {
+        "id": "cand-a",
+        "name": "Só chegou, já processou",
+        "state": "chosen",
+        "tuple": [
+          "gerenciado-sem-compute",
+          "evento",
+          "data-lake",
+          "privado",
+          "multi-fronteira"
+        ],
+        "buys": "painel fresco minutos após a loja enviar; zero runtime seu.",
+        "pays": "custo por evento imprevisível em dia de pico; depurar fluxo assíncrono é chato.",
+        "chooseIf": "\"painel velho\" é a dor principal da diretoria.",
+        "wrongIf": "o volume por loja crescer 10× — aí o custo por evento passa o de lote.",
+        "because": "a dor declarada é frescor, e a separação de fronteiras da ata sobrevive."
+      },
+      {
+        "id": "cand-b",
+        "name": "Micro-lote de 15 minutos",
+        "state": "discarded",
+        "differsIn": [
+          "E2"
+        ],
+        "tuple": [
+          "gerenciado-sem-compute",
+          "lote-agendado",
+          "data-lake",
+          "privado",
+          "multi-fronteira"
+        ],
+        "buys": "custo previsível, reprocessamento trivial, uma janela para consertar arquivo torto.",
+        "pays": "até 15 min de atraso — a reclamação da diretoria volta menor, não some.",
+        "chooseIf": "auditoria e reprocessamento pesam mais que frescor.",
+        "wrongIf": "alguém prometeu \"tempo real\" para a diretoria.",
+        "because": "descartada: o atraso residual não resolve a dor declarada. Fica em pé se o custo por evento estourar."
+      },
+      {
+        "id": "cand-c",
+        "name": "Transformação na borda",
+        "state": "discarded",
+        "differsIn": [
+          "E1",
+          "E3",
+          "E5"
+        ],
+        "tuple": [
+          "conteineres",
+          "evento",
+          "relacional-gerenciado",
+          "privado",
+          "fronteira-unica"
+        ],
+        "buys": "lógica de negócio complexa por loja em código comum; consulta relacional direta.",
+        "pays": "você opera cluster; colapsa as três fronteiras e perde a separação de auditoria.",
+        "chooseIf": "a transformação por loja for regra de negócio pesada, não parsing.",
+        "wrongIf": "a separação de fronteiras for exigência de compliance — e a ata sugere que é.",
+        "because": "descartada: perde a fronteira de auditoria, que a ata trata como dada."
+      }
+    ],
+    "findings": [
+      {
+        "rule": "spof",
+        "target": "receber-arquivo",
+        "state": "rejected",
+        "at": "2026-08-21",
+        "viaNote": "n-spof",
+        "note": "ponto de entrada sem par. O time aceitou para a fase 1 por orçamento — vira nota no diagrama, não conserto calado."
+      },
+      {
+        "rule": "assincrono-sem-dlq",
+        "target": "processar-na-chegada",
+        "state": "accepted",
+        "at": "2026-08-21",
+        "note": "virou a capacidade \"Tratar arquivo que falhou\"."
+      },
+      {
+        "rule": "cross-account-sem-confianca",
+        "target": "processamento",
+        "state": "accepted",
+        "at": "2026-08-21",
+        "note": "a travessia entre fronteiras precisa de caminho de confiança declarado — desenha na fase técnica."
+      },
+      {
+        "rule": "retencao-sem-regra",
+        "target": "reter-objeto",
+        "state": "accepted",
+        "at": "2026-08-21",
+        "note": "5 anos declarado; virou premissa anotada no nó."
+      }
+    ]
+  }
+}

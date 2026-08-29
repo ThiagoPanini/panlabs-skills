@@ -168,7 +168,7 @@ Roda **depois do desenho**, porque estas não são respostas a perguntas — sã
 node tools/review-gaps.cjs <modelo.json>       # o laudo
 ```
 
-A régua contra o corpus inteiro — `--corpus` — saiu com ele no #44: mora em `workbench/panlabs-aws-diagrams/tests/check-gaps.cjs`, e é lá que o L2/L3 roda.
+A régua contra o corpus inteiro — `--corpus` — saiu com ele no #44: mora fora desta árvore, no workspace irmão, e não é rodada por quem executa a skill; é lá que o L2/L3 roda.
 
 São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura que o modelo precisa afirmar para a regra ter o que dizer. Onde o modelo não afirma, a regra fica **muda** — e muda aparece no laudo com o motivo, porque *"não acusou"* não pode se confundir com *"não rodou"*.
 

@@ -56,8 +56,23 @@ const VIEWS = ['logical', 'technical'];
  * model@1, if this list forgot it. Exported for that reason — the check reads the
  * real list, not a copy of it.
  */
-const TECHNICAL_FIELDS = ['service', 'az', 'access', 'cidr', 'account', 'note',
+const TECHNICAL_FIELDS = ['service', 'az', 'access', 'account', 'note',
                          'qualifier', 'ou', 'enables', 'layer', 'resource'];
+
+/**
+ * Declared in both schemas, crossed by nothing — not this projection, not
+ * the engine, not the theme. `cidr` is the first entry, and it is a worse
+ * defect than `genre`'s until #169: `genre` never crossed the projection at
+ * all, so its schema description could already say so truthfully. `cidr`
+ * DID cross — it sat in TECHNICAL_FIELDS and reached `model@1` on every
+ * projection, where nothing read it either. Retiring it means taking it out
+ * of TECHNICAL_FIELDS too, or the "nobody reads this" on its schema
+ * description would be false about this very file. Exported so
+ * `check-technical-parity.cjs` reads an informational field's absence from
+ * TECHNICAL_FIELDS as policy, not as the exact loss that check exists to
+ * catch.
+ */
+const INFORMATIONAL_FIELDS = ['cidr'];
 
 /** The same, on the logical side. `note` was already there; `qualifier` came in with #29. */
 const LOGICAL_FIELDS = ['note', 'qualifier'];
@@ -268,4 +283,4 @@ function agreementSlice(logicalModel) {
   };
 }
 
-module.exports = { project, agreementSlice, VIEWS, TECHNICAL_FIELDS, LOGICAL_FIELDS };
+module.exports = { project, agreementSlice, VIEWS, TECHNICAL_FIELDS, INFORMATIONAL_FIELDS, LOGICAL_FIELDS };

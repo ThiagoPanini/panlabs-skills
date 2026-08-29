@@ -85,13 +85,17 @@ function elaborate(base, el) {
   for (const [id, r] of Object.entries(el.refines || {})) {
     const a = byEdgeId.get(id);
     if (!a) { errors.push(`refines edge "${id}", which does not exist`); continue; }
+    // A refine's VALUE lives inside a map the schema leaves open (`refines` is
+    // `additionalProperties: true`), so the schema cannot refuse a misspelled
+    // key — a delta spelling `by` as `bys` parses clean and silently drops the
+    // whole path, and one spelling `labels` any other way parses clean and
+    // silently draws unlabelled segments. #124 renamed `labels` from `rotulos`
+    // on BOTH ends at once — here, the schema's `description`, and the shipped
+    // example — and #171 is what makes the NEXT such rename fail loudly here
+    // instead of parsing clean, for either key.
+    for (const k of Object.keys(r)) if (k !== 'by' && k !== 'labels') errors.push(`refines "${id}": unknown key "${k}"`);
     const jumps = r.by || [];
     for (const s of jumps) if (!byId.has(s)) errors.push(`refines "${id}" through "${s}", which does not exist`);
-    // `labels` lives inside a map the schema leaves open (`refines` is
-    // `additionalProperties: true`), so nothing but this line validates the
-    // name: a delta spelling it any other way parses clean and silently draws
-    // unlabelled segments. #124 renamed it from `rotulos` on BOTH ends at once
-    // — here, the schema's `description`, and the shipped example.
     const labels = r.labels || [];
     if (labels.length && labels.length !== jumps.length + 1)
       errors.push(`refines "${id}": ${jumps.length} jump(s) require ${jumps.length + 1} label(s), got ${labels.length}`);

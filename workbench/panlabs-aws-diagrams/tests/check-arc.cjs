@@ -254,6 +254,26 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
         : `${logical.nodes.length} logical nodes, zero \`service\` outside an actor`);
   }
 
+  // ───── an unknown key inside a `refines` value is refused, not silently dropped (#171)
+  console.log('\nan unknown key inside a `refines` value is refused, not silently dropped (#171)\n');
+  {
+    // `refines` is `additionalProperties: true` — its KEYS are edge ids, which
+    // the schema cannot predict. But the VALUE's own shape is fixed (`by`,
+    // `labels`), and before #171 nothing checked those two names: `by`
+    // misspelled `bys` parsed clean and the whole path vanished silently,
+    // exit 0. This is the real case the arc already built the technical model
+    // for, not a fixture invented for the ticket.
+    const badDelta = { schema: 'panlabs-aws-diagrams/elaboration@1', about: technical.id,
+      refines: { 'a-avisa': { bys: ['endpoint-s3'] } } };
+    let threw = null;
+    try { elaborate(technical, badDelta); } catch (e) { threw = e; }
+    record(!!threw, '`elaborate()` refuses the delta instead of silently dropping the jump',
+      threw ? (threw.errors || []).join(' · ') : 'elaborate() did not throw — the path would have vanished');
+    record(!!threw && /refines "a-avisa": unknown key "bys"/.test((threw.errors || []).join(' · ')),
+      'and names the edge and the offending key, not just "invalid elaboration"',
+      threw ? (threw.errors || []).join(' · ') : '');
+  }
+
   // ───────────────────────────────────── step 1 · the resume door (the briefing)
   console.log('\nstep 1 · the file resumes, and the briefing returns what does not get asked again\n');
   {

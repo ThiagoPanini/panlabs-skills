@@ -478,18 +478,23 @@ console.log('\n5 · the name the guide teaches is the name the code reads (#124)
     ok(taughtRun.segment === 'SECOND-PROBE',
       'and the second lands on the jump segment', taughtRun.segment);
 
-    // CONTROL: the same delta under the name the guide does NOT teach. Nothing
-    // refuses it — that is the whole point — and the labels simply vanish.
+    // CONTROL: the same delta under the name the guide does NOT teach. The
+    // SCHEMA still cannot catch it — `refines` stays `additionalProperties:
+    // true` on purpose, because its keys are unpredictable edge ids — but
+    // #171 taught `elaborate()` itself to refuse an unknown key inside a
+    // refine's VALUE, so the old name is now rejected loudly instead of
+    // parsing clean and drawing unlabelled segments.
     const staleDelta = JSON.parse(JSON.stringify(delta));
     staleDelta.refines[edgeId] = { by: ['bus-probe'], rotulos: ['FIRST-PROBE', 'SECOND-PROBE'] };
     const ELABORATION = SCHEMAS['panlabs-aws-diagrams/elaboration@1'];
     ok(againstSchema(staleDelta, ELABORATION, ELABORATION).length === 0,
-      'CONTROL: a delta using the OLD name still validates — the open map cannot catch it',
-      'which is why this verdict exists at all');
-    const staleRun = labelsOf(elaborate(approved(), staleDelta));
-    ok(!staleRun.first && !staleRun.segment,
-      'CONTROL: and its labels vanish silently, which is the defect in one line',
-      `first=${staleRun.first} segment=${staleRun.segment}`);
+      'CONTROL: a delta using the OLD name still validates against the SCHEMA — the open map cannot catch it',
+      'which is why elaborate() itself has to (#171)');
+    let staleError = null;
+    try { elaborate(approved(), staleDelta); } catch (e) { staleError = e; }
+    ok(!!staleError && /unknown key "rotulos"/.test((staleError.errors || []).join(' · ')),
+      'and `elaborate()` now refuses it by name, instead of silently drawing unlabelled segments (#171)',
+      staleError ? (staleError.errors || []).join(' · ') : 'elaborate() did not throw');
   }
 
   // `views` is the other half of #124 and the EASY half: `session@1` is closed,

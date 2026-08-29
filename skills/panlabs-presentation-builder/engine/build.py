@@ -24,7 +24,7 @@ import pathlib
 import re
 import sys
 
-from register import REGISTER, BEATS, INLINE
+from register import REGISTER, BEATS, INLINE, DOCUMENT
 
 HERE = pathlib.Path(__file__).resolve().parent
 MARKER = "<!--P:{}-->"
@@ -99,7 +99,10 @@ def _need(d, spec, where):
 
 
 def validate(arg):
-    for k in ("title", "occasion", "beats"):
+    # The required keys come from the register, not from a tuple written here.
+    # `vocab.py` publishes the same tuple to the model, so the document the
+    # model reads and the check it is measured by cannot name different keys.
+    for k in DOCUMENT["fields"]:
         if k not in arg:
             raise Refused(f"argument: missing {k}")
     _text(arg["title"], "title")

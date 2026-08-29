@@ -320,6 +320,14 @@ function pageMeasure(legibilityExempt, okOverlapClass, inlineTags) {
 // pixel analysis: decoded from the screenshot INSIDE the page (an offscreen
 // canvas), never in Node, so this stays a zero-dependency client -- Node has
 // no built-in PNG decoder and this repo does not add one for a test suite.
+//
+// The base64-to-canvas setup below is repeated verbatim in `bleedMeasure`.
+// That is not an oversight: `evalCall` ships ONE function's source across
+// the wire by calling `.toString()` on it (see its own comment), so a
+// helper this function called would not exist in the page it runs in --
+// only what is written INSIDE the function body travels. Deduplicating it
+// into a shared Node-side helper would make `bleedMeasure` throw
+// `ReferenceError` the moment it actually ran in a browser.
 function pixelMeasure(pngB64, textBoxes, wholeFrame) {
   return (async () => {
     const img = new Image(); img.src = 'data:image/png;base64,' + pngB64;
@@ -572,37 +580,21 @@ function familyClipped(files) {
   return out;
 }
 
-function familyCollision(files) {
+// Four families read one already-collected list off `beat.dom` and prefix
+// each entry with where it came from; the shape is the family, `key` is the
+// only thing that varies.
+function fromDomList(files, key) {
   const out = [];
   for (const f of files) for (const beat of f.beats) {
-    for (const c of beat.dom.collisions) out.push(`${f.file} beat ${beat.n}: ${c}`);
+    for (const v of beat.dom[key]) out.push(`${f.file} beat ${beat.n}: ${v}`);
   }
   return out;
 }
 
-function familyOutlineIcon(files) {
-  const out = [];
-  for (const f of files) for (const beat of f.beats) {
-    for (const v of beat.dom.iconViolations) out.push(`${f.file} beat ${beat.n}: ${v}`);
-  }
-  return out;
-}
-
-function familyLineCount(files) {
-  const out = [];
-  for (const f of files) for (const beat of f.beats) {
-    for (const v of beat.dom.lineGroups) out.push(`${f.file} beat ${beat.n}: ${v}`);
-  }
-  return out;
-}
-
-function familyStacking(files) {
-  const out = [];
-  for (const f of files) for (const beat of f.beats) {
-    for (const v of beat.dom.stackViolations) out.push(`${f.file} beat ${beat.n}: ${v}`);
-  }
-  return out;
-}
+function familyCollision(files) { return fromDomList(files, 'collisions'); }
+function familyOutlineIcon(files) { return fromDomList(files, 'iconViolations'); }
+function familyLineCount(files) { return fromDomList(files, 'lineGroups'); }
+function familyStacking(files) { return fromDomList(files, 'stackViolations'); }
 
 const FAMILIES = [
   ['network-zero', familyNetwork],

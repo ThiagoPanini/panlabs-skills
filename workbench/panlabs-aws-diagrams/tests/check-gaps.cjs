@@ -30,7 +30,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
 const WORKBENCH = path.join(__dirname, '..');
 
-const { review, NAMES, arquivosDoCorpus } =
+const { review, NAMES, arquivosDoCorpus, CORPUS_DIRS } =
   require(path.join(ROOT, 'session', 'gaps.cjs'));
 
 /**
@@ -133,6 +133,28 @@ console.log('\n4 · the ruler against the #15 prototype\n');
   note(rate < 1.33 / 4, "the rate is at least 4× below the prototype's",
     `${totalFindings} findings / ${totalNodes} nodes = ${rate.toFixed(3)} per node ` +
     `(prototype: 4/3 = 1.333 — ${(1.333 / rate).toFixed(1)}× above this)`);
+}
+
+// #167 — the failure destination is judged by CLASS, not by matching `service`
+// to the origin. EventBridge → Lambda with an SQS DLQ used to fire: `sqs` !==
+// `eventbridge`, and the old rule compared catalog keys. L2/L3 above can't
+// catch this — they count silences, and this model has exactly ONE, unrelated
+// to the DLQ shape — so it gets a case of its own.
+console.log('\n5 · destino de falha por classe, não por `service` igual ao da origem (#167)\n');
+{
+  const modelName = 'notifications-eventbridge-dlq';
+  const rel = files.find(f => path.basename(f, '.json') === modelName);
+  note(!!rel, `o modelo mínimo do #167 está no corpus`,
+    rel || `nenhum arquivo "${modelName}.json" em ${CORPUS_DIRS.join(', ')}`);
+  if (rel) {
+    const model = JSON.parse(fs.readFileSync(path.join(WORKBENCH, rel), 'utf8'));
+    const dlqFindings = review(model).findings.filter(f => f.rule === 'assincrono-sem-dlq');
+    note(dlqFindings.length === 0,
+      '"assincrono-sem-dlq" fica calada: EventBridge → Lambda → SQS é destino de falha válido, mesmo com serviço diferente da origem',
+      dlqFindings.length
+        ? `acusou ${dlqFindings.map(f => f.target).join(', ')} apesar da fila morta declarada`
+        : 'nenhum achado — a fila SQS foi reconhecida como classe assíncrona, não pelo `service`');
+  }
 }
 
 console.log();

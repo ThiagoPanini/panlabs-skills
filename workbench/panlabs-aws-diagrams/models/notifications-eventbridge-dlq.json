@@ -1,0 +1,29 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "notifications-eventbridge-dlq",
+  "title": "Notificações · fila morta de outro serviço",
+  "subtitle": "Vista técnica T1 · #167 — o barramento alimenta direto o compute, e o destino de falha é uma fila SQS, não outro EventBridge",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "region", "kind": "region", "label": "us-east-1", "inside": "cloud" },
+
+    { "id": "barramento", "kind": "service", "service": "eventbridge", "label": "Barramento de notificações", "inside": "region",
+      "qualifier": "uma regra por consumidor" },
+    { "id": "notificar", "kind": "service", "service": "lambda", "label": "Notificar cliente", "inside": "region",
+      "qualifier": "chama o provedor de SMS, falha às vezes" },
+    { "id": "dlq-notificar", "kind": "service", "service": "sqs", "label": "Fila morta · notificações", "inside": "region",
+      "qualifier": "guarda o que o provedor recusou" }
+  ],
+
+  "edges": [
+    { "from": "barramento", "to": "notificar", "label": "regra de notificação", "order": 1 },
+    { "from": "notificar", "to": "dlq-notificar", "label": "após 3 tentativas", "order": 2 }
+  ],
+
+  "notes": [
+    { "text": "O consumidor do barramento tem destino de falha declarado, só que numa fila SQS — serviço diferente do EventBridge que o alimenta. A regra `assincrono-sem-dlq` comparava `service`, não classe, e acusava esse caso (#167).", "origin": "legend" }
+  ]
+}

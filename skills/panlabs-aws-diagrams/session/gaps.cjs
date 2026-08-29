@@ -350,12 +350,16 @@ function ruleTrust(model, ctx) {
  *
  * MEASURE: is the consumer COMPUTE (it's the one that fails while
  * processing; the bus → queue hop is fan-out, not consumption), and does it
- * write to some other node of the SAME service that feeds it? A dead letter
- * queue is a queue.
+ * write to some other node of the SAME CLASS as the one that feeds it — a
+ * queue, topic or bus, whichever `application_integration` service it is? A
+ * dead letter queue is a queue, not necessarily the same catalog service:
+ * EventBridge → Lambda with an SQS DLQ is the common shape, and comparing
+ * catalog keys (`service`) instead of class made that exact shape a false
+ * positive (#167).
  *
- * THRESHOLD: zero destinations of that kind. And the same-service test is
- * derived, not a list: there's no "list of services that are a DLQ", there's
- * "whatever receives a queue's refuse is another queue".
+ * THRESHOLD: zero destinations of that kind. And the class test is derived,
+ * not a list: there's no "list of services that are a DLQ", there's
+ * "whatever receives a queue's refuse is asynchronous transport too".
  */
 function ruleDlq(model, ctx) {
   const edges = model.edges || [];
@@ -377,7 +381,7 @@ function ruleDlq(model, ctx) {
     const hasFailureDestination = edges.some(x => {
       if (x.from !== consumer.id) return false;
       const target = ctx.t.byId.get(x.to);
-      return target && target.id !== queue.id && target.service === queue.service;
+      return target && target.id !== queue.id && isAsynchronous(target, ctx.cat);
     });
     if (hasFailureDestination) continue;
     alreadySeen.add(consumer.id);

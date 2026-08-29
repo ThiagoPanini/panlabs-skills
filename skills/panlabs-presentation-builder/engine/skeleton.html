@@ -67,6 +67,14 @@ b,strong,em,i{font-style:normal;font-weight:900;color:var(--ink)}
 /* line icon: stroke, NEVER fill -- swapping produces a solid blot and there
    is no markup error to give it away (#94) */
 .ic{width:1em;height:1em;stroke:currentColor;fill:none;flex:none}
+/* THE SLOT #93 found two families needing: a legitimate chromatic
+   third-party mark (a brand logo, e.g. in a future tech-stack row) is
+   neither the measured palette nor a line icon, and without a name for it
+   both families call it a defect. One name, declared once, read by both:
+   #156's palette-chroma exempts a hex inside it; #157's outline-icon check
+   will exempt its fill the same way. Empty on purpose -- no block in this
+   register emits it yet. */
+.mark{}
 .sprite{position:absolute;width:0;height:0;overflow:hidden}
 /* texture (#92): the fill IS the surface, and the shadow is its pair */
 .tex{position:absolute;inset:0;width:100%;height:100%;display:block;

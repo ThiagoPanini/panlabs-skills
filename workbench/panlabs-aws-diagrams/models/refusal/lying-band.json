@@ -1,8 +1,8 @@
 {
   "schema": "panlabs-aws-diagrams/model@1",
   "id": "lying-band",
-  "title": "A faixa que mente — o corpo de prova do portão de veracidade",
-  "subtitle": "Este modelo GERA, e o desenho que sai afirma um atributo que o modelo nega. Existe para provar, ponta a ponta, que --gate veracidade recusa.",
+  "title": "A faixa que mentia — o corpo de prova da degradação do #168",
+  "subtitle": "Até o #168, este modelo GERAVA um desenho que afirmava um atributo que o modelo nega, e só --gate veracidade recusava. Agora o caminho ELK degrada a faixa para rótulo em vez de desenhar a caixa que mente — a régua do #31 estendida ao ELK — e o modelo passa limpo em qualquer nível de portão.",
   "view": "technical",
 
   "nodes": [
@@ -25,6 +25,6 @@
   ],
 
   "notes": [
-    { "id": "n-porque", "origin": "assumption", "text": "A faixa declara DOIS membros e o layout põe um terceiro entre eles. Como a caixa da faixa é a UNIÃO dos membros (o agente diz QUEM, o motor calcula ONDE), o não-membro cai dentro dela — e o desenho passa a afirmar dele um atributo que o modelo não declara. É F1, tolerância zero." }
+    { "id": "n-porque", "origin": "assumption", "text": "A faixa declara DOIS membros e o layout põe um terceiro entre eles. A caixa da faixa é a UNIÃO dos membros (o agente diz QUEM, o motor calcula ONDE) — antes do #168, o não-membro caía dentro dela e o desenho passava a afirmar dele um atributo que o modelo não declara (F1, tolerância zero). Agora o `elkPlan` mede a mesma união, vê que ela abraça `n2`, e degrada a faixa para rótulo solto antes de desenhar a caixa — não há mais caixa para F1 medir." }
   ]
 }

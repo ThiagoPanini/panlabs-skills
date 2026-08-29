@@ -1,0 +1,35 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "web-asg-single-az-neighbor",
+  "title": "Web · Auto Scaling group de AZ única, com vizinho de subnet",
+  "subtitle": "T4 · dois membros do ASG na mesma subnet, um terceiro serviço entre eles — sem redundância zonal, o motor desenha pelo caminho ELK (#168)",
+  "view": "technical",
+  "genre": "T4",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "VPC de produção · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
+
+    { "id": "app", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "inside": "vpc" },
+
+    { "id": "web-a", "kind": "service", "service": "ec2", "label": "EC2 · web", "inside": "app" },
+    { "id": "fraude", "kind": "service", "service": "lambda", "label": "Lambda · antifraude", "inside": "app" },
+    { "id": "web-b", "kind": "service", "service": "ec2", "label": "EC2 · web", "inside": "app" }
+  ],
+
+  "edges": [
+    { "from": "web-a", "to": "fraude", "label": "pontua o risco", "order": 1 },
+    { "from": "fraude", "to": "web-b", "label": "libera", "order": 2 }
+  ],
+
+  "bands": [
+    { "id": "asg-web", "kind": "auto-scaling", "label": "Auto Scaling group", "members": ["web-a", "web-b"] }
+  ],
+
+  "notes": [
+    {
+      "text": "Uma única AZ não aciona a grade (#19) — o motor desenha pelo caminho ELK, que não reserva calha nenhuma para a faixa (#168). fraude mora entre web-a e web-b e NÃO escala com o grupo: sem a régua do #31 estendida ao ELK, a caixa da faixa (a união dos dois membros) abraçaria fraude por acidente de layout. Com a régua estendida, a faixa degrada para rótulo solto, como já acontecia na grade.",
+      "origin": "legend"
+    }
+  ]
+}

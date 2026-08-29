@@ -138,6 +138,33 @@ def plant_engine_gone():
 
 
 GUARD = '    exit 1\n  fi\n'
+SHAPE_TEST = '[ -n "$GITDIR" ] && [ "$GITDIR" != "$COMMON" ] && IN_WORKTREE=1\n'
+
+
+def _installer_with(replacement, needle, why):
+    """A staged tree whose installer has one line rewritten."""
+    root = _seq() / "tree"
+    shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns("__pycache__"))
+    sh = root / "tools/install.sh"
+    text = sh.read_text(encoding="utf-8")
+    if text.count(needle) != 1:
+        raise Drifted(why)
+    sh.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+    return root
+
+
+def plant_shape_test_removed():
+    """Only the path substring is left to recognise a worktree.
+
+    This is the guard as it was first written, and the reason it was not good
+    enough: `git worktree add /anywhere/else` matches no substring, so the
+    links land in a tree that disappears with the session that made it.
+    """
+    root = _installer_with(
+        "", SHAPE_TEST,
+        "the git-shape worktree test is no longer that single line -- "
+        "re-anchor SHAPE_TEST on whatever shape it has now")
+    return dict(root=root, home=HOME)
 
 
 def plant_guard_removed():
@@ -154,7 +181,7 @@ def plant_guard_removed():
     if text.count(GUARD) != 1:
         raise Drifted(
             "the worktree refusal is no longer a lone `exit 1` before its "
-            "`fi` — re-anchor GUARD on whatever shape it has now")
+            "`fi` -- re-anchor GUARD on whatever shape it has now")
     sh.write_text(text.replace(GUARD, '  fi\n', 1), encoding="utf-8")
     return dict(root=root, home=HOME)
 
@@ -170,6 +197,8 @@ CASES = [
      plant_engine_gone, "reinstall from a checkout that carries engine/"),
     ("refuses-orphan", "the worktree refusal removed from the installer",
      plant_guard_removed, "restore the refusal"),
+    ("detects-real-worktree", "only the path substring left to spot a worktree",
+     plant_shape_test_removed, "ask git what the tree is"),
 ]
 
 
@@ -192,6 +221,7 @@ PROOF = Proof(
     planted=lambda payload: fingerprint(payload["root"],
                                         payload["home"]) != BASELINE,
     control=_control,
+    width=21,
 )
 
 
@@ -204,13 +234,17 @@ def main():
     failed = PROOF.run(CASES)
 
     # A family nobody plants against is a family nobody has ever seen fail.
+    # Worded and shaped exactly like the three proofs that came before this
+    # one: a fourth phrasing of the same verdict is the drift `proof_driver`
+    # was extracted to stop, one floor up.
     unplanted = [n for n, _ in check.FAMILIES
                  if not any(c[0] == n for c in CASES)]
-    print(f"  {'FAIL' if unplanted else 'ok  '} {'coverage':<19} "
-          f"{len(CASES)} planted defects over all {len(check.FAMILIES)} "
-          f"families" if not unplanted else
-          f"  FAIL {'coverage':<19} never planted against: "
-          f"{', '.join(unplanted)} -- add a case, or drop the family")
+    if unplanted:
+        print(f"  FAIL coverage              no defect planted for: "
+              f"{', '.join(unplanted)} -- add a case, or drop the family")
+    else:
+        print(f"  ok   coverage              {len(CASES)} planted defects "
+              f"over all {len(check.FAMILIES)} families")
     return failed + len(unplanted)
 
 

@@ -47,9 +47,24 @@ for a in "$@"; do
 done
 
 # ---------------------------------------------------- where the link points to
+#
+# ⚠️ ASK GIT WHAT THIS IS, DO NOT READ THE PATH. In a linked worktree
+# `--git-dir` points inside the main repository's `worktrees/` administrative
+# area while `--git-common-dir` points at the repository itself, and the two
+# differing IS what being a worktree means. The path test below stays as a
+# second net, because it is the only one that still fires on a COPY of a tree
+# that is no longer a git repository at all — but it cannot be the first, and
+# on its own it is blind to `git worktree add /anywhere/else`, which is a
+# worktree by every property that matters here and matches no substring.
+GITDIR="$(git -C "$SKILL_LOCAL" rev-parse --path-format=absolute --git-dir 2>/dev/null || true)"
+COMMON="$(git -C "$SKILL_LOCAL" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+
+IN_WORKTREE=0
+[ -n "$GITDIR" ] && [ "$GITDIR" != "$COMMON" ] && IN_WORKTREE=1
+[[ "$SKILL_LOCAL" == *"/.claude/worktrees/"* ]] && IN_WORKTREE=1
+
 TARGET="$SKILL_LOCAL"
-if [[ "$SKILL_LOCAL" == *"/.claude/worktrees/"* ]]; then
-  COMMON="$(git -C "$SKILL_LOCAL" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+if [ "$IN_WORKTREE" = 1 ]; then
   MAIN="$(dirname "${COMMON:-}")"
   CANDIDATE="$MAIN/skills/$NAME"
   if [ -n "${COMMON:-}" ] && [ -d "$CANDIDATE" ]; then
@@ -78,10 +93,11 @@ bad() { echo "  ✗ $1"; failed=1; }
 # END UP once resolved
 #
 # ⚠️ The last two are different things. The `~/.claude/` link carries a
-# RELATIVE path (`../../.agents/…`), and `readlink -f` on a relative string
-# resolves against the CALLER's working directory, not against the link's
-# directory. What decides is the FINAL DESTINATION: both links have to end up
-# at the same skill root, whatever text they carry.
+# RELATIVE path (`../../.agents/…`), and `readlink -f` applied to that TEXT --
+# rather than to the link's own absolute path, which is what happens below --
+# would resolve it against the CALLER's working directory instead of against
+# the link's directory. What decides is the FINAL DESTINATION: both links have
+# to end up at the same skill root, whatever text they carry.
 link_skill() {
   local link="$1" to="$2" destination="$3"
   local dir; dir="$(dirname "$link")"
@@ -139,7 +155,11 @@ trap 'rm -rf "$SCRATCH"' EXIT
 for base in "$HOME/.claude/skills/$NAME" "$HOME/.agents/skills/$NAME"; do
   if [ ! -r "$base/SKILL.md" ]; then bad "$base/SKILL.md unreadable"; continue; fi
   ok "$base/SKILL.md readable"
-  out="$SCRATCH/$(basename "$(dirname "$base")").html"
+  # Numbered, not named after the path: both skill homes end in `skills`, so
+  # a name derived from the parent directory is the SAME name twice and the
+  # second build silently overwrites the first.
+  n=$((${n:-0} + 1))
+  out="$SCRATCH/from-$n.html"
   # PYTHONDONTWRITEBYTECODE: `build.py` imports `register`, and without this
   # the check would leave `engine/__pycache__/` inside the tree it just
   # installed. Verifying a skill must not modify it.

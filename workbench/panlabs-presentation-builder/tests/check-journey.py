@@ -35,7 +35,9 @@ is the template for the shape; nothing is shared but the shape.
                           The sibling's package reached 29 of its 30 MB
                           because a documented command wrote one file per user
                           run into the tree that ships.
-  5  ceilings-published   every number the register carries reaches the
+  5  register-published   every fact the register declares -- ceilings,
+                          counts, zones, the zone they are measured against,
+                          and the document's own top-level keys -- reaches the
                           document the model reads. Family 1 of the
                           architecture gate proves the doc equals the
                           GENERATOR's output; it cannot see a generator that
@@ -45,8 +47,8 @@ is the template for the shape; nothing is shared but the shape.
 
 NOTHING HERE KNOWS THE VOCABULARY, on purpose, and family 5 is where that is
 hardest to hold: it never lists a block, a field or a number. It walks the
-register and asks the document about what it found, so adding a ninth block or
-retuning a ceiling needs no edit in this file.
+register and asks the document about what it found, so adding a ninth block, a
+new top-level key or a retuned ceiling needs no edit in this file.
 
 THE SUITE DOES NOT LIVE INSIDE THE SKILL (#44). Every path below points INTO
 skills/panlabs-presentation-builder/ -- the only direction a reference from
@@ -68,7 +70,7 @@ DOC = SKILL / "VOCABULARY.md"
 sys.path.insert(0, str(ENGINE))
 
 import vocab                                                      # noqa: E402
-from register import REGISTER, ZONE_PCT                           # noqa: E402
+from register import REGISTER, ZONE_PCT, DOCUMENT                 # noqa: E402
 
 # The command that turns an argument into a page. Named once, here, because
 # family 2 is the only rule in this file that has to know WHICH command is the
@@ -77,7 +79,7 @@ BUILDER = "build.py"
 
 # Scratch: outside the tree on purpose, and the one prefix a documented
 # destination may carry without naming a file that exists.
-SCRATCH = "/tmp/"
+SCRATCH_PREFIX = "/tmp/"
 
 # A fence declaring a DATA format is data; everything else is a command. It is
 # a DENY list and not an allow list because narrowing a rule is the move that
@@ -229,7 +231,7 @@ def _scan(md):
     escapes, dangling = [], []
     for cmd in commands(md):
         for t in tokens(cmd):
-            if t.startswith(SCRATCH):
+            if t.startswith(SCRATCH_PREFIX):
                 continue
             if re.match(r"^(\.\./|~|/)", t):
                 escapes.append(t)
@@ -247,7 +249,7 @@ def check_paths_exist(skill_md=None, **_):
         return False, (f"command(s) reaching outside the skill: "
                        f"{', '.join(escapes)} -- whoever installs the skill "
                        f"gets the directory and nothing beside it. Write the "
-                       f"path from the skill root, or send it to {SCRATCH}")
+                       f"path from the skill root, or send it to {SCRATCH_PREFIX}")
     if dangling:
         return False, (f"command(s) naming a path that does not exist: "
                        f"{', '.join(dangling)} -- fix the spelling, or add "
@@ -296,7 +298,7 @@ def check_writes_outside(skill_md=None, **_):
         for t in _writes(cmd):
             if t.startswith("("):             # `--write`, already spelled out
                 inside.append(t)
-            elif t.startswith(SCRATCH):
+            elif t.startswith(SCRATCH_PREFIX):
                 continue
             elif re.match(r"^(~|/|\.\./)", t):
                 continue                      # the caller's disk, or above the
@@ -309,24 +311,24 @@ def check_writes_outside(skill_md=None, **_):
     if inside:
         return False, (f"documented write(s) landing inside the skill: "
                        f"{', '.join(inside)} -- the installed tree grows by "
-                       f"one file per run and the weight family eventually "
-                       f"reprova. Send it to {SCRATCH} or to a path the "
-                       f"caller names")
+                       f"one file per run, until the weight family fails it. "
+                       f"Send it to {SCRATCH_PREFIX} or to a path the caller "
+                       f"names")
     return True, "every documented write lands outside the skill tree"
 
 
 # --------------------------------------------------------------------------
 # 5 - the register's numbers reach the document the model reads
 # --------------------------------------------------------------------------
-def check_ceilings_published(vocab_md=None, **_):
+def check_register_published(vocab_md=None, **_):
     """Read the REGISTER, then ask the DOCUMENT about what was found.
 
     Never a list of blocks, fields or numbers: this walks whatever the
-    register happens to carry, so a ninth block or a retuned ceiling needs no
-    edit here. What it defends is the half family 1 cannot see -- a generator
-    that stopped emitting a ceiling regenerates a document that agrees with
-    it perfectly, and both sides are then green about a number the model
-    never receives.
+    register happens to carry, so a ninth block, a new top-level key or a
+    retuned ceiling needs no edit here. What it defends is the half family 1
+    of the architecture gate cannot see -- a generator that stopped emitting a
+    ceiling regenerates a document that agrees with it perfectly, and both
+    sides are then green about a number the model never receives.
     """
     text = _doc(vocab_md)
     if vocab.BEGIN not in text or vocab.END not in text:
@@ -338,27 +340,43 @@ def check_ceilings_published(vocab_md=None, **_):
     missing = []
     for name, spec in REGISTER.items():
         mine = [r for r in rows if r.lstrip().startswith(f"| `{name}` |")]
-        cells = [{c.strip() for c in r.split("|")} for r in mine]
-        want = [f"`{k}` {v}" for k, v in spec["ceil"].items()]
-        for pair in want:
-            if not any(pair in r for r in mine):
-                missing.append(f"{name}: ceiling {pair}")
-        if not any(str(spec["zones"]) in c for c in cells):
+        # Split to WHOLE cells and whole `·`-separated entries, and compare by
+        # equality. A substring test would call `note` 180 published by a
+        # document that says `note` 1800 -- the one reading of the number that
+        # is worse than not publishing it at all.
+        cells, entries = set(), set()
+        for r in mine:
+            for cell in r.split("|"):
+                cells.add(cell.strip())
+                for entry in cell.split("·"):
+                    entries.add(entry.strip())
+        for k, v in spec["ceil"].items():
+            if f"`{k}` {v}" not in entries:
+                missing.append(f"{name}: ceiling `{k}` {v}")
+        if str(spec["zones"]) not in cells:
             missing.append(f"{name}: zones {spec['zones']}")
-        if spec.get("count") and not any(str(spec["count"]) in c
-                                         for c in cells):
+        if spec.get("count") and str(spec["count"]) not in cells:
             missing.append(f"{name}: count {spec['count']}")
     if f"{ZONE_PCT}%" not in body:
         missing.append(f"the reading zone itself ({ZONE_PCT}%), which is the "
                        f"ruler every ceiling above is measured against")
+    # The document's own top level. These four were the last names in the
+    # vocabulary written by hand beside the generated block, and therefore the
+    # only ones nothing compared against anything.
+    for k in list(DOCUMENT["fields"]) + list(DOCUMENT["opt"]):
+        if f'"{k}"' not in body:
+            missing.append(f"the top-level key {k}, which an argument.json "
+                           f"carries before any beat")
     if missing:
         return False, (f"the register publishes numbers the model never "
                        f"receives: {'; '.join(missing)} -- make vocab.py emit "
                        f"them, then run `python3 engine/vocab.py --write`")
     n = sum(len(s["ceil"]) for s in REGISTER.values())
-    return True, (f"every ceiling reaches the model: {n} over "
-                  f"{len(REGISTER)} blocks, plus the {ZONE_PCT}% zone they "
-                  f"are measured against")
+    keys = len(DOCUMENT["fields"]) + len(DOCUMENT["opt"])
+    return True, (f"every fact the register declares reaches the model: {n} "
+                  f"ceilings over {len(REGISTER)} blocks, the {ZONE_PCT}% "
+                  f"zone they are measured against, and the {keys} top-level "
+                  f"keys")
 
 
 FAMILIES = [
@@ -366,7 +384,7 @@ FAMILIES = [
     ("artifact-first", check_artifact_first),
     ("paths-exist", check_paths_exist),
     ("writes-outside", check_writes_outside),
-    ("ceilings-published", check_ceilings_published),
+    ("register-published", check_register_published),
 ]
 
 BY_NAME = dict(FAMILIES)

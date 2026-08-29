@@ -9,7 +9,7 @@ description: Gera uma apresentação HTML de arquivo único na identidade Panlab
 
 A fronteira não é disciplina, é gramática: o modelo escreve **um arquivo de dado**, `argument.json`, e não existe nele onde escrever uma coordenada, uma classe de CSS, uma cor ou um número de ordem. O motor (`engine/skeleton.html`) já existe, é **copiado byte a byte** para dentro do resultado, e o construtor preenche quatro furos nele.
 
-A razão é medida, não estética. Escrever o markup das seções à mão custa **49 nomes de classe** distintos — não é um contrato, é um segundo framework de CSS para o modelo decorar. Em vez disso o modelo escolhe entre **4 tipos de `beat`** e **8 tipos de `block`**, e o construtor recusa o resto com uma mensagem que nomeia o próprio conserto.
+A razão é medida, não estética. Escrever o markup das seções à mão custa **49 nomes de classe** distintos — não é um contrato, é um segundo framework de CSS para o modelo decorar. Em vez disso o modelo escolhe um `beat` e um `block` de duas listas fechadas e curtas, e o construtor recusa o resto com uma mensagem que nomeia o próprio conserto. **Quantos são e como se chamam não está escrito aqui**, de propósito: está em [`VOCABULARY.md`](VOCABULARY.md), gerado do registro, onde não pode divergir do motor.
 
 O que sai é **um `.html` de arquivo único que abre offline**: as fontes viajam dentro dele em `data:` URI, o CSS e o JS são inline, e não existe uma única referência externa. Ele rola — não há página, não há «próximo», existe mais texto abaixo —, com um desenho grudado no topo que muda conforme o texto passa.
 
@@ -33,7 +33,7 @@ Três turnos: **rascunho, rodada, ajuste** — e o primeiro é o que **aparece n
 |---|---|
 | prosa, documento, ata, relatório, anotação | nada — é este turno |
 | um `argument.json` de uma sessão anterior | construa direto, e **pare**: a jornada acabou |
-| só um pedido, sem material nenhum (*«faça uma apresentação»*) | construa `examples/argument.json`, **mostre a forma**, e peça o material apontando para ela |
+| só um pedido, sem material nenhum (*«faça uma apresentação»*) | `python3 engine/build.py examples/argument.json /tmp/exemplo.html` — **mostre a forma** e peça o material apontando para ela |
 
 **Escreva o argumento.** Ele é uma coluna que desce: um `frame` abre, cada `claim` carrega uma afirmação, um `block` traz a evidência que sustenta a afirmação anterior, e um `ask` fecha pedindo alguma coisa. **Uma seção, no máximo um bloco** — a prosa de um `claim` sozinha já enche a zona de leitura, e afirmação sem bloco continua legítima. O vocabulário inteiro, campo a campo e teto a teto, está em [`VOCABULARY.md`](VOCABULARY.md); a forma de cada `items` está em [`examples/argument.json`](examples/argument.json), que é um argumento completo de treze batidas com os oito blocos.
 
@@ -48,6 +48,8 @@ python3 engine/build.py /tmp/proposta.argument.json /tmp/proposta.html
 O construtor **valida antes de escrever**, e recusa com uma mensagem que nomeia o próprio conserto — `REFUSED · beat 7: lit 4 has nothing to light — the figure in force here has 3 lightable part(s)`. Recusa é ida e volta de máquina: conserte o argumento e rode de novo, sem trazer isso para o humano.
 
 **Nunca invente um fato em silêncio.** Faltou um número, uma data, um nome? Ou ele vira **chute declarado** — você desenha com ele e diz, neste turno, qual foi e de onde saiu — ou o material inteiro está faltando, e aí é a terceira linha da tabela acima. Nas duas saídas alguma coisa aparece na tela antes de qualquer pergunta.
+
+**Abra o arquivo e olhe antes de entregar.** O construtor aceitar não quer dizer que a página está certa: o corpus desta família tem caso de checagem verde com o desenho errado na tela.
 
 **Fecha quando** o `.html` existe e você entregou, no mesmo turno: o caminho do arquivo, os chutes que declarou, e o que ficou de fora por falta de material.
 
@@ -87,7 +89,7 @@ Recusa alto em vez de desenhar errado, e toda recusa nomeia o próprio conserto.
 |---|---|
 | `beat` ou `block` com nome que não existe | o vocabulário é fechado, e a mensagem lista os que existem |
 | campo obrigatório faltando, ou chave desconhecida | o contrato é o contrato — a mensagem lista as chaves conhecidas |
-| qualquer tag que não `<b>`, ou `style=` / `class=` em texto | geometria não atravessa esta costura; `<span style=…>` é geometria vestida de prosa |
+| tag fora do markup em linha que o `VOCABULARY.md` publica, ou `style=` / `class=` em texto | geometria não atravessa esta costura; `<span style=…>` é geometria vestida de prosa |
 | `lit` apontando para parte que a figura em vigor não tem | o índice era legal acima da troca de figura e deixou de ser abaixo dela — a página mentiria em silêncio |
 | bloco sem partes acendíveis usado como `figure` | a faixa desenharia algo que nenhuma batida consegue acender |
 | figura que nenhuma batida chega a olhar | são bytes na faixa que nunca pintam, e nada na tela mostraria isso |
@@ -114,13 +116,13 @@ Quatro `.woff2` em [`assets/fonts/`](assets/fonts/), todas sob SIL Open Font Lic
 bash tools/install.sh
 ```
 
-Expõe a skill nos dois caminhos que a casa usa — `~/.agents/skills/<nome>` apontando para o repositório, e `~/.claude/skills/<nome>` apontando para o primeiro —, e no fim **roda um comando da skill a partir de cada um**, que é o que prova que ela funciona instalada e não só aqui. `--check` confere sem escrever nada; `--force` substitui um diretório de verdade.
+Expõe a skill nos dois caminhos que a casa usa — `~/.agents/skills/<nome>` apontando para o repositório, e `~/.claude/skills/<nome>` apontando para o primeiro —, e no fim **roda um comando da skill a partir de cada um**, que é o que prova que ela funciona instalada e não só aqui. `--check` confere e não escreve link nenhum; `--force` substitui um diretório de verdade.
 
 Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no repositório, em vez de uma fotografia dela que envelhece em silêncio. E o link **nunca aponta para um worktree** — worktree é apagado junto com a sessão que o criou, e o que sobra é um link quebrado sem nada avisando, com a skill sumindo do harness. Rodando de dentro de um, o instalador resolve o checkout principal e aponta para lá, dizendo em voz alta que fez isso.
 
 ## A régua
 
-A suíte que mede este motor **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, em seis camadas — as réguas provando que sabem ficar vermelhas, o esqueleto congelado, as seis famílias da arquitetura, as nove do portão estático, as dez do portão de render sobre um Chromium de verdade, e as dez da porta de entrada, que medem este documento e a instalação. O que a skill publica não carrega o peso de nada disso.
+A suíte que mede este motor **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, em seis camadas — as réguas provando que sabem ficar vermelhas, o esqueleto congelado, as seis famílias da arquitetura, as nove do portão estático, as dez do portão de render sobre um Chromium de verdade, e as onze da porta de entrada, que medem este documento e a instalação. O que a skill publica não carrega o peso de nada disso.
 
 Uma suíte verde não substitui abrir o `.html` e olhar: o corpus desta família tem caso de checagem estática verde com o desenho errado na tela.
 

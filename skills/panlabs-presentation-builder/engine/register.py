@@ -111,6 +111,27 @@ REGISTER = {
                     ceil=dict(label=8, note=160), lit=True, zones=1),
 }
 
+# The document's own top level: the keys an `argument.json` carries before any
+# beat. It is here, and not spelled out beside the generated block in
+# `VOCABULARY.md`, because that is exactly where it WAS -- four field names
+# hand-written next to a generated table, which is the shape drift starts in.
+# `build.py` validates from this and `vocab.py` renders from it, so the two
+# ends read the same fact.
+#
+# The gloss is Portuguese because it is CONTENT, not code: it is emitted into
+# a document the model reads, the same way every prose string in `vocab.py`
+# is. It travels with the name rather than in the generator, so that adding a
+# key cannot leave a name published with nothing said about it.
+DOCUMENT = dict(
+    fields=("title", "occasion", "beats"),
+    opt=("figure",),
+    shape=dict(title='"…"', occasion='"…"', figure="{ … }", beats="[ … ]"),
+    about=dict(title="o que vai no <title> do documento",
+               occasion="a linha de rodapé",
+               figure="um bloco, grudado no topo",
+               beats="o argumento, de cima a baixo"),
+)
+
 # The beat register. A beat is one stretch of the reading column, and it is
 # the ONLY structural unit the model writes. It is not a page: nothing in the
 # rendered document draws a boundary at a beat, and its ordinal is derived by

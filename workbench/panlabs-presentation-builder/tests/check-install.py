@@ -195,12 +195,77 @@ def check_refuses_orphan(root=None, **_):
                   "with nothing written")
 
 
+def _git(cwd, *args):
+    return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
+                          text=True, timeout=60,
+                          env=dict(os.environ,
+                                   GIT_AUTHOR_NAME="p", GIT_AUTHOR_EMAIL="p@p",
+                                   GIT_COMMITTER_NAME="p",
+                                   GIT_COMMITTER_EMAIL="p@p"))
+
+
+def check_detects_real_worktree(root=None, **_):
+    """A worktree that lives NOWHERE NEAR `.claude/worktrees/`.
+
+    `git worktree add /anywhere/else` is a worktree by every property that
+    matters here -- deleted independently, its path gone afterwards -- and it
+    matches no substring. Only asking git what the tree IS can see it, so this
+    family stages a real repository with a real linked worktree, puts a copy
+    of the skill in both, and installs from the WORKTREE one. The links must
+    come out pointing at the main checkout's copy.
+
+    Without it the path test could be the only guard and every family here
+    would still be green, which is the shape of a rule nobody has measured.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = pathlib.Path(tmp)
+        repo, wt, home = tmp / "repo", tmp / "elsewhere", tmp / "home"
+        repo.mkdir()
+        home.mkdir()
+        _git(repo, "init", "-q", "-b", "main")
+        (repo / "seed").write_text("x", encoding="utf-8")
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-qm", "seed")
+        r = _git(repo, "worktree", "add", "-q", "-b", "wt", str(wt))
+        if not wt.exists():
+            return False, (f"could not stage a real git worktree, so this "
+                           f"family measured nothing: "
+                           f"{(r.stderr or r.stdout).strip()} -- install git, "
+                           f"or run this suite where `git worktree` works")
+        # The same skill in both trees, so the only thing distinguishing the
+        # right answer from the wrong one is WHICH copy the links resolve to.
+        for tree in (repo, wt):
+            (tree / "skills").mkdir(exist_ok=True)
+            shutil.copytree(SKILL, tree / "skills" / NAME,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        if root is not None:
+            shutil.copy2(pathlib.Path(root) / "tools/install.sh",
+                         wt / "skills" / NAME / "tools/install.sh")
+        out = install(wt / "skills" / NAME, home)
+        landed = {str(p.resolve()) for p in links(home) if p.is_symlink()}
+        want = str((repo / "skills" / NAME).resolve())
+        if landed == {want}:
+            return True, ("a worktree outside .claude/worktrees/ is still "
+                          "recognised, and the links went to the main "
+                          "checkout")
+        if not landed:
+            return True, ("a worktree outside .claude/worktrees/ is refused "
+                          "outright, with nothing written")
+        return False, (f"installed from a real worktree at {wt} and the links "
+                       f"went to {', '.join(sorted(landed))} instead of "
+                       f"{want} -- ask git what the tree is (`--git-dir` "
+                       f"against `--git-common-dir`) instead of reading the "
+                       f"path, because a worktree can live anywhere. "
+                       f"{out.stdout.strip().splitlines()[-1] if out.stdout.strip() else ''}")
+
+
 FAMILIES = [
     ("both-links", check_both_links),
     ("link-shape", check_link_shape),
     ("not-a-worktree", check_not_a_worktree),
     ("runs-from-both", check_runs_from_both),
     ("refuses-orphan", check_refuses_orphan),
+    ("detects-real-worktree", check_detects_real_worktree),
 ]
 
 BY_NAME = dict(FAMILIES)
@@ -215,7 +280,7 @@ def run(quiet=False, **over):
             ok, msg = False, f"{type(e).__name__}: {e}"
         bad += not ok
         if not quiet:
-            print(f"  {'ok  ' if ok else 'FAIL'} {name:<19} {msg}")
+            print(f"  {'ok  ' if ok else 'FAIL'} {name:<21} {msg}")
     return bad
 
 

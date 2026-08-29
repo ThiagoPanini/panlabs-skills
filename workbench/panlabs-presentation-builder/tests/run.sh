@@ -47,7 +47,7 @@
 #                                      bytes layer 1 wrote. Degrades to a
 #                                      named SKIP (not a red) where no
 #                                      Chromium is on the machine running it.
-#   5  THE FRONT DOOR                   the five journey families and the five
+#   5  THE FRONT DOOR                  the five journey families and the six
 #                                      install families of #158 — the two
 #                                      things a HUMAN touches, measured last
 #                                      because a front door onto a broken
@@ -203,7 +203,7 @@ echo "════ layer 5 · the front door ════"
 # that exact surprise being discovered the hard way.
 step "the five journey families each go red on a planted defect"  python3 "$HERE/check-journey.proof.py"
 step "the front door holds (#158)"  python3 "$HERE/check-journey.py"
-step "the five install families each go red on a planted defect"  python3 "$HERE/check-install.proof.py"
+step "the six install families each go red on a planted defect"  python3 "$HERE/check-install.proof.py"
 step "the installation holds (#158)"  python3 "$HERE/check-install.py"
 
 echo

@@ -41,13 +41,13 @@ VOCAB = check.DOC.read_text(encoding="utf-8") if check.DOC.exists() else None
 def _front():
     if FRONT is None:
         raise Drifted(f"{check.FRONT.name} is not on disk, so there is "
-                      f"nothing to mutate — restore it and run this again")
+                      f"nothing to mutate -- restore it and run this again")
     return FRONT
 
 
 def _vocab():
     if VOCAB is None:
-        raise Drifted(f"{check.DOC.name} is not on disk — run "
+        raise Drifted(f"{check.DOC.name} is not on disk -- run "
                       f"`python3 engine/vocab.py --write`")
     return VOCAB
 
@@ -85,7 +85,7 @@ def plant_turn_never_closes():
     md = _front()
     if "**Fecha quando**" not in md:
         raise Drifted("no turn says when it closes, so removing one changes "
-                      "nothing — the document is already red")
+                      "nothing -- the document is already red")
     return dict(skill_md=md.replace("**Fecha quando**", "**Talvez feche "
                                     "quando**", 1))
 
@@ -93,26 +93,26 @@ def plant_turn_never_closes():
 # --------------------------------------------------------------------------
 # 2 - the artifact comes before the questions
 # --------------------------------------------------------------------------
-def _cut_build_fence(md):
-    """(the fence that builds, the document without it) -- by scanning, not by
-    matching the document's exact wording, so a reworded command still moves."""
+def _without_builds(md):
+    """Every line naming the builder, gone.
+
+    EVERY line, and not just the fenced one. An earlier version cut only the
+    fence, and the day the document grew a second build -- an inline span in
+    the door table -- the plant stopped planting: turn 1 still built, the
+    family stayed green, and the case reported a rule it was no longer
+    testing. Being blunt here is the point; the family cares about whether ANY
+    command in turn 1 builds, so the plant has to leave none.
+    """
     lines = md.split("\n")
-    open_ = None
-    for i, line in enumerate(lines):
-        if re.match(r"\s*```", line):
-            if open_ is None:
-                open_ = i
-            else:
-                if check.BUILDER in "\n".join(lines[open_ + 1:i]):
-                    return lines[open_:i + 1], lines[:open_] + lines[i + 1:]
-                open_ = None
-    raise Drifted(f"no fenced command runs {check.BUILDER}, so there is no "
-                  f"build to move — the document is already red")
+    rest = [l for l in lines if check.BUILDER not in l]
+    if len(rest) == len(lines):
+        raise Drifted(f"no line names {check.BUILDER}, so there is no build "
+                      f"to remove -- the document is already red")
+    return rest
 
 
 def plant_no_build_at_all():
-    _, rest = _cut_build_fence(_front())
-    return dict(skill_md="\n".join(rest))
+    return dict(skill_md="\n".join(_without_builds(_front())))
 
 
 def plant_build_behind_the_questions():
@@ -122,12 +122,13 @@ def plant_build_behind_the_questions():
     forgot to document the build, the other put a round of questions in front
     of it, which is the premise this whole journey is shaped by.
     """
-    block, rest = _cut_build_fence(_front())
+    rest = _without_builds(_front())
     heads = [i for i, l in enumerate(rest) if l.startswith("### ")]
     if len(heads) < 2:
         raise Drifted("there is no later turn to move the build into")
     at = heads[-1] + 1
-    return dict(skill_md="\n".join(rest[:at] + [""] + block + rest[at:]))
+    moved = fence(f"python3 engine/{check.BUILDER} /tmp/a.json /tmp/b.html")
+    return dict(skill_md="\n".join(rest[:at] + [moved] + rest[at:]))
 
 
 # --------------------------------------------------------------------------
@@ -189,7 +190,7 @@ def _drop_from_vocab(needle):
     md = _vocab()
     if needle not in md:
         raise Drifted(f"{needle!r} is not in {check.DOC.name}, so removing it "
-                      f"changes nothing — the document is already red")
+                      f"changes nothing -- the document is already red")
     return dict(vocab_md=md.replace(needle, "—", 1))
 
 
@@ -204,6 +205,17 @@ def plant_ceiling_dropped():
 
 def plant_zone_dropped():
     return _drop_from_vocab(f"{check.ZONE_PCT}%")
+
+
+def plant_top_level_key_dropped():
+    """A key an `argument.json` carries stops being published.
+
+    These four used to be hand-written above the generated block, which is
+    exactly why they are the case worth keeping: they were the last names in
+    the vocabulary that nothing compared against anything.
+    """
+    k = check.DOCUMENT["fields"][0]
+    return _drop_from_vocab(f'"{k}"')
 
 
 CASES = [
@@ -229,10 +241,12 @@ CASES = [
      "send it to /tmp/"),
     ("writes-outside", "a documented command regenerating a tracked document",
      plant_regenerating_write, "send it to /tmp/"),
-    ("ceilings-published", "one ceiling stops being published",
+    ("register-published", "one ceiling stops being published",
      plant_ceiling_dropped, "make vocab.py emit"),
-    ("ceilings-published", "the reading zone stops being published",
+    ("register-published", "the reading zone stops being published",
      plant_zone_dropped, "make vocab.py emit"),
+    ("register-published", "a top-level key stops being published",
+     plant_top_level_key_dropped, "make vocab.py emit"),
 ]
 
 
@@ -248,19 +262,22 @@ PROOF = Proof(
 
 def main():
     if FRONT is None:
-        return PROOF.refuse(f"{check.FRONT} is not there — every case below "
+        return PROOF.refuse(f"{check.FRONT} is not there -- every case below "
                             f"mutates it, and there is nothing to mutate")
     failed = PROOF.run(CASES)
 
     # A family nobody plants against is a family nobody has ever seen fail.
+    # Worded and shaped exactly like the three proofs that came before this
+    # one: a fourth phrasing of the same verdict is the drift `proof_driver`
+    # was extracted to stop, one floor up.
     unplanted = [n for n, _ in check.FAMILIES
                  if not any(c[0] == n for c in CASES)]
     if unplanted:
-        print(f"  FAIL {'coverage':<19} never planted against: "
+        print(f"  FAIL coverage            no defect planted for: "
               f"{', '.join(unplanted)} -- add a case, or drop the family")
     else:
-        print(f"  ok   {'coverage':<19} {len(CASES)} planted defects over all "
-              f"{len(check.FAMILIES)} families")
+        print(f"  ok   coverage            {len(CASES)} planted defects over "
+              f"all {len(check.FAMILIES)} families")
     return failed + len(unplanted)
 
 

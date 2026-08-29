@@ -109,22 +109,40 @@ module.exports = function a2(scene) {
 
   // ---------------------------------------------------------------- A2.5
   {
-    const byClass = new Map();
-    for (const e of nodes) {
-      const cls = e.semanticKind || 'unknown';
-      if (!byClass.has(cls)) byClass.set(cls, []);
-      byClass.get(cls).push(e);
+    // `cellBox.w` stopped being a stand-in for the icon's width the moment
+    // #33 landed: the leaf box now widens to fit the label
+    // (`engine/resolve.cjs`'s `boxW = max(shapeW, labelW)`), so two nodes of
+    // the same class with differently-sized labels get differently-sized
+    // boxes ON PURPOSE. The icon's own width doesn't move with the label —
+    // it lives in the catalog record the model's `service` key resolves to,
+    // the same lookup A2.3 already does.
+    if (!nodes.length) output.push(notApplicable('A2.5', 'the diagram has no nodes'));
+    else if (!cat) output.push(notApplicable('A2.5', 'the shape catalog is not available'));
+    else if (!scene.model) output.push(notApplicable('A2.5', 'the plan does not carry the model, so there is no way to know which service each node asked for'));
+    else {
+      const byModelId = new Map((scene.model.nodes || []).map(n => [n.id, n]));
+      const byClass = new Map();
+      for (const e of nodes) {
+        const m = byModelId.get(e.id);
+        const key = m && (m.service || (m.kind === 'actor' ? 'users' : null));
+        if (!key) continue;
+        const official = cat.service(key);
+        if (!official) continue;
+        const cls = e.semanticKind || 'unknown';
+        if (!byClass.has(cls)) byClass.set(cls, []);
+        byClass.get(cls).push({ id: e.id, w: official.w || 78 });
+      }
+      const cases = [];
+      for (const [cls, list] of byClass) {
+        if (list.length < 2) continue;
+        const widths = list.map(x => x.w);
+        const ratio = Math.max(...widths) / Math.min(...widths);
+        if (ratio !== 1)
+          cases.push({ o_que: `class "${cls}" uses icons from ${Math.min(...widths)} to ${Math.max(...widths)} px (ratio ${roundTo(ratio, 2)})`, ids: list.map(x => x.id) });
+      }
+      output.push(byClass.size ? matches('A2.5', cases, { measured: { classes: byClass.size, irregular: cases.length } })
+        : notApplicable('A2.5', 'no node resolves to a catalog icon, so there is no icon geometry to compare'));
     }
-    const cases = [];
-    for (const [cls, list] of byClass) {
-      if (list.length < 2) continue;
-      const widths = list.map(e => e.cellBox.w);
-      const ratio = Math.max(...widths) / Math.min(...widths);
-      if (ratio !== 1)
-        cases.push({ o_que: `class "${cls}" uses widths from ${Math.min(...widths)} to ${Math.max(...widths)} px (ratio ${roundTo(ratio, 2)})`, ids: list.map(e => e.id) });
-    }
-    output.push(byClass.size ? matches('A2.5', cases, { measured: { classes: byClass.size, irregular: cases.length } })
-      : notApplicable('A2.5', 'the diagram has no nodes'));
   }
 
   // ---------------------------------------------------------------- A2.6

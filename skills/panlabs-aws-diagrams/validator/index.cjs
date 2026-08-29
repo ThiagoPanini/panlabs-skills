@@ -165,8 +165,8 @@ const CHECKS = [
     fonte: 'AWS Architecture Icons ("check that you\'re using up-to-date icons"; quarterly releases)',
   },
   {
-    id: 'A2.5', family: 'A2', name: 'Icon size uniform per class', severity: 'fail', input: 'geometry',
-    mede: 'within each node class, max(width)/min(width) == 1',
+    id: 'A2.5', family: 'A2', name: 'Icon size uniform per class', severity: 'fail', input: 'catalog',
+    mede: 'within each node class, max(icon width)/min(icon width) == 1 — the catalog\'s declared size, not the label-widened box',
     limiar: { descricao: 'ratio == 1 within the class' },
     fonte: 'Azure WAF ("Use standardized ... icons, icon sizes ... for similar elements")',
   },

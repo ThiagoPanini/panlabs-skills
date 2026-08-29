@@ -352,6 +352,22 @@ const CASES = [
       { id: 'lojas', kind: 'actor', service: 'users' },
     ])),
   },
+
+  {
+    name: 'two same-class icons boxed to the same width, catalog says the icons differ',
+    because: 'the boxes are drawn IDENTICAL — 130px, as if two labels happened to measure the same. A check ' +
+      'reading `cellBox.w` would call this uniform and stay quiet. The catalog does not agree: Lambda\'s icon ' +
+      'is 78px wide and Credentials\' is 56 — a real A2.5 violation that only shows up once the check reads the ' +
+      'icon it is named after instead of the label-widened box around it (#166)',
+    expect: ['A2.5'],
+    ...build('a2.5', [
+      v('wide-icon', '1', 60, 100, 130, 78, icon()),
+      v('narrow-icon', '1', 300, 100, 130, 78, icon('#232F3D', 'credentials')),
+    ], mod([
+      { id: 'wide-icon', kind: 'service', service: 'lambda' },
+      { id: 'narrow-icon', kind: 'service', service: 'credentials' },
+    ])),
+  },
 ];
 
 /**
@@ -378,4 +394,4 @@ const CONTROL = build('control', [
   { id: 'external', kind: 'service', service: 'vpc_endpoints', inside: 'cloud', qualifier: 'acesso privado ao S3' },
 ], { edges: [{ from: 'app', to: 'db', label: 'query', protocol: 'sql' }] }), 900, 560);
 
-module.exports = { CASES, CONTROL };
+module.exports = { CASES, CONTROL, build, v, icon, mod };

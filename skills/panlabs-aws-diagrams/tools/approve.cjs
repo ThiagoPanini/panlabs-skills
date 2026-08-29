@@ -35,6 +35,7 @@ const ROOT = path.join(__dirname, '..');
 const { validate } = require(path.join(ROOT, 'session', 'validate.cjs'));
 const { approve, check } = require(path.join(ROOT, 'session', 'agreement.cjs'));
 const { draw } = require(path.join(ROOT, 'session', 'draw.cjs'));
+const { resolveRoot } = require(path.join(ROOT, 'tools', 'case.cjs'));
 
 const HELP = `
   node tools/approve.cjs <logical-session.json> [options]
@@ -43,7 +44,8 @@ const HELP = `
     --candidate <id>       which candidate won      (default: the one with state "chosen",
                            or the dossier's only one)
     --at <YYYY-MM-DD>      agreement date           (default: today)
-    --output <x.drawio>    where to write           (default: output/<model-id>.drawio)
+    --output <x.drawio>    where to write           (default: <repo-root>/output/<model-id>.drawio,
+                                                      never inside this skill's own tree)
 
   With no argument at all, runs the shipped example (examples/session/retail-logical.json).
 `;
@@ -134,7 +136,18 @@ async function main() {
   for (const a of r.report.warnings) console.log(`  ⚠ ${a}`);
   console.log(`  draw        path="${r.path}" · ${r.model.nodes.length} nodes projected`);
 
-  const output = opts.output || path.join(ROOT, 'output', `${session.id}.drawio`);
+  // #160 — the default used to fall back to `ROOT` (this skill's own tree),
+  // exactly the defect `case.cjs`'s `resolveRoot` exists to stop repeating.
+  // Only resolved when `--output` was not given: an explicit path has no use
+  // for the repo root, and asking `git` for it here would risk a warning
+  // that means nothing to a caller who already said where to write.
+  let output = opts.output;
+  if (!output) {
+    const { root, inRepo } = resolveRoot(process.cwd());
+    if (!inRepo)
+      console.log('  ⚠ not inside a git repository — writing to the current directory instead of a repo root');
+    output = path.join(root, 'output', `${session.id}.drawio`);
+  }
   fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
   fs.writeFileSync(output, r.xml);
   console.log(`\n  → ${path.relative(process.cwd(), output)}  (${r.xml.length} bytes, 1 page)`);

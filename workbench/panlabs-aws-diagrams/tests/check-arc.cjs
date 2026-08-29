@@ -45,9 +45,11 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams');
 const WORKBENCH = path.join(__dirname, '..');
+const APPROVE_CLI = path.join(ROOT, 'tools', 'approve.cjs');
 const { validate } = require(path.join(ROOT, 'session', 'validate.cjs'));
 const { approve, check } = require(path.join(ROOT, 'session', 'agreement.cjs'));
 const { draw } = require(path.join(ROOT, 'session', 'draw.cjs'));
@@ -175,6 +177,40 @@ const PUBLISHED = path.join(OUTPUT_DIR, 'predictive-fleet.published.drawio');
 
     const semanticFailures = r.report.geometry.reduce((s, x) => s + x.report.semantic.length, 0);
     record(semanticFailures === 0, 'the logical view has no semantic failure', `${semanticFailures} semantic`);
+  }
+
+  // ──────── `approve.cjs` without `--output` never writes inside the skill's own tree (#160)
+  console.log('\nthe output default resolves to the caller\'s repo root, never this skill\'s own tree (#160)\n');
+  {
+    // A NESTED working directory on purpose — same proof `check-case.cjs`
+    // already runs for `case.cjs`: it is what shows the resolution walks up
+    // to the repo root instead of trusting `cwd` directly.
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'approve-repo-'));
+    spawnSync('git', ['init', '-q'], { cwd: repo });
+    const nested = path.join(repo, 'some', 'nested', 'place');
+    fs.mkdirSync(nested, { recursive: true });
+    const drawioAt = path.join(repo, 'output', `${session.id}.drawio`);
+    const r1 = spawnSync('node', [APPROVE_CLI, LOGICAL, '--by', 'operations leadership', '--at', '2026-08-23'],
+      { cwd: nested, encoding: 'utf8' });
+    record(r1.status === 0, 'CLI inside a git repo: exits 0', r1.stderr || '');
+    record(fs.existsSync(drawioAt), 'CLI inside a git repo: the file is born at the repo root', drawioAt);
+    record(!path.resolve(drawioAt).startsWith(ROOT + path.sep),
+      'CLI inside a git repo: nothing landed inside the skill\'s own tree');
+
+    // outside a git repo: falls back to the current directory, and SAYS so
+    const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'approve-bare-'));
+    const r2 = spawnSync('node', [APPROVE_CLI, LOGICAL, '--by', 'operations leadership', '--at', '2026-08-23'],
+      { cwd: bare, encoding: 'utf8' });
+    record(r2.status === 0, 'CLI outside a git repo: exits 0', r2.stderr || '');
+    record(/not inside a git repository/.test(r2.stdout), 'CLI outside a git repo: warns explicitly');
+    record(fs.existsSync(path.join(bare, 'output', `${session.id}.drawio`)),
+      'CLI outside a git repo: still writes output/<model-id>.drawio, at the fallback directory');
+
+    // the control: BOTH runs above default to `<root>/output/<session.id>.drawio`
+    // — before #160, `<root>` was always this skill's own tree regardless of
+    // `cwd`, so this exact file is where the old bug would have landed.
+    record(!fs.existsSync(path.join(ROOT, 'output', `${session.id}.drawio`)),
+      'CONTROL: neither run above left its file inside the skill\'s own tree');
   }
 
   // ───────────────── step 6 · the technical view, and the projection survives the network level

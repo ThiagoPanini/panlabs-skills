@@ -47,6 +47,13 @@
 #                                      bytes layer 1 wrote. Degrades to a
 #                                      named SKIP (not a red) where no
 #                                      Chromium is on the machine running it.
+#   5  THE FRONT DOOR                   the five journey families and the five
+#                                      install families of #158 — the two
+#                                      things a HUMAN touches, measured last
+#                                      because a front door onto a broken
+#                                      engine is a document about nothing.
+#                                      Reads documents and a scratch HOME, not
+#                                      the corpus.
 #
 # ⚠️ THIS FILE IS A REGISTRY, AND REGISTRIES HERE ARE APPEND-ONLY
 # (CLAUDE.md § Registro é append-only). #156 (the static gate, nine families)
@@ -179,6 +186,25 @@ echo "════ layer 4 · the render gate ════"
 # alongside every `.py` one rather than a subprocess wrapper around either.
 step "the ten families each go red on a planted defect"  node "$HERE/check-render.proof.cjs" --corpus "$OUTPUT_DIR"
 step "the ten families hold (#157)"  node "$HERE/check-render.cjs" --corpus "$OUTPUT_DIR"
+
+echo
+echo "════ layer 5 · the front door ════"
+# The only layer that reads no corpus: its subjects are `SKILL.md`, the
+# generated vocabulary, and the two links an installation leaves on a machine.
+# It runs LAST because every one of its verdicts is about a door onto the
+# engine the four layers above just measured — a journey documenting a build
+# that does not work is a red worth having in the order that says so.
+#
+# ⚠️ THE INSTALL FAMILIES NEVER TOUCH THE REAL `~/.claude/skills/`. They stage
+# a copy of the skill and install it into a scratch `HOME`. With parallel
+# sessions the doctrine here, a suite that repointed the live skill homes
+# would hand every session running beside it a different skill for as long as
+# it ran — and `blind-run/` in the sibling workbench is the written record of
+# that exact surprise being discovered the hard way.
+step "the five journey families each go red on a planted defect"  python3 "$HERE/check-journey.proof.py"
+step "the front door holds (#158)"  python3 "$HERE/check-journey.py"
+step "the five install families each go red on a planted defect"  python3 "$HERE/check-install.proof.py"
+step "the installation holds (#158)"  python3 "$HERE/check-install.py"
 
 echo
 if [ "$failed" -ne 0 ]; then

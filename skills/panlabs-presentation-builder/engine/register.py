@@ -39,11 +39,19 @@ that decision, and only PART of them moved -- see the note under `ceil`.
 #               Only the two blocks whose count #117 published carry it.
 # `lit`      -- True when the block's parts carry `data-i` and can be lit by a
 #               beat, i.e. the block is eligible to be the pinned figure
+# `zones`    -- how many reading zones the block may occupy: #117's regime B,
+#               as a number instead of as a sentence. It is here for the same
+#               reason every other name is: #158 publishes the ceilings to the
+#               model, and a ceiling means nothing without the ruler it is
+#               measured against. Written in prose beside this dict it would
+#               be a second place the split is stated -- and the split is
+#               exactly the kind of fact that gets edited on one side only.
 #
-# `ceil` and `count` are DECLARATIVE: nothing in `build.py` refuses an argument
-# for going over one, exactly as in the prototype. Publishing them to the model
-# is #158's ticket -- its criterion names `tetos` -- and turning them into a
-# refusal is a gate decision, not a transport one.
+# `ceil`, `count` and `zones` are DECLARATIVE: nothing in `build.py` refuses an
+# argument for going over one, exactly as in the prototype. #158 PUBLISHES them
+# -- `vocab.py` emits every number below and the suite regenerates and demands
+# byte-identity, so a ceiling dropped from the prose is a red -- and turning one
+# into a refusal is a gate decision, not a transport one, still untaken.
 #
 # THE RULER IS REGIME B, and the mother rule of #98 is what makes a ceiling
 # safe to state as a number at all: going over one becomes ANOTHER BLOCK,
@@ -67,14 +75,21 @@ that decision, and only PART of them moved -- see the note under `ceil`.
 # format is for a shared screen in a small room, A if it projects. The
 # projector was never invoked, so B stands. If it rises, the regime B ceilings
 # are RE-MEASURED, not adjusted.
+
+# The reading zone, as a percentage of the window: `(vh - the figure's band)
+# - 2x the footer's veil`, measured by #98. It is the unit `zones` counts, and
+# a ceiling published without it is a number with no ruler beside it.
+ZONE_PCT = 34
+
 REGISTER = {
     "quote":   dict(css="b-quote", fields=("text", "src"), opt=("head",),
-                    ceil=dict(text=270, src=60), lit=False),
+                    ceil=dict(text=270, src=60), lit=False, zones=2),
     "list":    dict(css="b-list", fields=("icon", "items"), opt=("head",),
-                    ceil=dict(items=180), count=6, lit=True),
+                    ceil=dict(items=180), count=6, lit=True, zones=2),
     "number":  dict(css="b-num", fields=("num", "suf", "cap", "note"),
                     opt=("head",),
-                    ceil=dict(num=6, suf=10, cap=110, note=180), lit=False),
+                    ceil=dict(num=6, suf=10, cap=110, note=180), lit=False,
+                    zones=2),
     # The name is `parts` and the CSS root is `b-pieces`, and the difference
     # is deliberate. #117 renamed the block because the naming rule of #98 is
     # that a name says WHAT DATA the block is, never how it draws itself --
@@ -84,16 +99,16 @@ REGISTER = {
     # class too would mean editing the frozen skeleton for a name no reader of
     # the vocabulary ever sees. This field exists precisely so they may differ.
     "parts":   dict(css="b-pieces", fields=("items",), opt=("head",),
-                    ceil=dict(title=22, body=90), lit=True),
+                    ceil=dict(title=22, body=90), lit=True, zones=1),
     "steps":   dict(css="b-steps", fields=("items",), opt=("head",),
-                    ceil=dict(title=52, body=180), count=4, lit=True),
+                    ceil=dict(title=52, body=180), count=4, lit=True, zones=2),
     "table":   dict(css="b-tb", fields=("cols", "rows"),
                     opt=("head", "note", "hi"),
-                    ceil=dict(cell=34, note=160), lit=True),
+                    ceil=dict(cell=34, note=160), lit=True, zones=1),
     "metrics": dict(css="b-mx", fields=("items",), opt=("head",),
-                    ceil=dict(value=6, desc=44, sub=52), lit=True),
+                    ceil=dict(value=6, desc=44, sub=52), lit=True, zones=1),
     "chart":   dict(css="b-ch", fields=("rows",), opt=("head", "note", "unit"),
-                    ceil=dict(label=8, note=160), lit=True),
+                    ceil=dict(label=8, note=160), lit=True, zones=1),
 }
 
 # The beat register. A beat is one stretch of the reading column, and it is

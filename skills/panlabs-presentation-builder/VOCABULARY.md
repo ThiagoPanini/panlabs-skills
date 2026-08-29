@@ -37,6 +37,21 @@ O modelo escreve **um arquivo de dado**, `argument.json`. Ele não escreve HTML,
 | `metrics` | `items` | `head` | sim |
 | `chart` | `rows` | `head` · `note` · `unit` | sim |
 
+**Os tetos.** Um orçamento de caracteres por papel de texto, medido contra a **zona de leitura** — a altura da janela menos a faixa da figura e o véu do rodapé, ou **34%** dela. Estourar um teto vira **mais um `block`**, nunca texto compactado. O construtor **não recusa por teto**: quem reprova é a página, e é por isso que o número está publicado aqui em vez de descoberto lá.
+
+| `block` | itens | teto de caracteres | zonas |
+|---|---|---|---|
+| `quote` | — | `text` 270 · `src` 60 | 2 |
+| `list` | 6 | `items` 180 | 2 |
+| `number` | — | `num` 6 · `suf` 10 · `cap` 110 · `note` 180 | 2 |
+| `parts` | — | `title` 22 · `body` 90 | 1 |
+| `steps` | 4 | `title` 52 · `body` 180 | 2 |
+| `table` | — | `cell` 34 · `note` 160 | 1 |
+| `metrics` | — | `value` 6 · `desc` 44 · `sub` 52 | 1 |
+| `chart` | — | `label` 8 · `note` 160 | 1 |
+
+Quem cabe em **uma** zona é desenhado para ser visto inteiro de uma vez — ver inteiro é a razão de desenhá-lo, e o que não coube não vira letra menor. Quem pode correr **duas** é lido de cima para baixo, e rolar é o movimento deste formato.
+
 **Markup em linha permitido dentro de qualquer texto:** `<b>`. Qualquer outra tag, e qualquer `style=` ou `class=`, é recusada pelo construtor com mensagem que nomeia o próprio conserto.
 
 **`lit`:** qualquer `beat` pode trazer `lit`, uma lista de índices de 1 a N das partes do `figure`. É o único número que o modelo escreve, e o construtor recusa índice que não tem o que acender.

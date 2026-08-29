@@ -283,10 +283,27 @@ function elkPlan(model, d, res, layout, opts = {}) {
     const parentId = anc && d.t.byId.get(anc.id) && abs.has(anc.id) ? anc.id : '1';
     const base = parentId === '1' ? { x: 0, y: 0 } : abs.get(parentId);
     const fr = res.band(f);
+    const lane = calhaDaFaixa(fr.style);
     const x1 = Math.min(...members.map(m => m.x)) - 12;
     const x2 = Math.max(...members.map(m => m.x + m.w)) + 12;
-    const y1 = Math.min(...members.map(m => m.y)) - calhaDaFaixa(fr.style);
+    const y1 = Math.min(...members.map(m => m.y)) - lane;
     const y2 = Math.max(...members.map(m => m.y + m.h)) + 12 + (layout.rotuloMax || 0);
+
+    // #168 — ELK doesn't know the band exists, so nothing about its layout
+    // keeps a non-member out of the members' own union. The grid path faced
+    // the identical shape in #31 and the answer carries over unchanged: the
+    // box DEGRADES to the same loose-label device the OR band uses instead
+    // of asserting a containment the model doesn't declare.
+    if (swallowsNonMember(model, abs, f, x1, y1, x2, y2)) {
+      const text = f.label || '';
+      layoutPlan.cells.push({
+        kind: 'vertice', id: `${f.id}-degraded`, parent: parentId, label: text,
+        style: res.theme.faixaRotulo(),
+        geo: { x: x1 - base.x, y: y1 - base.y, w: Math.max(40, res.textWidth(text) + 8), h: lane },
+      });
+      continue;
+    }
+
     layoutPlan.cells.push({
       kind: 'vertice', id: f.id, parent: parentId, label: f.label || '', style: fr.style,
       geo: { x: x1 - base.x, y: y1 - base.y, w: x2 - x1, h: y2 - y1 },

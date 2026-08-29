@@ -210,38 +210,50 @@ step "the gate blocks what lies and fits in between"  node "$HERE/check-geometry
 step "the certified corpus (no open quarantine)"   node "$HERE/check-good.cjs"
 step "the #24 routing budget"           node "$HERE/check-routing.cjs"
 step "check-geometry.cjs accepts --theme (#33)"     node "$HERE/check-theme-geometry.cjs"
-# ⚠️ THE PROOF BODY CHANGED IN #24, and the reason is that the ticket succeeded.
+# ⚠️ THE PROOF BODY CHANGED IN #24, AND AGAIN IN #168 — same sentence twice.
 #
 # Up to here the gate was exercised against `web-flow-3-az`, which lied (`A5.5`
 # ×2, the #24 quarantine). It stopped lying — and a test whose subject is a
-# defect dies the day the defect is fixed. The subject becomes
-# `models/refusal/lying-band.json`, made TO lie and chosen for having
-# no routing fix: the band's box is the UNION of its members, so a
-# non-member laid out in the middle falls inside it by definition, and no
-# routing choice undoes that. A proof body that can't be fixed by accident.
+# defect dies the day the defect is fixed. The subject became
+# `models/refusal/lying-band.json`, made TO lie by a non-member the ELK path
+# laid out between two real members — chosen because no ROUTING choice could
+# undo it, the band's box being the UNION of its members by construction.
+#
+# #168 paid THAT debt too, but not through routing: `elkPlan` grew the same
+# swallow check `gridPlan` already had from #31, and the box DEGRADES to a
+# loose label instead of lying. `lying-band.json` no longer lies either — it
+# is now the #168 regression fixture, proving the ELK path degrades instead
+# of drawing the box that used to trigger F1.
 #
 # ⚠️ And `F1`/`F2` are OUTSIDE the 62 on purpose (#18), so this step alone
 # would not prove that a family FROM THE RUBRIC blocks. What proves that is the step above:
 # `check-geometry-gate.cjs` runs `A4.2`, `A4.4`, `A5.5`, `F1` and `F2` — the
 # FIVE zero-tolerance ones —, each against its planted case, and requires the
 # message to name the check. The split is: THERE the gate proves it blocks each
-# family; HERE the engine proves it calls the gate and obeys the level. There is no
-# model that triggers `A5.5` or `F2` end to end, because the engine produces neither.
+# family; HERE the engine proves it calls the gate and obeys the level — and as
+# of #168 there is no model left that triggers ANY zero-tolerance family end to
+# end (`A5.5` and `F2` already produced none before this; `F1` now joins them).
+# That absence is itself the measure of #168: the ELK path used to be the one
+# place a truthful model's OWN band could make the drawing lie, with nothing
+# reserving space for it the way the grid's lanes do — now nothing does.
 step "and the gate is GRAFTED into the engine"         bash -c '
   G="'"$SKILL"'/engine/generate.cjs"
   M="'"$WORKBENCH"'/models/refusal/lying-band.json"
-  if node "$G" "$M" --gate truthfulness --output /dev/null > /dev/null 2>&1; then
-    echo "   ✗ the engine DREW a plan that lies, with the gate requested"; exit 1
-  fi
-  echo "   ✓ --gate truthfulness refuses the lying drawing"
-  # and the control: the same level lets through one that does not lie
+  # #168: the band that used to lie now degrades — nothing left for
+  # "truthfulness" to refuse here (see check-geometry-gate.cjs for the
+  # per-family proof, unaffected: it exercises F1 against a planted scene).
+  node "$G" "$M" --gate truthfulness --output /dev/null > /dev/null 2>&1 \
+    && echo "   ✓ --gate truthfulness lets the degraded band through (#168)" \
+    || { echo "   ✗ the degraded band still gets refused — #168 regressed"; exit 1; }
+  # and the control: the same level lets through one that never lied
   node "$G" "'"$SKILL"'/examples/web-multi-az.json" --gate truthfulness --output /dev/null > /dev/null 2>&1 \
     && echo "   ✓ and lets through the one that does not lie" \
     || { echo "   ✗ refused a drawing that does not lie"; exit 1; }
-  # without a gate, the engine draws — but it WARNS
-  node "$G" "$M" --output /dev/null 2>&1 | grep -q "⛔ F1" \
-    && echo "   ✓ and without a gate it draws, but warns of the semantic failure" \
-    || { echo "   ✗ drew a lying plan silently"; exit 1; }'
+  # without a gate, the band still draws — as a label now, with no lie left to warn about
+  if node "$G" "$M" --output /dev/null 2>&1 | grep -q "⛔ F1"; then
+    echo "   ✗ the band still warns of a semantic lie — #168 regressed"; exit 1
+  fi
+  echo "   ✓ and without a gate it degrades quietly — there is no lie to warn about (#168)"'
 
 echo
 echo "════ layer 6 · the session ════"

@@ -9,7 +9,7 @@
  * contrast that's off by 5% passes a text the norm fails, and the diagram goes
  * to the slide wearing an "accessible" label it hasn't earned. That's why the
  * three computations here are checked against a published value in
- * `tests/check-primitives.cjs`.
+ * `workbench/panlabs-aws-diagrams/tests/check-primitives.cjs`.
  *
  * Two known traps, and why this module avoids them:
  *

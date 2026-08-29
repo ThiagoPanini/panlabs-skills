@@ -90,8 +90,47 @@ expect "a link shown inside a fenced code block is not a reference" green "" "$o
 out="$("$CHECK" --describe 2>&1)"; code=$?
 expect "--describe states the self-containment rule" green "path inside the skill" "$out" "$code"
 expect "--describe states the orphan rule" green "resolves to something that exists" "$out" "$code"
+expect "--describe states the second-sweep rule" green "repository root" "$out" "$code"
 
 out="$("$CHECK" 2>&1)"; code=$?
 expect "no argument is an error, not a pass" red "usage" "$out" "$code"
+
+# ── 8 . #161 . A COMMENT CITES A PATH THAT ONLY EXISTS FROM THE SKILL ROOT ────
+# The citing file lives in `nested/`; the target sits at the skill root, not
+# beside the caller and not under `nested/tools/` -- only the skill-root
+# anchor clears it.
+mkdir -p "$PROOF_BENCH/prose/nested" "$PROOF_BENCH/prose/tools"
+printf -- '// see tools/helper.cjs\n' > "$PROOF_BENCH/prose/nested/caller.cjs"
+: > "$PROOF_BENCH/prose/tools/helper.cjs"
+out="$("$CHECK" "$PROOF_BENCH/prose" 2>&1)"; code=$?
+expect "a bare comment citation resolving from the skill root, not the caller's own directory, passes" green "" "$out" "$code"
+
+# ── 9 . #161 . SELF-CONTAINMENT IS NOT ENFORCED ON THE SECOND SWEEP ──────────
+# `measure.cjs` sits under a sibling `workbench/`, outside the skill root
+# entirely -- reachable only through the repository-root anchor. A markdown
+# link doing this would fail case 2's rule; a bare comment citation does not,
+# on purpose.
+mkdir -p "$PROOF_BENCH/devtool/skills/demo" "$PROOF_BENCH/devtool/workbench/demo"
+printf -- '// measured in workbench/demo/measure.cjs\n' > "$PROOF_BENCH/devtool/skills/demo/engine.cjs"
+: > "$PROOF_BENCH/devtool/workbench/demo/measure.cjs"
+out="$("$CHECK" "$PROOF_BENCH/devtool/skills/demo" 2>&1)"; code=$?
+expect "a comment citing dev tooling outside the skill, reachable from the repository root, passes" green "" "$out" "$code"
+
+# ── 10 . #161 . NOTHING RESOLVES, UNDER ANY OF THE THREE ANCHORS ─────────────
+mkdir -p "$PROOF_BENCH/dead"
+printf -- '{"description": "see tools/gone.cjs"}\n' > "$PROOF_BENCH/dead/schema.json"
+out="$("$CHECK" "$PROOF_BENCH/dead" 2>&1)"; code=$?
+expect "a description citing a path that resolves nowhere turns red" red "does not resolve" "$out" "$code"
+
+# ── 11 . #161 . A SAME-DIRECTORY SELF-REFERENCE IN A BLOCK COMMENT ───────────
+# `require('./sibling.cjs')` inside a JSDoc block, exactly as
+# `catalog/aws-shapes.cjs` writes its own example -- correct only relative to
+# the caller's own directory, which is neither the skill root nor the
+# repository root here.
+mkdir -p "$PROOF_BENCH/selfref/catalog"
+printf -- "/** const c = require('./sibling.cjs') */\n" > "$PROOF_BENCH/selfref/catalog/main.cjs"
+: > "$PROOF_BENCH/selfref/catalog/sibling.cjs"
+out="$("$CHECK" "$PROOF_BENCH/selfref" 2>&1)"; code=$?
+expect "a same-directory self-reference in a block comment passes" green "" "$out" "$code"
 
 proof_verdict

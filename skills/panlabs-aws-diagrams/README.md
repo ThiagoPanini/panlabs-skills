@@ -18,8 +18,8 @@ node tools/resume.cjs /tmp/retail.drawio --delta examples/session/retail-elabora
 A régua de 8 camadas mora no workspace irmão e roda de lá, contra esta árvore:
 `workbench/panlabs-aws-diagrams/tests/run.sh` (#44). É lá também que mora a
 bancada — medição, geração de variantes, bisseção, recorte, demonstração — e o
-catálogo de extração/conferência, desde o #45; `./tools/measure-candidates.sh`
-virou `workbench/panlabs-aws-diagrams/tools/measure-candidates.sh`.
+catálogo de extração/conferência, desde o #45; a bancada de medição de
+candidatos mora em `workbench/panlabs-aws-diagrams/tools/measure-candidates.sh`.
 
 ## Instalar
 
@@ -77,7 +77,7 @@ leva o diretório inteiro (menos `__pycache__`, `node_modules`, `*.pyc`,
 | o corpus renderizado | 6,7 MB de `.drawio` e PNG commitados. Também **apagados no #62**, e a medição que decidiu foi esta: 4 de 4 modelos regenerados divergiam do commitado, e nada na régua os comparava. A régua escreve em `output/` e nunca leu aquele diretório — não era fixture, era foto vencida |
 | os casos de uso | 3,2 MB de prosa, modelo, desenho e laudo. Idem, com a mesma medição. Os defeitos que eles acharam já eram ticket e os repros já tinham sido promovidos para `models/` — que, por sua vez, saiu no #44 (ver abaixo). A tabela de cobertura sobreviveu, na auditoria do registro |
 | a suíte de testes e o corpus de modelos | A suíte inteira (8 camadas) e os ~28 modelos que ela come — **movidos no #44** para `workbench/panlabs-aws-diagrams/`, que é quem os lê e roda agora. Não são apagados: a régua continua verde, rodando de fora da árvore e apontando para dentro dela, que é a única direção permitida. Ficou um diretório de exemplos mínimo (`examples/`) — só o suficiente para os comandos documentados no topo deste README rodarem sem baixar nada |
-| a bancada, o catálogo de extração/conferência, o manifesto multi-harness e o tema-armadilha | **Movidos no #45**: 14 ferramentas de `tools/` (medição, geração de variantes, bisseção, recorte, demonstração) e as quatro de `catalog/tools/` foram para `workbench/panlabs-aws-diagrams/`, junto com `catalog/tests/` e `theme/trap.json` — o mesmo critério executável do #44, aplicado ao resto. `agents/openai.yaml` **saiu**, sem substituto: nada na jornada o lia, e nenhum harness não-Claude jamais chegou a existir para o consumir. `output/` também saiu inteiro — três arquivos gerados (`predictive-fleet*.drawio`, `retail.drawio`) tinham ficado tracked por acidente apesar do `.gitignore`, e a régua passou a escrever o corpus renderizado num diretório de temporário de verdade (`OUTPUT_DIR`, via `mktemp`), nunca mais dentro de árvore nenhuma. `render.sh` foi a única exceção: `case.cjs --image` o chama em tempo de execução, então ficou em `tools/` |
+| a bancada, o catálogo de extração/conferência, o manifesto multi-harness e o tema-armadilha | **Movidos no #45**: 14 ferramentas de `tools/` (medição, geração de variantes, bisseção, recorte, demonstração) e as quatro de `catalog/tools/` foram para `workbench/panlabs-aws-diagrams/`, junto com `catalog/tests/` e `workbench/panlabs-aws-diagrams/theme/trap.json` — o mesmo critério executável do #44, aplicado ao resto. `agents/openai.yaml` **saiu**, sem substituto: nada na jornada o lia, e nenhum harness não-Claude jamais chegou a existir para o consumir. `output/` também saiu inteiro — três arquivos gerados (`predictive-fleet*.drawio`, `retail.drawio`) tinham ficado tracked por acidente apesar do `.gitignore`, e a régua passou a escrever o corpus renderizado num diretório de temporário de verdade (`OUTPUT_DIR`, via `mktemp`), nunca mais dentro de árvore nenhuma. `render.sh` foi a única exceção: `case.cjs --image` o chama em tempo de execução, então ficou em `tools/` |
 
 O git guarda os três, e o #62 registra os endereços. **Nada aqui aponta para lá** —
 é a direção que o #46 exige, e a razão de a lista congelada do
@@ -101,9 +101,10 @@ mantém, nunca de quem executa.
 **O #45 mediu de novo, a mesma régua.** Antes deste ticket a árvore estava nos
 mesmos **101 arquivos** do #44 (a #43 reescreveu `SKILL.md` sem mudar
 contagem), **3,4 MB**. Depois, **73 arquivos e 2,5 MB** (8% do teto): 28
-arquivos saíram — os 25 de `tools/`, `catalog/tools/`, `catalog/tests/`,
-`catalog/README.md` e `theme/trap.json` que foram para
-`workbench/panlabs-aws-diagrams/`, mais os quatro apagados
+arquivos saíram — os 25 de `tools/`, `catalog/tools/`, `catalog/tests/` e mais
+dois que foram para `workbench/panlabs-aws-diagrams/`, hoje
+`workbench/panlabs-aws-diagrams/catalog/README.md` e
+`workbench/panlabs-aws-diagrams/theme/trap.json` — mais os quatro apagados
 (`agents/openai.yaml` e os três de `output/`), menos o `render.sh` que voltou
 — ele é bancada, mas `case.cjs --image` o chama em tempo de execução, e mover
 um comando publicado para fora da árvore que ele mesmo precisa em produção

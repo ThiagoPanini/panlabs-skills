@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "panlabs-aws-diagrams/model@1",
   "title": "Modelo de arquitetura (IR)",
-  "description": "O que o AGENTE escreve. Semantica pura: quais recursos existem, quem contem quem, quem fala com quem. Nao existe vocabulario de geometria aqui — nenhuma propriedade deste esquema nomeia posicao, tamanho, coordenada ou caminho. Isso e verificado mecanicamente por check-fronteira.cjs.",
+  "description": "O que o AGENTE escreve. Semantica pura: quais recursos existem, quem contem quem, quem fala com quem. Nao existe vocabulario de geometria aqui — nenhuma propriedade deste esquema nomeia posicao, tamanho, coordenada ou caminho. Isso e verificado mecanicamente por workbench/panlabs-aws-diagrams/tests/check-model-boundary.cjs.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "id", "title", "view", "nodes"],

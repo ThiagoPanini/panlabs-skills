@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "panlabs-aws-diagrams/session@1",
   "title": "Modelo de sessao — UM IR, dois casacos",
-  "description": "O que persiste entre sessoes. NAO e o que o motor come: o motor do #11 come `model@1`, de uma vista so, e continua comendo — este esquema PROJETA para aquele (ver project.cjs). A diferenca entre a vista logica e a tecnica nao e outro modelo, e outro CASACO sobre os mesmos nos, mais os nos que so a camada tecnica tem. Como no #11, nenhuma propriedade aqui nomeia posicao, tamanho, distancia ou direcao — a fronteira do #11 vale igual, e check-fronteira.cjs varre este arquivo tambem.",
+  "description": "O que persiste entre sessoes. NAO e o que o motor come: o motor do #11 come `model@1`, de uma vista so, e continua comendo — este esquema PROJETA para aquele (ver project.cjs). A diferenca entre a vista logica e a tecnica nao e outro modelo, e outro CASACO sobre os mesmos nos, mais os nos que so a camada tecnica tem. Como no #11, nenhuma propriedade aqui nomeia posicao, tamanho, distancia ou direcao — a fronteira do #11 vale igual, e workbench/panlabs-aws-diagrams/tests/check-session-boundary.cjs varre este arquivo tambem.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -221,7 +221,7 @@
             "application",
             "data"
           ],
-          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `node` em `model@1`, e mesmo NOME que o `layer` do `node` que envolve este casaco (que aqui significa onde o elemento existe na sessao — both|technical). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com kind=subnet. Ausente ate o #37 — era o mesmo defeito que `qualifier`, `ou` e `enables` tiveram ate o #29 (tests/check-technical-parity.cjs mede isto agora)."
+          "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `node` em `model@1`, e mesmo NOME que o `layer` do `node` que envolve este casaco (que aqui significa onde o elemento existe na sessao — both|technical). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com kind=subnet. Ausente ate o #37 — era o mesmo defeito que `qualifier`, `ou` e `enables` tiveram ate o #29 (workbench/panlabs-aws-diagrams/tests/check-technical-parity.cjs mede isto agora)."
         },
         "cidr": {
           "type": "string"

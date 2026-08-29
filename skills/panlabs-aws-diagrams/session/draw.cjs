@@ -9,7 +9,7 @@
  * The engine receives a `model@1` of ONE view and does not know two exist. It
  * never needed to: the difference between the views was settled before it was
  * called — and that stayed true after the engine grew with #12, #13 and #22,
- * which is the real test of the thesis. `tests/check-engine-untouched.cjs`
+ * which is the real test of the thesis. `workbench/panlabs-aws-diagrams/tests/check-engine-untouched.cjs`
  * freezes the bytes of the PRODUCTION engine so that the next change to it is a
  * deliberate one.
  *

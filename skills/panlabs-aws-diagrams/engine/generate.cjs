@@ -107,18 +107,32 @@ async function detailPages(model, d, res, opts, report) {
         // the cloud stands in that check — the grid still refuses a node it
         // genuinely can't place, it just no longer refuses the whole page
         // over the account itself being the root.
+        //
+        // #190 — a regional service alongside the account's VPC (API Gateway,
+        // Cognito, EventBridge, KMS, S3, SNS, SQS all reproduced it) is the
+        // account-level mirror of #30's own outsider: a top-level node, sibling
+        // of the VPC, that the grid's own tree has no row for. `#137` treated
+        // it as a refusal because the check only knew ONE exemption — the
+        // account/vpc/subnet tree itself; it now gets `#30`'s treatment too,
+        // laid out on its own and stacked in a column beside the account's VPC.
+        const outsiders = sub.nodes.filter(n =>
+          n.inside === account.id && !['vpc', 'subnet'].includes(n.kind));
+        const outsiderIds = new Set(outsiders.map(n => n.id));
         const unsupported = sub.nodes.filter(n => {
           if (['account', 'vpc', 'subnet'].includes(n.kind) || n.inside === undefined) return false;
+          if (outsiderIds.has(n.id)) return false;                            // an outsider root itself
           const parent = ds.t.byId.get(n.inside);
-          return !(parent && parent.kind === 'subnet');
+          if (parent && parent.kind === 'subnet') return false;               // the grid's own tree
+          return !ds.t.ancestrais(n).some(a => outsiderIds.has(a.id));        // nested inside an outsider
         });
         if (unsupported.length) {
           const e = new Error('the grid path cannot yet draw these nodes');
           e.errors = unsupported.map(n =>
-            `"${n.id}" (${n.kind}) — a detail page's grid only models account › VPC › subnet › content (#137)`);
+            `"${n.id}" (${n.kind}) — a detail page's grid only models account › VPC › subnet › content, plus a column of standalone outsiders (#30)`);
           throw e;
         }
         const g = await dispor.porGrade(sub, ds, res);
+        if (outsiders.length) g.outsiders = await dispor.layoutOutsiders(sub, ds, res, g, outsiders);
         p = plan.gridPlan(sub, ds, res, g, opts);
       } else {
         const layout = await dispor.porElk(sub, ds, res);
@@ -126,7 +140,10 @@ async function detailPages(model, d, res, opts, report) {
       }
       pages.push(p);
     } catch (e) {
-      const because = e.message + (e.errors ? ` — ${e.errors[0]}` : '');
+      // ALL of them — #190 found this warning quietly undercounting: `e.errors[0]`
+      // reported one node while a real multi-service account had several, and
+      // whoever read the warning had no way to tell it was a list, not a fact.
+      const because = e.message + (e.errors && e.errors.length ? ` — ${e.errors.join('; ')}` : '');
       report.warnings.push(`detail view of "${account.id}" didn't come out: ${because}`);
       // Structured, alongside the string above — `report.warnings` is nine
       // lines deep by the time a real multi-account model runs (#137), and

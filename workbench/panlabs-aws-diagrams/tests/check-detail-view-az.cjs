@@ -61,6 +61,12 @@ async function main() {
   // THAT account, loudly, and leaves the other account's page alone. Same
   // shape as the top-level grid path's own "cannot yet draw these nodes"
   // refusal (#30), now reachable from a detail page too.
+  //
+  // A service sibling of the VPC (directly under the ACCOUNT) is no longer
+  // this shape — #190 gave it the outsider-column treatment. What still has
+  // nowhere to go is a service inside the VPC but outside every subnet: not
+  // the grid's own tree (its parent isn't a subnet) and not an outsider
+  // either (its root ancestor is the VPC, never eligible to become one).
   console.log('\n  control — a node the grid still cannot place\n');
   const cloud = { id: 'cloud', kind: 'cloud' };
   const account = (id, label) => ([
@@ -76,7 +82,7 @@ async function main() {
     title: 'Unit test — one account the grid cannot place', view: 'technical',
     nodes: [
       cloud, ...account('good', 'Good'), ...account('broken', 'Broken'),
-      { id: 'stray', kind: 'service', service: 's3', inside: 'broken' }, // not under any VPC/subnet
+      { id: 'stray', kind: 'service', service: 's3', inside: 'broken-vpc' }, // inside the VPC, outside every subnet
     ],
     edges: [],
   };

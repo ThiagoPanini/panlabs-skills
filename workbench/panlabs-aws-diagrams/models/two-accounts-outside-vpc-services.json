@@ -1,0 +1,38 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "two-accounts-outside-vpc-services",
+  "title": "Agendamento e resultados · serviço regional ao lado da VPC, em cada conta",
+  "subtitle": "Vista técnica T5 · a corrida cega do #178 desenhou exatamente esta forma — VPC e serviço regional lado a lado sob a mesma conta — e as duas vistas de detalhe recusaram (#190)",
+  "view": "technical",
+  "genre": "T5",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+
+    { "id": "c-agendamento", "kind": "account", "account": "111111111111", "label": "Agendamento", "inside": "cloud" },
+    { "id": "vpc-agendamento", "kind": "vpc", "label": "VPC de agendamento", "cidr": "10.10.0.0/16", "inside": "c-agendamento" },
+    { "id": "sub-agendamento-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "cidr": "10.10.1.0/24", "inside": "vpc-agendamento" },
+    { "id": "sub-agendamento-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "cidr": "10.10.2.0/24", "inside": "vpc-agendamento" },
+    { "id": "scheduler-a", "kind": "service", "service": "ecs", "label": "Scheduler", "inside": "sub-agendamento-a" },
+    { "id": "scheduler-b", "kind": "service", "service": "ecs", "label": "Scheduler", "inside": "sub-agendamento-b" },
+    { "id": "api-agendamento", "kind": "service", "service": "api gateway", "label": "Scheduling API", "inside": "c-agendamento" },
+
+    { "id": "c-resultados", "kind": "account", "account": "222222222222", "label": "Resultados", "inside": "cloud" },
+    { "id": "vpc-resultados", "kind": "vpc", "label": "VPC de resultados", "cidr": "10.20.0.0/16", "inside": "c-resultados" },
+    { "id": "sub-resultados-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "cidr": "10.20.1.0/24", "inside": "vpc-resultados" },
+    { "id": "sub-resultados-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "cidr": "10.20.2.0/24", "inside": "vpc-resultados" },
+    { "id": "worker-a", "kind": "service", "service": "ecs", "label": "Worker", "inside": "sub-resultados-a" },
+    { "id": "worker-b", "kind": "service", "service": "ecs", "label": "Worker", "inside": "sub-resultados-b" },
+    { "id": "queue-resultados", "kind": "service", "service": "sqs", "label": "Results queue", "inside": "c-resultados" }
+  ],
+
+  "edges": [
+    { "from": "scheduler-a", "to": "worker-a", "label": "despacha job", "order": 1 },
+    { "from": "api-agendamento", "to": "scheduler-a", "label": "invoca", "order": 1 },
+    { "from": "worker-a", "to": "queue-resultados", "label": "publica", "order": 2 }
+  ],
+
+  "dossier": {
+    "_comentario": "Reprodução mínima do achado do #190: a simulação cega do #178 desenhou duas contas — agendamento e resultados —, cada uma com VPC e um serviço regional direto sob a conta, irmão da VPC (API Gateway/SNS/SQS/Cognito/EventBridge/KMS/S3 no achado original). Antes deste modelo, nenhum caso do corpus cruzava multi-conta com um outsider dentro de uma conta ao mesmo tempo — o #30 só media isso na página consolidada."
+  }
+}

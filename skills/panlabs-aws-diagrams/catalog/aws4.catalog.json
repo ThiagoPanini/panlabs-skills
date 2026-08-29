@@ -11,7 +11,7 @@
   "stencilsDeclarados": 1037,
   "referenciasQuebradas": [],
   "pointsDuplicadosNormalizados": 39,
-  "extraidoPor": "catalog/tools/extract-aws4-catalog.cjs"
+  "extraidoPor": "workbench/panlabs-aws-diagrams/catalog/tools/extract-aws4-catalog.cjs"
  },
  "templates": {
   "svc": {

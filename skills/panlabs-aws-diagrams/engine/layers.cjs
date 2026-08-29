@@ -23,7 +23,7 @@
  * The `layer` field exists in the schema, but as an ESCAPE HATCH, not as a
  * question: it covers what the content can't say (an empty subnet) and what it
  * would say wrong. It's semantic — it names a network floor, not a position —
- * so #11's boundary stays standing and `check-fronteira` stays green.
+ * so #11's boundary stays standing and `check-model-boundary` stays green.
  *
  * What this module does NOT do is guess. With no evidence it returns `null`,
  * and whoever is drawing decides what to do with the `null`: the grid refuses

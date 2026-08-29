@@ -41,7 +41,7 @@ const MIN_LABEL = 23;
  * `fontSize=12`, the body the catalog styles draw and that `N11` of #5
  * prescribes. Changing the body changes the reserved box, which changes the gap,
  * which changes the geometry — so that sum belongs to the theme, and the theme
- * enters the pipeline BEFORE the layout. See `tools/check-partition.cjs`.
+ * enters the pipeline BEFORE the layout. See `workbench/panlabs-aws-diagrams/tests/check-partition.cjs`.
  */
 
 /** How many lines the label takes if wrapped in a box `width` px wide. */

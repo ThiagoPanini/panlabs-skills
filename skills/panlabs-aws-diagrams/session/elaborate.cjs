@@ -13,7 +13,7 @@
  * SHAPE being wrong (a typo'd field, the wrong `schema`, a new node with no
  * `layer`) was to fall straight into the domain errors below, or not even that.
  * Now the shape is checked first, against the same schema
- * `tests/check-single-schema.cjs` started sweeping.
+ * `workbench/panlabs-aws-diagrams/tests/check-single-schema.cjs` started sweeping.
  *
  * What the delta can do:
  *   nodes         add infrastructure (mandatory "technical" layer)

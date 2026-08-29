@@ -168,7 +168,7 @@
       "",
       "O que ficou no lugar: o tingimento voltou a ser do catálogo, e o VALOR virou derivação",
       "do tema (`grupo.tingimento`), porque um azul-claro que funciona no deck claro é um",
-      "bloco luminoso num fundo escuro. Ver prototypes/q13/theme/schema.json."
+      "bloco luminoso num fundo escuro."
     ],
     "_withdrawnIn": "https://github.com/ThiagoPanini/panlabs-skills/issues/13",
     "affects": []

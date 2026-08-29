@@ -6,7 +6,7 @@
  * families for a concrete reason: the question "which of the 62 does the
  * validator cover, at what severity, and what was left for render" has to be
  * answerable without running anything and without reading eight modules.
- * `tests/check-index.cjs` checks the table against the rubric, and that is
+ * `workbench/panlabs-aws-diagrams/tests/check-index.cjs` checks the table against the rubric, and that is
  * what stops the index from drifting away from it in silence.
  *
  * Four fields carry the decisions #18 had to make:

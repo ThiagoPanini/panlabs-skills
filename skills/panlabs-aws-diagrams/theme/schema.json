@@ -14,7 +14,7 @@
     "inherits": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
 
     "background": {
-      "description": "O INTERRUPTOR NORMATIVO. A AWS publica dois decks (#5 F2/F3) e o escuro muda exatamente duas coisas: a borda/ícone do AWS Cloud inverte e os callouts invertem. Medindo a paleta contra a WCAG chega-se à mesma lista — ver tools/measure-ruler.cjs. Não há token para 'cor do AWS Cloud' porque quem decide isso é o deck, não o tema.",
+      "description": "O INTERRUPTOR NORMATIVO. A AWS publica dois decks (#5 F2/F3) e o escuro muda exatamente duas coisas: a borda/ícone do AWS Cloud inverte e os callouts invertem. Medindo a paleta contra a WCAG chega-se à mesma lista — ver workbench/panlabs-aws-diagrams/tools/measure-ruler.cjs. Não há token para 'cor do AWS Cloud' porque quem decide isso é o deck, não o tema.",
       "enum": ["light", "dark"]
     },
 
@@ -50,7 +50,7 @@
       "type": "object", "additionalProperties": false,
       "properties": {
         "family": {
-          "description": "TRÊS valores, e o corte foi medido, não escolhido. N11 do #5 manda 12 pt ARIAL em todo rótulo de diagrama; a lista `Menus.defaultFonts` do draw.io (#4 §4.1) não inclui Arial, mas o default do mxGraph é literalmente 'Arial,Helvetica'. O que fecha a lista em três é `tools/check-partition.cjs`: a métrica de texto do motor é uma largura média por caractere, e trocar para Verdana ou Georgia NÃO movia uma coordenada — ou seja, a faixa de rótulo continuaria dimensionada para Helvetica e o texto vazaria. Arial e Helvetica são intercambiáveis nessa conta (Arial foi desenhada sobre as larguras da Helvetica); qualquer outra exigiria uma tabela de largura por família que o motor não tem. Enquanto não tiver, a família é PINTURA — e a lista é essa.",
+          "description": "TRÊS valores, e o corte foi medido, não escolhido. N11 do #5 manda 12 pt ARIAL em todo rótulo de diagrama; a lista `Menus.defaultFonts` do draw.io (#4 §4.1) não inclui Arial, mas o default do mxGraph é literalmente 'Arial,Helvetica'. O que fecha a lista em três é `workbench/panlabs-aws-diagrams/tests/check-partition.cjs`: a métrica de texto do motor é uma largura média por caractere, e trocar para Verdana ou Georgia NÃO movia uma coordenada — ou seja, a faixa de rótulo continuaria dimensionada para Helvetica e o texto vazaria. Arial e Helvetica são intercambiáveis nessa conta (Arial foi desenhada sobre as larguras da Helvetica); qualquer outra exigiria uma tabela de largura por família que o motor não tem. Enquanto não tiver, a família é PINTURA — e a lista é essa.",
           "enum": ["Arial", "Arial,Helvetica", "Helvetica"]
         },
         "label": { "$ref": "#/definitions/pt" },

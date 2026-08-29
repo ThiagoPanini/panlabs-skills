@@ -15,11 +15,11 @@
  * The theme (#13) enters at `resolve` — BEFORE the layout, not after. Ten of
  * its tokens are metric (label body, grid density, two-line qualifier) and
  * move coordinates; the other seventeen are pure paint. The split is proved in
- * `tests/check-partition.cjs`.
+ * `workbench/panlabs-aws-diagrams/tests/check-partition.cjs`.
  *
  * Nothing between `lay-out` and `check` can be influenced by the model except
  * through semantics. It isn't discipline: the schema has nowhere to write a
- * coordinate. See `tools/check-fronteira.cjs`.
+ * coordinate. See `workbench/panlabs-aws-diagrams/tests/check-model-boundary.cjs`.
  */
 
 const fs = require('fs');

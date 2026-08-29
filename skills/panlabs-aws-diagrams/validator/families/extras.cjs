@@ -48,7 +48,7 @@
  * trigger the fallback and none would catch a regression.
  *
  * ⚠️ And #26's measurement says the defect does NOT happen in this engine.
- * Sweeping a complete mesh of 3, 4, 5 and 6 zones (`tools/measure-fan.cjs`),
+ * Sweeping a complete mesh of 3, 4, 5 and 6 zones (`workbench/panlabs-aws-diagrams/tools/measure-fan.cjs`),
  * with a predicted sweep floor of 2, 8, 20 and 40, the measured F2 is ZERO on
  * all four. #24's routing takes the long edge to the bands' outer border
  * instead of straight across columns; the floor keeps counting a crossing the

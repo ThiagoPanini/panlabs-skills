@@ -21,7 +21,7 @@
  * Pages instead of files is the same argument one level up.
  *
  * The model is written on EVERY page, not only the first. It costs bytes
- * (measured in `tools/measure-host.cjs`) and buys something concrete: deleting a
+ * (measured in `workbench/panlabs-aws-diagrams/tools/measure-host.cjs`) and buys something concrete: deleting a
  * page is the most banal operation in the world in draw.io, and with a single
  * copy it deletes the whole session along with it. Divergent copies become, in
  * themselves, a signal of divergence at read time.

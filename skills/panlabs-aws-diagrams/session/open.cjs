@@ -41,7 +41,7 @@ function open(xml) {
   if (sealed.length) howIRecognized.push(`seal on ${sealed.length}/${pages.length} page(s)`);
   // The `host` is the weak mark: it is an attribute of the APP, not ours, and
   // whoever saves the file last writes their own name into it. Good for
-  // explaining, never for deciding. Measured in `tools/measure-host.cjs`.
+  // explaining, never for deciding. Measured in `workbench/panlabs-aws-diagrams/tools/measure-host.cjs`.
   if (host === 'panlabs-aws-diagrams') howIRecognized.push('host="panlabs-aws-diagrams" (weak mark)');
 
   /**

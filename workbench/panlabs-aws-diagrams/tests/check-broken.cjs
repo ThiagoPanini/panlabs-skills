@@ -15,7 +15,7 @@ const { CASES, CONTROL } = require(path.join(__dirname, 'cases', 'broken.cjs'));
 const { validateGeometry } = require(path.join(__dirname, '..', '..', '..', 'skills', 'panlabs-aws-diagrams', 'validator', 'validate-geometry.cjs'));
 
 /** The checks that must pass on a geometrically correct drawing. */
-const HARD = ['A3.1', 'A3.3', 'A3.5', 'A3.7', 'A4.1', 'A4.2', 'A4.3', 'A4.4', 'A5.5', 'A5.8', 'F1'];
+const HARD = ['A3.1', 'A3.3', 'A3.5', 'A3.7', 'A4.1', 'A4.2', 'A4.3', 'A4.4', 'A5.5', 'A5.8', 'F1', 'L1'];
 
 let failures = 0;
 

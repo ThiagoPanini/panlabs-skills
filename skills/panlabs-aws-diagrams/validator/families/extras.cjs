@@ -32,6 +32,13 @@
  * If #18 ever ships to production, the path is to bring F1 and F2 back into
  * the rubric as A4.8 and A5.10, not leave them here forever.
  *
+ * `L1` (#164) is a different animal — not a band, a leaf field the rubric's
+ * own A1 family never named — but the same hygiene reason keeps it in this
+ * file and out of the 62. Its own docstring, right above where it's defined,
+ * has the detail; the short version is that `resultados` (what `a1()` and
+ * its seven siblings return) is where the "62 rubric" totals get counted
+ * from, and this file's `output` is kept apart from that on purpose.
+ *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY F2 WAS BORN IN #26, AND WHAT ITS MEASUREMENT SAID
  *
@@ -131,6 +138,46 @@ function f2(scene) {
     cases);
 }
 
+/**
+ * L1 — every technical leaf carries `resource` or `qualifier` (#164).
+ *
+ * The rubric's A1 family already asks "is every element NAMED" (A1.4) and
+ * "is every element TYPED" (A1.5) — the same "presence of a field" question
+ * this asks, of a field the rubric never named: the second, italic line a
+ * leaf draws below its name (guide/model.md, "A segunda linha da folha").
+ * It stays out of the 62 for the same hygiene reason F1/F2 do, and it lands
+ * in THIS file rather than beside A1.4/A1.5 in `a1-completeness.cjs` for a
+ * concrete, measured reason, not a stylistic one: `validate-geometry.cjs`
+ * keeps this file's output in its own bucket, `r.extras`, apart from
+ * `resultados` — the array `summary.total`/`summary.ok`/`summary.failure`
+ * are counted from. A check returned from `a1()`'s own `module.exports`
+ * would land in `resultados` instead, and silently inflate what those
+ * "62 rubric" totals mean on every technical-view run.
+ */
+function l1(scene) {
+  const finding = (state, message, measured, occurrences = []) => ({
+    id: 'L1', name: 'Technical leaf carries a second line', family: 'L', input: 'model',
+    maxSeverity: 'fail', semantica: false, calibratable: false,
+    state, message, measured, occurrences,
+  });
+  const model = scene.model;
+  if (!model) return finding('notApplicable', 'the plan does not carry the semantic model', { leaves: 0 });
+  if (model.view !== 'technical')
+    // The logical view's leaf falls to `qualifier` on its OWN facet — that is
+    // turn 1's job (guide/model.md), not what this rule audits.
+    return finding('notApplicable', 'the plan is the logical view — its leaf label is turn 1\'s job', { leaves: 0 });
+
+  const leaves = (model.nodes || []).filter(n => n.kind === 'service' || n.kind === 'actor');
+  const cases = leaves.filter(n => !n.resource && !n.qualifier)
+    .map(n => ({ o_que: `${name(n)} has neither "resource" nor "qualifier" — the leaf draws with no second line`, ids: [n.id] }));
+  return finding(cases.length ? 'failure' : 'ok',
+    cases.length
+      ? `${cases.length} technical leaf(s) with no second line`
+      : `${leaves.length} technical leaf(s), every one carries "resource" or "qualifier"`,
+    { leaves: leaves.length, missing: cases.length },
+    cases);
+}
+
 module.exports = function extras(scene) {
   const output = [];
   const { bands, nodes } = scene;
@@ -143,6 +190,7 @@ module.exports = function extras(scene) {
       bands.length ? 'the plan\'s bands declare no members' : 'the diagram has no bands',
       { bands: bands.length }));
     output.push(f2(scene));
+    output.push(l1(scene));
     return output;
   }
 
@@ -182,6 +230,9 @@ module.exports = function extras(scene) {
 
   // ---------------------------------------------------------------- F2
   output.push(f2(scene));
+
+  // ---------------------------------------------------------------- L1
+  output.push(l1(scene));
 
   return output;
 };

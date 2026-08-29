@@ -37,6 +37,15 @@
  * `project.cjs` copies them straight through, before the `TECHNICAL_FIELDS`
  * loop — not being on the list isn't a bug, it's the list not being where
  * they belong.
+ *
+ * `INFORMATIONAL_FIELDS` (#169) is a third, narrower exclusion from the
+ * projection parity only: a field can be declared in both schemas for the
+ * author to read and still be crossed by nothing on purpose, like `cidr`
+ * after #169 — the schemas keep the field, `project.cjs` stops forwarding
+ * it. Without this exclusion, retiring a field's projection this way would
+ * be the exact loss section 2 exists to catch; with it, the exclusion is
+ * read from `project.cjs` itself, so declaring a field informational and
+ * forgetting to also drop it from `TECHNICAL_FIELDS` still fails loudly.
  */
 
 const fs = require('fs');
@@ -68,7 +77,7 @@ const ok = (cond, title, detail) => {
   if (!cond) failures++;
 };
 
-const { TECHNICAL_FIELDS } = require(path.join(ROOT, 'session', 'project.cjs'));
+const { TECHNICAL_FIELDS, INFORMATIONAL_FIELDS } = require(path.join(ROOT, 'session', 'project.cjs'));
 
 const model = JSON.parse(fs.readFileSync(path.join(ROOT, 'schema.json'), 'utf8'));
 const session = JSON.parse(fs.readFileSync(path.join(ROOT, 'session', 'schema.json'), 'utf8'));
@@ -92,8 +101,10 @@ ok(schemaDiff.onlyInB.length === 0,
 console.log('\n2 · the schema against whoever actually PROJECTS — technicalFacet × TECHNICAL_FIELDS\n');
 console.log(`  TECHNICAL_FIELDS (project.cjs):      ${TECHNICAL_FIELDS.length}  (${TECHNICAL_FIELDS.slice().sort().join(', ')})`);
 console.log(`  copied straight through, off the list: ${[...COPIED_VERBATIM].join(', ')}`);
+console.log(`  informational, crossed by nothing:     ${INFORMATIONAL_FIELDS.join(', ')}`);
 
-const projectionDiff = divergences(facetProps, TECHNICAL_FIELDS, COPIED_VERBATIM);
+const PROJECTION_EXCLUDED = new Set([...COPIED_VERBATIM, ...INFORMATIONAL_FIELDS]);
+const projectionDiff = divergences(facetProps, TECHNICAL_FIELDS, PROJECTION_EXCLUDED);
 ok(projectionDiff.onlyInA.length === 0,
   'every field of technicalFacet (besides kind/label) is in TECHNICAL_FIELDS — it crosses the projection',
   projectionDiff.onlyInA.length ? projectionDiff.onlyInA.join(', ') : 'none');
@@ -140,10 +151,19 @@ ok(!structuralControl.onlyInA.includes('inside') && !structuralControl.onlyInB.i
 // TECHNICAL_FIELDS has to be flagged — it's the exact incident section 2
 // exists to never again let through in silence.
 const withoutLayerInList = TECHNICAL_FIELDS.filter(c => c !== 'layer');
-const lossInProjection = divergences(facetProps, withoutLayerInList, COPIED_VERBATIM);
+const lossInProjection = divergences(facetProps, withoutLayerInList, PROJECTION_EXCLUDED);
 ok(lossInProjection.onlyInA.includes('layer'),
   'CONTROL: removing "layer" from the simulated TECHNICAL_FIELDS, projection parity flags it',
   lossInProjection.onlyInA.join(', '));
+
+// and the INFORMATIONAL excuse (#169) has to matter, the mirror image of the
+// structural control above: drop it, and the field it excuses (declared in
+// the schema, absent from TECHNICAL_FIELDS on purpose) gets flagged exactly
+// like a genuinely lost field would.
+const withoutInformationalExcuse = divergences(facetProps, TECHNICAL_FIELDS, COPIED_VERBATIM);
+ok(INFORMATIONAL_FIELDS.every(f => withoutInformationalExcuse.onlyInA.includes(f)),
+  'CONTROL: without the informational excuse, an excused field is flagged exactly like a lost one',
+  withoutInformationalExcuse.onlyInA.join(', '));
 
 console.log(failures
   ? `\n  ✗ ${failures} failure(s) — model@1, session@1's technical facet, and/or TECHNICAL_FIELDS diverge on a leaf field.\n`

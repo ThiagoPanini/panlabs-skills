@@ -224,7 +224,8 @@
           "description": "ANDAR DE REDE da subnet (#22) — mesmo campo do `node` em `model@1`, e mesmo NOME que o `layer` do `node` que envolve este casaco (que aqui significa onde o elemento existe na sessao — both|technical). Coincidencia de vocabulario, nao o mesmo conceito: aquele decide PRESENCA na sessao, este afirma um FATO de rede. ESCAPE, nao pergunta, com a mesma politica do #22: declarado vence derivado, e divergencia entre os dois vira aviso. So com kind=subnet. Ausente ate o #37 — era o mesmo defeito que `qualifier`, `ou` e `enables` tiveram ate o #29 (workbench/panlabs-aws-diagrams/tests/check-technical-parity.cjs mede isto agora)."
         },
         "cidr": {
-          "type": "string"
+          "type": "string",
+          "description": "Bloco CIDR de vpc ou subnet. Informativo — nem o motor nem a projecao leem (#169)."
         },
         "account": {
           "type": "string",

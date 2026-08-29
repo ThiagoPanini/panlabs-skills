@@ -1,0 +1,356 @@
+{
+ "title": "UM CONTRATO NA FRONTEIRA",
+ "occasion": "Proposta interna · decisão em 12 de setembro",
+ "figure": {
+  "kind": "table",
+  "head": "contas · v1 — o que a tabela promete",
+  "cols": [
+   [
+    "coluna",
+    34,
+    "k"
+   ],
+   [
+    "tipo",
+    20,
+    ""
+   ],
+   [
+    "quem consome",
+    46,
+    ""
+   ]
+  ],
+  "rows": [
+   [
+    "conta_id",
+    "int64",
+    "Risco · Cobrança"
+   ],
+   [
+    "abertura",
+    "date",
+    "Painel exec."
+   ],
+   [
+    "segmento",
+    "string",
+    "Modelo de churn"
+   ],
+   [
+    "saldo_fim_mes",
+    "decimal",
+    "Risco · Painel exec."
+   ]
+  ]
+ },
+ "beats": [
+  {
+   "kind": "frame",
+   "kicker": "Proposta",
+   "title": "UM CONTRATO NA FRONTEIRA",
+   "sub": "Esquema de dado como interface pública, não como detalhe de implementação"
+  },
+  {
+   "kind": "claim",
+   "kicker": "O problema",
+   "claim": "Quem descobre que a tabela mudou de forma é quem consome — e descobre depois",
+   "because": "Não é falta de cuidado: é que não existe lugar onde essa promessa esteja escrita.",
+   "lit": [
+    3
+   ]
+  },
+  {
+   "kind": "block",
+   "lit": [
+    3
+   ],
+   "block": {
+    "kind": "quote",
+    "text": "Eu não mudei nada que fosse <b>público</b>. Só renomeei uma coluna interna que ninguém usava.",
+    "src": "dito em três incidentes, por três pessoas"
+   }
+  },
+  {
+   "kind": "block",
+   "lit": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "block": {
+    "kind": "number",
+    "head": "O tamanho do problema",
+    "num": "9",
+    "suf": " de 14",
+    "cap": "dos incidentes do semestre foram quebra de esquema",
+    "note": "Não é a categoria mais cara por incidente. É a mais frequente, e a única cuja correção já é conhecida antes da falha."
+   }
+  },
+  {
+   "kind": "block",
+   "lit": [
+    3
+   ],
+   "block": {
+    "kind": "list",
+    "head": "Onde a promessa mora hoje",
+    "icon": "warn",
+    "items": [
+     "Na cabeça de quem escreveu o pipeline, há dois anos",
+     "Num canal de mensagens, numa conversa arquivada",
+     "Num campo de catálogo, escrito uma vez",
+     "Na consulta do consumidor, que virou a spec de fato"
+    ]
+   }
+  },
+  {
+   "kind": "claim",
+   "kicker": "A proposta",
+   "claim": "A proposta não inventa promessa nova — ela muda de lugar",
+   "because": "Três peças, e nenhuma é nova como tecnologia. Novo é serem obrigatórias.",
+   "lit": [
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "kind": "block",
+   "lit": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "block": {
+    "kind": "parts",
+    "head": "A proposta, em três peças",
+    "items": [
+     [
+      "O arquivo",
+      "box",
+      "Esquema declarado ao lado do código: colunas, tipos, chave, versão"
+     ],
+     [
+      "O portão",
+      "shield",
+      "Checagem no mesmo commit: mudança incompatível não passa"
+     ],
+     [
+      "O aviso",
+      "clock",
+      "Depreciação com prazo — duas versões de folga ao consumidor"
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "block",
+   "lit": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "block": {
+    "kind": "list",
+    "head": "Onde ela passa a morar",
+    "icon": "check",
+    "items": [
+     "Num arquivo versionado, ao lado de quem publica",
+     "Numa checagem que falha antes do merge",
+     "Num número de versão que o consumidor fixa",
+     "Num aviso de depreciação com prazo"
+    ]
+   }
+  },
+  {
+   "kind": "block",
+   "lit": [
+    1,
+    3
+   ],
+   "block": {
+    "kind": "steps",
+    "head": "Como isso entra",
+    "items": [
+     [
+      "Começa nas doze tabelas que já têm dono",
+      "São 71% do consumo, e as únicas em que «quem decide o esquema?» já tem resposta."
+     ],
+     [
+      "O portão nasce avisando, não barrando",
+      "Nos dois primeiros meses ele comenta no pull request e não reprova."
+     ],
+     [
+      "Barra só depois de medir o falso positivo",
+      "Portão que reprova trabalho legítimo é portão desligado na primeira sexta-feira."
+     ],
+     [
+      "Estende por demanda, não por calendário",
+      "As outras vinte e seis entram quando um consumidor pedir — quem pede tem a dor."
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "block",
+   "lit": [
+    1,
+    2
+   ],
+   "block": {
+    "kind": "table",
+    "head": "O que custa",
+    "cols": [
+     [
+      "Item",
+      44,
+      "k"
+     ],
+     [
+      "Quem",
+      22,
+      ""
+     ],
+     [
+      "Quando",
+      16,
+      ""
+     ],
+     [
+      "Esforço",
+      18,
+      "n"
+     ]
+    ],
+    "rows": [
+     [
+      "Escrever os doze contratos",
+      "Donos",
+      "Set–out",
+      "12 d"
+     ],
+     [
+      "Checagem na integração",
+      "Plataforma",
+      "Out",
+      "8 d"
+     ],
+     [
+      "Modo aviso e coleta",
+      "Plataforma",
+      "Out–dez",
+      "3 d"
+     ],
+     [
+      "Painel de versões e prazos",
+      "Plataforma",
+      "Nov",
+      "6 d"
+     ],
+     [
+      "Revisão trimestral",
+      "Donos",
+      "Contínuo",
+      "1 d/tri"
+     ]
+    ],
+    "hi": 1,
+    "note": "Vinte e nove dias-pessoa, dezessete deles da plataforma. Não pedimos cabeça nova."
+   },
+   "figure": {
+    "kind": "steps",
+    "head": "o calendário · o que se aprova hoje e o que espera",
+    "items": [
+     [
+      "Set–out · os doze contratos",
+      "Os donos escrevem. 12 dias-pessoa, e é o único item que sai do time de domínio."
+     ],
+     [
+      "Out–dez · o portão avisa",
+      "Comenta no pull request e não reprova. 17 dias-pessoa da plataforma."
+     ],
+     [
+      "Dez · mede o falso positivo",
+      "A decisão que pesa: barrar ou continuar avisando."
+     ],
+     [
+      "2026 · catálogo, se pedirem",
+      "Adiado um trimestre. Entra por demanda de consumidor, nunca por calendário."
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "block",
+   "lit": [
+    2,
+    3
+   ],
+   "block": {
+    "kind": "metrics",
+    "head": "O que isso compra",
+    "items": [
+     [
+      "9",
+      "→2",
+      "incidentes de esquema por semestre",
+      "Projeção conservadora sobre 71% do consumo"
+     ],
+     [
+      "0",
+      "",
+      "quebras sem aviso prévio",
+      "É o que a depreciação com prazo garante"
+     ],
+     [
+      "2",
+      " ver",
+      "de folga para o consumidor",
+      "Tempo de planejar, não de reagir"
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "block",
+   "lit": [
+    3
+   ],
+   "block": {
+    "kind": "chart",
+    "head": "Incidentes de esquema, por semestre",
+    "rows": [
+     [
+      "1S",
+      7
+     ],
+     [
+      "2S",
+      9
+     ],
+     [
+      "proj.",
+      2
+     ]
+    ],
+    "note": "A terceira barra é projeção, não medição — e é a única afirmação desta apresentação que o tempo pode desmentir."
+   }
+  },
+  {
+   "kind": "ask",
+   "kicker": "O pedido",
+   "claim": "O pedido é um: aprovar as doze primeiras tabelas e adiar a frente de catálogo por um trimestre",
+   "because": "O resto se decide em dezembro, com o falso positivo medido.",
+   "close": "Doze tabelas, vinte e nove dias-pessoa, um trimestre de espera. A decisão de hoje é a primeira; a de dezembro é a que pesa.",
+   "lit": [
+    1,
+    4
+   ]
+  }
+ ]
+}

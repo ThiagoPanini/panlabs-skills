@@ -36,3 +36,10 @@ skills/panlabs-aws-diagrams/output/
 
 .claude/settings.local.json
 tmp/
+
+# O bytecode do Python. Entrou junto com a `panlabs-presentation-builder`, que
+# é a primeira skill da casa cujo motor é Python: rodar o construtor uma vez
+# deixa `engine/__pycache__/` na árvore, e ele estava sendo apanhado por um
+# `git add` de diretório.
+__pycache__/
+*.pyc

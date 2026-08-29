@@ -35,6 +35,9 @@ const ICON = 'shape=mxgraph.aws4.resourceIcon;resIcon=y;';
 // monochrome icon: aws4, but neither group nor service icon — the third path,
 // and the one the first version of this control did not cover
 const MONO = 'shape=mxgraph.aws4.users;';
+// band: the ONE group shape the catalog uses for a crossing ring rather than
+// a container (#17 — today only "Auto Scaling group") — see #185
+const BAND = 'shape=mxgraph.aws4.groupCenter;grIcon=x;container=1;';
 
 const CASES = [
   {
@@ -93,6 +96,26 @@ const CLEAN = {
     cell('users', 'Customers', MONO + 'fillColor=#232F3E;fontColor=#232F3E;fontSize=12;') ] },
 };
 
+/**
+ * #185: the simplest possible single-zone Auto Scaling group — two members in
+ * the SAME private subnet, so the band's common ancestor is the tinted
+ * subnet, not the untinted VPC. Before the fix this blocked generation on the
+ * default theme; the ring has to land in A7.2a (warn), same bucket as the
+ * icon square right next to it, not A7.2 (fail).
+ */
+const BAND_ON_TINTED_SUBNET = {
+  name: 'auto-scaling band ring over a tinted subnet',
+  because: "the ring's identity is redundant with the model's members, the label and the icon glyph — AREA, not STROKE",
+  layoutPlan: { background: '#FFFFFF', cells: [
+    cell('sub', 'Private subnet', GROUP + 'strokeColor=#00A4A6;fillColor=#E6F6F6;fontColor=#232F3E;fontSize=12;'),
+    cell('a', 'EC2', ICON + 'fillColor=#ED7100;strokeColor=#FFFFFF;fontColor=#232F3E;fontSize=12;', 'sub'),
+    cell('b', 'EC2', ICON + 'fillColor=#ED7100;strokeColor=#FFFFFF;fontColor=#232F3E;fontSize=12;', 'sub'),
+    // fontColor/labelBackgroundColor match what `theme.band()` actually emits
+    // (ink.strong on a white halo) — the STROKE stays the catalog's own
+    // #ED7100, which is what #185 is about
+    cell('asg', 'Auto Scaling group', BAND + 'strokeColor=#ED7100;fillColor=none;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;fontSize=12;', 'sub') ] },
+};
+
 function main() {
   let failed = 0;
 
@@ -109,6 +132,12 @@ function main() {
   if (!ok) failed = 1;
   console.log(`  ${ok ? '✓' : '✗'} ${CLEAN.name.padEnd(48)} —     a gate that only knows how to say no is not a gate`);
   if (!ok) for (const l of require('../../../skills/panlabs-aws-diagrams/engine/contrast.cjs').summarize(clean)) console.log('      ' + l);
+
+  const band = measure(BAND_ON_TINTED_SUBNET.layoutPlan);
+  const bandOk = band.ok && band.warnings.some(w => w.rule === 'A7.2a' && w.o_que === 'band border');
+  if (!bandOk) failed = 1;
+  console.log(`  ${bandOk ? '✓' : '✗'} ${BAND_ON_TINTED_SUBNET.name.padEnd(48)} —     ${BAND_ON_TINTED_SUBNET.because}`);
+  if (!bandOk) console.log(`      band border did not land in A7.2a — either it blocks generation again, or it stopped firing at all`);
 
   console.log(failed ? '\n  GATE DOES NOT KNOW HOW TO FAIL' : `\n  ✓ the gate catches the ${CASES.length} bad plans and approves the good one`);
   process.exit(failed);

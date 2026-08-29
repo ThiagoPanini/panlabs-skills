@@ -11,7 +11,7 @@ A **fronteira** não é disciplina, é gramática: `schema.json` não tem nenhum
 
 E a razão de a skill existir não é bonita, é estrutural: **nenhuma checagem geométrica sabe se a arquitetura desenhada existe.** O validador guarda o **desenho**; a **pergunta** guarda o **fato**. É por isso que a jornada começa perguntando — e é por isso que ela pergunta **uma vez**, sobre o que a descrição não determinou, em vez de sabatinar até uma família de checagem fechar: a checagem mede o modelo, e antes do desenho não existe modelo para medir.
 
-Os comandos abaixo rodam a partir da raiz da skill (`skills/panlabs-aws-diagrams/`), com **uma exceção que decide onde o seu trabalho vai parar**: o verbo de caso resolve o destino subindo do **diretório corrente** até a raiz do repositório git, então ele roda de dentro do projeto que vai receber o diagrama. Rodá-lo da raiz da skill grava o resultado no repositório da própria skill — que é exatamente o defeito que a jornada nova existe para não repetir.
+Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**, não um caminho fixo: instalada, essa raiz é `<projeto>/.claude/skills/panlabs-aws-diagrams/` ou `~/.claude/skills/panlabs-aws-diagrams/`, nunca `skills/panlabs-aws-diagrams/` — esse é o caminho da árvore de desenvolvimento. Todo `<raiz-da-skill>` usado adiante é essa mesma frase. Há **uma exceção que decide onde o seu trabalho vai parar**: o verbo de caso resolve o destino subindo do **diretório corrente** até a raiz do repositório git, então ele roda de dentro do projeto que vai receber o diagrama. Rodá-lo da raiz da skill grava o resultado no repositório da própria skill — que é exatamente o defeito que a jornada nova existe para não repetir.
 
 Node 18+, e nada além dele: o `elkjs` vai embarcado, nenhum `npm install`, nenhuma rede. **Nada é gravado dentro desta árvore** — o resultado nasce no projeto de quem chamou, e os arquivos de trabalho no temporário do sistema.
 
@@ -56,7 +56,7 @@ Resolva todo nome de serviço pelo catálogo **antes** de escrevê-lo:
 node catalog/aws-shapes.cjs "kinesis data firehose" opensearch "availability zone"
 ```
 
-Escreva um `session@1` com `stage: "technical"` — um IR, dois casacos sobre os mesmos nós: o lógico diz a **capacidade**, o técnico diz o **serviço** e o `resource`. **O contrato é [`session/schema.json`](session/schema.json)**, e é ele que descreve os dois casacos campo a campo; [`guide/model.md`](guide/model.md) traz o que o esquema não consegue dizer sobre si mesmo. Em [`examples/session/`](examples/session/) fica o único par já pronto — a sessão lógica mais o delta do **arco sequencial** —, e não um exemplo já no estágio técnico: para ver um, aplique o delta com o [one-liner de `elaborate`](#quando-o-arco-volta-a-ser-sequencial) e leia o resultado.
+Escreva um `session@1` com `stage: "technical"` — um IR, dois casacos sobre os mesmos nós: o lógico diz a **capacidade**, o técnico diz o **serviço** e o `resource`. **O contrato é [`session/schema.json`](session/schema.json)**, e é ele que descreve os dois casacos campo a campo; [`guide/model.md`](guide/model.md) traz o que o esquema não consegue dizer sobre si mesmo. Em [`examples/session/`](examples/session/) ficam três arquivos: a sessão lógica, o delta do **arco sequencial**, e [`retail-technical.json`](examples/session/retail-technical.json) — o resultado já pronto de aplicar o delta à sessão lógica, no mesmo [one-liner de `elaborate`](#quando-o-arco-volta-a-ser-sequencial) que gera o seu.
 
 Grave a sessão e o descritivo fora desta árvore, e rode o verbo **de dentro do projeto que vai receber o diagrama** — é o diretório corrente que decide o destino:
 
@@ -74,7 +74,7 @@ Sai um diretório em `docs/architecture/diagrams/<case-slug>/`, a partir da raiz
 
 **Com um eixo de forma ainda em aberto, desenhe com a recomendação e declare qual foi o chute** — em prosa, neste turno, e como fato `inferred` no dossiê, com o `from` dizendo de onde saiu. Com **dois ou mais**, não desenhe: [o arco vira sequencial](#quando-o-arco-volta-a-ser-sequencial).
 
-**Agora, e não antes, medem-se o modelo e o grafo.** As duas comem `model@1`, então projete a sessão primeiro:
+**Agora, e não antes, medem-se o modelo e o grafo.** A exceção do verbo de caso já terminou: volte para a **raiz da skill** — os três comandos abaixo são de novo relativos a ela, não ao projeto de quem chamou. As duas checagens comem `model@1`, então projete a sessão primeiro:
 
 ```bash
 node -e "const {project}=require('./session/project.cjs');
@@ -83,6 +83,8 @@ node -e "const {project}=require('./session/project.cjs');
 node tools/check-geometry.cjs /tmp/projection.json
 node tools/review-gaps.cjs /tmp/projection.json
 ```
+
+**O laudo sai vermelho em `A1.2`/`A1.3`/`A1.11` mesmo num desenho correto — dívida conhecida do corpus inteiro, não do seu modelo.** Não entre em loop de conserto atrás dessas três: o piso está explicado em [`guide/inquiry.md`](guide/inquiry.md) e em [`guide/report.md`](guide/report.md).
 
 A **revisão de lacunas** — SPOF, single-AZ, egress sem controle, dado em subnet pública, cross-account sem confiança, assíncrono sem DLQ — **relata e propõe; ela não bloqueia**. Ela sai no mesmo turno que o desenho, e vira a seção 5 do `case.md`. Consertar um SPOF calado produz um diagrama bonito de uma arquitetura que não existe, e nada a jusante pega isso.
 
@@ -164,7 +166,7 @@ Recusa é **para o agente, não para o humano**: é ida e volta de máquina, nã
 
 ## A régua
 
-A suíte de testes e o corpus de modelos que ela come não são lidos nem rodados por quem executa a skill — moram no workspace irmão, fora desta árvore, e apontam para dentro dela: `workbench/panlabs-aws-diagrams/tests/run.sh`, 8 camadas. As sete primeiras rodam em qualquer máquina; só o render precisa do draw.io headless e, sem o binário, avisa e segue. O render é dependência de **desenvolvimento**; a skill publicada não carrega nenhuma.
+A suíte de testes e o corpus de modelos que ela come **moram fora desta árvore, no workspace irmão, e não são lidos nem rodados por quem executa a skill** — 8 camadas. As sete primeiras rodam em qualquer máquina; só o render precisa do draw.io headless e, sem o binário, avisa e segue. O render é dependência de **desenvolvimento**; a skill publicada não carrega nenhuma.
 
 Uma suíte verde sobre a semântica **não substitui** o portão sobre a geometria, e nenhum dos dois substitui olhar o PNG — o corpus tem caso de 24 checagens estáticas verdes com o ícone errado no desenho.
 

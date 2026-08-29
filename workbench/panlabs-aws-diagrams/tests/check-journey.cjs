@@ -80,6 +80,17 @@ const INSIDE_DIRS = fs
 // write syntax below — which is the half that can always be worded around.
 const WRITE_ONLY_DIR = 'output';
 
+// The one placeholder that names the skill's OWN root, as opposed to every
+// other `<...>` token (`<case-slug>`, `<m.json>`, `<dir-do-caso>`) which names
+// something the caller supplies and this checker has no business resolving.
+// #165: `<raiz-da-skill>/tools/case.cjs` used to skip existence checking
+// entirely, because the blanket placeholder exemption below tests the WHOLE
+// token for `<`/`>` — so a typo in the tool name after it (`does-not-exist.cjs`
+// for `case.cjs`) would have gone unmeasured forever, in the one command the
+// document most depends on. Stripping this ONE known prefix and checking what
+// is left keeps every other placeholder exempt while closing that hole.
+const ROOT_PLACEHOLDER = '<raiz-da-skill>/';
+
 // ------------------------------------------------------------------- reading
 
 /**
@@ -219,7 +230,12 @@ function measure(md, surfaces = []) {
       if (t.split('/')[0] === WRITE_ONLY_DIR) writesInside.push({ file, t });
       if (t.startsWith('/tmp/')) continue;      // scratch: outside the tree on purpose
       if (/^(\.\.\/|~|\/)/.test(t)) { escapes.push({ file, t }); continue; }
-      if (/[<>*]/.test(t)) continue;            // `<case-slug>.session.json` is a placeholder
+      if (t.startsWith(ROOT_PLACEHOLDER)) {      // the skill's own root: check what follows it
+        const rest = t.slice(ROOT_PLACEHOLDER.length);
+        if (!/[<>*]/.test(rest) && !fs.existsSync(path.join(ROOT, rest))) dangling.push({ file, t: rest });
+        continue;
+      }
+      if (/[<>*]/.test(t)) continue;            // any other placeholder — `<case-slug>.session.json`
       if (!fs.existsSync(path.join(ROOT, t))) dangling.push({ file, t });
     }
   }
@@ -304,6 +320,11 @@ const DEFECTS = [
     md => md + inLang('js', `require('fs').writeFileSync('examples/new.json', x)`)],
   ['a js fence naming a path that does not exist', '3 · every concrete path a command names exists',
     md => md + inLang('js', `require('./tools/does-not-exist.cjs')`)],
+  // #165: before ROOT_PLACEHOLDER existed, `<raiz-da-skill>/...` matched the
+  // blanket `<`/`>` exemption whole, so a typo'd tool name behind it went
+  // unmeasured — this is the actual document's own command, not a synthetic one.
+  ['<raiz-da-skill> naming a tool that does not exist', '3 · every concrete path a command names exists',
+    md => md.replace('<raiz-da-skill>/tools/case.cjs', '<raiz-da-skill>/tools/does-not-exist.cjs')],
 ];
 
 // ------------------------------------------------------------------ the report

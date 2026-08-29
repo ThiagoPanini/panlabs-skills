@@ -9,9 +9,9 @@
  * will land on. The theme is a hypothesis; the plan is where it becomes a
  * number.
  *
- *   A7.1   text             >= 4.5:1  (>= 3:1 if >= 24 px, or >= 18.5 px bold)
- *   A7.2   stroke            >= 3:1    FAILS
- *   A7.2a  solid area        >= 3:1    WARNS
+ *   A7.1   text                       >= 4.5:1  (>= 3:1 if >= 24 px, or >= 18.5 px bold)
+ *   A7.2   stroke                      >= 3:1    FAILS
+ *   A7.2a  solid area / band ring      >= 3:1    WARNS
  *   A7.3   color isn't the only channel
  *
  * The split between STROKE and AREA came out of #13's rework, and it isn't a
@@ -28,6 +28,20 @@
  * A2 caveat in #5 already sanctions. That's why AREA warns and STROKE fails.
  * The area threshold is engineering judgment, not WCAG text — the same
  * annotation the rubric gives A7.4.
+ *
+ * #185 found the same tension one shape over: a `groupCenter` BAND (today
+ * only "Auto Scaling group") whose common ancestor is a tinted subnet inherits
+ * the identical subnet-tint problem on its own ring, and #ED7100 — the
+ * corrected Compute orange (#17's `legacyPalette`) — only clears 3:1 against
+ * pure white by 0.02, so any tint at all pushes it under the floor. Neither
+ * side may move to fix it: the ring's color is normative (#5 — a group's
+ * color IS the legend), and the subnet's tint is #13's own withdrawn
+ * correction, restored because it matches AWS's real, published diagrams. So
+ * the ring joins AREA instead: like the icon square, its identity is carried
+ * redundantly (the model's `members`, the label, and the icon glyph
+ * `layout.cjs`'s `calhaDaFaixa` reserves room for) — a BAND ring reinforces
+ * containment; it isn't the only place it's stated, the way a VPC's or a
+ * subnet's border is.
  *
  * WARNING: the #4 §3.2 trap applies HERE TOO: in `mxgraph.aws4.*` shapes,
  * `strokeColor` isn't the border color — it's the GLYPH color. A validator that
@@ -94,6 +108,19 @@ function effectiveBackground(cel, byId, pageBackground, skipSelf) {
 const isAws4 = style => /shape=mxgraph\.aws4\./.test(style || '');
 const isServiceIcon = style => /shape=mxgraph\.aws4\.(resourceIcon|productIcon)/.test(style || '');
 const isAws4Group = style => /shape=mxgraph\.aws4\.(group|groupCenter|group2)\b/.test(style || '');
+/**
+ * `groupCenter` is the one group shape the catalog uses for a BAND (#17):
+ * today only "Auto Scaling group", crossing members that already live inside
+ * someone else's border rather than containing them. Its identity reaches the
+ * reader three ways that a structural container (VPC, subnet, AZ, security
+ * group) doesn't have: the model's own `members` list, the label, and — per
+ * `layout.cjs`'s `calhaDaFaixa` — an icon glyph the shape itself draws at the
+ * top (`spacingTop=25`). That's the same redundancy #13 measured for a
+ * service icon's square, which is why the ring gets the SAME exception: it's
+ * AREA-class reinforcement, not the only place containment is stated, so it
+ * warns instead of failing. See #185.
+ */
+const isBand = style => /shape=mxgraph\.aws4\.groupCenter\b/.test(style || '');
 
 /**
  * The (foreground, background) pairs a cell requires measuring. This is where
@@ -132,8 +159,12 @@ function pairsOf(cel, byId, pageBackground) {
   if (isAws4(st)) {   // group, or a monochrome resource icon
     const behind = effectiveBackground(cel, byId, pageBackground, true);
     const group = isAws4Group(st);
-    if (stroke) pairs.push({ rule: 'A7.2', o_que: group ? 'group border' : 'icon stroke',
-      frente: stroke, background: behind.color, target: 3.0 });
+    const band = isBand(st);
+    if (stroke) {
+      if (band) pairs.push({ rule: 'A7.2a', o_que: 'band border', frente: stroke, background: behind.color, target: 3.0, warning: true });
+      else pairs.push({ rule: 'A7.2', o_que: group ? 'group border' : 'icon stroke',
+        frente: stroke, background: behind.color, target: 3.0 });
+    }
     // In a group, the boundary is carried by the BORDER; the fill is a wash and
     // WCAG 1.4.11 speaks of "the important parts". Measuring the tint against
     // the page would fail a light gray that doesn't need to be seen — and would

@@ -98,6 +98,41 @@ function anchor(cellBox, p) {
   return null;   // loose tip: let it float instead of lying about an anchor
 }
 
+/**
+ * #195: the box the layout reserved (`w`, `h`) still carries the label's
+ * overflow — `resolve.cjs`'s `leaf()` widens it ON PURPOSE, so ELK and the
+ * grid keep siblings apart. The EMITTED geometry is a different question: an
+ * AWS resource icon draws at the catalog's own 1:1 size (`shapeW`×`shapeH`),
+ * centered inside whatever width the layout bought for its label. A
+ * container has no `shapeW` of its own — its reserved box IS its geometry —
+ * so it passes through untouched, same as anything `resolve.cjs` never sized
+ * (a title band, a group, a band's halo).
+ */
+function iconGeo(meta, x, y, w, h) {
+  if (!meta || meta.container || meta.shapeW == null) return { x, y, w, h };
+  return { x: x + (w - meta.shapeW) / 2, y, w: meta.shapeW, h: meta.shapeH };
+}
+
+/**
+ * `anchor()` classifies an ELK touch point against the box ELK actually
+ * routed around — the WIDE reservation `abs` still stores — so the touched
+ * SIDE, and the axis the width never moves (height), come out right
+ * unchanged. Only the FREE axis of a top/bottom touch is a fraction of that
+ * wide width; remap it onto the narrower icon `iconGeo` now draws, or the
+ * arrow lands in the label's margin instead of on the visible shape.
+ */
+function narrowAnchor(a, meta, wideW) {
+  if (!a || !meta || meta.container || meta.shapeW == null || wideW === meta.shapeW) return a;
+  if (a.x === 0 || a.x === 1) return a;   // side touch: y is height-based, untouched
+  const offset = (wideW - meta.shapeW) / 2;
+  return { ...a, x: clamp((a.x * wideW - offset) / meta.shapeW) };
+}
+
+/** `anchor()` + `narrowAnchor()` together, at the three sites that touch ELK edges. */
+function touch(cellBox, meta, p) {
+  return narrowAnchor(anchor(cellBox, p), meta, cellBox.w);
+}
+
 function edgeLabel(a) {
   const base = a.label || '';
   if (a.order === undefined) return base;
@@ -267,7 +302,7 @@ function elkPlan(model, d, res, layout, opts = {}) {
         kind: 'vertice', id: c.id, parent: parentId,
         label: meta.container ? (modelNode.label || '') : meta.label,
         style: meta.style,
-        geo: { x, y, w: c.width, h: c.height },
+        geo: iconGeo(meta, x, y, c.width, c.height),
       });
 
       if (c.children && c.children.length) tier(c, c.id, a);
@@ -317,8 +352,8 @@ function elkPlan(model, d, res, layout, opts = {}) {
     if (!sec) continue;
     const shift = toPage({ x: mo.x, y: mo.topo });
     const anc = {
-      output: anchor(abs.get(a.from), sec.startPoint),
-      input: anchor(abs.get(a.to), sec.endPoint),
+      output: touch(abs.get(a.from), boxes.get(a.from), sec.startPoint),
+      input: touch(abs.get(a.to), boxes.get(a.to), sec.endPoint),
     };
     layoutPlan.cells.push({
       kind: 'edge', id: e.id, parent: '1', from: a.from, to: a.to,
@@ -477,7 +512,7 @@ function drawOutsiders(layoutPlan, model, d, res, g, mo) {
       kind: 'vertice', id: n.id, parent: '1',
       label: meta.container ? (n.label || '') : meta.label,
       style: meta.style,
-      geo: { x: page.x, y: page.y, w: p.w, h: p.h },
+      geo: iconGeo(meta, page.x, page.y, p.w, p.h),
     });
 
     const r = g.outsiders.interno.get(n.id);
@@ -491,7 +526,7 @@ function drawOutsiders(layoutPlan, model, d, res, g, mo) {
           kind: 'vertice', id: c.id, parent: parentId,
           label: m.container ? (modelNode.label || '') : m.label,
           style: m.style,
-          geo: { x: c.x, y: c.y, w: c.width, h: c.height },
+          geo: iconGeo(m, c.x, c.y, c.width, c.height),
         });
         if (c.children && c.children.length) tier(c, c.id);
       }
@@ -504,8 +539,8 @@ function drawOutsiders(layoutPlan, model, d, res, g, mo) {
       if (!edge || !sec) continue;
       const eshift = toPage({ x: page.x, y: page.y });
       const anc = {
-        output: anchor(boxPage(edge.from), eshift(sec.startPoint)),
-        input: anchor(boxPage(edge.to), eshift(sec.endPoint)),
+        output: touch(boxPage(edge.from), g.outsiders.boxes.get(edge.from), eshift(sec.startPoint)),
+        input: touch(boxPage(edge.to), g.outsiders.boxes.get(edge.to), eshift(sec.endPoint)),
       };
       layoutPlan.cells.push({
         kind: 'edge', id: e.id, parent: '1', from: edge.from, to: edge.to,
@@ -725,7 +760,7 @@ function gridPlan(model, d, res, g, opts = {}) {
         const meta = g.boxes.get(child.id);
         layoutPlan.cells.push({
           kind: 'vertice', id: child.id, parent: s.id, label: meta.label, style: meta.style,
-          geo: { x: child.x, y: child.y, w: meta.boxW || meta.shapeW, h: meta.shapeH },
+          geo: iconGeo(meta, child.x, child.y, meta.boxW || meta.shapeW, meta.shapeH),
         });
       }
     }
@@ -1146,7 +1181,7 @@ function accountPlan(model, d, res, g, opts = {}) {
           kind: 'vertice', id: c.id, parent: parentId,
           label: m.container ? (modelNode.label || '') : m.label,
           style: m.style,
-          geo: { x: c.x, y: c.y, w: c.width, h: c.height },
+          geo: iconGeo(m, c.x, c.y, c.width, c.height),
         });
         if (c.children && c.children.length) tier(c, c.id, a);
       }
@@ -1160,8 +1195,8 @@ function accountPlan(model, d, res, g, opts = {}) {
       if (!a || !sec) continue;
       const shift = toPage({ x: ax, y: ay });
       const anc = {
-        output: anchor(abs.get(a.from), shift(sec.startPoint)),
-        input: anchor(abs.get(a.to), shift(sec.endPoint)),
+        output: touch(abs.get(a.from), g.boxes.get(a.from), shift(sec.startPoint)),
+        input: touch(abs.get(a.to), g.boxes.get(a.to), shift(sec.endPoint)),
       };
       layoutPlan.cells.push({
         kind: 'edge', id: e.id, parent: '1', from: a.from, to: a.to,
@@ -1635,4 +1670,8 @@ function outsideEdges(layoutPlan, d, res, g, abs, opts) {
   if (topLane) g.canaletaTopo = 26 + topLane * 30;
 }
 
-module.exports = { elkPlan, gridPlan, accountPlan, paint, frame };
+// `iconGeo`/`narrowAnchor` are exported for #195's regression proof
+// (`workbench/panlabs-aws-diagrams/tests/check-leaf-box.cjs`) — the same reason
+// `resolve.cjs` exports `labelLines`/`textWidth`: a pure formula is tested
+// directly, not reconstructed from an ELK run that may or may not exercise it.
+module.exports = { elkPlan, gridPlan, accountPlan, paint, frame, iconGeo, narrowAnchor };

@@ -48,7 +48,14 @@ function briefing(opened, extra = {}) {
   const agreement = s.dossier && s.dossier.agreement;
   L.push(...head('The agreement'));
   if (!agreement) {
-    L.push('    (none) — the logical view has not been approved. The technical phase does not start.');
+    // Two DIFFERENT silences, and the one this session took matters (#198). A
+    // technical-stage session with no agreement went through the normal path:
+    // the agent chose the logical view directly, and no human approved it —
+    // that is documented, not a gap. A logical-stage one with no agreement
+    // means what it always meant: nobody has approved it yet.
+    L.push(s.stage === 'technical'
+      ? '    (none) — this session went straight to the technical stage. The agent chose the logical view; no human approved it.'
+      : '    (none) — the logical view has not been approved. The technical phase does not start.');
   } else {
     L.push(`    approved ${agreement.at || '(no date)'}${agreement.by ? ' by ' + agreement.by : ''}` +
       `${agreement.candidate ? ', candidate ' + agreement.candidate : ''}`);

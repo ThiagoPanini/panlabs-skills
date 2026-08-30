@@ -548,7 +548,8 @@
                 "description": "spof | single-az | egress-sem-controle | dado-em-subnet-publica | cross-account-sem-confianca | assincrono-sem-dlq | ..."
               },
               "target": {
-                "$ref": "#/definitions/identifier"
+                "$ref": "#/definitions/identifier",
+                "description": "Id de um nó OU de uma aresta — `cross-account-sem-confianca` (session/gaps.cjs) aponta a travessia em si, não uma das pontas. O validador da sessão confere contra os dois conjuntos."
               },
               "state": {
                 "enum": [

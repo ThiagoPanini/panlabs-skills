@@ -187,6 +187,8 @@ São **seis regras**, e cada uma tem **pré-condição escrita**: a estrutura qu
 
 **Não bloqueia mais — relata, em bloco e uma vez só.** Todos os achados saem junto do desenho, no mesmo turno, e viram a seção 5 do `case.md`; cada um é aceito ou recusado pelo usuário quando ele responder. Uma interação, não N: atrito importa, e o que bloqueava aqui deixou de precisar bloquear porque o desenho já está na frente de quem decide — quem guarda a fronteira de rede agora é o portão de veracidade, por máquina.
 
+**`target` aponta um nó ou uma aresta.** A maioria dos achados aponta um nó — mas `cross-account-sem-confianca` aponta a travessia em si, e a travessia é uma aresta. Grave o `id` da aresta problemática ali; omiti-lo para guardar o alvo só em texto livre perde endereçamento de máquina ([#197](https://github.com/ThiagoPanini/panlabs-skills/issues/197)).
+
 ### A recusa tem de chegar ao desenho
 
 Todo achado com `state: "rejected"` precisa de `viaNote` apontando para uma entrada de `notes` com `origin: "rejected-finding"`. O elo é **explícito**, e não busca de substring no texto, para que quem edita o texto da nota não quebre a rastreabilidade sem perceber.

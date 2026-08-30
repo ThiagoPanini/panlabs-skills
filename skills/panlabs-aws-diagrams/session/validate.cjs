@@ -179,8 +179,16 @@ function dossier(m) {
   }
 
   const ids = new Set(m.nodes.map(n => n.id));
+  // A finding's target is not always a node: `cross-account-sem-confianca`
+  // (session/gaps.cjs) points at the CROSSING itself — the edge — because
+  // that is the thing the finding is about, not either account it touches.
+  // Checking only `ids` rejected exactly that shape: a real gap review came
+  // back with `target: "f7"`, an edge id, and the only way to publish the
+  // case was to drop the target and keep "f7" in free text (#197).
+  const edgeIds = new Set((m.edges || []).map(a => a.id).filter(id => id !== undefined));
   for (const a of (d.findings || []))
-    if (a.target !== undefined && !ids.has(a.target)) errors.push(`dossier.findings: target "${a.target}" does not exist among the nodes.`);
+    if (a.target !== undefined && !ids.has(a.target) && !edgeIds.has(a.target))
+      errors.push(`dossier.findings: target "${a.target}" does not exist among the nodes or edges.`);
   for (const e of (d.parking || []))
     if (e.capability !== undefined && !ids.has(e.capability))
       errors.push(`dossier.parking: capability "${e.capability}" does not exist among the nodes.`);

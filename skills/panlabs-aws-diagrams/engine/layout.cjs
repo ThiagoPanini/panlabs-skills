@@ -23,6 +23,7 @@ const ELK = require('./vendor/elk.bundled.cjs');
 const { align } = require('./align.cjs');
 const layersMod = require('./layers.cjs');
 const { CONTAINERS, LEAVES } = require('./validate.cjs');
+const { MAX_PAGE_RATIO } = require('./page-ratio.cjs');
 
 // ---- #19's four lanes ---------------------------------------------------
 //
@@ -579,6 +580,217 @@ function deficitDeTitulo(no, cellBox, obtainedWidth, res) {
   return Math.max(0, Math.ceil(needed - obtainedWidth));
 }
 
+/**
+ * Candidates tried in order, roomiest first. ELK's wrapping snaps to
+ * whichever row count comes closest to the REQUESTED ratio among the few
+ * geometrically possible ones for that exact graph — not a continuous
+ * dial — so a single fixed target sometimes lands well past the ceiling on
+ * one graph and comfortably under it on another (measured: `2.2` alone
+ * left one corpus chain at a 7.0:1 four-row split when a 1.75:1 six-row
+ * split was one candidate away). Trying a descending list and keeping the
+ * first result that actually clears `MAX_PAGE_RATIO` is what makes the
+ * page stay under the ceiling by CONSTRUCTION instead of by luck.
+ */
+const WRAP_ASPECT_CANDIDATES = [4, 2.2, 1.2];
+
+/**
+ * A "flow" container: 2+ children, none of which are themselves containers
+ * — i.e. it directly holds a ROW of leaves, the shape that goes wide. Never
+ * a container that holds other containers: every over-ratio page measured
+ * for #199 is a flat chain inside a single wrapper (`AWS Cloud`, sometimes a
+ * region under it, occasionally a few sibling groups) — deep VPC/subnet
+ * nesting already goes through path B, which is grid-shaped and structurally
+ * short of the ceiling (measured: nothing there passes 2.34:1).
+ */
+function flowContainers(node, out) {
+  const kids = node.children || [];
+  const allLeaves = kids.length >= 2 && kids.every(c => !(c.children && c.children.length));
+  if (allLeaves) out.add(node.id);
+  else for (const c of kids) flowContainers(c, out);
+}
+
+function findNode(root, id) {
+  if (root.id === id) return root;
+  for (const c of root.children || []) { const r = findNode(c, id); if (r) return r; }
+  return null;
+}
+
+function descendantIds(node) {
+  const out = new Set();
+  (function collect(n) { out.add(n.id); for (const c of n.children || []) collect(c); })(node);
+  return out;
+}
+
+/**
+ * WRAPPING REFUSES A TARGET WITH A FOREIGN EDGE — THE CHEAP HALF OF THE
+ * SAFETY NET, `allEdgesRouted` BELOW IS THE OTHER.
+ *
+ * `elk.hierarchyHandling: SEPARATE_CHILDREN` — the only setting under which
+ * `elk.layered.wrapping.strategy` actually does anything (measured: with the
+ * engine's usual `INCLUDE_CHILDREN`, wrapping options on a nested container
+ * are silently inert, same trap `folgas`'s header already documents for
+ * spacing) — solves the wrapped container as its OWN independent layout
+ * problem. An edge with exactly one end inside that problem has nowhere to
+ * go: ELK returns it with no `sections` at all, and `plan.cjs` already
+ * treats a section-less edge as unroutable and skips it — which for a real
+ * edge is a silent, missing arrow, not a warning.
+ *
+ * Promoting a target UP its ancestor chain to escape a foreign edge was
+ * tried and measured wrong: `SEPARATE_CHILDREN` isolates every level with
+ * children, not just the boundary of whichever node it's set on, so a
+ * target widened to include two sibling sub-containers still can't route an
+ * edge BETWEEN them (measured on `logical-support`: promoting to `root`
+ * reports no foreign edge at all — everything is a descendant of root — and
+ * still drops 4 of 7 edges crossing between `canais`/`governanca`/`nucleo`).
+ * There is no cheap predicate for that second failure; `allEdgesRouted`
+ * checks it directly, after the fact, instead.
+ */
+function hasForeignEdge(root, own) {
+  let found = false;
+  (function walk(n) {
+    for (const e of n.edges || []) {
+      const inFrom = e.sources.every(s => own.has(s));
+      const inTo = e.targets.every(t => own.has(t));
+      if (inFrom !== inTo) found = true;   // exactly one end inside — the case wrapping can't route
+    }
+    for (const c of n.children || []) walk(c);
+  })(root);
+  return found;
+}
+
+/**
+ * The two fixes `SEPARATE_CHILDREN` + wrapping needs before it runs at all:
+ *
+ *   1. every wholly-internal edge declared ON the target — `buildElkGraph`
+ *      declares every edge once, at the root, which is what the engine's
+ *      usual `INCLUDE_CHILDREN` wants; `SEPARATE_CHILDREN` needs the target
+ *      to see its own edges to have anything to wrap AROUND.
+ *   2. no edge label object on any of them — ELK's `SINGLE_EDGE` wrapping
+ *      throws `java.util.NoSuchElementException` on any labelled edge
+ *      (measured directly against this vendored build), and every numbered
+ *      or described edge in this engine carries one (`textoDaAresta`). The
+ *      RENDERED text never came from this object — `plan.cjs` draws it from
+ *      the model's own `edgeLabel(a)` as the mxCell's value — so dropping it
+ *      here changes nothing downstream except needing to buy the room a
+ *      label object used to reserve on its own, added to
+ *      `nodeNodeBetweenLayers` instead.
+ */
+function prepareForWrap(root, targetId, aspectRatio, own) {
+  root.layoutOptions = { ...root.layoutOptions, 'elk.hierarchyHandling': 'SEPARATE_CHILDREN' };
+  const node = findNode(root, targetId);
+
+  const moved = [];
+  (function strip(n) {
+    n.edges = (n.edges || []).filter(e => {
+      const internal = e.sources.every(s => own.has(s)) && e.targets.every(t => own.has(t));
+      if (internal) moved.push(e);
+      return !internal;
+    });
+    for (const c of n.children || []) strip(c);
+  })(root);
+
+  const labelReserve = Math.max(0, ...moved.flatMap(e => (e.labels || []).map(l => l.width)));
+  for (const e of moved) delete e.labels;
+  node.edges = [...(node.edges || []), ...moved];
+  node.layoutOptions = {
+    ...node.layoutOptions,
+    'elk.layered.wrapping.strategy': 'SINGLE_EDGE',
+    'elk.aspectRatio': String(aspectRatio),
+    'elk.layered.spacing.nodeNodeBetweenLayers':
+      String(Number(node.layoutOptions['elk.layered.spacing.nodeNodeBetweenLayers'] || 0) + labelReserve),
+  };
+}
+
+/**
+ * `plan.cjs`'s `elkPlan` reads `output.edges` — the ROOT's own array — and
+ * nothing recurses into a child's. That is exactly right for the engine's
+ * usual `INCLUDE_CHILDREN` output, where every edge always comes back at the
+ * root regardless of where its ends live, and it is exactly WRONG for what
+ * `prepareForWrap` just did: an edge moved onto a nested target's own INPUT
+ * `edges` array comes back nested in ELK's OUTPUT too, under
+ * `SEPARATE_CHILDREN` — invisible to `elkPlan`'s loop, a silently missing
+ * arrow (measured directly: both edges of a 3-node wrapped chain came back
+ * with valid `sections`, and zero edge cells reached the emitted XML).
+ *
+ * The fix is not to make `plan.cjs` recurse — `ROOT_OPTIONS`'s
+ * `elk.json.edgeCoords: 'ROOT'` already means every section's coordinates
+ * are root-absolute NO MATTER which level of the tree the edge object sits
+ * at (measured: a section nested three levels down landed exactly on the
+ * sum of its ancestors' `PARENT`-relative offsets). Hoisting every edge back
+ * onto `output.edges` after a wrapped layout is a pure bookkeeping move,
+ * not a coordinate one, and it keeps `elkPlan` exactly as ignorant of
+ * wrapping as it already is of everything else `porElk` does internally.
+ */
+function hoistEdges(output) {
+  const all = [];
+  (function collect(n) {
+    all.push(...(n.edges || []));
+    if (n !== output) n.edges = [];
+    for (const c of n.children || []) collect(c);
+  })(output);
+  output.edges = all;
+}
+
+/**
+ * #199 — a page past `MAX_PAGE_RATIO` gets ONE more ELK pass, wrapped,
+ * instead of shipping a panoramic strip. Only reached when the normal,
+ * single-row pass already measured over-ratio, so the ~20 of 24 corpus
+ * models that were never over-ratio to begin with never touch this code —
+ * their generation is byte-for-byte what it always was.
+ */
+/**
+ * `hasForeignEdge` catches the CHEAP case — an edge with exactly one end
+ * outside the target — but `SEPARATE_CHILDREN` isolates every level with
+ * children it touches, not just the target's own boundary: a target
+ * promoted up to hold two sibling sub-containers still can't route an edge
+ * BETWEEN them, because each sub-container is independently solved too
+ * (measured on `logical-support`: promoting to `root` reports no foreign
+ * edge — every endpoint IS a descendant of root — and still drops 4 of 7
+ * edges, because they cross from one of root's child containers into
+ * another). There is no cheap predicate for that; the definitive check is
+ * whether every edge the model declares actually came back with a route.
+ */
+function allEdgesRouted(output, edgeIds) {
+  const byId = new Map();
+  (function walk(n) { for (const e of n.edges || []) byId.set(e.id, e); for (const c of n.children || []) walk(c); })(output);
+  return edgeIds.every(id => { const e = byId.get(id); return !!(e && e.sections && e.sections.length); });
+}
+
+/**
+ * #199 — a page past `MAX_PAGE_RATIO` gets ONE more ELK pass, wrapped,
+ * instead of shipping a panoramic strip. Only reached when the normal,
+ * single-row pass already measured over-ratio, so the ~20 of 24 corpus
+ * models that were never over-ratio to begin with never touch this code —
+ * their generation is byte-for-byte what it always was.
+ */
+async function wrapIfTooWide(elk, model, d, res, base, measure) {
+  if (base.output.width / base.output.height <= MAX_PAGE_RATIO) return base;
+  const edgeIds = d.edges.map(a => a.id);
+
+  for (const aspectRatio of WRAP_ASPECT_CANDIDATES) {
+    const { grafo, boxes, paddings, rotuloMax, revertidas } = buildElkGraph(model, d, res, measure);
+    const targets = new Set();
+    flowContainers(grafo, targets);
+    if (!targets.size) break;   // nothing shaped like a flow row — wrapping has nothing to do
+
+    let wrapped = false;
+    for (const id of targets) {
+      const own = descendantIds(findNode(grafo, id));
+      if (hasForeignEdge(grafo, own)) continue;   // the cheap, necessary (not sufficient) filter
+      prepareForWrap(grafo, id, aspectRatio, own);
+      wrapped = true;
+    }
+    if (!wrapped) break;   // every candidate target has a foreign edge — no safe target to wrap
+
+    const laid = clean(await elk.layout(grafo));
+    hoistEdges(laid);   // before `unrevert` — it only reads the root's own `edges` too
+    const output = unrevert(laid, revertidas);
+    if (output.width / output.height <= MAX_PAGE_RATIO && allEdgesRouted(output, edgeIds))
+      return { output, boxes, rotuloMax, passadas: base.passadas + 1, snap: align(output, paddings), wrapped: true };
+  }
+  return base;   // no candidate cleared the ceiling without dropping an edge — the original survives
+}
+
 async function porElk(model, d, res) {
   const elk = new ELK();
   let measure = new Map();
@@ -587,7 +799,10 @@ async function porElk(model, d, res) {
   for (let pass = 0; pass < 2; pass++) {
     const { grafo, boxes, paddings, rotuloMax, revertidas } = buildElkGraph(model, d, res, measure);
     output = unrevert(clean(await elk.layout(structuredClone(grafo))), revertidas);
-    if (pass === 1) return { output, boxes, rotuloMax, passadas: 2, snap: align(output, paddings) };
+    if (pass === 1) {
+      const base = { output, boxes, rotuloMax, passadas: 2, snap: align(output, paddings) };
+      return wrapIfTooWide(elk, model, d, res, base, measure);
+    }
 
     const next = new Map();
     (function measureTitles(n) {
@@ -598,7 +813,10 @@ async function porElk(model, d, res) {
         measureTitles(c);
       }
     })(output);
-    if (!next.size) return { output, boxes, rotuloMax, passadas: 1, snap: align(output, paddings) };
+    if (!next.size) {
+      const base = { output, boxes, rotuloMax, passadas: 1, snap: align(output, paddings) };
+      return wrapIfTooWide(elk, model, d, res, base, measure);
+    }
     measure = next;
   }
 }
@@ -1416,4 +1634,5 @@ module.exports = {
   notasPorPai, idDaNota, NOTE_W, NOTE_MIN_H,
   AZ_LANE, BAND_LANE, CROSS_OUT, HEAD, GAP_IRMA, GAP_OU, LANE, OU_LANE, clean, folgas,
   layoutOutsiders,
+  MAX_PAGE_RATIO, WRAP_ASPECT_CANDIDATES, flowContainers, hasForeignEdge, prepareForWrap,
 };

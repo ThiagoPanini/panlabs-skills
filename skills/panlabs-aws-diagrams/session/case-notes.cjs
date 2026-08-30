@@ -85,7 +85,19 @@ function inferredResourcesBlock(nodes) {
   );
 }
 
-function attentionBlock(semanticFailures, findings, detailPagesMissing) {
+// A finding's `target` is a node id OR an edge id — `cross-account-sem-confianca`
+// (session/gaps.cjs) points at the crossing itself, not one of its ends. `on
+// "f7"` reads as an opaque token unless the reader already has the model open;
+// naming it an edge and printing both ends is what makes it legible without one.
+function describeTarget(target, nodeIds, edgesById) {
+  if (target === undefined) return '';
+  if (nodeIds.has(target)) return ` on \`${target}\``;
+  const edge = edgesById.get(target);
+  if (edge) return ` on edge \`${target}\` (\`${edge.from}\` → \`${edge.to}\`)`;
+  return ` on \`${target}\``;
+}
+
+function attentionBlock(semanticFailures, findings, detailPagesMissing, nodeIds, edgesById) {
   return [
     '**Semantic failures**',
     ...bullets(
@@ -95,7 +107,7 @@ function attentionBlock(semanticFailures, findings, detailPagesMissing) {
     '',
     '**Gap findings**',
     ...bullets(
-      findings.map(a => `- [${a.state}] ${a.rule}${a.target ? ` on \`${a.target}\`` : ''}${a.note ? ` — ${a.note}` : ''}`),
+      findings.map(a => `- [${a.state}] ${a.rule}${describeTarget(a.target, nodeIds, edgesById)}${a.note ? ` — ${a.note}` : ''}`),
       '_No gap review was recorded for this case._'
     ),
     '',
@@ -124,13 +136,15 @@ function caseNotes(session, opts = {}) {
     throw new Error('case-notes needs the original brief, verbatim — pass opts.brief');
 
   const d = session.dossier || {};
+  const nodeIds = new Set((session.nodes || []).map(n => n.id));
+  const edgesById = new Map((session.edges || []).filter(a => a.id !== undefined).map(a => [a.id, a]));
   const L = [`# ${session.title}`, ''];
   L.push(...section(1, 'The case', [String(brief).trim()]));
   L.push(...section(2, 'What I understood', factsBlock(d.facts || [])));
   L.push(...section(3, 'The decisions', decisionsBlock(d.candidates || [])));
   L.push(...section(4, 'What I inferred — please check', inferredResourcesBlock(session.nodes || [])));
   L.push(...section(5, 'What deserves attention',
-    attentionBlock(opts.semanticFailures || [], d.findings || [], opts.detailPagesMissing || [])));
+    attentionBlock(opts.semanticFailures || [], d.findings || [], opts.detailPagesMissing || [], nodeIds, edgesById)));
 
   return L.join('\n').replace(/\n+$/, '\n');
 }

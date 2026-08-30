@@ -265,6 +265,7 @@ step "steps 1 and 6 — resume and technical view"   node "$SKILL/tools/resume.c
 step "the arc end to end, on a new case (#26)"  node "$HERE/check-arc.cjs"
 step "the dossier's privacy"                    node "$HERE/check-dossier.cjs"
 step "the case verb writes at the caller's root (#41)"  node "$HERE/check-case.cjs"
+step "a finding can target an edge, not just a node (#197)"  node "$HERE/check-finding-target.cjs"
 
 echo
 echo "════ layer 7 · the app (development dependency) ════"

@@ -214,6 +214,14 @@ Medido em 24 de 24 combinações realistas contra a proporção 16:9, e a razão
 
 Onde o fato falta, a assimetria é deliberada: **o motor exige o fato onde o fato É o desenho, e avisa onde ele é só desempate.** A grade recusa com a lista; o ELK avisa e desenha.
 
+### Página panorâmica: o ELK reparte um fluxo longo em fileiras
+
+O caminho `elk` desenha um fluxo longo numa única linha até que a página vire uma tira — o #199 mediu casos entre 4,6:1 e 12,1:1 de proporção. Passado **3:1**, o motor tenta uma segunda passada em `engine/layout.cjs` (`wrapIfTooWide`), pedindo ao próprio ELK para quebrar aquela sequência em mais de uma **fileira**: nome deliberadamente diferente de `bands[]` (§5 acima) — uma fileira é geometria de página, uma faixa é atributo compartilhado do modelo, e as duas nunca são a mesma coisa mesmo quando aparecem juntas no mesmo desenho.
+
+A regra é determinística e vem do próprio ELK (`elk.layered.wrapping.strategy=SINGLE_EDGE`), não uma heurística escrita aqui: dado o mesmo grafo, a mesma quebra sai sempre no mesmo lugar, e a aresta que atravessa a fileira ganha o mesmo desvio ortogonal — desce, atravessa, entra — que qualquer outro desvio deste motor.
+
+**Nem todo fluxo largo quebra.** `SEPARATE_CHILDREN` — a única configuração sob a qual o ELK aceita quebrar em fileiras — isola cada nível da árvore que toca; uma aresta com só uma ponta dentro do contêiner escolhido sai sem rota, e um desenho que perde uma aresta calada é exatamente o defeito que este motor existe para não cometer. Por isso a quebra só é aceita quando **toda** aresta do modelo continua com uma rota válida depois dela — testado, não suposto, comparando o conjunto de arestas antes e depois. Um fluxo alcançado por um ator externo, ou que cruza entre grupos irmãos, não tem contêiner seguro para quebrar e a página permanece panorâmica, com `P1` (`guide/report.md`) avisando em vez de a suíte ficar calada.
+
 ### Multi-conta: dois modos, nenhum perguntado
 
 | modo | gatilho | o que faz com a travessia |

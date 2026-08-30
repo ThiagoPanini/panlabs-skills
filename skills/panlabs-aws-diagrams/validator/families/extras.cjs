@@ -39,6 +39,15 @@
  * its seven siblings return) is where the "62 rubric" totals get counted
  * from, and this file's `output` is kept apart from that on purpose.
  *
+ * `P1` (#199) is the same shape again: a ceiling the rubric never wrote,
+ * because the rubric has no notion of "page" at all — the `A6` family that
+ * comes closest (`A6.3`) compares the drawing's ratio to whatever the
+ * CANVAS already is, and the canvas is exactly what grows to match a
+ * panoramic drawing, so it can't itself catch one. `P1` reads the same
+ * ceiling `engine/layout.cjs` reads to decide whether a flow needs wrapping
+ * (`engine/page-ratio.cjs`, so the two can't quietly drift onto different
+ * numbers) and simply asks whether the page it got obeys it.
+ *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY F2 WAS BORN IN #26, AND WHAT ITS MEASUREMENT SAID
  *
@@ -70,6 +79,7 @@
 const path = require('path');
 const g = require(path.join(__dirname, '..', 'geometry.cjs'));
 const { withoutTags, roundTo, name } = require(path.join(__dirname, 'common.cjs'));
+const { MAX_PAGE_RATIO } = require(path.join(__dirname, '..', '..', 'engine', 'page-ratio.cjs'));
 
 /**
  * The descriptor for an `F`-family finding, in one place.
@@ -178,6 +188,32 @@ function l1(scene) {
     cases);
 }
 
+/**
+ * P1 — the page stays inside `MAX_PAGE_RATIO` (#199).
+ *
+ * `warn`, not `fail`: unlike F1/F2/A4.2, a wide page isn't the drawing
+ * LYING — it's LEGIBILITY, the same tier `A6.3` already sits at. #199's own
+ * wrap only ever narrows a flow container with no edge crossing its
+ * boundary (`engine/layout.cjs`'s `hasForeignEdge`) — a flow an outsider
+ * actor reaches into stays unwrapped rather than risk a route ELK can't
+ * compute, so a page can legitimately still be over-ratio after the engine
+ * tried. `P1` is what keeps that honest instead of silent.
+ */
+function p1(scene) {
+  const finding = (state, message, measured) => ({
+    id: 'P1', name: 'Page stays within the ratio ceiling', family: 'P', input: 'geometry',
+    maxSeverity: 'warn', semantica: false, calibratable: false,
+    state, message, measured, occurrences: [],
+  });
+  const { canvas } = scene;
+  if (!canvas || !canvas.w || !canvas.h) return finding('notApplicable', 'the drawing has no area', {});
+  const ratio = roundTo(canvas.w / canvas.h, 2);
+  const measured = { ratio, ceiling: MAX_PAGE_RATIO, w: canvas.w, h: canvas.h };
+  return ratio <= MAX_PAGE_RATIO
+    ? finding('ok', `page ratio ${ratio}:1, within the ${MAX_PAGE_RATIO}:1 ceiling`, measured)
+    : finding('warning', `page ratio ${ratio}:1 exceeds the ${MAX_PAGE_RATIO}:1 ceiling (${canvas.w}×${canvas.h})`, measured);
+}
+
 module.exports = function extras(scene) {
   const output = [];
   const { bands, nodes } = scene;
@@ -191,6 +227,7 @@ module.exports = function extras(scene) {
       { bands: bands.length }));
     output.push(f2(scene));
     output.push(l1(scene));
+    output.push(p1(scene));
     return output;
   }
 
@@ -233,6 +270,9 @@ module.exports = function extras(scene) {
 
   // ---------------------------------------------------------------- L1
   output.push(l1(scene));
+
+  // ---------------------------------------------------------------- P1
+  output.push(p1(scene));
 
   return output;
 };

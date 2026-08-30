@@ -185,6 +185,7 @@ step "the leaf queue centers in its final box (#40)"   node "$HERE/check-leaf-qu
 step "a colliding edge label slides along its edge (#40)"  node "$HERE/check-edge-label-collision.cjs"
 step "a detail page's AZ grid draws the account as its root (#137)"  node "$HERE/check-detail-view-az.cjs"
 step "a detail page draws a regional service beside its VPC as an outsider column (#190)"  node "$HERE/check-detail-view-outsiders.cjs"
+step "a page past the ratio ceiling wraps into rows, or stays wide rather than lose an edge (#199)"  node "$HERE/check-page-wrap.cjs"
 
 echo
 echo "════ layer 4 · the theme ════"

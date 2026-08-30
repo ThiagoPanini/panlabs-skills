@@ -90,6 +90,7 @@ Medido nas **35 páginas** dos 20 modelos — em páginas e não em modelos, por
 | `A7.2` | ✗ 21/35 | o quadrado do ícone de serviço fica em **2,71:1** contra o tingimento de subnet. O portão de contraste do tema **avisa** (trata como área); este validador **reprova** (trata como traço). As duas leituras convivem |
 | `A3.7` | ✗ 8/20 modelos | o caminho da grade dimensiona a largura só pela nuvem, e o desenho estoura o canvas. Contado em modelos porque é o CAMINHO que decide, e o caminho é do modelo |
 | `A1.5` `A1.12` | ✗ sempre que houver **nota com `about`** | ver abaixo |
+| `P1` | ⚠ 2/26 modelos | fora das 62, medido à parte no corpus atual do #199: o motor tenta reduzir a página quando ela passa de 3:1 (`engine/layout.cjs`, `wrapIfTooWide`), mas só quando existe um contêiner seguro para envolver — nenhuma aresta pode cruzar a fronteira dele sem perder a rota, porque `SEPARATE_CHILDREN` isola cada nível que toca. Os dois casos do corpus que ainda acusam têm exatamente essa forma: `analytics-pipeline` tem um ator externo entrando no fluxo, `logical-support` tem arestas cruzando entre grupos irmãos — e o motor prefere a página larga, honesta, a uma aresta que sai do desenho calada |
 
 ### A nota presa a nó derruba `A1.5` e `A1.12`
 

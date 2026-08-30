@@ -21,6 +21,14 @@
  * outside one). With the binary, it additionally asks for `--image` and
  * requires the PNG to exist; without it, it forces a missing `DRAWIO` and
  * requires the opt-in warning instead of a failure.
+ *
+ * #196 — the same no-argument run also drives `--image` against three stub
+ * binaries (refuses, hangs, crashes with Chromium's sandbox FATAL shape) and
+ * requires the PERSON who asked for the image to read three DIFFERENT
+ * sentences, not the one generic failure this file used to print for all of
+ * them. It needs `xvfb-run`, not a real draw.io — same premise as
+ * `check-render-verdict.cjs`, which is what actually measures `render.sh`'s
+ * own exit codes; this file only checks that `case.cjs` translates them.
  */
 
 const fs = require('fs');
@@ -314,6 +322,53 @@ async function main() {
     check('CLI --image, no binary: warns instead of failing', /skipping the image/.test(r3.stdout));
     check('CLI --image, no binary: no PNG was written', !fs.existsSync(pngAt(withoutBin)));
     console.log('  (binary check skipped — no draw.io binary was passed in)');
+
+    // 10 · three stub binaries, three DIFFERENT sentences (#196). None of this
+    // needs a real draw.io — only `xvfb-run`, which `render.sh` calls no
+    // matter what `$DRAWIO` points at.
+    if (spawnSync('sh', ['-c', 'command -v xvfb-run']).status === 0) {
+      console.log("\n  --image against stub binaries — the person reads a different, actionable sentence per state (#196)\n");
+      const stubDir = fs.mkdtempSync(path.join(os.tmpdir(), 'case-stub-'));
+      const stubBin = (name, body) => {
+        const p = path.join(stubDir, name);
+        fs.writeFileSync(p, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+        return p;
+      };
+      const runImage = (bin, extraEnv) => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'case-imgfail-'));
+        const r = spawnSync('node', [CLI, sessionFile, SLUG, '--brief', briefFile, '--image'],
+          { cwd: dir, encoding: 'utf8', env: { ...process.env, DRAWIO: bin, ...extraEnv } });
+        return { text: `${r.stderr || ''}${r.stdout || ''}`, status: r.status, dir };
+      };
+
+      {
+        const { text, status, dir } = runImage(stubBin('refused', 'echo "Error: Export failed" >&2; exit 1'));
+        check('--image, draw.io REFUSES the file: the CLI fails', status !== 0);
+        check('--image, draw.io REFUSES the file: names the drawing, not the environment',
+          /the drawing, not the environment/.test(text));
+        check('--image, draw.io REFUSES the file: the .drawio was still published (#35\'s "no impede a publicação")',
+          fs.existsSync(drawioAt(dir)));
+      }
+
+      {
+        const { text, status, dir } = runImage(stubBin('hangs', 'while :; do sleep 1; done'), { LIMIT: '2', ATTEMPTS: '2' });
+        check('--image, the render NEVER ANSWERS: the CLI fails', status !== 0);
+        check('--image, the render NEVER ANSWERS: blames the machine, not the drawing',
+          /never answered in time/.test(text));
+        check('--image, the render NEVER ANSWERS: the .drawio was still published', fs.existsSync(drawioAt(dir)));
+      }
+
+      {
+        const { text, status, dir } = runImage(stubBin('sandboxed',
+          'echo "[1:1:0101/000000.000000:FATAL:sandbox_host_linux.cc(94)] Check failed: sandboxed_" >&2\nkill -ABRT $$'));
+        check("--image, the HOST blocks Chromium's sandbox: the CLI fails", status !== 0);
+        check("--image, the HOST blocks Chromium's sandbox: names the environment, not the drawing",
+          /an environment restriction, not the drawing/.test(text));
+        check("--image, the HOST blocks Chromium's sandbox: the .drawio was still published", fs.existsSync(drawioAt(dir)));
+      }
+    } else {
+      console.log('  (stub failure states skipped (#196) — xvfb-run not found)');
+    }
   }
 
   console.log(failed

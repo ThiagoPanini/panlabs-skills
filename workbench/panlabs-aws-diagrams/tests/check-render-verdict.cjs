@@ -28,6 +28,13 @@
  *      line, the stub below survives every sample out to +10s; against the
  *      current one it is gone before the first.
  *
+ * #196 added a fourth and a fifth: the binary NEVER INSTALLED exits 3 before
+ * `xvfb-run` is ever invoked, and the HOST blocking Chromium's own sandbox
+ * start-up check exits 5 — never 4 — even though it dies by the same kind of
+ * SIGNAL a hang's kill does. Only the log tells those two apart, which is
+ * exactly why the stub below writes Chromium's own FATAL-crash shape instead
+ * of a bare signal.
+ *
  * ⚠️ NONE OF THIS NEEDS draw.io. The subject is `render.sh`'s control flow, so
  * the binary is a stub written here — one that exits, one that never does, one
  * that hangs once and then works. That last one is the flake itself, planted,
@@ -145,6 +152,14 @@ function survivors() {
   return (r.stdout || '').split('\n').filter(Boolean).length;
 }
 
+console.log('\n  the BINARY was never installed (#196)\n');
+{
+  const missing = path.join(DIR, 'no-such-drawio');
+  const { code, out } = render(missing);
+  check('exits 3, before xvfb-run is ever invoked', code === 3, out);
+  check('and names the missing path', out.includes(missing), out);
+}
+
 console.log('\n  the render came out\n');
 {
   const { code, out } = render(stub(`printf 'not-really-a-png' > ${OUT}; exit 0`));
@@ -179,6 +194,25 @@ console.log('\n  the render died of a SIGNAL — and a signal is nobody\'s opini
   check('exits 4, not 1 — 139 is the kernel talking, not draw.io', code === 4, out);
   check('and the sentence blames the render', /the render, not the drawing/i.test(out), out);
   check('and it was retried, because nothing answered', calls() === 2, `called ${calls()}×`);
+}
+
+console.log("\n  the HOST blocked Chromium's own sandbox check — dies by SIGNAL just like a hang, but is neither (#196)\n");
+{
+  // The exact Chromium FATAL-crash shape a practical scan found:
+  // `[pid:pid:date/time:FATAL:sandbox_host_linux.cc(line)] Check failed: …`,
+  // then the process ending itself — SIGABRT, same signal family `answered()`
+  // would otherwise fold into "the kernel speaking".
+  const { code, out } = render(stub(
+    'echo "[123:123:0101/000000.000000:FATAL:sandbox_host_linux.cc(94)] Check failed: sandboxed_" >&2\nkill -ABRT $$'
+  ), { limit: 5, attempts: 2 });
+  check('exits 5, not 4 — a signal death that is not a hang', code === 5, out);
+  check('and the sentence names THIS HOST, not the drawing and not the render',
+    /THIS HOST/.test(out) && !/the render, not the drawing/i.test(out) && !/REFUSED by draw\.io/.test(out), out);
+  check('and it offers a next step that never weakens Chromium\'s own sandbox further',
+    /never by weakening/i.test(out), out);
+  // A verdict, exactly like a refusal — the host answers the same way on the
+  // next attempt too, so a retry here would only spend the clock (#196).
+  check('the binary was called ONCE — a verdict is not retried', calls() === 1, `called ${calls()}×`);
 }
 
 console.log('\n  the RENDER never answered — it hung, and we ended it\n');

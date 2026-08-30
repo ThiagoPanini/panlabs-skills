@@ -164,6 +164,21 @@ const HELP = `
   two tabs. A detail page that fails to draw warns and is skipped.
 `;
 
+/**
+ * WHAT `render.sh` CAN ANSWER, TRANSLATED FOR THE PERSON WHO ASKED FOR THE
+ * IMAGE (#196). The binary-missing case (exit 3) never reaches here — it is
+ * checked before `render.sh` is even called, above, and stays a warning that
+ * does not fail the case. Everything below it DOES fail the case, but not
+ * with the same sentence: a drawing draw.io refuses, a render that never
+ * answered, and a sandbox the HOST blocked are three different things to go
+ * fix, and #196 is the ticket that stopped them all reading the same way.
+ */
+const IMAGE_FAILURE = {
+  1: 'draw.io read the file and refused it — the drawing, not the environment (see the .drawio)',
+  4: 'the render never answered in time, on every attempt — go look at the machine, not the drawing (tools/render.sh)',
+  5: "the host blocks Chromium's own sandbox check at start-up — an environment restriction, not the drawing (tools/render.sh)",
+};
+
 const WITH_VALUE = ['gate', 'brief'];
 
 function parse(args) {
@@ -224,7 +239,11 @@ async function main() {
       const drawioPath = path.join(caseDir, `${slug}.drawio`);
       const pngPath = path.join(caseDir, `${slug}.png`);
       const r = spawnSync('bash', [path.join(__dirname, 'render.sh'), drawioPath, pngPath], { stdio: 'inherit' });
-      if (r.status !== 0) { console.error('\n  ✗ the image did not render'); process.exit(1); }
+      if (r.status !== 0) {
+        const unknown = `render.sh exited ${r.status}, a code this tool does not know`;
+        console.error(`\n  ✗ the image did not render — ${IMAGE_FAILURE[r.status] || unknown}`);
+        process.exit(1);
+      }
       console.log(`  → ${pngPath}`);
     }
   }

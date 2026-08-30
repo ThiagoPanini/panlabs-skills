@@ -10,6 +10,8 @@
 #   1  draw.io READ the file and REFUSED it — the DRAWING is the problem
 #   3  the headless binary is not installed
 #   4  the render never answered — every attempt hung and had to be killed
+#   5  the HOST blocks Chromium's own sandbox start-up check — an ENVIRONMENT
+#      restriction, distinct from both the drawing and a hang (#196)
 #
 # Until #128 everything that was not a success came out as `1`, and the callers
 # had no way to tell the two apart: `bisect-model.cjs` printed the same
@@ -61,6 +63,21 @@
 # 4. A RETRY THAT SAVES A RENDER SAYS SO. A flake that is swallowed is a flake
 #    nobody ever fixes, and a layer that quietly passes on the second try is
 #    the same green-that-asserts-nothing this file already cost once.
+#
+# 5. THE SANDBOX SCAR (#196). `--no-sandbox` above turns off CHROMIUM's own
+#    sandbox; it says nothing about whether the HOST lets Chromium's start-up
+#    checks run in the first place. A practical scan found the SAME 13 files
+#    fail inside a more restricted process/user-namespace with a `FATAL` crash
+#    naming `sandbox_host_linux.cc`, and render 13 of 13 outside it — same
+#    bytes, same draw.io, only the host changed. That crash ends the process
+#    with a SIGNAL (typically SIGABRT), so on the exit code alone it is
+#    indistinguishable from scar 1's hang — which is exactly the bug: before
+#    this, the sandbox restriction retried `ATTEMPTS` times and came out as
+#    "NEVER ANSWERED", spending the whole clock on something no retry could
+#    ever fix and blaming the render for what the host did. The LOG is what
+#    tells the two apart, so it is checked before `answered()`, is treated as
+#    a verdict — never retried, same as a refusal — and gets its own exit code
+#    so a reader is pointed at the host, not at the drawing or the machine.
 set -uo pipefail
 
 INPUT="$1"
@@ -92,6 +109,14 @@ extra=()
 # lands here too. Asking who chose the number is the version with no hole in it.
 answered() { [ "$1" -lt 124 ]; }
 
+# THE HOST, NOT THE DRAWING, NOT A HANG. See scar 5 above. Anchored on
+# Chromium's own FATAL-crash log shape — `[pid:pid:date/time:FATAL:file.cc(line)]`
+# — with a `sandbox` source file, so a segfault or an OOM'd child (already
+# covered by `answered()`'s "kernel speaking" branch) still falls through to
+# the hang path unchanged, and only the specific check Chromium's start-up
+# runs before it will even talk to draw.io's XML is named separately.
+sandbox_blocked() { echo "$1" | grep -qE ':FATAL:[^]]*sandbox[^]]*\.cc'; }
+
 log_tail() { grep -vi 'dbus\|trace-warnings' | tail -5; }
 
 # DO NOT try a safety net with `pkill -f "$(basename "$INPUT")"`: the file name
@@ -114,6 +139,17 @@ while :; do
     [ "$hangs" -gt 0 ] && flake="   ⚠ draw.io did not answer $hangs× on these same bytes — attempt $attempt of $ATTEMPTS (#128)"
     echo "✓ $(basename "$OUTPUT")  $(stat -c %s "$OUTPUT") bytes$flake"
     exit 0
+  fi
+
+  if sandbox_blocked "$render_log"; then
+    # The host, not draw.io, ended this — before it ever reached the file. It
+    # is a verdict in the same sense a refusal is: this host answers the same
+    # way on the next attempt too, so retrying only spends the clock.
+    echo "✗ $(basename "$INPUT") Chromium's sandbox could not start — a restriction of THIS HOST, not the drawing, not the render"
+    echo "$render_log" | log_tail
+    echo "  --no-sandbox is already set; the host itself is blocking Chromium's own start-up check, and no flag here papers over that."
+    echo "  next steps: render from a shell the host does not itself sandbox or namespace-restrict, or grant this process the permission that check needs — never by weakening Chromium's sandbox further."
+    exit 5
   fi
 
   if answered "$code"; then

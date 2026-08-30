@@ -213,9 +213,12 @@ function dossier(m) {
   if (d.agreement && d.agreement.candidate && !cands.some(c => c.id === d.agreement.candidate))
     errors.push(`dossier.agreement: candidate "${d.agreement.candidate}" is not in dossier.candidates.`);
 
-  if (m.stage === 'technical' && !d.agreement)
-    errors.push('stage "technical" with no dossier.agreement. Assumption 2 places approval of the logical view ' +
-      'BETWEEN the two phases — elaborating technically without it skips the heart of the product.');
+  // A technical-stage session with no agreement is the NORMAL path's own
+  // signature (#198): the agent went straight to the technical stage, and no
+  // human ever approved a logical view to record. The sequential arc's promise
+  // still gets checked — session/agreement.cjs's `check()` compares today's
+  // projection against the snapshot whenever one exists — this file just stops
+  // pretending every technical session took that arc.
 
   return { errors, warnings };
 }

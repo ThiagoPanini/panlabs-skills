@@ -45,17 +45,24 @@ function approve(session, who = {}) {
  * models linked by a mapping, answering this requires the mapping to be right —
  * and nothing guarantees it is. With one IR, the answer is a projection and a
  * string comparison.
+ *
+ * `reason` is what lets a caller tell the two `ok: false` cases apart. `missing`
+ * is the normal path's signature — the agent went straight to the technical
+ * stage and no human ever approved a logical view, which is documented and not
+ * corruption (#198). `drift` is the sequential arc's actual failure: an
+ * agreement WAS recorded and today's projection no longer matches it. Only
+ * `drift` is something to block on.
  */
 function check(session) {
   const agreement = session.dossier && session.dossier.agreement;
-  if (!agreement) return { ok: false, motivo: 'no agreement', diferencas: [] };
+  if (!agreement) return { ok: false, reason: 'missing', motivo: 'no agreement', diferencas: [] };
 
   const { model } = project(session, 'logical');
   const now = agreementSlice(model);
   const fingerprint = agreementFingerprint(now);
-  if (fingerprint === agreement.fingerprint) return { ok: true, fingerprint, diferencas: [] };
+  if (fingerprint === agreement.fingerprint) return { ok: true, reason: null, fingerprint, diferencas: [] };
 
-  return { ok: false, motivo: "today's logical projection differs from the approved one", fingerprint,
+  return { ok: false, reason: 'drift', motivo: "today's logical projection differs from the approved one", fingerprint,
     esperada: agreement.fingerprint, diferencas: snapshotDiff(agreement.snapshot, now) };
 }
 

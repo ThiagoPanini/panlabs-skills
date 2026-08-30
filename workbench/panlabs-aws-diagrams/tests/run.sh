@@ -267,6 +267,7 @@ step "the arc end to end, on a new case (#26)"  node "$HERE/check-arc.cjs"
 step "the dossier's privacy"                    node "$HERE/check-dossier.cjs"
 step "the case verb writes at the caller's root (#41)"  node "$HERE/check-case.cjs"
 step "a finding can target an edge, not just a node (#197)"  node "$HERE/check-finding-target.cjs"
+step "the normal path validates, publishes and resumes with no agreement (#198)"  node "$HERE/check-normal-path.cjs"
 
 echo
 echo "════ layer 7 · the app (development dependency) ════"

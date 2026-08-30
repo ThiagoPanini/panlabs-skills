@@ -143,14 +143,21 @@ async function main() {
   for (const p of moved)
     console.log(`\n  ⚠ page "${p.name || p.id}": ${policy(p.state).say}`);
 
-  if (!agreementBefore.ok) { console.error(`\n  ✗ agreement: ${agreementBefore.motivo}`); process.exit(2); }
+  // A MISSING agreement is not a problem: it is the normal path's own signature
+  // (#198) — the agent went straight to the technical stage, and there was
+  // never a human approval to lose. Only DRIFT blocks — an agreement that WAS
+  // recorded and no longer matches today's projection, which is the sequential
+  // arc's actual promise broken.
+  if (agreementBefore.reason === 'drift') { console.error(`\n  ✗ agreement: ${agreementBefore.motivo}`); process.exit(2); }
 
-  // Resuming a file that has ALREADY been elaborated is not an error, and is the
-  // common case from the third session on. What it is not is a reason to reapply
-  // the delta: the elaboration already happened, and reapplying it would only
-  // produce "already had a technical facet" ten times over.
+  // Resuming a file already at the technical stage is not an error, and is the
+  // common case from the third session on — whether it got there through the
+  // sequential arc's `--delta` or was written straight into the technical stage
+  // by the normal path. What it is not, either way, is a reason to apply a
+  // delta: reapplying one would only produce "already had a technical facet"
+  // ten times over.
   if (opened.session.stage === 'technical') {
-    console.log('\n  This file has already been elaborated — both views are in here.');
+    console.log('\n  This file is already at the technical stage — both views are in here.');
     console.log('  Nothing to do: the briefing above and the pages\' state already are the resumption.\n');
     return;
   }

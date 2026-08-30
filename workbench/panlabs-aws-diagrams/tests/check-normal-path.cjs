@@ -87,7 +87,7 @@ const OUTPUT_DIR = process.env.OUTPUT_DIR || fs.mkdtempSync(path.join(os.tmpdir(
   console.log('\n3 · the case verb publishes it — case.cjs never required an agreement either\n');
   let published;
   try {
-    published = await caseFiles(technical, 'normal-path', { gate: 'truthfulness', brief: 'Brief de teste do caminho normal.' });
+    published = await caseFiles(technical, 'normal-path', { gate: 'truthfulness', brief: 'Test brief for the normal path.' });
     record(true, 'caseFiles() draws both views and does not throw');
   } catch (e) {
     record(false, 'caseFiles() draws both views and does not throw', e.message);

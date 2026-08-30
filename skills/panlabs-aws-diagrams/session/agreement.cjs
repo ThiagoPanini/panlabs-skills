@@ -45,8 +45,7 @@ function approve(session, who = {}) {
  * models linked by a mapping, answering this requires the mapping to be right —
  * and nothing guarantees it is. With one IR, the answer is a projection and a
  * string comparison.
- */
-/**
+ *
  * `reason` is what lets a caller tell the two `ok: false` cases apart. `missing`
  * is the normal path's signature — the agent went straight to the technical
  * stage and no human ever approved a logical view, which is documented and not

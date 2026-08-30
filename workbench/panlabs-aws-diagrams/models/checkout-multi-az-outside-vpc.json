@@ -1,0 +1,48 @@
+{
+  "schema": "panlabs-aws-diagrams/model@1",
+  "id": "checkout-multi-az-outside-vpc",
+  "title": "Checkout · multi-AZ com fila e DLQ fora da VPC",
+  "subtitle": "Vista técnica T1 · #200 — grade multi-AZ, borda pública, aplicação e dados privados, mais de um serviço raiz e fan-out/fan-in sobre a fila",
+  "view": "technical",
+  "genre": "T1",
+
+  "nodes": [
+    { "id": "cloud", "kind": "cloud", "label": "AWS Cloud" },
+    { "id": "vpc", "kind": "vpc", "label": "Checkout VPC · 10.0.0.0/16", "cidr": "10.0.0.0/16", "inside": "cloud" },
+
+    { "id": "pub-a", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1a", "cidr": "10.0.0.0/24", "inside": "vpc" },
+    { "id": "pub-b", "kind": "subnet", "label": "Public subnet", "access": "public", "az": "us-east-1b", "cidr": "10.0.1.0/24", "inside": "vpc" },
+
+    { "id": "app-a", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1a", "cidr": "10.0.10.0/24", "inside": "vpc" },
+    { "id": "app-b", "kind": "subnet", "label": "App subnet", "access": "private", "az": "us-east-1b", "cidr": "10.0.11.0/24", "inside": "vpc" },
+
+    { "id": "data-a", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1a", "cidr": "10.0.20.0/24", "inside": "vpc" },
+    { "id": "data-b", "kind": "subnet", "label": "Data subnet", "access": "private", "az": "us-east-1b", "cidr": "10.0.21.0/24", "inside": "vpc" },
+
+    { "id": "alb-a", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-a" },
+    { "id": "alb-b", "kind": "service", "service": "application load balancer", "label": "ALB", "inside": "pub-b" },
+
+    { "id": "checkout-a", "kind": "service", "service": "fargate", "label": "Checkout", "inside": "app-a" },
+    { "id": "checkout-b", "kind": "service", "service": "fargate", "label": "Checkout", "inside": "app-b" },
+
+    { "id": "aurora-a", "kind": "service", "service": "aurora", "label": "Aurora writer", "inside": "data-a" },
+    { "id": "aurora-b", "kind": "service", "service": "aurora", "label": "Aurora reader", "inside": "data-b" },
+
+    { "id": "orders-queue", "kind": "service", "service": "sqs", "label": "Fila de pedidos" },
+    { "id": "orders-dlq", "kind": "service", "service": "sqs", "label": "DLQ de pedidos" }
+  ],
+
+  "edges": [
+    { "from": "alb-a", "to": "checkout-a", "label": "encaminha" },
+    { "from": "alb-b", "to": "checkout-b", "label": "encaminha" },
+    { "from": "checkout-a", "to": "aurora-a", "label": "grava", "protocol": "sql" },
+    { "from": "checkout-b", "to": "aurora-a", "label": "grava", "protocol": "sql" },
+    { "from": "checkout-a", "to": "orders-queue", "label": "publica" },
+    { "from": "checkout-b", "to": "orders-queue", "label": "publica" },
+    { "from": "orders-queue", "to": "orders-dlq", "label": "após 3 tentativas" }
+  ],
+
+  "dossier": {
+    "_comentario": "Reprodução mínima do achado do #200: a grade multi-AZ tem três papéis empilhados por AZ (public, app, data) e dois serviços raiz (fila e DLQ) fora da VPC. `checkout-a`/`checkout-b` vivem no papel do MEIO da coluna — não no de baixo —, e antes da correção a subida reta de `outsiderEdges` a partir do sul assumia o alvo como o papel mais baixo da coluna: a aresta para a fila atravessava a subnet de dados, que não é origem nem destino dela (`A5.5`). A fila também fecha o fan-in dos dois `checkout` e fan-out para a DLQ na mesma caixa — o `fanOf` do #30 espalhando três arestas num único lado."
+  }
+}

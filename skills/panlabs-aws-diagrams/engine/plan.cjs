@@ -596,6 +596,10 @@ function outsiderEdges(layoutPlan, model, d, res, g, mo) {
 
   const outAbs = outsiderPositions(g);
   const gridAbs = gridPositions(model, g);
+  // hoisted once for `gridBarriers`'s column-mode rise below — both are
+  // whole-model sweeps, and the edge loop runs one of these per crossing
+  const barrierSubnets = model.nodes.filter(n => n.kind === 'subnet').map(n => n.id);
+  const barrierBands = azBandBoxes(model, g);
   const west = Math.min(...g.outsiders.order.map(n => outAbs.get(n.id).x)) - 40;
   const south = g.fim + 40;
 
@@ -671,12 +675,49 @@ function outsiderEdges(layoutPlan, model, d, res, g, mo) {
       // one of them and the safe row (measured: banlist's own "checks"
       // edges crossed agent's box before this, same shape as swimlane's own
       // west-first adjustment above).
+      //
+      // ⚠️ "NO OTHER COLUMN SHARES THAT X" ONLY HOLDS WHEN THE TARGET IS THE
+      // COLUMN'S BOTTOM-MOST ROLE (#200, the gap this header used to name and
+      // leave open). A role stacked ABOVE another in the same AZ — the
+      // checkout's app tier, with a data tier below it — puts that sibling
+      // row squarely between `south` and the target: the straight rise
+      // asserts a path through a subnet the edge never touches, `A5.5`. The
+      // primitive that already answers "where is the nearest genuinely free
+      // corridor" is `corredorLivre` — the same one `gridEdges` runs for its
+      // own cross-zone detours — so the rise is swept against it instead of
+      // assumed clear, and only bends toward a side entry when a real
+      // obstacle sits in the way.
       const outY = outEnd.y + outEnd.h * fy;
-      const targetCenterX = gridEnd.x + gridEnd.w / 2;
-      const chain = [{ x: west, y: outY }, { x: west, y: south }, { x: targetCenterX, y: south }];
-      const anc = outsiderIsOrigin
-        ? { output: { x: 1, y: fy }, input: { x: 0.5, y: 1 } }
-        : { output: { x: 0.5, y: 1 }, input: { x: 1, y: fy } };
+      const centerX = gridEnd.x + gridEnd.w / 2;
+      const centerY = gridEnd.y + gridEnd.h / 2;
+      const gridEndId = outsiderIsOrigin ? a.to : a.from;
+      const bars = gridBarriers(barrierSubnets, barrierBands, d, gridAbs, [gridEndId], boxOnX);
+      const enterX = dispor.corredorLivre([south, centerY], bars, centerX);
+
+      let chain, anc;
+      if (Math.abs(enterX - centerX) < 0.5) {
+        chain = [{ x: west, y: outY }, { x: west, y: south }, { x: centerX, y: south }];
+        anc = outsiderIsOrigin
+          ? { output: { x: 1, y: fy }, input: { x: 0.5, y: 1 } }
+          : { output: { x: 0.5, y: 1 }, input: { x: 1, y: fy } };
+      } else {
+        // the straight rise found a sibling role in the way — the entry
+        // moves to whichever side the free corridor fell on, and turns into
+        // the target's box from there instead of punching through it. The
+        // chain stops AT the corridor: the closing segment from there to the
+        // side anchor is horizontal by construction, and spelling it out as
+        // one more point would just be a zero-length bend into the anchor's
+        // own pixel — the same trap `outsiderEdges`'s rise leg already
+        // avoids for `xUp`.
+        const fromRight = enterX > centerX;
+        chain = [
+          { x: west, y: outY }, { x: west, y: south }, { x: enterX, y: south },
+          { x: enterX, y: centerY },
+        ];
+        anc = outsiderIsOrigin
+          ? { output: { x: 1, y: fy }, input: { x: fromRight ? 1 : 0, y: 0.5 } }
+          : { output: { x: fromRight ? 1 : 0, y: 0.5 }, input: { x: 1, y: fy } };
+      }
       push(a, anc, outsiderIsOrigin ? chain : [...chain].reverse());
     }
   }
@@ -844,6 +885,96 @@ function gridPlan(model, d, res, g, opts = {}) {
   return layoutPlan;
 }
 
+/** Which subnet hosts `id`, and which AZ that subnet sits in. */
+function subnetOf(d, id) {
+  const n = d.t.byId.get(id);
+  if (!n) return null;
+  const s = n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet');
+  return s ? s.id : null;
+}
+function laneOf(d, id) {
+  const s = subnetOf(d, id);
+  const n = s && d.t.byId.get(s);
+  return n ? n.az : null;
+}
+
+/**
+ * What a detour's leg CANNOT cross — and it is TWO lists, not one.
+ *
+ * ┌ every SUBNET that is neither `ids`' own nor its destination's. Leaving
+ * │ the subnet it starts in and entering the destination's is the path;
+ * │ passing through a third one is `A5.5` — the drawing asserting a network
+ * │ path the model denies.
+ * │
+ * └ every AZ BAND that isn't one of `ids`' own either. This is `F2`, and it
+ *   is the mirror of `A5.5` for a band instead of a group — the same
+ *   sentence with the noun swapped, which is exactly how the validator
+ *   words it.
+ *
+ * #110 IS THE PROOF THAT ONE LIST WAS NOT TWO. Until it, the only obstacle
+ * here was the subnet, and the band was assumed to be covered by it. It is
+ * not: the band is deliberately larger (see `azBandBoxes`) — its own label
+ * lane, the `CROSS_OUT` overflow, the reach to the outermost VPC edge. So
+ * `corredorLivre` did its job, found a gap genuinely free of every subnet,
+ * and put the leg down inside the neighboring band anyway. `quorum-3-az`
+ * showed it: three brokers, one per zone, replicating to every peer — the
+ * far pair sits at distance 2 in ANY lane order (#21's measured fallback),
+ * its leg detoured into the row between the band's top and the VPC's title,
+ * and that row is free of subnets and inside band `b`.
+ *
+ * ⚠️ AND IT IS AN ADDITION, NOT A SUBSTITUTION. Replacing subnet-with-band
+ * here closes `quorum-3-az` and reopens `A5.5` on `web-flow-3-az` — a zone
+ * there stacks THREE subnets, so its band is the union of all three, and
+ * handing that union over as the only obstacle widens the search until the
+ * corridor lands inside a subnet that the narrower obstacle had kept it out
+ * of. Both lists, or one zero-tolerance failure is traded for another.
+ *
+ * Excluding the ENDS' OWN bands is what keeps this from being that same
+ * over-widening: in swimlane mode a band is a full-WIDTH strip, and feeding
+ * the origin's own band in would block every candidate the leg has.
+ *
+ * ⚠️ AND THE FOREIGN BAND STAYS A BOX — WHICH MEANS THE LEG MAY GO NORTH.
+ *
+ * In column mode a band runs the full height of the grid, so blocking one
+ * leaves `corredorLivre` exactly two candidates: a row above every band or a
+ * row below, whichever the midpoint sits nearer. `quorum-3-az` lands south.
+ * A grid with the VPCs stacked TWO rows deep and the edge in the top row
+ * lands north instead — the crossbar in the cloud's own label row, the two
+ * verticals through the VPC's title row, which `A3.4` reports and which does
+ * not block. The same model reports that same single `A3.4` WITHOUT this
+ * change, alongside the `F2` this change removes: north is not a new defect
+ * here, it is the old one minus the lie.
+ *
+ * Forcing south instead — opening the obstacle upward so north cannot win —
+ * was tried and MEASURED on exactly that two-row grid: the leg clears every
+ * band, and then its two verticals descend from the top row's icons past the
+ * bottom row's subnets, `A5.5` ×3. That trades a readability finding for
+ * three zero-tolerance lies. And #30's own rejection of north ("it runs into
+ * the title block") was measured for the OUTSIDER leg, which travels above
+ * the whole cloud — not for this one, which stops inside it. So the obstacle
+ * stays a box, and the primitive keeps choosing the nearer margin.
+ *
+ * ⚠️ ONE ACCOUNT, TWO CALLERS (#200). `gridEdges` calls this for a leg that
+ * starts and ends inside the grid; `outsiderEdges`'s column-mode entry calls
+ * it for a leg that starts SOUTH of the whole grid and rises into one of its
+ * rows — same sweep, same two lists, because a sibling role stacked below the
+ * target in its own AZ column is exactly as foreign to that rise as a
+ * neighboring subnet is to a cross-zone detour. Writing the account twice
+ * would let the two drift the day only one of them learned a new obstacle.
+ *
+ * `subnets` and `bands` are the CALLER's to compute once, not this
+ * function's to repeat per edge: both are whole-model sweeps, and either
+ * caller runs this inside its own edge loop.
+ */
+function gridBarriers(subnets, bands, d, abs, ids, onAxis) {
+  const mine = new Set(ids.map(id => subnetOf(d, id)));
+  const myBands = new Set(ids.map(id => laneOf(d, id)));
+  return [
+    ...subnets.filter(id => !mine.has(id)).map(id => abs.get(id)).filter(Boolean),
+    ...[...bands].filter(([z]) => !myBands.has(z)).map(([, box]) => box),
+  ].map(onAxis);
+}
+
 /**
  * The edges inside the grid.
  *
@@ -875,95 +1006,36 @@ function gridEdges(layoutPlan, model, d, res, g, opts) {
    * `A5.6` reported "there are off-axis segments in a routing that claims to
    * be orthogonal". Two checks pointing at the same `+32,+76` that nobody had
    * added up.
+   *
+   * ⚠️ #30 ADDED A THIRD TERM TO THAT SAME OFFSET, AND THIS ACCOUNTING MISSED
+   * IT (#200). A column of outsiders shifts the cloud's own box right by
+   * `g.outsiders.leftMargin` (`gridPlan`'s `cloudX`) — `drawOutsiders` and
+   * `outsiderEdges` both fold it into their own `fromGridToPage`, but this one
+   * kept computing cross-lane detours in the PRE-#30 origin. No corpus model
+   * ever combined outsiders with a cross-lane grid edge to catch it: with the
+   * margin at 0 the missing term is a no-op, and every outsider model before
+   * #200 only ever had same-lane grid edges (`points: []`, no explicit
+   * coordinate for the omission to corrupt). `checkout-multi-az-outside-vpc`
+   * is the first that does both, and its cross-AZ Aurora write landed a
+   * waypoint outside the VPC's own box entirely — the same failure mode #24
+   * already named, one term short of fixed.
    */
   const mo = frame(res);
-  const fromGridToPage = toPage({ x: mo.x, y: mo.topo });
+  const fromGridToPage = toPage({ x: mo.x + (g.outsiders ? g.outsiders.leftMargin : 0), y: mo.topo });
 
   const abs = gridPositions(model, g);
 
-  const subnetOf = id => {
-    const n = d.t.byId.get(id);
-    if (!n) return null;
-    const s = n.kind === 'subnet' ? n : d.t.ancestrais(n).find(a => a.kind === 'subnet');
-    return s ? s.id : null;
-  };
-  const laneOf = id => {
-    const s = subnetOf(id);
-    const n = s && d.t.byId.get(s);
-    return n ? n.az : null;
-  };
-
-  /**
-   * What the detour's leg CANNOT cross — and it is TWO lists, not one.
-   *
-   * ┌ every SUBNET that is neither the origin's nor the destination's.
-   * │ Leaving the subnet it starts in and entering the destination's is the
-   * │ path; passing through a third one is `A5.5` — the drawing asserting a
-   * │ network path the model denies.
-   * │
-   * └ every AZ BAND that neither end belongs to. This is `F2`, and it is the
-   *   mirror of `A5.5` for a band instead of a group — the same sentence with
-   *   the noun swapped, which is exactly how the validator words it.
-   *
-   * #110 IS THE PROOF THAT ONE LIST WAS NOT TWO. Until it, the only obstacle
-   * here was the subnet, and the band was assumed to be covered by it. It is
-   * not: the band is deliberately larger (see `azBandBoxes`) — its own label
-   * lane, the `CROSS_OUT` overflow, the reach to the outermost VPC edge. So
-   * `corredorLivre` did its job, found a gap genuinely free of every subnet,
-   * and put the leg down inside the neighboring band anyway. `quorum-3-az`
-   * showed it: three brokers, one per zone, replicating to every peer — the
-   * far pair sits at distance 2 in ANY lane order (#21's measured fallback),
-   * its leg detoured into the row between the band's top and the VPC's title,
-   * and that row is free of subnets and inside band `b`.
-   *
-   * ⚠️ AND IT IS AN ADDITION, NOT A SUBSTITUTION. Replacing subnet-with-band
-   * here closes `quorum-3-az` and reopens `A5.5` on `web-flow-3-az` — a zone
-   * there stacks THREE subnets, so its band is the union of all three, and
-   * handing that union over as the only obstacle widens the search until the
-   * corridor lands inside a subnet that the narrower obstacle had kept it out
-   * of. Both lists, or one zero-tolerance failure is traded for another.
-   *
-   * Excluding the ENDS' OWN bands is what keeps this from being that same
-   * over-widening: in swimlane mode a band is a full-WIDTH strip, and feeding
-   * the origin's own band in would block every candidate the leg has.
-   *
-   * ⚠️ AND THE FOREIGN BAND STAYS A BOX — WHICH MEANS THE LEG MAY GO NORTH.
-   *
-   * In column mode a band runs the full height of the grid, so blocking one
-   * leaves `corredorLivre` exactly two candidates: a row above every band or a
-   * row below, whichever the midpoint sits nearer. `quorum-3-az` lands south.
-   * A grid with the VPCs stacked TWO rows deep and the edge in the top row
-   * lands north instead — the crossbar in the cloud's own label row, the two
-   * verticals through the VPC's title row, which `A3.4` reports and which does
-   * not block. The same model reports that same single `A3.4` WITHOUT this
-   * change, alongside the `F2` this change removes: north is not a new defect
-   * here, it is the old one minus the lie.
-   *
-   * Forcing south instead — opening the obstacle upward so north cannot win —
-   * was tried and MEASURED on exactly that two-row grid: the leg clears every
-   * band, and then its two verticals descend from the top row's icons past the
-   * bottom row's subnets, `A5.5` ×3. That trades a readability finding for
-   * three zero-tolerance lies. And #30's own rejection of north ("it runs into
-   * the title block") was measured for the OUTSIDER leg, which travels above
-   * the whole cloud — not for this one, which stops inside it. So the obstacle
-   * stays a box, and the primitive keeps choosing the nearer margin.
-   */
-  const subnets = model.nodes.filter(n => n.kind === 'subnet').map(n => n.id);
-  const bands = azBandBoxes(model, g);
+  // what the detour's leg CANNOT cross — see `gridBarriers`'s header for the
+  // two lists, and #110/#200 for why a subnet-only account isn't enough
+  const barrierSubnets = model.nodes.filter(n => n.kind === 'subnet').map(n => n.id);
+  const barrierBands = azBandBoxes(model, g);
   const onAxis = g.swimlane ? boxOnX : boxOnY;
-  const barriers = a => {
-    const mine = new Set([subnetOf(a.from), subnetOf(a.to)]);
-    const myBands = new Set([laneOf(a.from), laneOf(a.to)]);
-    return [
-      ...subnets.filter(id => !mine.has(id)).map(id => abs.get(id)).filter(Boolean),
-      ...[...bands].filter(([z]) => !myBands.has(z)).map(([, box]) => box),
-    ].map(onAxis);
-  };
+  const barriers = a => gridBarriers(barrierSubnets, barrierBands, d, abs, [a.from, a.to], onAxis);
 
   for (const a of d.edges) {
     const o = abs.get(a.from), dst = abs.get(a.to);
     if (!o || !dst) continue;
-    const same = laneOf(a.from) && laneOf(a.from) === laneOf(a.to);
+    const same = laneOf(d, a.from) && laneOf(d, a.from) === laneOf(d, a.to);
     const forward = g.swimlane ? dst.x >= o.x : dst.y >= o.y;
 
     let anc, points = [];

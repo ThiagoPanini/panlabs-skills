@@ -1,0 +1,84 @@
+/* THE TOKEN VOCABULARY, AND THE ONLY PLACE IT IS DECLARED.
+ *
+ * `base` is two things at once, and that is deliberate: it is the theme every
+ * other theme inherits its STRUCTURE from -- the stage, the type scale, the
+ * patterns -- and it is a complete, unbranded theme in its own right. A deck
+ * built in `base` therefore proves that a pattern does not depend on a brand
+ * to hold together; a theme that hid a broken pattern behind its own colours
+ * would be a theme nobody could trust.
+ *
+ * A THEME IS A SHEET OF TOKENS. Every name below is what a theme may
+ * override, and the list is closed on purpose: a theme that could invent a
+ * token would be a theme the patterns had to learn about one by one. What
+ * `base` sets here in neutral values, `panlabs` will set in the identity of
+ * the documentation -- same names, different values, no new names.
+ *
+ * NOTHING HERE REACHES THE NETWORK. `base` paints with the faces the machine
+ * already has; a theme that ships its own faces embeds them as `data:` URIs
+ * beside this file. Either way the built deck opens with the cable pulled.
+ */
+
+:root {
+  /* ---- surface and ink -------------------------------------------------
+   * Near-black surface, near-white ink, grey as the accent: `base` carries
+   * no brand, and a colour with an opinion in it would be one.
+   */
+  --surface: #0f0f0f;
+  --ink: #fafafa;
+  --ink-muted: #9b9b9b;
+  --accent: #c8c8c8;
+
+  /* ---- the two content colours -----------------------------------------
+   * The theme lends a deck AT MOST TWO colours beyond the accent, and the
+   * deck's art direction decides what each one MEANS -- the same colour
+   * marking the same thing from the first slide to the last. Two, because a
+   * legend nobody reads is the price of the third.
+   */
+  --content-1: #e6e6e6;
+  --content-2: #7d7d7d;
+
+  /* ---- the three hairlines ---------------------------------------------
+   * Separation is a line, never a filled box: three weights of the same ink,
+   * which is what keeps a slide from looking like a form. They are literal
+   * rather than derived from `--ink` because a theme that changes the ink
+   * changes these on purpose, in the same sheet, rather than by accident.
+   */
+  --hairline-faint: rgb(250 250 250 / 0.07);
+  --hairline: rgb(250 250 250 / 0.12);
+  --hairline-strong: rgb(250 250 250 / 0.20);
+
+  /* ---- radius ----------------------------------------------------------- */
+  --radius: 16px;
+
+  /* ---- fonts ------------------------------------------------------------
+   * `base` asks the machine for what it has. A theme with its own faces
+   * overrides these three names and embeds the faces beside this file.
+   */
+  --font-display: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ---- the stage, and the type scale measured against it -----------------
+   * EVERY TYPE SIZE IN THIS SKILL IS A PERCENTAGE OF THE STAGE HEIGHT, and
+   * the reason is that a deck is projected at a resolution nobody tells us
+   * in advance. A size in pixels is a size that is right on one projector.
+   *
+   * The stage is 16:9 and letterboxed inside the window, so each edge is
+   * whichever of the two constraints binds first -- and because the scale
+   * hangs off `--stage-height` rather than off `100vh`, the proportions hold
+   * in a tall window exactly as they hold in a wide one. The ratio is written
+   * ONCE, here, in the pair below: the stage element reads both names rather
+   * than restating 16 over 9 in a second file that could drift from this one.
+   *
+   * The floor is not a step of the scale, it is the bottom of it: no text in
+   * a deck is smaller than `--type-floor`, because below that the last row
+   * of the room stops reading and starts guessing.
+   */
+  --stage-width: min(100vw, calc(100vh * 16 / 9));
+  --stage-height: min(100vh, calc(100vw * 9 / 16));
+
+  --type-display: calc(var(--stage-height) * 0.110); /* 11.0% of stage height */
+  --type-title: calc(var(--stage-height) * 0.070);   /*  7.0% */
+  --type-body: calc(var(--stage-height) * 0.028);    /*  2.8% */
+  --type-floor: calc(var(--stage-height) * 0.022);   /*  2.2% -- the floor */
+}

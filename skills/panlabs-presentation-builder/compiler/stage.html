@@ -1,0 +1,174 @@
+<!doctype html>
+<!-- THE STAGE. The compiler copies this file and fills its holes; no line of
+     it is ever written per deck, which is what makes two decks the same
+     identity instead of two approximations of one.
+
+     A HOLE IS A NAME IN DOUBLE BRACES, AND APPEARS EXACTLY ONCE. The
+     compiler refuses a skeleton where a marker appears zero times or twice --
+     zero means the content silently vanished, twice means half the page
+     disagrees with the other half, and both ship a deck that looks built. It
+     also refuses to write a page where a marker survived the filling.
+
+     Everything the deck needs travels inside it: the theme is inlined above,
+     the script below is inline, and there is not one external reference on
+     this page. That is the whole of "opens with the cable pulled". -->
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+/* ── the theme, inlined ─────────────────────────────────────────────────── */
+{{THEME}}
+
+/* ── the stage ──────────────────────────────────────────────────────────────
+ * 16:9, centred in the window, and never scrolling. The window is whatever
+ * the room's projector happens to be; the stage is the deck. Both edges are
+ * derived from the same pair of constraints, so the box is always exactly
+ * 16:9 and always as large as the window allows.
+ *
+ * There is no letterbox colour. The surround is the surface, because a
+ * painted frame around the slide is furniture the room did not ask for --
+ * and on a 16:9 projector there is no surround at all.
+ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--type-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage {
+  position: relative;
+  width: var(--stage-width);
+  height: var(--stage-height);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+/* ── a slide ────────────────────────────────────────────────────────────────
+ * Every slide occupies the whole stage; the current one is the one that is
+ * painted. `is-current` is set on the first slide BY THE COMPILER rather than
+ * by the script, so a stage whose script never ran still shows slide one
+ * instead of a black rectangle.
+ */
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: calc(var(--stage-height) * 0.105) calc(var(--stage-height) * 0.095);
+}
+
+.slide.is-current { display: flex; }
+
+/* Emphasis is the one freedom the source has inside a slot, and it is paid
+ * for with the accent AS A MARKER -- a rule under the words, in the accent,
+ * with the ink left alone.
+ *
+ * Not weight: the identity this skill is heading for tops out at 600, so a
+ * bolder bold is a promise no theme can keep. And not the ink itself: an
+ * unbranded theme has only greys to spend, so recolouring the emphasised
+ * words can only make them DIMMER than the sentence around them, which is
+ * the opposite of what the author wrote. Measured on the first render this
+ * skeleton ever produced -- the marked words read as an afterthought. */
+.slide strong {
+  font-weight: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 0.045em;
+  text-underline-offset: 0.16em;
+  text-decoration-skip-ink: none;
+}
+
+.slide em { font-style: italic; }
+
+/* ── pattern · full-bleed-statement ─────────────────────────────────────────
+ * One sentence, at display size, holding the stage on its own. The measure is
+ * a fraction of the stage rather than a count of characters: it has to break
+ * into three or four lines at any projector size, because a statement that
+ * lands on one line reads as a caption.
+ */
+.slide[data-pattern="full-bleed-statement"] { justify-content: center; }
+
+.slide[data-pattern="full-bleed-statement"] .statement {
+  margin: 0;
+  max-width: 76%;
+  font-family: var(--font-display);
+  font-size: var(--type-display);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* ── the page number ────────────────────────────────────────────────────────
+ * One element, outside every slide, in the same corner of the stage from the
+ * first slide to the last -- which is the only way it never competes with
+ * what is being said. It sits exactly on the type floor: the smallest a deck
+ * is allowed to print, and nothing smaller anywhere.
+ */
+.page-number {
+  position: absolute;
+  right: calc(var(--stage-height) * 0.045);
+  bottom: calc(var(--stage-height) * 0.045);
+  font-family: var(--font-mono);
+  font-size: var(--type-floor);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A machine that was told to move less is told once, here. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body {{DECK_ATTRS}}>
+<main class="stage">
+{{SLIDES}}
+<footer class="page-number"><span data-page-current>1</span>&#8202;/&#8202;<span data-page-total>{{PAGE_TOTAL}}</span></footer>
+</main>
+<script>
+// Arrows, and nothing else yet. The overview, the notes and the fragments
+// arrive with the ticket that owns them; a half-built shortcut is worse than
+// a missing one, because it teaches a lever that does not work.
+(function () {
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  if (!slides.length) return;
+  var here = 0;
+  var readout = document.querySelector('[data-page-current]');
+  var total = document.querySelector('[data-page-total]');
+  if (total) total.textContent = String(slides.length);
+
+  function show(n) {
+    here = Math.max(0, Math.min(slides.length - 1, n));
+    for (var i = 0; i < slides.length; i++) {
+      slides[i].classList.toggle('is-current', i === here);
+    }
+    if (readout) readout.textContent = String(here + 1);
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === 'ArrowRight') { show(here + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { show(here - 1); e.preventDefault(); }
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>

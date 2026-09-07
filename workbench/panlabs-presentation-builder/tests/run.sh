@@ -23,12 +23,23 @@
 # ⚠️ THIS FILE WAS REBORN WITH THE v2 (#208), AND THE v1's SUITE IS IN THE
 # HISTORY, NOT IN THE TREE. Six layers measured an engine that no longer
 # exists; keeping them would have kept a green about nothing. What the v1
-# learned about measuring a rendered page -- the network watch over CDP, the
-# font that actually painted, the clipping measured in pixels -- is one
-# command away and worth reading before #209 writes the render gate again:
+# learned about measuring a rendered page is one command away, still:
 #
 #   git log --diff-filter=D -1 -p -- \
 #     workbench/panlabs-presentation-builder/tests/check-render.cjs
+#
+# #209 READ IT BEFORE WRITING gate/render.cjs, AND THREE THINGS SURVIVED
+# VERBATIM: the CDP client itself (already living in the skill as
+# `gate/cdp.cjs` since #208), the network watch over CDP, and the platform-
+# font read (`CSS.getPlatformFontsForNode`, the one thing page JS cannot
+# answer on its own). Box overflow is NOT the old per-chart pixel bleed --
+# v2 has no chart yet (#213), so it is a straight rect comparison against the
+# stage's own edges, in CSS pixels, over every leaf of real text. The other
+# four families the v1 measured (legibility contrast, surface inversion,
+# line-count outliers, stacking order) have no v2 equivalent: the current
+# engine doesn't yet have the constructs they were measuring (a card grid, a
+# decorative layer), and inventing a ruler for a shape that does not exist
+# yet is exactly the shape of check the workbench doctrine refuses.
 #
 # THE ORDER OF THE LAYERS IS THE ORDER IN WHICH ONE FAILURE INVALIDATES THE
 # ONES THAT FOLLOW.
@@ -47,6 +58,27 @@
 #                                      temp directory. Everything a later
 #                                      layer measures is the bytes this one
 #                                      wrote.
+#   2  THE RENDER GATE                 `gate/render.cjs`'s own checks prove
+#                                      they measure (plant, red, message,
+#                                      green, same standard as layer 0's),
+#                                      then every file layer 1 built is
+#                                      handed to the gate itself. Chromium-
+#                                      dependent, unlike 0 and 1 -- a machine
+#                                      with none still reaches green here,
+#                                      because the gate degrades to a NAMED
+#                                      SKIP rather than failing (the ticket's
+#                                      own words: "réguas degradam para SKIP
+#                                      nomeado quando não há Chromium").
+#
+# ⚠️ THE TICKET THAT ADDED LAYER 2 (#209) SAID "camada quatro" IN ITS OWN
+# ACCEPTANCE CRITERIA. Read literally that would leave layers 2 and 3 empty
+# on purpose, for tickets that had not landed yet -- but #209 is #208's very
+# next in the serial queue (docs/agents/ § SPEC-207 "Ordem de execução"),
+# nothing sits between them, and this file's own rule is APPEND AT THE END,
+# not "leave a gap for a number a spec wrote before the queue ran." The
+# render gate lands as 2, the next free slot, and this note is the reason a
+# reader grepping the ticket for "camada quatro" does not go looking for a
+# layer that was never going to exist.
 #
 # ⚠️ THIS FILE IS A REGISTRY, AND REGISTRIES HERE ARE APPEND-ONLY
 # (CLAUDE.md § Registro é append-only). The render gate, the doctrine rulers
@@ -146,9 +178,45 @@ build_corpus() {
 step "every source in examples/ builds through the documented command"  build_corpus
 
 echo
+echo "════ layer 2 · the render gate ════"
+# THE PROOF FIRST, layer 0's own rule one floor up: a render ruler only ever
+# seen green is documentation same as a static one is.
+step "every check the render gate makes proves it measures" \
+  node "$HERE/check-render.proof.cjs" --corpus "$OUTPUT_DIR"
+
+# THEN THE REAL CORPUS. This is a SECOND render pass over the files layer 1
+# already built -- `compiler/build.py` itself calls `gate/render.cjs` after
+# every successful write (#209), so a plain `build_corpus` run above already
+# rendered each of them once. That call is best-effort and never touches
+# `build.py`'s own exit code (a render defect must not block someone from
+# getting the file they asked for); THIS step is the one place the render
+# gate's own verdict is actually asserted pass/fail for the whole corpus,
+# which is worth the second Chromium launch per file for what it buys: layer
+# 1 stays a claim about the compiler alone, and this layer's failure means
+# only one thing broke.
+render_corpus() {
+  local n=0 bad=0 file
+  for file in "$OUTPUT_DIR"/*.html; do
+    [ -e "$file" ] || break
+    n=$((n + 1))
+    node "$SKILL/gate/render.cjs" "$file" --out "$OUTPUT_DIR" || bad=$((bad + 1))
+  done
+  if [ "$n" -eq 0 ]; then
+    echo "   ✗ no built .html in $OUTPUT_DIR — layer 1 must run first"
+    return 1
+  fi
+  if [ "$bad" -ne 0 ]; then
+    echo "   ✗ $bad of $n built example(s) failed the render gate"
+    return 1
+  fi
+  echo "   ✓ $n built example(s) passed the render gate"
+}
+step "every built example passes the render gate over the corpus"  render_corpus
+
+echo
 if [ "$failed" -ne 0 ]; then
   echo "SUITE RED — ${#REDS[@]} step(s):"
   for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite green — the audit knows how to be red, and the corpus builds."
+echo "suite green — the audit knows how to be red, the corpus builds, and the render gate holds."

@@ -23,6 +23,7 @@ import argparse
 import html
 import os
 import re
+import subprocess
 import sys
 
 # BEFORE THE SIBLING IMPORTS, OR IT IS SET TOO LATE. Importing `catalog`,
@@ -161,6 +162,33 @@ def fill(skeleton, holes):
     return MARKER.sub(pick, skeleton)
 
 
+# ── the render gate ─────────────────────────────────────────────────────────
+
+def render_gate(output_path):
+    """Hand the page just written to gate/render.cjs, best-effort (#209).
+
+    NEVER CHANGES THIS COMMAND'S OWN EXIT CODE. This command's promise is "0
+    the file was written, 1 it was not" -- a fact about the STATIC audit,
+    settled before a single byte of the page exists to render. The render
+    gate can only measure a page that already exists, so a render defect
+    (or a missing Chromium) is printed for the reader to act on, never
+    folded into the promise this exit code already makes.
+    """
+    gate = os.path.join(ROOT, "gate", "render.cjs")
+    try:
+        done = subprocess.run(
+            ["node", gate, output_path],
+            capture_output=True, text=True, timeout=120,
+        )
+        out = (done.stdout + done.stderr).strip()
+        if out:
+            print()
+            print(out)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        print()
+        print(f"── render · SKIP — could not run the render gate ({e})")
+
+
 # ── the command ──────────────────────────────────────────────────────────────
 
 def main(argv=None):
@@ -237,6 +265,7 @@ def main(argv=None):
         fh.write(page)
 
     print(f"   wrote {args.output}")
+    render_gate(args.output)
     return 0
 
 

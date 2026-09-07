@@ -68,6 +68,30 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
 
 **Abra o arquivo e olhe antes de entregar.** Laudo verde não quer dizer que a página está certa; ele diz que o defeito que a máquina sabe medir não está lá.
 
+## O portão de render
+
+Toda construção bem-sucedida também é levada a um Chromium real: o comando escreve o arquivo, imprime o laudo estático acima e, em seguida, entrega a página pronta para [`gate/render.cjs`](gate/render.cjs), que devolve uma **folha de contato em PNG** com todos os slides lado a lado e um segundo laudo, das seis réguas que só um navegador de verdade sabe responder — a fonte declarada no tema de fato pintou, ou caiu para a substituta sem avisar; o texto cabe no palco, ou vaza por cima da própria borda; o slide ocupa pelo menos 40% da altura do palco; nenhuma requisição de rede foi observada; e o número de página fica no mesmo lugar do primeiro ao último slide.
+
+```
+── render · "A régua e a plateia" · 1 slide · 1600×900
+   ✓ box-overflow · no leaf paints past the stage's own edges
+   ✓ type-floor · no leaf paints smaller than 2.2% of the stage height
+   ✓ occupancy · every slide fills at least 40% of the stage height
+   ✓ network-zero · the deck makes no request the network has to answer
+   ✓ platform-font · the face that painted is the one the theme declares
+   ✓ page-number · the page number sits in the same place on every slide
+   contact sheet · /tmp/exemplo.contact-sheet.png
+   6 rulers, green
+```
+
+**Sem Chromium na máquina, o portão degrada para um `SKIP` nomeado, e a construção não falha** — o código de saída de `build.py` fala só do laudo estático (`0` o arquivo foi escrito, `1` não foi); um defeito de render, ou a ausência de Chromium para medi-lo, nunca reabre essa promessa, porque só existe algo para renderizar depois que o arquivo já está no disco. [`gate/cdp.cjs`](gate/cdp.cjs) é a única dependência: um cliente CDP sem npm, sobre o WebSocket e o fetch que o próprio Node já tem, contra qualquer Chromium que `npx playwright install chromium` ou `npx puppeteer browsers install chrome` tenha deixado no cache da máquina.
+
+Chamar o portão sozinho, sobre um arquivo já construído, também funciona:
+
+```bash
+node gate/render.cjs /tmp/exemplo.html --out /tmp
+```
+
 ## O tema
 
 Um tema é uma **folha de tokens**, e a lista de nomes é fechada: superfície, tinta, tinta secundária, acento, duas cores de conteúdo, três hairlines, raio, três fontes, e a escala tipográfica. [`themes/base/tokens.css`](themes/base/tokens.css) é o único lugar onde eles são declarados.
@@ -95,5 +119,6 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | precisar de um token, ou do tamanho de alguma coisa | [`themes/base/tokens.css`](themes/base/tokens.css) |
 | quiser saber por que o compilador recusou | [`compiler/audit.py`](compiler/audit.py) |
 | for medir a página construída num navegador de verdade | [`gate/cdp.cjs`](gate/cdp.cjs) |
+| quiser a folha de contato ou o laudo das seis réguas de render | [`gate/render.cjs`](gate/render.cjs) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

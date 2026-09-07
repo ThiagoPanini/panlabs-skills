@@ -46,9 +46,15 @@ from dataclasses import dataclass
 # `base` to prove the patterns hold without a brand behind them.
 DECK_FIELDS = ("title", "occasion", "theme", "lang", "minutes")
 
-# The whole of the emphasis the dialect allows inside a slot. Two, because
-# emphasis that can say four things says none of them from the back row.
-INLINE_TAGS = ("em", "strong")
+# THE INLINE VOCABULARY CLOSES HERE (#211). Two tags always available -- bold
+# and an accent-coloured highlight -- plus one that is not a matter of taste:
+# `BREAK_TAG` forces a line inside a slot's own prose, and only where a
+# pattern's own `allow_break` says a paragraph is long enough to need one.
+# `em` never joins this set: italic said nothing the closed three do not
+# already say, and a vocabulary that keeps growing by one tag per ticket is a
+# vocabulary nobody can hold in their head while writing a deck.
+INLINE_TAGS = ("strong", "mark")
+BREAK_TAG = "br"
 
 # A text slot is written as a paragraph. The element carries the slot's name
 # as its only class, and nothing else: `style=` and a second class are
@@ -76,6 +82,7 @@ NAME = "name"          # a section's name -- where a category is the right word
 FIGURE = "figure"      # a number or token, set large and read as an image
 BODY = "body"          # the prose that supports the claim
 META = "meta"          # furniture: the label, the index, the source, the date
+ICON = "icon"          # a Lucide name, read as a glyph and never as a word
 
 ROLE_LABEL = {
     CLAIM: "afirmação",
@@ -83,6 +90,7 @@ ROLE_LABEL = {
     FIGURE: "número",
     BODY: "corpo",
     META: "metadado",
+    ICON: "ícone",
 }
 
 
@@ -150,13 +158,14 @@ class Pattern:
     purpose: str       # Portuguese: the line the reference publishes about it
     group: Group = None      # a Group this pattern also carries, or None
     table: bool = False      # this pattern's evidence is a real <table>, not a group
+    allow_break: bool = False  # may a slot force a line with BREAK_TAG (#211)
 
 
 # THE ORDER IS THE ARC, not the alphabet: a deck opens with a cover, turns on
-# a question, states its thesis, holds the stage with a sentence, borrows a
-# voice, takes a breath, and asks for something. The reference publishes them
-# in this order and every message that lists them uses it too, because the
-# order teaches when to reach for which.
+# a question, states its thesis, holds the stage with a sentence, lays out
+# its evidence, borrows a voice, takes a breath, and asks for something. The
+# reference publishes them in this order and every message that lists them
+# uses it too, because the order teaches when to reach for which.
 #
 # THE BUDGETS ARE THE SPEC'S (#207), AND THEY ARE THE SLIDE'S, NOT THE SLOT'S.
 # A label is words the room reads too, so a cover's `meta` and a question's
@@ -165,13 +174,12 @@ class Pattern:
 # fit belongs.
 #
 # AND ONE CEILING OVER ALL OF THEM: no slide, whatever its pattern, spends
-# more than this. It is the spec's backstop for the patterns that have not
-# been registered yet -- the ones this catalog still owes are wider (two
-# columns 60, three columns and comparison 75), and the only place the
-# ceiling can be broken is here, when a budget is written. `--check` is what
-# refuses it. `table` (#212) sets its budget AT the ceiling on purpose: the
-# spec's own regulator for a table is the row count, not a word count, and a
-# tighter number here would be a second ceiling nobody asked for.
+# more than this. The widest word-budgeted patterns are two columns at 60 and
+# three columns and the comparison at 75, and the only place the ceiling can
+# be broken is here, when a budget is written. `--check` is what refuses it.
+# `table` (#212) sets its budget AT the ceiling on purpose: the spec's own
+# regulator for a table is the row count, not a word count, and a tighter
+# number here would be a second ceiling nobody asked for.
 ABSOLUTE_BUDGET = 90
 
 PATTERNS = {
@@ -302,6 +310,64 @@ PATTERNS = {
             purpose="Uma frase em corpo de display, segurando o palco sozinha",
         ),
         Pattern(
+            name="two-columns",
+            slots=(
+                Slot("title", CLAIM, "a tese que as duas colunas sustentam"),
+                Slot("column-a", BODY, "o primeiro argumento"),
+                Slot("column-b", BODY, "o segundo argumento"),
+            ),
+            required=("title", "column-a", "column-b"),
+            budget=60,
+            purpose="A tese no alto, sustentada por dois argumentos lado a lado",
+            allow_break=True,
+        ),
+        Pattern(
+            name="three-columns",
+            slots=(
+                Slot("title", CLAIM, "a tese que as três colunas sustentam"),
+                Slot("column-a", BODY, "o primeiro argumento"),
+                Slot("column-b", BODY, "o segundo argumento"),
+                Slot("column-c", BODY, "o terceiro argumento"),
+            ),
+            required=("title", "column-a", "column-b", "column-c"),
+            budget=75,
+            purpose="A tese no alto, sustentada por três argumentos lado a lado",
+            allow_break=True,
+        ),
+        Pattern(
+            name="comparison",
+            slots=(
+                Slot("title", CLAIM, "a tese que a comparação decide"),
+                Slot("label-a", META, "o nome do primeiro lado"),
+                Slot("label-b", META, "o nome do segundo lado"),
+                Slot("body-a", BODY, "o que se diz do primeiro lado"),
+                Slot("body-b", BODY, "o que se diz do segundo lado"),
+            ),
+            required=("title", "label-a", "label-b", "body-a", "body-b"),
+            budget=75,
+            purpose="Dois lados nomeados e postos lado a lado, com uma hairline entre eles",
+            allow_break=True,
+        ),
+        Pattern(
+            name="icon-list",
+            slots=(
+                Slot("title", CLAIM, "a tese que a lista sustenta"),
+                Slot("item-1-icon", ICON, "o ícone do primeiro item"),
+                Slot("item-1-text", BODY, "o primeiro item"),
+                Slot("item-2-icon", ICON, "o ícone do segundo item"),
+                Slot("item-2-text", BODY, "o segundo item"),
+                Slot("item-3-icon", ICON, "o ícone do terceiro item"),
+                Slot("item-3-text", BODY, "o terceiro item"),
+                Slot("item-4-icon", ICON, "o ícone do quarto item"),
+                Slot("item-4-text", BODY, "o quarto item"),
+                Slot("item-5-icon", ICON, "o ícone do quinto item"),
+                Slot("item-5-text", BODY, "o quinto item"),
+            ),
+            required=("title", "item-1-icon", "item-1-text"),
+            budget=60,
+            purpose="Até cinco itens, cada um com seu ícone — nunca um marcador solto",
+        ),
+        Pattern(
             name="pull-quote",
             slots=(
                 Slot("quote", CLAIM, "a frase citada, na voz de quem a disse"),
@@ -407,6 +473,20 @@ def is_table(name):
     return bool(p and p.table)
 
 
+def role_of(pattern, slot_name):
+    """The role of one named slot in one pattern, or None when either is a stranger."""
+    for s in slot_specs(pattern):
+        if s.name == slot_name:
+            return s.role
+    return None
+
+
+def allow_break_of(name):
+    """Whether BREAK_TAG may appear inside this pattern's prose."""
+    p = PATTERNS.get(name)
+    return bool(p and p.allow_break)
+
+
 # ── the reference the model reads ────────────────────────────────────────────
 # Generated, never written: `CATALOG.md` carries the block between the two
 # markers below and nothing else of this file's business. The prose around
@@ -421,13 +501,15 @@ DOCUMENT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 
 def reference():
     """The whole register, as Markdown, exactly as CATALOG.md publishes it."""
+    breakable = [p.name for p in PATTERNS.values() if p.allow_break]
     out = [
         "O cabeçalho é o próprio `<deck>`, e os cinco campos são obrigatórios: "
         + ", ".join(f"`{f}`" for f in DECK_FIELDS)
         + f". Um slot é um `<{SLOT_TAG}>` com o nome do slot na `class=` e nada mais. "
-        "Dentro de um slot a ênfase é livre, com duas marcações: "
+        "O vocabulário de ênfase inline fecha em três marcações: "
         + " e ".join(f"`<{t}>`" for t in INLINE_TAGS)
-        + ".",
+        + f", sempre disponíveis, e `<{BREAK_TAG}/>` (quebra forçada), disponível só "
+        "nos padrões que o dizem.",
         "",
         f"São {len(PATTERNS)} padrões, na ordem do arco. O orçamento é do slide "
         "inteiro, mobília inclusive, e nenhum slide passa de "
@@ -438,7 +520,9 @@ def reference():
         out += [
             f"### `{p.name}` · até {p.budget} palavras",
             "",
-            p.purpose + ".",
+            p.purpose
+            + (f" — admite `<{BREAK_TAG}/>` na prosa" if p.allow_break else "")
+            + ".",
             "",
             "| slot | papel | obrigatório | o que vai nele |",
             "| --- | --- | --- | --- |",
@@ -483,6 +567,12 @@ def reference():
         "a categoria nomeia a pasta, não o ponto:",
         "",
         ", ".join(f"«{t}»" for t in CATEGORY_TITLES) + ".",
+        "",
+        "### Quebra forçada",
+        "",
+        f"`<{BREAK_TAG}/>` só é aceito, vazio e sem atributo, dentro da prosa destes "
+        "padrões — nos demais a construção recusa: "
+        + ", ".join(f"`{n}`" for n in breakable) + ".",
     ]
     return "\n".join(out)
 

@@ -10,13 +10,15 @@
 
 **Um grupo é uma série, e é a primeira vez que este catálogo precisa de uma (#212).** `número gigante`, `tabela` e `linha do tempo` dizem mais de um fato por slide, e um slot dito uma vez não segura isso. Onde há um grupo, o slide carrega um `<ul>`, um `<ol>` ou um `<table>` — sem `class=` em nenhum dos dois, porque cada padrão tem no máximo um grupo e a própria tag já diz o que é. Um item é um `<li>` (ou uma `<tr>` de uma tabela), com os campos do grupo escritos exatamente como um slot: um `<p>` por campo, o nome do campo na `class=`.
 
-[`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/statement.deck.html`](examples/statement.deck.html) é a afirmação de tela cheia sozinha; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série. Os três compilam pelo comando documentado no [`SKILL.md`](SKILL.md).
+**Um ícone é o nome de um slot, nunca um atributo.** O slot de papel **ícone** carrega só o nome Lucide como texto — `<p class="item-1-icon">circle-check</p>` — porque a mesma regra de sempre vale aqui: um slot carrega `class=` e nada mais. O compilador confere o nome contra o conjunto vendorizado em [`themes/base/icons/`](themes/base/icons/) e escreve, na página construída, só os ícones que o deck de fato usa — nunca o conjunto inteiro. A licença do conjunto está ao lado, em [`themes/base/icons/LICENSE`](themes/base/icons/LICENSE).
+
+[`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/statement.deck.html`](examples/statement.deck.html) é a afirmação de tela cheia sozinha; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones. Os quatro compilam pelo comando documentado no [`SKILL.md`](SKILL.md).
 
 <!-- catalog:begin -->
 
-O cabeçalho é o próprio `<deck>`, e os cinco campos são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`. Um slot é um `<p>` com o nome do slot na `class=` e nada mais. Dentro de um slot a ênfase é livre, com duas marcações: `<em>` e `<strong>`.
+O cabeçalho é o próprio `<deck>`, e os cinco campos são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`. Um slot é um `<p>` com o nome do slot na `class=` e nada mais. O vocabulário de ênfase inline fecha em três marcações: `<strong>` e `<mark>`, sempre disponíveis, e `<br/>` (quebra forçada), disponível só nos padrões que o dizem.
 
-São 12 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
+São 16 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
 
 ### `cover-headline` · até 25 palavras
 
@@ -115,6 +117,57 @@ Uma frase em corpo de display, segurando o palco sozinha.
 | --- | --- | --- | --- |
 | `statement` | afirmação | sim | a frase que o slide inteiro sustenta |
 
+### `two-columns` · até 60 palavras
+
+A tese no alto, sustentada por dois argumentos lado a lado — admite `<br/>` na prosa.
+
+| slot | papel | obrigatório | o que vai nele |
+| --- | --- | --- | --- |
+| `title` | afirmação | sim | a tese que as duas colunas sustentam |
+| `column-a` | corpo | sim | o primeiro argumento |
+| `column-b` | corpo | sim | o segundo argumento |
+
+### `three-columns` · até 75 palavras
+
+A tese no alto, sustentada por três argumentos lado a lado — admite `<br/>` na prosa.
+
+| slot | papel | obrigatório | o que vai nele |
+| --- | --- | --- | --- |
+| `title` | afirmação | sim | a tese que as três colunas sustentam |
+| `column-a` | corpo | sim | o primeiro argumento |
+| `column-b` | corpo | sim | o segundo argumento |
+| `column-c` | corpo | sim | o terceiro argumento |
+
+### `comparison` · até 75 palavras
+
+Dois lados nomeados e postos lado a lado, com uma hairline entre eles — admite `<br/>` na prosa.
+
+| slot | papel | obrigatório | o que vai nele |
+| --- | --- | --- | --- |
+| `title` | afirmação | sim | a tese que a comparação decide |
+| `label-a` | metadado | sim | o nome do primeiro lado |
+| `label-b` | metadado | sim | o nome do segundo lado |
+| `body-a` | corpo | sim | o que se diz do primeiro lado |
+| `body-b` | corpo | sim | o que se diz do segundo lado |
+
+### `icon-list` · até 60 palavras
+
+Até cinco itens, cada um com seu ícone — nunca um marcador solto.
+
+| slot | papel | obrigatório | o que vai nele |
+| --- | --- | --- | --- |
+| `title` | afirmação | sim | a tese que a lista sustenta |
+| `item-1-icon` | ícone | sim | o ícone do primeiro item |
+| `item-1-text` | corpo | sim | o primeiro item |
+| `item-2-icon` | ícone | não | o ícone do segundo item |
+| `item-2-text` | corpo | não | o segundo item |
+| `item-3-icon` | ícone | não | o ícone do terceiro item |
+| `item-3-text` | corpo | não | o terceiro item |
+| `item-4-icon` | ícone | não | o ícone do quarto item |
+| `item-4-text` | corpo | não | o quarto item |
+| `item-5-icon` | ícone | não | o ícone do quinto item |
+| `item-5-text` | corpo | não | o quinto item |
+
 ### `pull-quote` · até 30 palavras
 
 Uma citação segurando o palco, com a atribuição na base.
@@ -148,5 +201,9 @@ O fecho que volta à tese e pede alguma coisa.
 Um slot de papel **afirmação** que diga só uma destas reprova a construção — a categoria nomeia a pasta, não o ponto:
 
 «visão geral», «agenda», «introdução», «conclusão», «próximos passos», «contexto», «resumo», «obrigado».
+
+### Quebra forçada
+
+`<br/>` só é aceito, vazio e sem atributo, dentro da prosa destes padrões — nos demais a construção recusa: `two-columns`, `three-columns`, `comparison`.
 
 <!-- catalog:end -->

@@ -27,21 +27,22 @@ import subprocess
 import sys
 
 # BEFORE THE SIBLING IMPORTS, OR IT IS SET TOO LATE. Importing `catalog`,
-# `source` and `audit` writes `compiler/__pycache__/` into the skill's own
-# tree -- and the skill is usually a symlink to a checkout. `run.sh` and
-# `install.sh` both set this in the environment because a ruler must not
-# modify its subject; a human following SKILL.md sets nothing, so the command
-# sets it for itself.
+# `source`, `audit` and `icons` writes `compiler/__pycache__/` into the
+# skill's own tree -- and the skill is usually a symlink to a checkout.
+# `run.sh` and `install.sh` both set this in the environment because a ruler
+# must not modify its subject; a human following SKILL.md sets nothing, so the
+# command sets it for itself.
 sys.dont_write_bytecode = True
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
+import icons                                                    # noqa: E402
 from audit import audit, report                                # noqa: E402
-from catalog import (DECK_FIELDS, SLOT_TAG, group_of, is_table,  # noqa: E402
-                     slot_specs)
-from source import Refused, inline_markup, read                # noqa: E402
+from catalog import (DECK_FIELDS, ICON, SLOT_TAG, group_of, is_table,  # noqa: E402
+                     role_of, slot_specs)
+from source import Refused, inline_markup, plain_text, read     # noqa: E402
 
 THEMES = os.path.join(ROOT, "themes")
 SKELETON = os.path.join(HERE, "stage.html")
@@ -140,6 +141,26 @@ def table_markup(table):
     return f'<table><thead><tr>{ths}</tr></thead><tbody>{"".join(rows)}</tbody></table>'
 
 
+def icons_used(deck):
+    """Every Lucide name an ICON-role slot names, across the whole deck.
+
+    Read after the audit has already run: `_icon_known` (audit.py) is what
+    refuses a name this registry does not carry, so by the time this walks the
+    deck every name it finds is one `icons.sprite()` can build a `<symbol>`
+    for without a second check.
+    """
+    used = []
+    for slide in deck.sections:
+        pattern = slide.attrs["pattern"]
+        for el in slide.elements():
+            slot_name = el.attrs.get("class", "").strip()
+            if role_of(pattern, slot_name) == ICON:
+                name = plain_text(el).strip()
+                if name:
+                    used.append(name)
+    return used
+
+
 def slide_markup(slide, index):
     """One section, with its slots in the order the CATALOG declares them.
 
@@ -158,6 +179,11 @@ def slide_markup(slide, index):
     carries a `class=` of its own -- there is nothing for catalog order to
     place it by -- and every pattern that has one writes its evidence after
     the claim that frames it, never before.
+
+    AN ICON SLOT PRINTS NO TEXT, EVER. Its content is a Lucide name -- furniture
+    for the sprite this same build already validated and embedded, never a
+    sentence the audience reads -- so it renders as a `<use>` reference instead
+    of the `<p>` every other slot gets.
     """
     pattern = slide.attrs["pattern"]
     written = {}
@@ -169,12 +195,20 @@ def slide_markup(slide, index):
         elif el.tag in ("ul", "ol", "table"):
             container = el
 
-    body = [
-        f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}">'
-        f"{inline_markup(written[slot.name])}</{SLOT_TAG}>"
-        for slot in slot_specs(pattern)
-        if slot.name in written
-    ]
+    def one(slot):
+        el = written[slot.name]
+        if slot.role == ICON:
+            name = html.escape(plain_text(el).strip(), quote=True)
+            return (
+                f'<svg class="icon" data-role="icon" aria-hidden="true" '
+                f'focusable="false"><use href="#icon-{name}"></use></svg>'
+            )
+        return (
+            f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}">'
+            f"{inline_markup(el)}</{SLOT_TAG}>"
+        )
+
+    body = [one(slot) for slot in slot_specs(pattern) if slot.name in written]
 
     group = group_of(pattern)
     if group and container is not None:
@@ -317,6 +351,7 @@ def main(argv=None):
             "TITLE": html.escape(deck.title),
             "THEME": css,
             "DECK_ATTRS": attrs,
+            "ICONS": icons.sprite(icons_used(deck)),
             "SLIDES": slides,
             "PAGE_TOTAL": str(len(sections)),
         },

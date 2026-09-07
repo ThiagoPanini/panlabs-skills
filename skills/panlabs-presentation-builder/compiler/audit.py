@@ -25,9 +25,11 @@ that "what is wrong with this deck" is answerable without opening a browser.
 import unicodedata
 from dataclasses import dataclass
 
-from catalog import (CATEGORY_TITLES, INLINE_TAGS, PATTERNS, SLOT_TAG,
-                     TABLE_MAX_ROWS, budget_of, claims_of, group_of,
-                     is_table, pattern_names, slots_of)
+import icons
+from catalog import (BREAK_TAG, CATEGORY_TITLES, ICON, INLINE_TAGS, PATTERNS,
+                     SLOT_TAG, TABLE_MAX_ROWS, allow_break_of, budget_of,
+                     claims_of, group_of, is_table, pattern_names, role_of,
+                     slots_of)
 from source import plain_text
 
 
@@ -65,6 +67,11 @@ CATEGORY_TITLE = Ruler(
 REPEATED_PATTERN = Ruler(
     "repeated-pattern",
     "no pattern runs on two slides in a row",
+)
+
+ICON_KNOWN = Ruler(
+    "icon-known",
+    "every icon a slide names is one the vendored Lucide set carries",
 )
 
 
@@ -107,16 +114,42 @@ def _slot_list(pattern):
     return f'the pattern "{pattern}" declares {count}: ' + ", ".join(slots)
 
 
-def _emphasis(node, at, slot):
-    """Everything below a slot: emphasis the dialect knows, and no attributes."""
+def _emphasis(node, at, slot, allow_break):
+    """Everything below a slot: emphasis the dialect knows, and no attributes.
+
+    BREAK_TAG IS CHECKED FIRST AND NEVER RECURSED INTO. It is not a member of
+    INLINE_TAGS -- a forced break is not emphasis, it is doctrine gated per
+    pattern (#211's own "onde o padrão permite") -- and unlike `<strong>` or
+    `<mark>` it carries no content of its own to validate underneath it.
+    """
     fixes = []
     for child in node.children:
         if isinstance(child, str):
+            continue
+        if child.tag == BREAK_TAG:
+            if not allow_break:
+                fixes.append(
+                    f'{at}, slot "{slot}": drop the <{BREAK_TAG}/> — this '
+                    "pattern does not permit a forced break"
+                )
+                continue
+            if child.children:
+                fixes.append(
+                    f'{at}, slot "{slot}": self-close the <{BREAK_TAG}/> — a '
+                    "forced break carries no content of its own"
+                )
+                continue
+            for key in sorted(child.attrs):
+                fixes.append(
+                    f'{at}, slot "{slot}": drop {key}= from the <{BREAK_TAG}/> '
+                    "— geometry does not cross this seam"
+                )
             continue
         if child.tag not in INLINE_TAGS:
             fixes.append(
                 f'{at}, slot "{slot}": drop the <{child.tag}> — the emphasis '
                 "the dialect knows is " + " and ".join(f"<{t}>" for t in INLINE_TAGS)
+                + f", plus <{BREAK_TAG}/> where the pattern allows it"
             )
             continue
         for key in sorted(child.attrs):
@@ -124,7 +157,7 @@ def _emphasis(node, at, slot):
                 f'{at}, slot "{slot}": drop {key}= from the <{child.tag}> — '
                 "geometry does not cross this seam"
             )
-        fixes.extend(_emphasis(child, at, slot))
+        fixes.extend(_emphasis(child, at, slot, allow_break))
     return fixes
 
 
@@ -159,7 +192,7 @@ def _slot(el, at, pattern, seen):
         else:
             fixes.append(f'{at}: drop the class "{name}" — ' + _slot_list(pattern))
 
-    fixes.extend(_emphasis(el, at, classes[0]))
+    fixes.extend(_emphasis(el, at, classes[0], allow_break_of(pattern)))
     return fixes
 
 
@@ -495,7 +528,13 @@ def _word_budget(deck):
         ceiling = budget_of(pattern)
         if ceiling is None:
             continue
-        spent = sum(_words(plain_text(el)) for el in node.elements())
+        # AN ICON IS READ, NEVER SAID. Its slot's text is a Lucide name --
+        # furniture the compiler consumes, not a word the room hears -- so it
+        # is left out of the same total a cover's meta line is spent from.
+        spent = sum(
+            _words(plain_text(el)) for el in node.elements()
+            if role_of(pattern, el.attrs.get("class", "").strip()) != ICON
+        )
         if spent > ceiling:
             fixes.append(
                 f"{_at(n, node)}: cut the slide to {ceiling} words "
@@ -544,15 +583,37 @@ def _repeated_pattern(deck):
     return fixes
 
 
+def _icon_known(deck):
+    # A NAME THE VENDORED SET DOES NOT CARRY IS STATIC, same as every other
+    # doctrine ruler here: the source already says the name, and no render is
+    # needed to know it is not one of the 1764 `themes/base/icons/` ships.
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        pattern = node.attrs.get("pattern", "")
+        for el in node.elements():
+            slot = el.attrs.get("class", "").strip()
+            if role_of(pattern, slot) != ICON:
+                continue
+            name = plain_text(el)
+            if name and not icons.known(name):
+                fixes.append(
+                    f'{_at(n, node)}, slot "{slot}": replace the icon "{name}" '
+                    "with one from themes/base/icons/lucide-icon-nodes.json — "
+                    "the vendored Lucide set has no icon by that name"
+                )
+    return fixes
+
+
 # APPEND AT THE END. The order is the order the report prints, and the report
 # is read top to bottom by whoever is fixing a deck: the dialect first,
 # because a source that does not parse into slides has nothing for the
-# doctrine to measure, then the three that judge what the slides say.
+# doctrine to measure, then the four that judge what the slides say.
 RULERS = (
     (VOCABULARY, _vocabulary),
     (WORD_BUDGET, _word_budget),
     (CATEGORY_TITLE, _category_title),
     (REPEATED_PATTERN, _repeated_pattern),
+    (ICON_KNOWN, _icon_known),
 )
 
 

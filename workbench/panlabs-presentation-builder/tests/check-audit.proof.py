@@ -391,6 +391,54 @@ def main():
     ], width=22)
 
     print()
+    failed += block("the closed inline vocabulary (#211)", EVIDENCE_SOURCE, [
+        (
+            "foreign tag",
+            "<em>, which no longer belongs to the closed set",
+            swap(EVIDENCE_SOURCE, "<mark>bastam</mark>", "<em>bastam</em>"),
+            "drop the <em>",
+        ),
+        (
+            "break not permitted",
+            "a forced break inside a pattern that never declared allow_break",
+            swap(EVIDENCE_SOURCE, "um catálogo que", "um catálogo<br/>que"),
+            "does not permit a forced break",
+        ),
+        (
+            "break not self-closed",
+            "<br> left open, swallowing the text that follows it",
+            swap(EVIDENCE_SOURCE, "depois:<br/>caixa", "depois:<br>x</br>caixa"),
+            "self-close the <br/>",
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the list ceiling (#211)", EVIDENCE_SOURCE, [
+        (
+            "sixth item",
+            "a sixth icon+text pair, past the five the register declares",
+            swap(
+                EVIDENCE_SOURCE,
+                '<p class="item-5-text">A licença mora ao lado do sprite, em themes/base/icons.</p>',
+                '<p class="item-5-text">A licença mora ao lado do sprite, em themes/base/icons.</p>\n'
+                '    <p class="item-6-icon">star</p>\n'
+                '    <p class="item-6-text">Um sexto item que o catálogo nunca declarou.</p>',
+            ),
+            'drop the class "item-6-icon"',
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the icon-known ruler (#211)", EVIDENCE_SOURCE, [
+        (
+            "unknown icon",
+            "a name the vendored Lucide set never shipped",
+            swap(EVIDENCE_SOURCE, ">circle-check<", ">circle-checkmark<"),
+            'replace the icon "circle-checkmark"',
+        ),
+    ], width=22)
+
+    print()
     print("and the three that demand green:  [built kept]")
     failed += the_page_is_not_a_template()
     failed += the_category_is_the_whole_title()

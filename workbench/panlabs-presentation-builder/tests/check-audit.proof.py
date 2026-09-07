@@ -61,10 +61,12 @@ SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
 BUILD = os.path.join(SKILL, "compiler", "build.py")
 STATEMENT = os.path.join(SKILL, "examples", "statement.deck.html")
 FEW_WORDS = os.path.join(SKILL, "examples", "few-words.deck.html")
+EVIDENCE = os.path.join(SKILL, "examples", "evidence.deck.html")
 
 
 STATEMENT_SOURCE = read(STATEMENT)
 FEW_WORDS_SOURCE = read(FEW_WORDS)
+EVIDENCE_SOURCE = read(EVIDENCE)
 
 
 def _run(text):
@@ -125,6 +127,51 @@ THIRTY_WORDS = (
     "Uma suíte verde, rodada de ponta a ponta na máquina de quem escreveu o "
     "deck, não prova nada sobre o que a última fileira da sala ainda lê no "
     "telão."
+)
+
+# Every group and table `evidence.deck.html` carries, exactly as its source
+# writes them -- the needles the cases below plant against and the ground
+# the "row dropped" / "item dropped" cases below cut into. #212's own
+# acceptance criteria name three of these numbers verbatim: seven lines in a
+# table, one item in the metrics, two marks in the timeline.
+METRICS_UL = """    <ul>
+      <li><p class="value">42%</p><p class="label">conversão</p></li>
+      <li><p class="value">1,8×</p><p class="label">tempo de resposta</p></li>
+      <li><p class="value">−12%</p><p class="label">churn</p></li>
+    </ul>"""
+
+METRICS_UL_ONE = """    <ul>
+      <li><p class="value">42%</p><p class="label">conversão</p></li>
+    </ul>"""
+
+TIMELINE_OL = """    <ol>
+      <li><p class="label">Descoberta</p><p class="date">Jan</p></li>
+      <li><p class="label">Piloto</p><p class="date">Mar</p></li>
+      <li now><p class="label">Lançamento</p><p class="date">Jun</p></li>
+      <li><p class="label">Expansão</p><p class="date">Set</p></li>
+    </ol>"""
+
+TIMELINE_OL_TWO = """    <ol>
+      <li><p class="label">Descoberta</p><p class="date">Jan</p></li>
+      <li><p class="label">Piloto</p><p class="date">Mar</p></li>
+    </ol>"""
+
+TIMELINE_OL_TWO_NOW = """    <ol>
+      <li now><p class="label">Descoberta</p><p class="date">Jan</p></li>
+      <li now><p class="label">Piloto</p><p class="date">Mar</p></li>
+      <li><p class="label">Lançamento</p><p class="date">Jun</p></li>
+      <li><p class="label">Expansão</p><p class="date">Set</p></li>
+    </ol>"""
+
+TABLE_BODY = """        <tr><td>Checkout</td><td>14 min</td><td>6 min</td></tr>
+        <tr><td>Catálogo</td><td>21 min</td><td>9 min</td></tr>
+        <tr><td>Pagamentos</td><td>18 min</td><td>7 min</td></tr>"""
+
+# Six data rows plus the header is seven lines of a table -- one over #212's
+# own ceiling ("tabela de sete linhas ... reprovam").
+TABLE_BODY_SIX = "\n".join(
+    f'        <tr><td>Squad {n}</td><td>{n} min</td><td>{n - 1} min</td></tr>'
+    for n in range(1, 7)
 )
 
 
@@ -210,7 +257,11 @@ def the_divider_may_name_the_arc():
 def main():
     missing = [
         os.path.relpath(path, SKILL)
-        for path, text in ((STATEMENT, STATEMENT_SOURCE), (FEW_WORDS, FEW_WORDS_SOURCE))
+        for path, text in (
+            (STATEMENT, STATEMENT_SOURCE),
+            (FEW_WORDS, FEW_WORDS_SOURCE),
+            (EVIDENCE, EVIDENCE_SOURCE),
+        )
         if text is None
     ]
     if missing:
@@ -276,6 +327,40 @@ def main():
             "give this slide another pattern",
         ),
     ], width=22)
+
+    print()
+    failed += block("the group and table rulers", EVIDENCE_SOURCE, [
+        (
+            "table over the ceiling",
+            "a header plus six data rows -- seven lines, one over the ceiling",
+            swap(EVIDENCE_SOURCE, TABLE_BODY, TABLE_BODY_SIX),
+            "drop 1 <tr>",
+        ),
+        (
+            "table with no header",
+            "the <thead> taken away",
+            cut(EVIDENCE_SOURCE, r"\s*<thead>.*?</thead>", "the table's header"),
+            "give the <table> exactly one <thead>",
+        ),
+        (
+            "metrics under the floor",
+            "one metric where the pattern needs two to four",
+            swap(EVIDENCE_SOURCE, METRICS_UL, METRICS_UL_ONE),
+            "add 1 more <li>",
+        ),
+        (
+            "timeline under the floor",
+            "two marks where the pattern needs three to six",
+            swap(EVIDENCE_SOURCE, TIMELINE_OL, TIMELINE_OL_TWO),
+            "add 1 more <li>",
+        ),
+        (
+            "two moments at once",
+            "two marks both claiming to be the present moment",
+            swap(EVIDENCE_SOURCE, TIMELINE_OL, TIMELINE_OL_TWO_NOW),
+            "keep `now` on at most one",
+        ),
+    ], width=24)
 
     print()
     failed += block("the compiler's refusals", STATEMENT_SOURCE, [

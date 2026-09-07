@@ -26,7 +26,8 @@ import unicodedata
 from dataclasses import dataclass
 
 from catalog import (CATEGORY_TITLES, INLINE_TAGS, PATTERNS, SLOT_TAG,
-                     budget_of, claims_of, pattern_names, slots_of)
+                     TABLE_MAX_ROWS, budget_of, claims_of, group_of,
+                     is_table, pattern_names, slots_of)
 from source import plain_text
 
 
@@ -162,6 +163,218 @@ def _slot(el, at, pattern, seen):
     return fixes
 
 
+# ── a group's item, and the group itself ─────────────────────────────────────
+# #212 IS THE FIRST TICKET WHERE A PATTERN SAYS MORE THAN ONE OF A NAME. Every
+# slot above is written once because #210 never needed more; a metric, a
+# milestone and a table's row are a SERIES, and the two functions below are
+# what let one pattern hold a bounded, repeating shape instead of inventing a
+# second dialect for it.
+
+def _field_list(group):
+    fields = tuple(f.name for f in group.fields)
+    count = "one field" if len(fields) == 1 else f"{len(fields)} fields"
+    return f"each <{group.item}> declares {count}: " + ", ".join(fields)
+
+
+def _field(el, at, group, seen):
+    """One field inside a group's item -- the same shape as `_slot`, one level
+    deeper, and kept as its own function rather than a shared one because the
+    vocabulary it reads is the group's fields, never the pattern's slots."""
+    fixes = []
+    if el.tag != SLOT_TAG:
+        return [
+            f"{at}: write the field as <{SLOT_TAG}>, not <{el.tag}> — every "
+            "field inside a group is a paragraph"
+        ]
+
+    for key in sorted(k for k in el.attrs if k != "class"):
+        fixes.append(
+            f"{at}: drop {key}= from the <{SLOT_TAG}> — a field carries "
+            "class= and nothing else"
+        )
+
+    classes = el.attrs.get("class", "").split()
+    field_names = tuple(f.name for f in group.fields)
+    if not classes:
+        return fixes + [f"{at}: name the <{SLOT_TAG}> with a class — " + _field_list(group)]
+    if len(classes) > 1:
+        fixes.append(
+            f"{at}: keep one class on the <{SLOT_TAG}> — a field has one name, "
+            f'and "{" ".join(classes)}" is {len(classes)}'
+        )
+
+    for name in classes:
+        if name in field_names:
+            seen.append(name)
+        else:
+            fixes.append(f'{at}: drop the class "{name}" — ' + _field_list(group))
+
+    fixes.extend(_emphasis(el, at, classes[0]))
+    return fixes
+
+
+def _group(container, at, pattern, group):
+    fixes = []
+    for key in sorted(container.attrs):
+        fixes.append(
+            f"{at}: drop {key}= from the <{group.container}> — it carries no "
+            "attribute of its own"
+        )
+    for child in container.children:
+        if isinstance(child, str) and child.strip():
+            fixes.append(
+                f"{at}: wrap the loose text in a <{group.item}> — a "
+                f"<{group.container}> holds <{group.item}> and nothing else"
+            )
+
+    now_count = 0
+    item_count = 0
+    for item in container.elements():
+        if item.tag != group.item:
+            fixes.append(
+                f"{at}: write each entry as <{group.item}>, not <{item.tag}> "
+                f'— the pattern "{pattern}" counts <{group.item}>, one per item'
+            )
+            continue
+        item_count += 1
+
+        extra = ("now",) if group.now_flag else ()
+        if group.now_flag and "now" in item.attrs:
+            now_count += 1
+        for key in sorted(k for k in item.attrs if k not in extra):
+            fixes.append(
+                f"{at}: drop {key}= from the <{group.item}>" + (
+                    f" — the only attribute a <{group.item}> may carry is "
+                    "the bare `now`" if group.now_flag else
+                    " — it carries no attribute of its own"
+                )
+            )
+
+        seen = []
+        for sub in item.children:
+            if isinstance(sub, str):
+                if sub.strip():
+                    fixes.append(f"{at}: wrap the loose text in a field — " + _field_list(group))
+                continue
+            fixes.extend(_field(sub, at, group, seen))
+
+        for want in group.required_fields:
+            if want not in seen:
+                fixes.append(
+                    f'{at}: add the missing <{SLOT_TAG} class="{want}"> to a '
+                    f"<{group.item}> — every item of this group needs it"
+                )
+        for name in sorted(set(s for s in seen if seen.count(s) > 1)):
+            fixes.append(
+                f'{at}: keep one <{SLOT_TAG} class="{name}"> per <{group.item}> '
+                "— an item declares the field once"
+            )
+
+    if item_count < group.minimum:
+        fixes.append(
+            f"{at}: add {group.minimum - item_count} more <{group.item}> — the "
+            f'pattern "{pattern}" needs {group.minimum} to {group.maximum}, and '
+            f"this one has {item_count}"
+        )
+    elif item_count > group.maximum:
+        fixes.append(
+            f"{at}: drop {item_count - group.maximum} <{group.item}> — the "
+            f'pattern "{pattern}" needs {group.minimum} to {group.maximum}, and '
+            f"this one has {item_count}"
+        )
+    if group.now_flag and now_count > 1:
+        fixes.append(
+            f"{at}: keep `now` on at most one <{group.item}> — {now_count} are "
+            "marked as the present moment, and a timeline has only one"
+        )
+    return fixes
+
+
+# ── a table ───────────────────────────────────────────────────────────────────
+# A TABLE'S COLUMNS ARE THE DECK'S OWN WORDS, NOT THE REGISTER'S. Every group
+# above has fields fixed by the catalog because a metric is always a value and
+# a label; a table's header is whatever the author is comparing, so the only
+# thing this pattern can fix in advance is the SHAPE -- one header, a bounded
+# number of rows, every row answering every column.
+
+def _table_cell(el, at, tag):
+    fixes = []
+    if el.tag != tag:
+        return [f"{at}: write the cell as <{tag}>, not <{el.tag}>"]
+    for key in sorted(el.attrs):
+        fixes.append(f"{at}: drop {key}= from the <{tag}> — a cell carries no attribute")
+    fixes.extend(_emphasis(el, at, tag))
+    return fixes
+
+
+def _table(table, at, pattern):
+    fixes = []
+    for key in sorted(table.attrs):
+        fixes.append(f"{at}: drop {key}= from the <table> — it carries no attribute of its own")
+    for child in table.children:
+        if isinstance(child, str) and child.strip():
+            fixes.append(f"{at}: wrap the loose text in a <thead> or <tbody> row")
+
+    kids = table.elements()
+    for stray in kids:
+        if stray.tag not in ("thead", "tbody"):
+            fixes.append(
+                f"{at}: drop the <{stray.tag}> from the <table> — a table holds "
+                "a <thead> and a <tbody>, nothing else"
+            )
+    theads = [c for c in kids if c.tag == "thead"]
+    tbodies = [c for c in kids if c.tag == "tbody"]
+    if len(theads) != 1:
+        fixes.append(
+            f'{at}: give the <table> exactly one <thead> — the pattern "{pattern}" '
+            f"needs a header, and this one has {len(theads)}"
+        )
+    if len(tbodies) != 1:
+        fixes.append(f"{at}: give the <table> exactly one <tbody> — this one has {len(tbodies)}")
+    if len(theads) != 1 or len(tbodies) != 1:
+        return fixes
+
+    head_rows = [c for c in theads[0].elements() if c.tag == "tr"]
+    if len(head_rows) != 1:
+        fixes.append(
+            f"{at}: give the <thead> exactly one <tr> — this one has {len(head_rows)}"
+        )
+        return fixes
+    heads = head_rows[0].elements()
+    for cell in heads:
+        fixes.extend(_table_cell(cell, at, "th"))
+    columns = len(heads)
+    if columns == 0:
+        fixes.append(f"{at}: give the header <tr> at least one <th> — an empty header proves nothing")
+        return fixes
+
+    body_rows = [c for c in tbodies[0].elements() if c.tag == "tr"]
+    for row in body_rows:
+        cells = row.elements()
+        for cell in cells:
+            fixes.extend(_table_cell(cell, at, "td"))
+        if len(cells) != columns:
+            fixes.append(
+                f"{at}: give this <tr> {columns} <td> like the header, not "
+                f"{len(cells)} — every row answers every column"
+            )
+
+    rows = 1 + len(body_rows)  # the header IS a line of the table
+    ceiling = TABLE_MAX_ROWS
+    if rows < 2:
+        fixes.append(f"{at}: add a <tr> to the <tbody> — a header with no data proves nothing")
+    elif rows > ceiling:
+        fixes.append(
+            f"{at}: drop {rows - ceiling} <tr> from the <tbody> — the pattern "
+            f'"{pattern}" allows {ceiling} lines, header included, and this one has {rows}'
+        )
+    return fixes
+
+
+# ── the containers a group or a table is written as, and nothing else can be ──
+CONTAINER_TAGS = ("ul", "ol", "table")
+
+
 def _slide(node, n):
     fixes = []
     at = _at(n, node)
@@ -182,7 +395,17 @@ def _slide(node, n):
             f"declares: {known}"
         ]
 
+    group = group_of(pattern)
+    table = is_table(pattern)
+    # THE WORD THE PATTERN CALLS ITS OWN EVIDENCE, and the tag it is written
+    # as. A `table` pattern never carries a `Group` -- its columns are the
+    # deck's own words, not the register's (`_table`'s own docstring) -- so a
+    # message about it says "table", never "group".
+    kind = "table" if table else "group"
+    want = "table" if table else (group.container if group else None)
+
     seen = []
+    evidence_seen = False
     for child in node.children:
         if isinstance(child, str):
             if child.strip():
@@ -190,18 +413,55 @@ def _slide(node, n):
                     f"{at}: wrap the loose text in a slot — " + _slot_list(pattern)
                 )
             continue
+
+        if child.tag in CONTAINER_TAGS:
+            if want and child.tag == want:
+                # A SECOND CONTAINER IS NEVER A SECOND CHANCE. Every pattern
+                # that carries evidence carries exactly one -- `build.py`'s
+                # `slide_markup` picks the LAST one it sees and drops the
+                # rest silently, which is exactly the class of defect this
+                # ruler exists to catch before it reaches the page.
+                if evidence_seen:
+                    fixes.append(
+                        f"{at}: keep one <{want}> — the pattern \"{pattern}\" "
+                        f"carries one {kind}, not two"
+                    )
+                    continue
+                evidence_seen = True
+                fixes.extend(
+                    _group(child, at, pattern, group) if group
+                    else _table(child, at, pattern)
+                )
+                continue
+            if want:
+                fixes.append(
+                    f"{at}: write the {kind} as <{want}>, not <{child.tag}> — "
+                    f'the pattern "{pattern}" needs its evidence in a <{want}>'
+                )
+            else:
+                fixes.append(
+                    f"{at}: drop the <{child.tag}> — the pattern \"{pattern}\" "
+                    "has no group; " + _slot_list(pattern)
+                )
+            continue
+
         fixes.extend(_slot(child, at, pattern, seen))
 
-    for want in PATTERNS[pattern].required:
-        if want not in seen:
+    for want_slot in PATTERNS[pattern].required:
+        if want_slot not in seen:
             fixes.append(
-                f'{at}: add the missing <{SLOT_TAG} class="{want}"> — the '
+                f'{at}: add the missing <{SLOT_TAG} class="{want_slot}"> — the '
                 f'pattern "{pattern}" is not itself without it'
             )
     for name in sorted(set(s for s in seen if seen.count(s) > 1)):
         fixes.append(
             f'{at}: keep one <{SLOT_TAG} class="{name}"> — the pattern '
             f'"{pattern}" declares the slot once'
+        )
+    if want and not evidence_seen:
+        fixes.append(
+            f"{at}: add a <{want}> — the pattern \"{pattern}\" needs its "
+            "evidence and this slide has none"
         )
     return fixes
 

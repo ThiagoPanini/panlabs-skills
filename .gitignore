@@ -43,3 +43,6 @@ tmp/
 # `git add` de diretório.
 __pycache__/
 *.pyc
+
+.agents/skills/
+.claude/skills/

@@ -13,7 +13,7 @@ O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inl
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **doze padrões** hoje — sete de poucas palavras, a afirmação de tela cheia, e os quatro que carregam uma série: número gigante, métricas em linha, linha do tempo e tabela. Os outros seis, as colunas e a comparação, os gráficos, a figura sob medida, as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **dezesseis padrões** hoje — sete de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), e agora duas colunas, três colunas, comparação e lista com ícones. Faltam dois — o gráfico com título-tese e a figura sob medida —, mais as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos, que chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## O dialeto
 
@@ -35,13 +35,13 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
 
 **Uma `<section>` é um slide**, e o `pattern=` dela é um nome do catálogo. **Um slot é um `<p>` com o nome do slot na `class=`** — e nada mais: um segundo atributo é geometria vestida de prosa, e geometria não atravessa esta costura.
 
-**Dentro de um slot a ênfase é livre**, com duas marcações: `<strong>`, que o tema marca com uma régua no acento, e `<em>`, que é itálico. Qualquer outra tag é recusada.
+**O vocabulário de ênfase inline fecha em três marcações.** `<strong>` (negrito) e `<mark>` (destaque com uma régua na cor de acento) valem em qualquer slot; `<br/>`, vazio e sem atributo, força uma quebra de linha só nos padrões que o dizem — o [`CATALOG.md`](CATALOG.md) lista quais. Qualquer outra tag é recusada, `<em>` inclusive: o vocabulário fechou nestas três de propósito.
 
 **Um padrão pode carregar um grupo**, que é uma série ao invés de um fato só — a métrica que se repete, o marco da linha do tempo, a linha da tabela. Um grupo é um `<ul>`, um `<ol>` ou um `<table>` — sem `class=`, porque a própria tag já diz o que é —, e cada item dentro dele (um `<li>`, ou uma `<tr>` de tabela) carrega seus próprios campos do mesmo jeito que um slide carrega slots: um `<p>` por campo, o nome do campo na `class=`. Um marco da linha do tempo aceita ainda `<li now>`, para marcar o momento presente.
 
 **O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot, quantas palavras o slide inteiro pode gastar e, quando houver, o grupo que carrega. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
 
-[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série.
+[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones.
 
 ## Construir
 
@@ -64,10 +64,12 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
    ✓ word-budget · no slide spends more words than its pattern budgets
    ✓ category-title · every claim on the stage makes a point, not a category
    ✓ repeated-pattern · no pattern runs on two slides in a row
-   4 rulers, green
+   ✓ icon-known · every icon a slide names is one the vendored Lucide set carries
+   ✓ icon-paired · a slot never appears without the one it is paired with
+   6 rulers, green
 ```
 
-**Uma régua lê o dialeto e três leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras três construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, e o mesmo padrão em dois slides seguidos, que a plateia lê como um slide que não avançou. As três são estáticas porque a fonte já responde por elas: contar palavras, ler um título e comparar dois `pattern=` não precisa de navegador.
+**Uma régua lê o dialeto e cinco leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras cinco construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, o mesmo padrão em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, e um item de lista com o ícone e sem o texto ou vice-versa. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=` e conferir um nome contra um registro não precisa de navegador.
 
 **Laudo vermelho não escreve arquivo nenhum.** Meio deck no disco é pior do que nenhum, porque parece pronto. Cada linha vermelha nomeia o conserto no imperativo — `drop the class "highlight" — the pattern "full-bleed-statement" declares one slot: statement` —, e consertar é ida e volta de máquina: corrija a fonte e rode de novo, sem trazer isso para o humano.
 
@@ -128,5 +130,7 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | for escolher um padrão para um slide, com slots, papéis e orçamento | [`CATALOG.md`](CATALOG.md) |
 | quiser ver os sete padrões de poucas palavras numa fonte só | [`examples/few-words.deck.html`](examples/few-words.deck.html) |
 | quiser ver os quatro padrões que carregam uma série numa fonte só | [`examples/evidence.deck.html`](examples/evidence.deck.html) |
+| quiser ver colunas, comparação e lista com ícones numa fonte só | [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) |
+| for escolher um ícone, ou conferir a licença do conjunto | [`themes/base/icons/`](themes/base/icons/) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

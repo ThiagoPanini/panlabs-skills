@@ -62,11 +62,13 @@ BUILD = os.path.join(SKILL, "compiler", "build.py")
 STATEMENT = os.path.join(SKILL, "examples", "statement.deck.html")
 FEW_WORDS = os.path.join(SKILL, "examples", "few-words.deck.html")
 EVIDENCE = os.path.join(SKILL, "examples", "evidence.deck.html")
+SIDE_BY_SIDE = os.path.join(SKILL, "examples", "side-by-side.deck.html")
 
 
 STATEMENT_SOURCE = read(STATEMENT)
 FEW_WORDS_SOURCE = read(FEW_WORDS)
 EVIDENCE_SOURCE = read(EVIDENCE)
+SIDE_BY_SIDE_SOURCE = read(SIDE_BY_SIDE)
 
 
 def _run(text):
@@ -261,6 +263,7 @@ def main():
             (STATEMENT, STATEMENT_SOURCE),
             (FEW_WORDS, FEW_WORDS_SOURCE),
             (EVIDENCE, EVIDENCE_SOURCE),
+            (SIDE_BY_SIDE, SIDE_BY_SIDE_SOURCE),
         )
         if text is None
     ]
@@ -387,6 +390,72 @@ def main():
             "a theme the skill does not have on disk",
             swap(STATEMENT_SOURCE, 'theme="base"', 'theme="panlabs"'),
             "build with a theme this skill carries",
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the closed inline vocabulary (#211)", SIDE_BY_SIDE_SOURCE, [
+        (
+            "foreign tag",
+            "<em>, which no longer belongs to the closed set",
+            swap(SIDE_BY_SIDE_SOURCE, "<mark>bastam</mark>", "<em>bastam</em>"),
+            "drop the <em>",
+        ),
+        (
+            "break not permitted",
+            "a forced break inside a pattern that never declared allow_break",
+            swap(SIDE_BY_SIDE_SOURCE, "um catálogo que", "um catálogo<br/>que"),
+            "does not permit a forced break",
+        ),
+        (
+            "break not self-closed",
+            "<br> left open, swallowing the text that follows it",
+            swap(SIDE_BY_SIDE_SOURCE, "depois:<br/>caixa", "depois:<br>x</br>caixa"),
+            "self-close the <br/>",
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the list ceiling (#211)", SIDE_BY_SIDE_SOURCE, [
+        (
+            "sixth item",
+            "a sixth icon+text pair, past the five the register declares",
+            swap(
+                SIDE_BY_SIDE_SOURCE,
+                '<p class="item-5-text">A licença mora ao lado do sprite, em themes/base/icons.</p>',
+                '<p class="item-5-text">A licença mora ao lado do sprite, em themes/base/icons.</p>\n'
+                '    <p class="item-6-icon">star</p>\n'
+                '    <p class="item-6-text">Um sexto item que o catálogo nunca declarou.</p>',
+            ),
+            'drop the class "item-6-icon"',
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the icon-known ruler (#211)", SIDE_BY_SIDE_SOURCE, [
+        (
+            "unknown icon",
+            "a name the vendored Lucide set never shipped",
+            swap(SIDE_BY_SIDE_SOURCE, ">circle-check<", ">circle-checkmark<"),
+            'replace the icon "circle-checkmark"',
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the icon-paired ruler (#211)", SIDE_BY_SIDE_SOURCE, [
+        (
+            "icon without its text",
+            "an item's icon left in, its text taken away",
+            cut(SIDE_BY_SIDE_SOURCE,
+                r'\s*<p class="item-3-text">[^<]*</p>\n', "item-3-text"),
+            'add the missing <p class="item-3-text">',
+        ),
+        (
+            "text without its icon",
+            "an item's text left in, its icon taken away",
+            cut(SIDE_BY_SIDE_SOURCE,
+                r'\s*<p class="item-3-icon">[^<]*</p>\n', "item-3-icon"),
+            'add the missing <p class="item-3-icon">',
         ),
     ], width=22)
 

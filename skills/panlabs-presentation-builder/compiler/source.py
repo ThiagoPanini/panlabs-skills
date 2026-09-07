@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
-from catalog import DECK_FIELDS, INLINE_TAGS
+from catalog import BREAK_TAG, DECK_FIELDS, INLINE_TAGS
 
 
 class Refused(Exception):
@@ -153,11 +153,21 @@ def plain_text(node, _top=True):
     rather than in the audit because both are READING the tree, and two
     copies of one whitespace rule is how "the <strong>room</strong>" ends up
     counted as one word in one place and two in the other.
+
+    BREAK_TAG COUNTS AS A SPACE, NEVER AS NOTHING. A forced line inside a
+    sentence still separates two words for whoever is counting them --
+    dropping it silently would turn "primeiro<br/>segundo" into the one word
+    "primeirosegundo" for the word-budget ruler, which is a defect the ruler
+    would never see because the merge happens one layer below it.
     """
     out = []
     for child in node.children:
-        out.append(_squeeze(child) if isinstance(child, str)
-                   else plain_text(child, _top=False))
+        if isinstance(child, str):
+            out.append(_squeeze(child))
+        elif child.tag == BREAK_TAG:
+            out.append(" ")
+        else:
+            out.append(plain_text(child, _top=False))
     said = "".join(out)
     return said.strip() if _top else said
 
@@ -169,11 +179,21 @@ def inline_markup(node, _top=True):
     both per run eats the space between a word and an emphasised word --
     "the <strong>room</strong>" comes back as "the<strong>room</strong>", and
     the deck reads as a typo nobody typed.
+
+    BREAK_TAG IS WRITTEN SELF-CLOSED AND NEVER RECURSED INTO. The audit
+    refuses a `<br>` that carries a child before this ever runs (source.py
+    judges nothing; see the module docstring), so by the time a source
+    reaches here a `<br>` is already known to be empty -- writing it as
+    `<br/>` rather than recursing is what keeps a forced break from ever
+    being handed markup validated for a different tag.
     """
     out = []
     for child in node.children:
         if isinstance(child, str):
             out.append(html.escape(_squeeze(child), quote=False))
+            continue
+        if child.tag == BREAK_TAG:
+            out.append(f"<{BREAK_TAG}/>")
             continue
         if child.tag not in INLINE_TAGS:
             raise Refused(

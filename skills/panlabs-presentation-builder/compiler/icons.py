@@ -48,11 +48,6 @@ def known(name):
     return name in _nodes()
 
 
-def names():
-    """Every Lucide name the vendored set carries, sorted."""
-    return sorted(_nodes())
-
-
 def _symbol(name):
     """One icon's `<symbol>`, its id namespaced so it cannot collide with a deck's own id."""
     nodes = _nodes()[name]

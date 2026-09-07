@@ -64,10 +64,12 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
    ✓ word-budget · no slide spends more words than its pattern budgets
    ✓ category-title · every claim on the stage makes a point, not a category
    ✓ repeated-pattern · no pattern runs on two slides in a row
-   4 rulers, green
+   ✓ icon-known · every icon a slide names is one the vendored Lucide set carries
+   ✓ icon-paired · a slot never appears without the one it is paired with
+   6 rulers, green
 ```
 
-**Uma régua lê o dialeto e três leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras três construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, e o mesmo padrão em dois slides seguidos, que a plateia lê como um slide que não avançou. As três são estáticas porque a fonte já responde por elas: contar palavras, ler um título e comparar dois `pattern=` não precisa de navegador.
+**Uma régua lê o dialeto e cinco leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras cinco construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, o mesmo padrão em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, e um item de lista com o ícone e sem o texto ou vice-versa. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=` e conferir um nome contra um registro não precisa de navegador.
 
 **Laudo vermelho não escreve arquivo nenhum.** Meio deck no disco é pior do que nenhum, porque parece pronto. Cada linha vermelha nomeia o conserto no imperativo — `drop the class "highlight" — the pattern "full-bleed-statement" declares one slot: statement` —, e consertar é ida e volta de máquina: corrija a fonte e rode de novo, sem trazer isso para o humano.
 

@@ -41,7 +41,7 @@ sys.path.insert(0, HERE)
 import icons                                                    # noqa: E402
 from audit import audit, report                                # noqa: E402
 from catalog import (DECK_FIELDS, ICON, SLOT_TAG, group_of, is_table,  # noqa: E402
-                     role_of, slot_specs)
+                     role_of_element, slot_specs)
 from source import Refused, inline_markup, plain_text, read     # noqa: E402
 
 THEMES = os.path.join(ROOT, "themes")
@@ -153,8 +153,7 @@ def icons_used(deck):
     for slide in deck.sections:
         pattern = slide.attrs["pattern"]
         for el in slide.elements():
-            slot_name = el.attrs.get("class", "").strip()
-            if role_of(pattern, slot_name) == ICON:
+            if role_of_element(pattern, el) == ICON:
                 name = plain_text(el).strip()
                 if name:
                     used.append(name)

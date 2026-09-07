@@ -101,6 +101,7 @@ class Slot:
     name: str
     role: str
     purpose: str       # Portuguese: the line the reference publishes about it
+    pairs_with: str = None  # another slot that must be written exactly when this one is (#211)
 
 
 @dataclass(frozen=True)
@@ -352,15 +353,15 @@ PATTERNS = {
             name="icon-list",
             slots=(
                 Slot("title", CLAIM, "a tese que a lista sustenta"),
-                Slot("item-1-icon", ICON, "o ícone do primeiro item"),
+                Slot("item-1-icon", ICON, "o ícone do primeiro item", pairs_with="item-1-text"),
                 Slot("item-1-text", BODY, "o primeiro item"),
-                Slot("item-2-icon", ICON, "o ícone do segundo item"),
+                Slot("item-2-icon", ICON, "o ícone do segundo item", pairs_with="item-2-text"),
                 Slot("item-2-text", BODY, "o segundo item"),
-                Slot("item-3-icon", ICON, "o ícone do terceiro item"),
+                Slot("item-3-icon", ICON, "o ícone do terceiro item", pairs_with="item-3-text"),
                 Slot("item-3-text", BODY, "o terceiro item"),
-                Slot("item-4-icon", ICON, "o ícone do quarto item"),
+                Slot("item-4-icon", ICON, "o ícone do quarto item", pairs_with="item-4-text"),
                 Slot("item-4-text", BODY, "o quarto item"),
-                Slot("item-5-icon", ICON, "o ícone do quinto item"),
+                Slot("item-5-icon", ICON, "o ícone do quinto item", pairs_with="item-5-text"),
                 Slot("item-5-text", BODY, "o quinto item"),
             ),
             required=("title", "item-1-icon", "item-1-text"),
@@ -479,6 +480,17 @@ def role_of(pattern, slot_name):
         if s.name == slot_name:
             return s.role
     return None
+
+
+def role_of_element(pattern, el):
+    """`role_of`, reading the slot name off a parsed Element's own `class=`.
+
+    The three callers that need this (audit.py's word-budget and icon-known
+    rulers, build.py's icon collector) were each spelling
+    `el.attrs.get("class", "").strip()` out by hand -- one copy here is what
+    keeps a future slot-naming change from having to find all three.
+    """
+    return role_of(pattern, el.attrs.get("class", "").strip())
 
 
 def allow_break_of(name):

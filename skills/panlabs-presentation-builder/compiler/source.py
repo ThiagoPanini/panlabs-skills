@@ -145,6 +145,23 @@ def _squeeze(s):
     return re.sub(r"\s+", " ", s)
 
 
+def plain_text(node, _top=True):
+    """A slot's contents as a sentence: the emphasis flattened into the words.
+
+    The same whitespace rule as `inline_markup` below, and for the same
+    reason -- squeeze per run, strip once at the top. It lives beside it
+    rather than in the audit because both are READING the tree, and two
+    copies of one whitespace rule is how "the <strong>room</strong>" ends up
+    counted as one word in one place and two in the other.
+    """
+    out = []
+    for child in node.children:
+        out.append(_squeeze(child) if isinstance(child, str)
+                   else plain_text(child, _top=False))
+    said = "".join(out)
+    return said.strip() if _top else said
+
+
 def inline_markup(node, _top=True):
     """A slot's contents as markup: text escaped, emphasis kept, nothing else.
 

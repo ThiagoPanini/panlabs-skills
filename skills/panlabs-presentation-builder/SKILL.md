@@ -13,7 +13,7 @@ O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inl
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **um padrão** hoje — afirmação de tela cheia. Os outros dezessete, os gráficos, as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **oito padrões** hoje — sete de poucas palavras e a afirmação de tela cheia. Os outros dez, os gráficos, as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## O dialeto
 
@@ -37,11 +37,9 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
 
 **Dentro de um slot a ênfase é livre**, com duas marcações: `<strong>`, que o tema marca com uma régua no acento, e `<em>`, que é itálico. Qualquer outra tag é recusada.
 
-| padrão | slots | para que serve |
-|---|---|---|
-| `full-bleed-statement` | `statement` | uma frase em corpo de display, segurando o palco sozinha |
+**O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot e quantas palavras o slide inteiro pode gastar. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
 
-O catálogo que manda é [`compiler/catalog.py`](compiler/catalog.py), e ele é a fonte única: o compilador valida por ele, e esta tabela existe só enquanto o catálogo couber numa linha. [`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível.
+[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras.
 
 ## Construir
 
@@ -61,8 +59,13 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
 ```
 ── audit · "A régua e a plateia" · theme base · 1 slide
    ✓ vocabulary · every pattern, class and tag in the source is one the catalog declares
-   1 ruler, green
+   ✓ word-budget · no slide spends more words than its pattern budgets
+   ✓ category-title · every claim on the stage makes a point, not a category
+   ✓ repeated-pattern · no pattern runs on two slides in a row
+   4 rulers, green
 ```
+
+**Uma régua lê o dialeto e três leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras três construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, e o mesmo padrão em dois slides seguidos, que a plateia lê como um slide que não avançou. As três são estáticas porque a fonte já responde por elas: contar palavras, ler um título e comparar dois `pattern=` não precisa de navegador.
 
 **Laudo vermelho não escreve arquivo nenhum.** Meio deck no disco é pior do que nenhum, porque parece pronto. Cada linha vermelha nomeia o conserto no imperativo — `drop the class "highlight" — the pattern "full-bleed-statement" declares one slot: statement` —, e consertar é ida e volta de máquina: corrija a fonte e rode de novo, sem trazer isso para o humano.
 
@@ -96,7 +99,7 @@ node gate/render.cjs /tmp/exemplo.html --out /tmp
 
 Um tema é uma **folha de tokens**, e a lista de nomes é fechada: superfície, tinta, tinta secundária, acento, duas cores de conteúdo, três hairlines, raio, três fontes, e a escala tipográfica. [`themes/base/tokens.css`](themes/base/tokens.css) é o único lugar onde eles são declarados.
 
-**Toda medida tipográfica é uma porcentagem da altura do palco** — display 11%, título 7%, corpo 2,8%, e um piso de 2,2% abaixo do qual nenhum texto desce. Um deck é projetado numa resolução que ninguém informa de antemão; tamanho em pixel é tamanho certo num projetor só.
+**Toda medida tipográfica é uma porcentagem da altura do palco** — display 11%, título 7%, frase de apoio 4,2%, corpo 2,8%, e um piso de 2,2% abaixo do qual nenhum texto desce. Um deck é projetado numa resolução que ninguém informa de antemão; tamanho em pixel é tamanho certo num projetor só.
 
 `base` é duas coisas ao mesmo tempo, de propósito: é a estrutura que todo tema herda — palco, padrões, escala — e é um tema completo e sem marca. Um deck construído nele prova que o padrão se sustenta sozinho.
 
@@ -120,5 +123,7 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser saber por que o compilador recusou | [`compiler/audit.py`](compiler/audit.py) |
 | for medir a página construída num navegador de verdade | [`gate/cdp.cjs`](gate/cdp.cjs) |
 | quiser a folha de contato ou o laudo das seis réguas de render | [`gate/render.cjs`](gate/render.cjs) |
+| for escolher um padrão para um slide, com slots, papéis e orçamento | [`CATALOG.md`](CATALOG.md) |
+| quiser ver os sete padrões de poucas palavras numa fonte só | [`examples/few-words.deck.html`](examples/few-words.deck.html) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

@@ -73,12 +73,34 @@
    * The floor is not a step of the scale, it is the bottom of it: no text in
    * a deck is smaller than `--type-floor`, because below that the last row
    * of the room stops reading and starts guessing.
+   *
+   * `--type-lead` is the step between the title and the body, and it exists
+   * because of what the few-word patterns do: one sentence, alone on a stage
+   * a display-size claim just left empty. Measured at both sizes on the same
+   * slide before it was added -- at the body step that sentence lands in grey
+   * on grey at the same weight as the page number, which is the exact defect
+   * #207 measured in the v1 ("a tipografia está a 72% do tamanho ... entre 13
+   * e 22 pixels em cinza sobre cinza"). Nothing in this scale goes above the
+   * display step: a number that wanted to be bigger would be a scale nobody
+   * agreed to.
+   *
+   * `--type-body` IS THE STEP FOR PROSE, and no pattern spends it yet. The
+   * first catalog is patterns of few words, where the most any of them says
+   * is one sentence; the step comes into use with the patterns that carry
+   * real paragraphs -- two and three columns (#211), the table (#212). It is
+   * here, unspent, rather than removed, because the scale is the spec's.
+   *
+   * The floor is where the deck's own FURNITURE sits, and only there: the
+   * page number and every `meta` slot -- the label, the index, the source,
+   * the date. That is not the floor becoming a step; it is the smallest thing
+   * a deck is allowed to print being exactly what the deck says about itself.
    */
   --stage-width: min(100vw, calc(100vh * 16 / 9));
   --stage-height: min(100vh, calc(100vw * 9 / 16));
 
   --type-display: calc(var(--stage-height) * 0.110); /* 11.0% of stage height */
   --type-title: calc(var(--stage-height) * 0.070);   /*  7.0% */
+  --type-lead: calc(var(--stage-height) * 0.042);    /*  4.2% -- one sentence */
   --type-body: calc(var(--stage-height) * 0.028);    /*  2.8% */
   --type-floor: calc(var(--stage-height) * 0.022);   /*  2.2% -- the floor */
 }

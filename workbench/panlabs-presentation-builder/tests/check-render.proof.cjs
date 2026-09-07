@@ -74,12 +74,24 @@ async function _measurePlanted(html) {
 // --------------------------------------------------------------------------
 // 1 - box-overflow
 // --------------------------------------------------------------------------
+// THE SLOT'S OWN OPENING TAG IS KEPT, WHATEVER IT SAYS. The compiler decides
+// what travels on a slot besides its class -- #210 put `data-role` there, and
+// the stage sets the type size from it -- so a plant that rewrote the tag
+// would be planting a defect into a paragraph the theme no longer styles. 200
+// words at body size fit the stage; at display size they do not, and the
+// second is the deck this ruler exists to refuse.
+const STATEMENT = /<p class="statement"[^>]*>[\s\S]*?<\/p>/;
+
+function _restate(html, text, what) {
+  const m = html.match(STATEMENT);
+  if (!m) throw new Drifted(`no <p class="statement" …> found to ${what}`);
+  const open = m[0].slice(0, m[0].indexOf('>') + 1);
+  return html.replace(m[0], `${open}${text}</p>`);
+}
+
 function plantOverflowWords() {
-  const html = _real();
-  const m = html.match(/<p class="statement">[\s\S]*?<\/p>/);
-  if (!m) throw new Drifted('no <p class="statement"> found to overflow');
   const words = Array.from({ length: 200 }, (_, i) => `palavra${i + 1}`).join(' ');
-  return html.replace(m[0], `<p class="statement">${words}</p>`);
+  return _restate(_real(), words, 'overflow');
 }
 
 // --------------------------------------------------------------------------
@@ -97,10 +109,7 @@ function plantTinyLabel() {
 // 3 - occupancy
 // --------------------------------------------------------------------------
 function plantSparseSlide() {
-  const html = _real();
-  const m = html.match(/<p class="statement">[\s\S]*?<\/p>/);
-  if (!m) throw new Drifted('no <p class="statement"> found to shrink');
-  return html.replace(m[0], '<p class="statement">Oi.</p>');
+  return _restate(_real(), 'Oi.', 'shrink');
 }
 
 // --------------------------------------------------------------------------
@@ -199,7 +208,24 @@ async function main(argv) {
     return 0;
   }
 
-  REAL_PATH = path.join(dir, files[0]);
+  // THE PLANTS PICK THE PAGE, NOT THE ALPHABET. Two of the six rewrite the
+  // deck's own statement to make their defect, so the page measured here has
+  // to be one that HAS a statement slot. It used to be `files[0]`, which was
+  // the right file only while the corpus held a single deck: #210 added a
+  // second example, the sort handed this proof a page with no statement in
+  // it, and both cases went red as "fixture drifted" -- the proof catching
+  // its own rot, and this is the fix it asked for.
+  const carries = (f) => fs.readFileSync(path.join(dir, f), 'utf8').match(STATEMENT);
+  const chosen = files.find(carries);
+  if (!chosen) {
+    console.log(`refused: build a source with a full-bleed-statement slide into `
+      + `--corpus ${dir} -- two of these plants rewrite the deck's own statement `
+      + 'to make their defect, and no built page there carries a '
+      + '<p class="statement" …> for them to plant into');
+    return 1;
+  }
+
+  REAL_PATH = path.join(dir, chosen);
   REAL_HTML = fs.readFileSync(REAL_PATH, 'utf8');
 
   let GREEN;

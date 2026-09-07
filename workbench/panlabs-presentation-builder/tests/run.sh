@@ -33,12 +33,15 @@
 # THE ORDER OF THE LAYERS IS THE ORDER IN WHICH ONE FAILURE INVALIDATES THE
 # ONES THAT FOLLOW.
 #
-#   0  THE RULERS PROVE THEY MEASURE   the compiler's audit plants its own
-#                                      defects and demands red, with the
-#                                      message asserted. A check only ever
-#                                      seen green is documentation, so this
-#                                      runs BEFORE any green underneath it is
-#                                      worth anything.
+#   0  THE RULERS PROVE THEY MEASURE   the compiler's audit and its refusals
+#                                      plant their own defects and demand
+#                                      red, with the message asserted, plus
+#                                      the one case that demands green
+#                                      because a check can also be wrong by
+#                                      firing. A check only ever seen green
+#                                      is documentation, so this runs BEFORE
+#                                      any green underneath it is worth
+#                                      anything.
 #   1  THE TREE                        every source under `examples/` builds
 #                                      through the DOCUMENTED command, into a
 #                                      temp directory. Everything a later
@@ -98,7 +101,7 @@ step() {
 }
 
 echo "════ layer 0 · the rulers prove they measure ════"
-step "the vocabulary ruler goes red on each planted defect"  python3 "$HERE/check-audit.proof.py"
+step "every check the compiler makes proves it measures"  python3 "$HERE/check-audit.proof.py"
 
 echo
 echo "════ layer 1 · the tree ════"

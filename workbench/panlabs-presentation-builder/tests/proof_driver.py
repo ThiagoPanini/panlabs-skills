@@ -21,8 +21,12 @@ and the two copies had already diverged in how they de-duplicate a repeated
 control -- one kept a set, the other a list. Two copies of a rule that drift
 is the failure mode this entire suite exists to refuse, and refusing it in
 the engine while practising it in the suite is the shape of a gate nobody
-believes. It is also what #156 and #157 need: each of them lands a proof
-file, and the third divergent driver is the one that quietly asserts three.
+believes. The v2's tickets each land a proof file of their own, and the
+divergent driver is always the one that quietly asserts three.
+
+IT OUTLIVED THE ENGINE IT WAS WRITTEN FOR (#208). Every proof that used to
+import it measured the v1, and every one of them went out with it; this file
+stayed because nothing in it ever knew what was being proved.
 
 The file has no hyphen in its name because it is imported, not run. Every
 other file here is a command and carries the house's hyphen.

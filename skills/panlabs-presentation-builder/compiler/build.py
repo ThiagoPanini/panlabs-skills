@@ -25,6 +25,14 @@ import os
 import re
 import sys
 
+# BEFORE THE SIBLING IMPORTS, OR IT IS SET TOO LATE. Importing `catalog`,
+# `source` and `audit` writes `compiler/__pycache__/` into the skill's own
+# tree -- and the skill is usually a symlink to a checkout. `run.sh` and
+# `install.sh` both set this in the environment because a ruler must not
+# modify its subject; a human following SKILL.md sets nothing, so the command
+# sets it for itself.
+sys.dont_write_bytecode = True
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
@@ -38,9 +46,15 @@ SKELETON = os.path.join(HERE, "stage.html")
 MARKER = re.compile(r"\{\{[A-Z_]+\}\}")
 
 
-def refuse(fix):
-    """Stop, and say what to do about it. Never a diagnosis on its own."""
-    print(f"REFUSED · {fix}")
+def refuse(*fixes):
+    """Stop, and say what to do about it. Never a diagnosis on its own.
+
+    It takes a LIST because a source with three mistakes in it should cost one
+    build and not three. Failing on the first one and stopping is the shape
+    that sends a reader round the loop once per typo.
+    """
+    for fix in fixes:
+        print(f"REFUSED · {fix}")
     raise SystemExit(1)
 
 
@@ -48,18 +62,23 @@ def refuse(fix):
 
 def check_header(deck):
     said = ", ".join(DECK_FIELDS)
-    for key in sorted(set(deck.header) - set(DECK_FIELDS)):
-        refuse(f"drop {key}= from the <deck> — the header says {said}")
+    fixes = [
+        f"drop {key}= from the <deck> — the header says {said}"
+        for key in sorted(set(deck.header) - set(DECK_FIELDS))
+    ]
     for key in DECK_FIELDS:
         if not deck.header.get(key, "").strip():
             article = "an" if key[0] in "aeiou" else "a"
-            refuse(f"give the <deck> {article} {key}= — the header says {said}")
-    minutes = deck.header["minutes"].strip()
-    if not minutes.isdigit() or int(minutes) < 1:
-        refuse(
+            fixes.append(f"give the <deck> {article} {key}= — the header says {said}")
+
+    minutes = deck.header.get("minutes", "").strip()
+    if minutes and (not minutes.isdigit() or int(minutes) < 1):
+        fixes.append(
             f'write minutes= as a whole number of minutes, not "{minutes}" — '
             "it is what sizes the deck against the time on the agenda"
         )
+    if fixes:
+        refuse(*fixes)
 
 
 # ── the theme ────────────────────────────────────────────────────────────────
@@ -118,7 +137,7 @@ def fill(skeleton, holes):
     ship something that looks built, which is the only kind of defect worth
     stopping a build over.
     """
-    for name, value in holes.items():
+    for name in holes:
         token = "{{" + name + "}}"
         found = skeleton.count(token)
         if found != 1:
@@ -126,15 +145,20 @@ def fill(skeleton, holes):
                 f"put {token} in compiler/stage.html exactly once — it is "
                 f"there {found} times, and the page would be built around a hole"
             )
-        skeleton = skeleton.replace(token, value)
 
-    left = MARKER.search(skeleton)
-    if left:
-        refuse(
-            f"fill {left.group(0)} in compiler/stage.html or take it out — the "
-            "built page would carry the marker instead of the content"
-        )
-    return skeleton
+    def pick(match):
+        name = match.group(0)[2:-2]
+        if name not in holes:
+            refuse(
+                f"fill {match.group(0)} in compiler/stage.html or take it out "
+                "— the built page would carry the marker instead of the content"
+            )
+        return holes[name]
+
+    # ONE PASS, not one pass per hole. Substituting hole by hole re-reads what
+    # the previous substitution just wrote, so a theme or a deck's own text
+    # containing `{{SLIDES}}` would be filled a second time by a later round.
+    return MARKER.sub(pick, skeleton)
 
 
 # ── the command ──────────────────────────────────────────────────────────────
@@ -167,7 +191,7 @@ def main(argv=None):
         refuse(str(e))
 
     check_header(deck)
-    sections = [s for s in deck.slides if s.tag == "section"]
+    sections = deck.sections
     if not sections:
         refuse(
             "add a <section pattern=…> — a deck with no slide compiles to a "
@@ -187,9 +211,13 @@ def main(argv=None):
     except Refused as e:
         refuse(str(e))
 
+    # The built page carries the header it was built from, field for field,
+    # with `theme` resolved to the one actually used -- `--theme` may have
+    # overridden what the source declared, and the artifact should say which
+    # identity it is wearing rather than which one it asked for.
+    header = dict(deck.header, theme=theme)
     attrs = " ".join(
-        f'data-{k}="{html.escape(deck.header[k], quote=True)}"'
-        for k in ("occasion", "minutes")
+        f'data-{k}="{html.escape(header[k], quote=True)}"' for k in DECK_FIELDS
     )
     page = fill(
         open(SKELETON, encoding="utf-8").read(),
@@ -197,7 +225,7 @@ def main(argv=None):
             "LANG": html.escape(deck.lang, quote=True),
             "TITLE": html.escape(deck.title),
             "THEME": css,
-            "DECK_ATTRS": f'data-theme="{html.escape(theme, quote=True)}" {attrs}',
+            "DECK_ATTRS": attrs,
             "SLIDES": slides,
             "PAGE_TOTAL": str(len(sections)),
         },

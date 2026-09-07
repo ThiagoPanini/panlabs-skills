@@ -41,18 +41,24 @@ class Element:
     def elements(self):
         return [c for c in self.children if isinstance(c, Element)]
 
-    def text(self):
-        out = []
-        for c in self.children:
-            out.append(c if isinstance(c, str) else c.text())
-        return "".join(out)
-
 
 @dataclass
 class Deck:
     header: dict            # the `<deck>` attributes, verbatim
-    slides: list            # the Elements directly under `<deck>`, verbatim
-    root: Element
+    children: list          # every Element directly under `<deck>`, verbatim
+
+    @property
+    def sections(self):
+        """The slides proper: the children that are actually `<section>`.
+
+        The two lists differ only in a source with a mistake in it, and that
+        is exactly why both exist. `children` is what the vocabulary ruler
+        reads, because a stray `<div>` under the deck is one of the things it
+        is there to name; `sections` is what everyone else reads, because a
+        stray `<div>` is not a slide and counting it as one would put the
+        wrong number on every page.
+        """
+        return [e for e in self.children if e.tag == "section"]
 
     @property
     def title(self):
@@ -76,8 +82,14 @@ class _Reader(HTMLParser):
         self.stack = [self.root]
 
     def _open(self, tag, attrs):
+        # A VALUELESS ATTRIBUTE COMES BACK AS None, NOT "". `<deck title>` and
+        # `<p class>` are both things a hand-written source really contains,
+        # and every reader downstream asks an attribute for `.strip()` or
+        # `.split()`. Normalising here is what turns a stack trace into a
+        # refusal that names the missing value.
         line = self.getpos()[0]
-        node = Element(tag=tag, attrs=dict(attrs), line=line)
+        clean = {k: ("" if v is None else v) for k, v in attrs}
+        node = Element(tag=tag, attrs=clean, line=line)
         self.stack[-1].children.append(node)
         return node
 
@@ -119,7 +131,7 @@ def read(text):
         )
 
     deck = decks[0]
-    return Deck(header=dict(deck.attrs), slides=deck.elements(), root=deck)
+    return Deck(header=dict(deck.attrs), children=deck.elements())
 
 
 # ── back out to markup ───────────────────────────────────────────────────────
@@ -148,8 +160,10 @@ def inline_markup(node, _top=True):
             continue
         if child.tag not in INLINE_TAGS:
             raise Refused(
-                f"drop the <{child.tag}> inside the slot — the emphasis the "
-                "dialect knows is " + " and ".join(f"<{t}>" for t in INLINE_TAGS)
+                f"fix the vocabulary ruler — it passed a <{child.tag}> inside "
+                "a slot and this serializer will not write markup nobody "
+                "validated. A reader seeing this has found a broken check, "
+                "not a broken deck"
             )
         out.append(f"<{child.tag}>{inline_markup(child, _top=False)}</{child.tag}>")
 

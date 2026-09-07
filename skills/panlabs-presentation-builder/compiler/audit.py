@@ -150,7 +150,7 @@ def _slide(node, n):
 def _vocabulary(deck):
     fixes = []
     n = 0
-    for node in deck.slides:
+    for node in deck.children:
         if node.tag != "section":
             fixes.append(
                 f"line {node.line}: drop the <{node.tag}> — a deck holds "
@@ -172,7 +172,7 @@ def audit(deck):
 
 def report(deck, theme, verdicts):
     """The audit, as the build command prints it."""
-    slides = sum(1 for s in deck.slides if s.tag == "section")
+    slides = len(deck.sections)
     plural = "slide" if slides == 1 else "slides"
     lines = [f'── audit · "{deck.title}" · theme {theme} · {slides} {plural}']
     for v in verdicts:

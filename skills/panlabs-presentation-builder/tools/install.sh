@@ -164,13 +164,25 @@ for base in "$HOME/.claude/skills/$NAME" "$HOME/.agents/skills/$NAME"; do
   # this the check would leave `compiler/__pycache__/` inside the tree it just
   # installed. Verifying a skill must not modify it.
   #
-  # The needle is what a page reaches OUT with -- an absolute URL, a `src=` or
-  # `href=` on an element, an `@import`, a `url(` in CSS. None of them appear
-  # in a built deck, and any one of them appearing is the deck going dark on
-  # the first network the room does not have.
+  # The needle is what a page reaches OUT with -- an absolute URL, an
+  # `@import`, or a `src=`/`href=`/`url(` pointing at anything but itself. A
+  # deck going dark on the first network the room does not have is the failure
+  # this asserts against.
+  #
+  # ⚠️ `data:` AND `#` ARE STRIPPED FIRST, AND THAT IS THE WHOLE POINT. A
+  # `url(data:font/woff2;…)` reaches nowhere -- it is the exact mechanism
+  # `themes/base/tokens.css` prescribes for a theme that carries its own
+  # faces, and an `href="#icon"` is a jump inside the page. Matching them
+  # would red the moment an embedded font, an inlined icon sprite or an
+  # embedded image lands, and name a fix that is wrong. `base` uses the
+  # machine's own faces, so today nothing is stripped and nothing matches;
+  # writing it now is what stops a later ticket from loosening the rule under
+  # pressure.
   if PYTHONDONTWRITEBYTECODE=1 python3 "$base/compiler/build.py" \
        "$base/examples/statement.deck.html" "$out" >/dev/null 2>&1; then
-    if grep -qiE 'https?://|src=|href=|@import|url\(' "$out" 2>/dev/null; then
+    if sed -e 's/url(["'"'"']\{0,1\}\(data:\|#\)[^)]*)//g' \
+           -e 's/\(src\|href\)="\(data:\|#\)[^"]*"//g' "$out" 2>/dev/null \
+         | grep -qiE 'https?://|src=|href=|@import|url\('; then
       bad "built from $base, but the page reaches outside itself — it would need the network"
     else
       ok "\`python3 compiler/build.py\` runs from $base, and the page reaches nowhere"

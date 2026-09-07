@@ -38,9 +38,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
-from audit import audit, report                        # noqa: E402
-from catalog import DECK_FIELDS, SLOT_TAG, slots_of    # noqa: E402
-from source import Refused, inline_markup, read        # noqa: E402
+from audit import audit, report                                # noqa: E402
+from catalog import DECK_FIELDS, SLOT_TAG, role_of, slots_of   # noqa: E402
+from source import Refused, inline_markup, read                # noqa: E402
 
 THEMES = os.path.join(ROOT, "themes")
 SKELETON = os.path.join(HERE, "stage.html")
@@ -108,6 +108,13 @@ def slide_markup(slide, index):
     Source order is what the author happened to type; catalog order is what
     the pattern IS. Emitting the second is what keeps composition the engine's
     job rather than a thing each deck re-decides.
+
+    THE ROLE TRAVELS WITH THE SLOT, as `data-role=`. The stage styles a `meta`
+    line by its role and not by a hand-kept list of slot names, so the pattern
+    a later ticket adds inherits the treatment instead of restating it -- and
+    the register stays the only place that decides what a slot IS. It appears
+    on the built page and never in a source: the dialect's rule that a slot
+    carries `class=` and nothing else is about what an author writes.
     """
     pattern = slide.attrs["pattern"]
     written = {}
@@ -115,7 +122,8 @@ def slide_markup(slide, index):
         written.setdefault(el.attrs.get("class", "").strip(), el)
 
     body = [
-        f'<{SLOT_TAG} class="{name}">{inline_markup(written[name])}</{SLOT_TAG}>'
+        f'<{SLOT_TAG} class="{name}" data-role="{role_of(pattern, name)}">'
+        f"{inline_markup(written[name])}</{SLOT_TAG}>"
         for name in slots_of(pattern)
         if name in written
     ]

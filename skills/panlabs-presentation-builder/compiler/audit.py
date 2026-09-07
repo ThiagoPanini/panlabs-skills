@@ -5,6 +5,14 @@ the contact sheet and a pair of eyes are for; what belongs here is the class
 of mistake the eye does not catch -- a class that is not in the catalog, a
 slot that is missing, a budget that is over.
 
+ONE RULER READS THE DIALECT AND THREE READ THE DOCTRINE. The first refuses a
+source the compiler cannot build; the other three build fine and would ship a
+deck that fails in the room -- a slide with a paragraph on it, a title that
+names a folder instead of making a point, the same shape twice in a row. All
+four are STATIC because the source already answers them: counting words,
+reading a title and comparing two `pattern=` attributes needs no browser, and
+a defect that can be named before a byte is written should be.
+
 EVERY RED NAMES ITS OWN FIX, IN THE IMPERATIVE. "unknown class" is a
 diagnosis and leaves the reader to guess; "drop the class …" is the repair.
 The proof beside this file asserts the fix, not the diagnosis, which is what
@@ -14,9 +22,12 @@ The report is printed by the build command on every run, green or red, so
 that "what is wrong with this deck" is answerable without opening a browser.
 """
 
+import unicodedata
 from dataclasses import dataclass
 
-from catalog import INLINE_TAGS, PATTERNS, SLOT_TAG, pattern_names, slots_of
+from catalog import (CATEGORY_TITLES, INLINE_TAGS, PATTERNS, SLOT_TAG,
+                     budget_of, claims_of, pattern_names, slots_of)
+from source import plain_text
 
 
 @dataclass(frozen=True)
@@ -39,6 +50,44 @@ VOCABULARY = Ruler(
     "vocabulary",
     "every pattern, class and tag in the source is one the catalog declares",
 )
+
+WORD_BUDGET = Ruler(
+    "word-budget",
+    "no slide spends more words than its pattern budgets",
+)
+
+CATEGORY_TITLE = Ruler(
+    "category-title",
+    "every claim on the stage makes a point, not a category",
+)
+
+REPEATED_PATTERN = Ruler(
+    "repeated-pattern",
+    "no pattern runs on two slides in a row",
+)
+
+
+# ── reading a slide, before anyone judges it ─────────────────────────────────
+
+def _words(text):
+    """Words the way the back row counts them: a token with a letter or a digit.
+
+    Splitting on whitespace and keeping what has an alphanumeric in it is what
+    makes "compiler/build.py" one word and an em dash none of one -- a reader
+    counting the slide out loud gets the same number, which is the only number
+    a budget can be argued against.
+    """
+    return sum(1 for token in text.split() if any(c.isalnum() for c in token))
+
+
+def _bare(text):
+    """A title stripped down to what it SAYS: no case, no accent, no punctuation."""
+    flat = unicodedata.normalize("NFD", text)
+    flat = "".join(c for c in flat if not unicodedata.combining(c))
+    return " ".join(flat.casefold().split()).strip(" .:;!?…—–-·")
+
+
+CATEGORIES = frozenset(_bare(t) for t in CATEGORY_TITLES)
 
 
 def _slot_list(pattern):
@@ -162,7 +211,74 @@ def _vocabulary(deck):
     return fixes
 
 
-RULERS = ((VOCABULARY, _vocabulary),)
+# ── the doctrine ─────────────────────────────────────────────────────────────
+# The three below read a source the compiler could build and refuse it anyway,
+# because what they measure is what the v1 shipped green and lost the room
+# with. Each one skips a slide whose pattern the catalog does not know: the
+# vocabulary ruler has already named that, and a second red about a stranger
+# pattern is noise on top of the fix.
+
+def _word_budget(deck):
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        pattern = node.attrs.get("pattern", "")
+        ceiling = budget_of(pattern)
+        if ceiling is None:
+            continue
+        spent = sum(_words(plain_text(el)) for el in node.elements())
+        if spent > ceiling:
+            fixes.append(
+                f"slide {n} (line {node.line}): cut the slide to {ceiling} words "
+                f'— the pattern "{pattern}" budgets {ceiling} and this one spends '
+                f"{spent}; what does not fit is what you say out loud"
+            )
+    return fixes
+
+
+def _category_title(deck):
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        claims = claims_of(node.attrs.get("pattern", ""))
+        for el in node.elements():
+            slot = el.attrs.get("class", "").strip()
+            if slot not in claims:
+                continue
+            said = plain_text(el)
+            if _bare(said) in CATEGORIES:
+                fixes.append(
+                    f'slide {n} (line {node.line}), slot "{slot}": rewrite '
+                    f'"{said}" as a claim with a verb or a number — a category '
+                    "names the folder, and the page number already says where "
+                    "the room is"
+                )
+    return fixes
+
+
+def _repeated_pattern(deck):
+    fixes = []
+    before = None
+    for n, node in enumerate(deck.sections, start=1):
+        pattern = node.attrs.get("pattern", "")
+        if pattern and pattern == before:
+            fixes.append(
+                f"slide {n} (line {node.line}): give this slide another pattern "
+                f'— "{pattern}" already ran on slide {n - 1}, and two slides in '
+                "the same shape read as one that failed to advance"
+            )
+        before = pattern
+    return fixes
+
+
+# APPEND AT THE END. The order is the order the report prints, and the report
+# is read top to bottom by whoever is fixing a deck: the dialect first,
+# because a source that does not parse into slides has nothing for the
+# doctrine to measure, then the three that judge what the slides say.
+RULERS = (
+    (VOCABULARY, _vocabulary),
+    (WORD_BUDGET, _word_budget),
+    (CATEGORY_TITLE, _category_title),
+    (REPEATED_PATTERN, _repeated_pattern),
+)
 
 
 def audit(deck):

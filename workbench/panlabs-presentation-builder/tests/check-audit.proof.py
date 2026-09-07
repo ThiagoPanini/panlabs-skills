@@ -3,11 +3,14 @@
 
     workbench/panlabs-presentation-builder/tests/check-audit.proof.py
 
-A check only ever seen green is documentation. The compiler says no in two
-different registers, and both are here:
+A check only ever seen green is documentation. The compiler says no in three
+different registers, and all three are here:
 
   the audit's rulers    read a well-formed source and report every fix at
                         once, in the report printed on every build
+  the doctrine rulers   read a source that BUILDS and refuse it anyway -- a
+                        budget over, a title that names a folder, the same
+                        pattern twice in a row
   the compiler's        stop before there is anything to audit -- no deck in
   refusals              the file, a header field missing, a theme the skill
                         does not carry
@@ -20,11 +23,19 @@ The asserted phrase is always the FIX and never the diagnosis. "unknown
 class" would pass an assertion on a message that tells the reader nothing to
 do; `drop the class "highlight"` cannot.
 
-AND ONE CASE THAT DEMANDS GREEN, at the bottom, because a check can also be
+TWO EXAMPLES, BECAUSE TWO KINDS OF DEFECT NEED DIFFERENT GROUND. The
+statement deck is one slide, which is all the dialect's own rulers need; the
+doctrine's rulers need a deck with several patterns and several titles in it,
+and planting a second divider next to the first is not something a
+one-slide source can be asked to do.
+
+AND TWO CASES THAT DEMAND GREEN, at the bottom, because a check can also be
 wrong by firing. `fill()` used to hunt for leftover `{{NAME}}` markers AFTER
 substituting the author's own text into the page, so a deck that said
 `{{TITLE}}` out loud was refused with a fix naming a file its author had
-never opened.
+never opened. And the category-title ruler matches a title WHOLE: a claim
+that happens to contain "visão geral" is a claim, and a ruler that read it as
+a substring would refuse the sentence that says the most.
 
 IT PLANTS IN A TEMP DIRECTORY, NEVER IN THE SKILL. The build command takes a
 path, so the mutated source has to reach disk somewhere -- somewhere is a
@@ -47,18 +58,20 @@ from proof_driver import Drifted, Proof                                # noqa: E
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
 BUILD = os.path.join(SKILL, "compiler", "build.py")
-EXAMPLE = os.path.join(SKILL, "examples", "statement.deck.html")
+STATEMENT = os.path.join(SKILL, "examples", "statement.deck.html")
+FEW_WORDS = os.path.join(SKILL, "examples", "few-words.deck.html")
 
 
-def read_example():
+def read(path):
     try:
-        with open(EXAMPLE, encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             return fh.read()
     except OSError:
         return None
 
 
-REAL = read_example()
+STATEMENT_SOURCE = read(STATEMENT)
+FEW_WORDS_SOURCE = read(FEW_WORDS)
 
 
 def _run(text):
@@ -90,56 +103,75 @@ def build(text):
     return ok, said
 
 
-def swap(needle, replacement):
+def swap(real, needle, replacement):
     """Plant by substitution, and refuse to plant nothing."""
     def plant():
-        if REAL is None:
-            raise Drifted(f"{EXAMPLE} is not readable")
-        if needle not in REAL:
+        if real is None:
+            raise Drifted("the example is not readable")
+        if needle not in real:
             raise Drifted(f"the example no longer contains {needle!r}")
-        return REAL.replace(needle, replacement, 1)
+        return real.replace(needle, replacement, 1)
     return plant
 
 
-def cut(expression, what):
+def cut(real, expression, what):
     """Plant by deletion, and refuse to plant nothing."""
     def plant():
-        if REAL is None:
-            raise Drifted(f"{EXAMPLE} is not readable")
-        planted, n = re.subn(expression, "", REAL, count=1, flags=re.S)
+        if real is None:
+            raise Drifted("the example is not readable")
+        planted, n = re.subn(expression, "", real, count=1, flags=re.S)
         if n == 0:
             raise Drifted(f"the example no longer holds {what}")
         return planted
     return plant
 
 
-def block(title, cases, width):
+def block(title, real, cases, width):
     proof = Proof(
         title=title,
         label=lambda key: key,
         invoke=lambda key, payload: build(payload),
-        planted=lambda payload: payload != REAL,
-        control=lambda key: build(REAL),
+        planted=lambda payload: payload != real,
+        control=lambda key: build(real),
         width=width,
     )
     return proof.run(cases)
 
 
+# The whole of the fifth slide of the few-words deck, as its source writes it.
+# The repeated-pattern ruler is the one check that cannot be planted by
+# changing a slide: it needs a SECOND slide of the same pattern next to the
+# first, and duplicating a section that is valid on its own is what makes the
+# repetition the only thing red.
+DIVIDER = """  <section pattern="section-divider">
+    <p class="index">02</p>
+    <p class="title">O que a máquina mede</p>
+  </section>"""
+
+# Thirty words where the pattern budgets twelve -- the ticket's own number
+# (#210), counted the way the ruler counts: a whitespace token with a letter
+# or a digit in it.
+THIRTY_WORDS = (
+    "Uma suíte verde, rodada de ponta a ponta na máquina de quem escreveu o "
+    "deck, não prova nada sobre o que a última fileira da sala ainda lê no "
+    "telão."
+)
+
+
 def the_page_is_not_a_template():
     """A deck may say `{{TITLE}}` out loud, and it stays said.
 
-    THIS ONE DEMANDS GREEN, and it is the only one here that does. The
-    skeleton's holes are filled in a single pass precisely so that the
+    THE SKELETON'S HOLES ARE FILLED IN A SINGLE PASS precisely so that the
     author's own words are never scanned for a marker of their own; going
     back to a substitution per hole brings back a refusal that blames
     `compiler/stage.html` for a sentence its author wrote.
     """
-    print("the fill is one pass:  [built kept]")
-    if REAL is None:
+    if STATEMENT_SOURCE is None:
         print(f"  FAIL {'setup':<22} no example to plant in")
         return 1
 
-    planted = REAL.replace("Nenhuma suíte verde", "Nenhuma {{TITLE}} verde", 1)
+    planted = STATEMENT_SOURCE.replace("Nenhuma suíte verde",
+                                       "Nenhuma {{TITLE}} verde", 1)
     ok, said, page = _run(planted)
     kept = bool(page) and "Nenhuma {{TITLE}} verde" in page
     marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
@@ -151,71 +183,135 @@ def the_page_is_not_a_template():
     return 0 if good else 1
 
 
+def the_category_is_the_whole_title():
+    """A claim that CONTAINS a category is a claim, and it stays built.
+
+    The category-title ruler compares the whole title, normalised, against the
+    list -- never a substring. "A visão geral do time falhou em três semanas"
+    is a thesis with a verb and a number in it, and a ruler that went looking
+    for "visão geral" inside it would refuse exactly the sentences the
+    doctrine is asking for.
+    """
+    if FEW_WORDS_SOURCE is None:
+        print(f"  FAIL {'setup':<22} no example to plant in")
+        return 1
+
+    planted = FEW_WORDS_SOURCE.replace(
+        "Um slide diz uma coisa",
+        "A visão geral do time falhou em três semanas", 1)
+    ok, said, page = _run(planted)
+    kept = bool(page) and "falhou em três semanas" in page
+    marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
+    good = ok and kept
+    print(f"  {'ok  ' if good else 'FAIL'} {'claim around a word':<22} {marks} "
+          "a title that contains a category and still makes a point")
+    if not good:
+        print(f"       <- {'refused: ' + said if not ok else 'the page lost the title'}")
+    return 0 if good else 1
+
+
 def main():
-    if REAL is None:
+    missing = [
+        os.path.relpath(path, SKILL)
+        for path, text in ((STATEMENT, STATEMENT_SOURCE), (FEW_WORDS, FEW_WORDS_SOURCE))
+        if text is None
+    ]
+    if missing:
         return Proof("the compiler's checks", lambda k: k, None, None, None).refuse(
-            f"put a source back under {os.path.relpath(EXAMPLE, SKILL)} — with "
-            "no real example there is no control, and a proof with no control "
-            "measures its own author"
+            f"put a source back under {', '.join(missing)} — with no real example "
+            "there is no control, and a proof with no control measures its own "
+            "author"
         )
 
-    failed = block("the vocabulary ruler", [
+    failed = block("the vocabulary ruler", STATEMENT_SOURCE, [
         (
             "foreign class",
             "a class the catalog never declared",
-            swap('class="statement"', 'class="highlight"'),
+            swap(STATEMENT_SOURCE, 'class="statement"', 'class="highlight"'),
             'drop the class "highlight"',
         ),
         (
             "unknown pattern",
             "a pattern the catalog never declared",
-            swap('pattern="full-bleed-statement"', 'pattern="mega-cover"'),
+            swap(STATEMENT_SOURCE, 'pattern="full-bleed-statement"',
+                 'pattern="mega-cover"'),
             'replace the pattern "mega-cover"',
         ),
         (
             "missing slot",
             "the pattern's required slot taken away",
-            cut(r'<p class="statement">.*?</p>', "the statement slot"),
+            cut(STATEMENT_SOURCE, r'<p class="statement">.*?</p>', "the statement slot"),
             'add the missing <p class="statement">',
         ),
         (
             "smuggled geometry",
             "a size typed into the source as an attribute",
-            swap("<strong>", '<strong style="font-size:9px">'),
+            swap(STATEMENT_SOURCE, "<strong>", '<strong style="font-size:9px">'),
             "drop style= from the <strong>",
         ),
     ], width=22)
 
     print()
-    failed += block("the compiler's refusals", [
+    failed += block("the doctrine rulers", STATEMENT_SOURCE, [
+        (
+            "budget over",
+            "thirty words where the pattern budgets twelve",
+            swap(STATEMENT_SOURCE,
+                 "Nenhuma suíte verde substitui a <strong>primeira fileira</strong> "
+                 "lendo o slide projetado.",
+                 THIRTY_WORDS),
+            "cut the slide to 12 words",
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the doctrine rulers, over a deck", FEW_WORDS_SOURCE, [
+        (
+            "category title",
+            "the biggest type on the stage naming a folder",
+            swap(FEW_WORDS_SOURCE, "Um slide diz uma coisa", "Próximos passos"),
+            'rewrite "Próximos passos" as a claim',
+        ),
+        (
+            "pattern twice in a row",
+            "a second divider right after the first",
+            swap(FEW_WORDS_SOURCE, DIVIDER, DIVIDER + "\n\n" + DIVIDER),
+            "give this slide another pattern",
+        ),
+    ], width=22)
+
+    print()
+    failed += block("the compiler's refusals", STATEMENT_SOURCE, [
         (
             "no deck",
             "the element the whole source hangs from, gone",
-            cut(r"<deck\b[^>]*>", "its opening <deck> tag"),
+            cut(STATEMENT_SOURCE, r"<deck\b[^>]*>", "its opening <deck> tag"),
             "wrap the whole source in a <deck",
         ),
         (
             "header field gone",
             "one of the five the header has to say",
-            swap('occasion="Retrospectiva de engenharia"', ""),
+            swap(STATEMENT_SOURCE, 'occasion="Retrospectiva de engenharia"', ""),
             "give the <deck> an occasion=",
         ),
         (
             "attribute with no value",
             "a header field written but never answered",
-            swap('title="A régua e a plateia"', "title"),
+            swap(STATEMENT_SOURCE, 'title="A régua e a plateia"', "title"),
             "give the <deck> a title=",
         ),
         (
             "theme not carried",
             "a theme the skill does not have on disk",
-            swap('theme="base"', 'theme="panlabs"'),
+            swap(STATEMENT_SOURCE, 'theme="base"', 'theme="panlabs"'),
             "build with a theme this skill carries",
         ),
     ], width=22)
 
     print()
+    print("and the two that demand green:  [built kept]")
     failed += the_page_is_not_a_template()
+    failed += the_category_is_the_whole_title()
     return failed
 
 

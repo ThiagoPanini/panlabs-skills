@@ -93,17 +93,20 @@ body {
 
 .slide em { font-style: italic; }
 
-/* ── pattern · full-bleed-statement ─────────────────────────────────────────
- * One sentence, at display size, holding the stage on its own. The measure is
- * a fraction of the stage rather than a count of characters: it has to break
- * into three or four lines at any projector size, because a statement that
- * lands on one line reads as a caption.
+/* ── a slot, by what it is for ──────────────────────────────────────────────
+ * A slot is set by its ROLE and not by which pattern it happens to sit in.
+ * `data-role` comes from the register (compiler/catalog.py) and rides on the
+ * paragraph the compiler emits, so a pattern that gains a `meta` line in a
+ * later ticket inherits this treatment instead of restating it -- and the
+ * register stays the only place that decides what a slot is.
+ *
+ * A PATTERN BELOW ONLY EVER ADDS COMPOSITION: the measure, and where in the
+ * stage the slot sits. Nothing below sets a face or a size again.
  */
-.slide[data-pattern="full-bleed-statement"] { justify-content: center; }
+.slide > p { margin: 0; max-width: 76%; }
 
-.slide[data-pattern="full-bleed-statement"] .statement {
-  margin: 0;
-  max-width: 76%;
+.slide [data-role="claim"],
+.slide [data-role="figure"] {
   font-family: var(--font-display);
   font-size: var(--type-display);
   font-weight: 600;
@@ -111,6 +114,154 @@ body {
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
+
+.slide [data-role="body"] {
+  font-size: var(--type-lead);
+  line-height: 1.32;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+
+/* The small print of a slide: the label, the index, the source, the date. It
+ * sits exactly on the type floor, in the same face as the page number,
+ * because both are the deck talking ABOUT itself rather than saying
+ * something -- and nothing in a deck is ever smaller than this. */
+.slide [data-role="meta"] {
+  font-family: var(--font-mono);
+  font-size: var(--type-floor);
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+}
+
+/* ── how a few-word slide holds the stage ───────────────────────────────────
+ * Every pattern here says almost nothing, and almost nothing is exactly what
+ * leaves a projector half dark: the render gate refuses a slide whose content
+ * spans less than 40% of the stage height. The composition that survives it
+ * is an ANCHOR and a HORIZON -- something small on the top edge, something
+ * large on the bottom one, and the stage as the pause between them.
+ *
+ * `margin-top: auto` in a flex column is what draws it: each `auto` eats an
+ * equal share of the leftover height, so two of them put one slot at the top
+ * and one at the bottom, and an `auto` on both sides of a slot centres it in
+ * whatever is left and pushes the rest of the slide down. The layout
+ * therefore holds whether or not the OPTIONAL slots were written, which is
+ * why every slot a composition leans on is a required one in the register.
+ */
+
+/* ── pattern · cover-headline ───────────────────────────────────────────────
+ * The kicker on the top edge, the occasion on the bottom one, the headline in
+ * the air between them.
+ */
+.slide[data-pattern="cover-headline"] .title { margin-top: auto; max-width: 84%; }
+
+.slide[data-pattern="cover-headline"] .subtitle {
+  margin-top: 0.55em;
+  max-width: 58%;
+}
+
+.slide[data-pattern="cover-headline"] .meta { margin-top: auto; }
+
+/* ── pattern · cover-numbered ───────────────────────────────────────────────
+ * The number leads and the title is the line that says what it counts, so the
+ * figure keeps the display size, the title follows one step down and hugging
+ * it, and the source line holds the bottom edge.
+ */
+.slide[data-pattern="cover-numbered"] .number {
+  margin-top: auto;
+  letter-spacing: -0.04em;
+}
+
+.slide[data-pattern="cover-numbered"] .title {
+  margin-top: 0.14em;
+  font-size: var(--type-title);
+  max-width: 82%;
+}
+
+.slide[data-pattern="cover-numbered"] .meta { margin-top: auto; }
+
+/* ── pattern · pivot-question ───────────────────────────────────────────────
+ * The label announces the turn; the question sits in the middle of the stage
+ * in a narrow measure, so that even a short one breaks into more than a line.
+ */
+.slide[data-pattern="pivot-question"] .question {
+  margin-top: auto;
+  margin-bottom: auto;
+  max-width: 68%;
+}
+
+/* ── pattern · thesis-title ─────────────────────────────────────────────────
+ * The claim in the upper third, the one sentence on the bottom edge under a
+ * hairline. The air between them is the pattern, not a gap somebody forgot --
+ * and the claim sits at the optical centre rather than on the top edge,
+ * because a heavy block against an edge with an empty middle reads as a slide
+ * that failed to load.
+ */
+.slide[data-pattern="thesis-title"] .title { margin-top: auto; max-width: 82%; }
+
+.slide[data-pattern="thesis-title"] .sentence {
+  margin-top: auto;
+  max-width: 100%;
+  padding-top: calc(var(--stage-height) * 0.030);
+  border-top: calc(var(--stage-height) * 0.0015) solid var(--hairline);
+}
+
+/* ── pattern · pull-quote ───────────────────────────────────────────────────
+ * The quote in the air with the accent running down its side -- the one mark
+ * that says "these are not our words" without spending a colour on it -- and
+ * the attribution on the bottom edge.
+ */
+.slide[data-pattern="pull-quote"] .quote {
+  margin-top: auto;
+  max-width: 78%;
+  padding-left: calc(var(--stage-height) * 0.038);
+  border-left: calc(var(--stage-height) * 0.003) solid var(--accent);
+}
+
+.slide[data-pattern="pull-quote"] .attribution { margin-top: auto; }
+
+/* ── pattern · section-divider ──────────────────────────────────────────────
+ * The one slide allowed to be nearly empty: the chapter's number standing on
+ * the top edge, the name of the section on the bottom one over a rule that
+ * crosses the whole stage, and the pause between them. The number is set one
+ * step down from the name and in the muted ink -- it counts the section, it
+ * does not announce it.
+ */
+.slide[data-pattern="section-divider"] .index {
+  font-size: var(--type-title);
+  letter-spacing: -0.02em;
+  color: var(--ink-muted);
+}
+
+.slide[data-pattern="section-divider"] .title {
+  margin-top: auto;
+  max-width: 100%;
+  padding-top: calc(var(--stage-height) * 0.040);
+  border-top: calc(var(--stage-height) * 0.0015) solid var(--hairline-strong);
+}
+
+/* ── pattern · closing-call ─────────────────────────────────────────────────
+ * The mirror of thesis-title: the thesis comes back small on the top edge,
+ * the ask holds the middle in the biggest type on the stage, and where the
+ * conversation continues sits on the bottom edge. The `auto` on both sides of
+ * the ask is what puts the optional line at the foot of the stage without the
+ * pattern depending on it being written.
+ */
+.slide[data-pattern="closing-call"] .thesis { max-width: 58%; }
+
+.slide[data-pattern="closing-call"] .call {
+  margin-top: auto;
+  margin-bottom: auto;
+  max-width: 72%;
+}
+
+/* ── pattern · full-bleed-statement ─────────────────────────────────────────
+ * One sentence, at display size, holding the stage on its own. The measure is
+ * a fraction of the stage rather than a count of characters: it has to break
+ * into three or four lines at any projector size, because a statement that
+ * lands on one line reads as a caption.
+ */
+.slide[data-pattern="full-bleed-statement"] { justify-content: center; }
 
 /* ── the page number ────────────────────────────────────────────────────────
  * One element, outside every slide, in the same corner of the stage from the

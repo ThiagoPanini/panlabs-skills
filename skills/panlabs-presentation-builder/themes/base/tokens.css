@@ -73,12 +73,20 @@
    * The floor is not a step of the scale, it is the bottom of it: no text in
    * a deck is smaller than `--type-floor`, because below that the last row
    * of the room stops reading and starts guessing.
+   *
+   * `--type-lead` is the step between the title and the body, and it exists
+   * because of what the few-word patterns do: one sentence, alone on a stage
+   * a display-size claim just left empty, set at body size reads as a
+   * footnote to the headline instead of the line that carries it. Nothing in
+   * this scale goes above the display step -- a number that wanted to be
+   * bigger would be a scale nobody agreed to.
    */
   --stage-width: min(100vw, calc(100vh * 16 / 9));
   --stage-height: min(100vh, calc(100vw * 9 / 16));
 
   --type-display: calc(var(--stage-height) * 0.110); /* 11.0% of stage height */
   --type-title: calc(var(--stage-height) * 0.070);   /*  7.0% */
+  --type-lead: calc(var(--stage-height) * 0.042);    /*  4.2% -- one sentence */
   --type-body: calc(var(--stage-height) * 0.028);    /*  2.8% */
   --type-floor: calc(var(--stage-height) * 0.022);   /*  2.2% -- the floor */
 }

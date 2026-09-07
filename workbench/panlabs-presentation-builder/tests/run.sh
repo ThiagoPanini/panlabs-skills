@@ -69,6 +69,16 @@
 #                                      SKIP rather than failing (the ticket's
 #                                      own words: "réguas degradam para SKIP
 #                                      nomeado quando não há Chromium").
+#   3  THE REGISTER IS THE ONE SOURCE   `CATALOG.md` is generated from
+#                                       `compiler/catalog.py`, and the model
+#                                       reads the generated copy. The proof
+#                                       plants a drift into a copy of the
+#                                       document and demands red; then the
+#                                       documented `--check` runs over the
+#                                       real one. It comes AFTER the corpus
+#                                       because a compiler that cannot build
+#                                       makes the question of what its
+#                                       reference says academic.
 #
 # ⚠️ THE TICKET THAT ADDED LAYER 2 (#209) SAID "camada quatro" IN ITS OWN
 # ACCEPTANCE CRITERIA. Read literally that would leave layers 2 and 3 empty
@@ -214,9 +224,22 @@ render_corpus() {
 step "every built example passes the render gate over the corpus"  render_corpus
 
 echo
+echo "════ layer 3 · the register is the one source ════"
+# THE PROOF FIRST, layer 0's rule again: the drift check has to know how to be
+# red before its green means the document is in step.
+step "the drift check between register and reference proves it measures" \
+  python3 "$HERE/check-catalog.proof.py"
+
+# THEN THE DOCUMENTED COMMAND over the real document. `--check` is what a
+# session runs after touching the register, and it is the one thing standing
+# between a pattern that changed and a model still reading last week's table.
+step "CATALOG.md publishes the register, line for line" \
+  python3 "$SKILL/compiler/catalog.py" --check
+
+echo
 if [ "$failed" -ne 0 ]; then
   echo "SUITE RED — ${#REDS[@]} step(s):"
   for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite green — the audit knows how to be red, the corpus builds, and the render gate holds."
+echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, and the reference is the register."

@@ -84,11 +84,11 @@
    * display step: a number that wanted to be bigger would be a scale nobody
    * agreed to.
    *
-   * `--type-body` IS THE STEP FOR PROSE, and no pattern spends it yet. The
-   * first catalog is patterns of few words, where the most any of them says
-   * is one sentence; the step comes into use with the patterns that carry
-   * real paragraphs -- two and three columns (#211), the table (#212). It is
-   * here, unspent, rather than removed, because the scale is the spec's.
+   * `--type-body` IS THE STEP FOR PROSE. The first catalog was patterns of
+   * few words, where the most any of them said was one sentence; `table`
+   * (#212) is the first to spend this step, on its cells -- a row of a table
+   * is read, not glanced at, and the lead size above it is a size meant for
+   * one line alone. Two and three columns (#211) still owe it.
    *
    * The floor is where the deck's own FURNITURE sits, and only there: the
    * page number and every `meta` slot -- the label, the index, the source,

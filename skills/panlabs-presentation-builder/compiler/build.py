@@ -39,7 +39,8 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
 from audit import audit, report                                # noqa: E402
-from catalog import DECK_FIELDS, SLOT_TAG, slot_specs          # noqa: E402
+from catalog import (DECK_FIELDS, SLOT_TAG, group_of, is_table,  # noqa: E402
+                     slot_specs)
 from source import Refused, inline_markup, read                # noqa: E402
 
 THEMES = os.path.join(ROOT, "themes")
@@ -102,6 +103,43 @@ def theme_css(name):
 
 # ── the slides ───────────────────────────────────────────────────────────────
 
+def group_markup(container, group):
+    """One <ul>/<ol> group, items in SOURCE order -- a series has no catalog
+    order to fall back on the way a pattern's named slots do; the order the
+    author wrote the items in is the only order there is."""
+    items = []
+    for item in container.elements():
+        if item.tag != group.item:
+            continue
+        now = " now" if group.now_flag and "now" in item.attrs else ""
+        fields = {el.attrs.get("class", "").strip(): el for el in item.elements()}
+        cells = "".join(
+            f'<{SLOT_TAG} class="{f.name}" data-role="{f.role}">'
+            f"{inline_markup(fields[f.name])}</{SLOT_TAG}>"
+            for f in group.fields
+            if f.name in fields
+        )
+        items.append(f"<{group.item}{now}>{cells}</{group.item}>")
+    return f'<{group.container}>{"".join(items)}</{group.container}>'
+
+
+def table_markup(table):
+    """One <table>, re-serialised so that only what the audit already passed
+    -- <thead>/<tbody>/<tr>/<th>/<td>, inline markup inside a cell -- ever
+    reaches the page, the same discipline `inline_markup` itself keeps."""
+    thead = next(c for c in table.elements() if c.tag == "thead")
+    tbody = next(c for c in table.elements() if c.tag == "tbody")
+    head_row = next(c for c in thead.elements() if c.tag == "tr")
+    ths = "".join(f"<th>{inline_markup(c)}</th>" for c in head_row.elements() if c.tag == "th")
+    rows = []
+    for tr in tbody.elements():
+        if tr.tag != "tr":
+            continue
+        tds = "".join(f"<td>{inline_markup(c)}</td>" for c in tr.elements() if c.tag == "td")
+        rows.append(f"<tr>{tds}</tr>")
+    return f'<table><thead><tr>{ths}</tr></thead><tbody>{"".join(rows)}</tbody></table>'
+
+
 def slide_markup(slide, index):
     """One section, with its slots in the order the CATALOG declares them.
 
@@ -115,11 +153,21 @@ def slide_markup(slide, index):
     the register stays the only place that decides what a slot IS. It appears
     on the built page and never in a source: the dialect's rule that a slot
     carries `class=` and nothing else is about what an author writes.
+
+    A GROUP OR A TABLE COMES AFTER THE SLOTS, ALWAYS LAST (#212). Neither
+    carries a `class=` of its own -- there is nothing for catalog order to
+    place it by -- and every pattern that has one writes its evidence after
+    the claim that frames it, never before.
     """
     pattern = slide.attrs["pattern"]
     written = {}
+    container = None
     for el in slide.elements():
-        written.setdefault(el.attrs.get("class", "").strip(), el)
+        cls = el.attrs.get("class", "").strip()
+        if cls:
+            written.setdefault(cls, el)
+        elif el.tag in ("ul", "ol", "table"):
+            container = el
 
     body = [
         f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}">'
@@ -127,6 +175,13 @@ def slide_markup(slide, index):
         for slot in slot_specs(pattern)
         if slot.name in written
     ]
+
+    group = group_of(pattern)
+    if group and container is not None:
+        body.append(group_markup(container, group))
+    elif is_table(pattern) and container is not None:
+        body.append(table_markup(container))
+
     current = " is-current" if index == 0 else ""
     return (
         f'<section class="slide{current}" data-pattern="{html.escape(pattern)}"'

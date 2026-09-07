@@ -45,6 +45,12 @@ body {
   font-family: var(--font-body);
   font-size: var(--type-body);
   -webkit-font-smoothing: antialiased;
+  /* EVERY DIGIT ON THE STAGE IS THE SAME WIDTH AS EVERY OTHER (#212's own
+   * "numerais em tabular"). A metric beside a metric, a column of a table, a
+   * date beside a date -- proportional figures make each one a slightly
+   * different width and the row wobbles; this touches no letter that is not
+   * a digit, so it costs nothing on the patterns that carry no number. */
+  font-variant-numeric: tabular-nums;
 }
 
 .stage {
@@ -135,6 +141,20 @@ body {
   color: var(--ink-muted);
 }
 
+/* ── a group's container, and its items (#212) ──────────────────────────────
+ * `<ul>`, `<ol>` and `<table>` are the only tags besides `<p>` a pattern may
+ * write, and the browser's own idea of a list or a table is furniture this
+ * dialect never asked for -- bullets, indent, cell spacing. Stripped here,
+ * once, so every pattern that carries a group starts from the same blank
+ * page a slot does; what each pattern below adds is composition, same rule
+ * as the roles above it.
+ */
+.slide ul, .slide ol { list-style: none; margin: 0; padding: 0; }
+.slide li, .slide table, .slide th, .slide td { margin: 0; padding: 0; }
+.slide li > p { margin: 0; max-width: none; }
+.slide table { border-collapse: collapse; width: 100%; }
+.slide th, .slide td { text-align: left; font-weight: inherit; }
+
 /* ── how a few-word slide holds the stage ───────────────────────────────────
  * Every pattern here says almost nothing, and almost nothing is exactly what
  * leaves a projector half dark: the render gate refuses a slide whose content
@@ -206,6 +226,139 @@ body {
   max-width: 100%;
   padding-top: calc(var(--stage-height) * 0.030);
   border-top: calc(var(--stage-height) * 0.0015) solid var(--hairline);
+}
+
+/* ── pattern · big-number (#212) ─────────────────────────────────────────────
+ * The same anchor-and-horizon as cover-numbered, spent mid-deck instead of at
+ * the open: the figure leads, the caption says what it proves one step below
+ * it, and the source line -- when written -- holds the bottom edge.
+ */
+.slide[data-pattern="big-number"] .number {
+  margin-top: auto;
+  letter-spacing: -0.04em;
+}
+
+.slide[data-pattern="big-number"] .caption {
+  margin-top: 0.14em;
+  font-size: var(--type-title);
+  max-width: 82%;
+}
+
+.slide[data-pattern="big-number"] .meta { margin-top: auto; }
+
+/* ── pattern · inline-metrics (#212) ──────────────────────────────────────────
+ * The claim holds the top edge; the row of metrics is the horizon, each one a
+ * small column of its own -- the number leading, the label naming what it
+ * measures. `--type-title` and not `--type-display` on the value, because up
+ * to four of them share the stage's width and a display-size row of four
+ * would not fit it.
+ */
+.slide[data-pattern="inline-metrics"] .claim {
+  margin-top: auto;
+  max-width: 88%;
+}
+
+.slide[data-pattern="inline-metrics"] ul {
+  margin-top: auto;
+  margin-bottom: auto;
+  display: flex;
+  gap: calc(var(--stage-height) * 0.075);
+}
+
+.slide[data-pattern="inline-metrics"] li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28em;
+}
+
+.slide[data-pattern="inline-metrics"] [data-role="figure"] {
+  font-size: var(--type-title);
+  letter-spacing: -0.02em;
+}
+
+/* ── pattern · timeline (#212) ────────────────────────────────────────────────
+ * The claim holds the top edge; the milestones sit on one hairline that runs
+ * the width of the stage, a dot per marker, each label naming its moment and
+ * its date sitting under it at floor size. The role is NAME and not CLAIM
+ * (compiler/catalog.py's own note on why) -- a milestone names what happened,
+ * it does not argue for it. `now`, when one marker carries it, is the one
+ * place this pattern spends the accent.
+ */
+.slide[data-pattern="timeline"] .claim {
+  margin-top: auto;
+  max-width: 88%;
+}
+
+.slide[data-pattern="timeline"] ol {
+  margin-top: auto;
+  margin-bottom: auto;
+  display: flex;
+  gap: calc(var(--stage-height) * 0.04);
+  padding-top: calc(var(--stage-height) * 0.045);
+  border-top: calc(var(--stage-height) * 0.0015) solid var(--hairline);
+}
+
+.slide[data-pattern="timeline"] li {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22em;
+}
+
+.slide[data-pattern="timeline"] li::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--stage-height) * -0.045 - var(--stage-height) * 0.006);
+  left: 0;
+  width: calc(var(--stage-height) * 0.012);
+  height: calc(var(--stage-height) * 0.012);
+  border-radius: 50%;
+  background: var(--ink-muted);
+}
+
+.slide[data-pattern="timeline"] li[now]::before { background: var(--accent); }
+
+.slide[data-pattern="timeline"] [data-role="name"] {
+  font-size: var(--type-lead);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.slide[data-pattern="timeline"] li[now] [data-role="name"] { color: var(--accent); }
+
+/* ── pattern · table (#212) ───────────────────────────────────────────────────
+ * The claim holds the top edge; the table is the horizon, set at
+ * `--type-body` -- the step themes/base/tokens.css named for this pattern by
+ * number before this ticket ever wrote one. The header reads like a `meta`
+ * line (mono, muted, at floor size) because it names the columns, it does
+ * not argue for anything; the body rows are the evidence.
+ */
+.slide[data-pattern="table"] .claim {
+  margin-top: auto;
+  max-width: 92%;
+}
+
+.slide[data-pattern="table"] table {
+  margin-top: auto;
+  margin-bottom: auto;
+  font-size: var(--type-body);
+}
+
+.slide[data-pattern="table"] th,
+.slide[data-pattern="table"] td {
+  padding: calc(var(--stage-height) * 0.016) calc(var(--stage-height) * 0.024)
+           calc(var(--stage-height) * 0.016) 0;
+  border-bottom: calc(var(--stage-height) * 0.0015) solid var(--hairline);
+}
+
+.slide[data-pattern="table"] th {
+  font-family: var(--font-mono);
+  font-size: var(--type-floor);
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  border-bottom-color: var(--hairline-strong);
+  border-bottom-width: calc(var(--stage-height) * 0.003);
 }
 
 /* ── pattern · pull-quote ───────────────────────────────────────────────────

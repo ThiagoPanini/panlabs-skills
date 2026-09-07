@@ -1,0 +1,47 @@
+<!-- The four patterns that carry a series instead of a single fact (#212):
+     a number, a row of metrics, a timeline, a table. Build it with
+     `python3 compiler/build.py examples/evidence.deck.html /tmp/evidence.html`. -->
+<deck title="Quatro formas de mostrar a prova"
+      occasion="Demonstração do catálogo, tema base"
+      theme="base"
+      lang="pt-BR"
+      minutes="4">
+
+  <section pattern="big-number">
+    <p class="number">84%</p>
+    <p class="caption">dos incidentes deste trimestre vêm de duas causas raiz</p>
+    <p class="meta">post-mortems · 2026</p>
+  </section>
+
+  <section pattern="inline-metrics">
+    <p class="claim">O funil melhorou em três frentes</p>
+    <ul>
+      <li><p class="value">42%</p><p class="label">conversão</p></li>
+      <li><p class="value">1,8×</p><p class="label">tempo de resposta</p></li>
+      <li><p class="value">−12%</p><p class="label">churn</p></li>
+    </ul>
+  </section>
+
+  <section pattern="timeline">
+    <p class="claim">Da ideia ao lançamento em quatro passos</p>
+    <ol>
+      <li><p class="label">Descoberta</p><p class="date">Jan</p></li>
+      <li><p class="label">Piloto</p><p class="date">Mar</p></li>
+      <li now><p class="label">Lançamento</p><p class="date">Jun</p></li>
+      <li><p class="label">Expansão</p><p class="date">Set</p></li>
+    </ol>
+  </section>
+
+  <section pattern="table">
+    <p class="claim">A plataforma reduziu o tempo de build em toda squad</p>
+    <table>
+      <thead><tr><th>Squad</th><th>Antes</th><th>Depois</th></tr></thead>
+      <tbody>
+        <tr><td>Checkout</td><td>14 min</td><td>6 min</td></tr>
+        <tr><td>Catálogo</td><td>21 min</td><td>9 min</td></tr>
+        <tr><td>Pagamentos</td><td>18 min</td><td>7 min</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</deck>

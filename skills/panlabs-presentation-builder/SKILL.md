@@ -13,7 +13,7 @@ O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inl
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **oito padrões** hoje — sete de poucas palavras e a afirmação de tela cheia. Os outros dez, os gráficos, as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **doze padrões** hoje — sete de poucas palavras, a afirmação de tela cheia, e os quatro que carregam uma série: número gigante, métricas em linha, linha do tempo e tabela. Os outros seis, as colunas e a comparação, os gráficos, a figura sob medida, as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## O dialeto
 
@@ -37,9 +37,11 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
 
 **Dentro de um slot a ênfase é livre**, com duas marcações: `<strong>`, que o tema marca com uma régua no acento, e `<em>`, que é itálico. Qualquer outra tag é recusada.
 
-**O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot e quantas palavras o slide inteiro pode gastar. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
+**Um padrão pode carregar um grupo**, que é uma série ao invés de um fato só — a métrica que se repete, o marco da linha do tempo, a linha da tabela. Um grupo é um `<ul>`, um `<ol>` ou um `<table>` — sem `class=`, porque a própria tag já diz o que é —, e cada item dentro dele (um `<li>`, ou uma `<tr>` de tabela) carrega seus próprios campos do mesmo jeito que um slide carrega slots: um `<p>` por campo, o nome do campo na `class=`. Um marco da linha do tempo aceita ainda `<li now>`, para marcar o momento presente.
 
-[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras.
+**O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot, quantas palavras o slide inteiro pode gastar e, quando houver, o grupo que carrega. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
+
+[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série.
 
 ## Construir
 
@@ -125,5 +127,6 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser a folha de contato ou o laudo das seis réguas de render | [`gate/render.cjs`](gate/render.cjs) |
 | for escolher um padrão para um slide, com slots, papéis e orçamento | [`CATALOG.md`](CATALOG.md) |
 | quiser ver os sete padrões de poucas palavras numa fonte só | [`examples/few-words.deck.html`](examples/few-words.deck.html) |
+| quiser ver os quatro padrões que carregam uma série numa fonte só | [`examples/evidence.deck.html`](examples/evidence.deck.html) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

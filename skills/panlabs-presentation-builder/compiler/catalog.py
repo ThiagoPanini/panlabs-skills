@@ -96,6 +96,50 @@ class Slot:
 
 
 @dataclass(frozen=True)
+class Field:
+    """One named part of a group's item -- a metric's value, a milestone's date.
+
+    THE SAME SHAPE AS A SLOT, ONE LEVEL DEEPER. A slot names what a `<p>`
+    means inside a SLIDE; a field names what one means inside an ITEM of a
+    repeating group. Keeping it a separate dataclass rather than reusing
+    `Slot` is what lets a field carry no budget and no top-level
+    requiredness of its own -- an item's shape is fixed by the group that
+    declares it, not by the slide.
+    """
+
+    name: str
+    role: str
+    purpose: str       # Portuguese: the line the reference publishes about it
+
+
+@dataclass(frozen=True)
+class Group:
+    """A bounded, repeating collection of same-shaped items inside a pattern.
+
+    EVERY OTHER PATTERN IN THIS FILE SAYS A NAME ONCE. That is what a slot
+    is, and #210's whole catalog never needed more. A metric row, a
+    milestone and a table's data row are exactly the place that stops
+    holding: the evidence a deck exists to show is a SERIES, not a fact, and
+    a dialect that could only say each name once would have no way to write
+    one.
+
+    THE CONTAINER TAG IS THE ONLY VOCABULARY THE GROUP NEEDS. Every pattern
+    below carries at most one group, so there is nothing for a `class=` on
+    `<ul>` or `<ol>` to disambiguate -- the tag alone says what is being
+    counted, the same way a bare `<table>` needs no class to say it is one.
+    """
+
+    container: str       # the tag the items sit inside: "ul", "ol"
+    item: str             # the tag one item is written as: "li"
+    fields: tuple          # the Field(s) an item carries, in reading order
+    required_fields: tuple
+    minimum: int
+    maximum: int
+    purpose: str          # Portuguese: the line the reference publishes about it
+    now_flag: bool = False  # one item, at most, may carry the bare `now` attribute
+
+
+@dataclass(frozen=True)
 class Pattern:
     """One entry of the catalog."""
 
@@ -104,6 +148,8 @@ class Pattern:
     required: tuple    # the slot names without which the slide is not the pattern
     budget: int        # words the WHOLE slide may spend, furniture included
     purpose: str       # Portuguese: the line the reference publishes about it
+    group: Group = None      # a Group this pattern also carries, or None
+    table: bool = False      # this pattern's evidence is a real <table>, not a group
 
 
 # THE ORDER IS THE ARC, not the alphabet: a deck opens with a cover, turns on
@@ -123,7 +169,9 @@ class Pattern:
 # been registered yet -- the ones this catalog still owes are wider (two
 # columns 60, three columns and comparison 75), and the only place the
 # ceiling can be broken is here, when a budget is written. `--check` is what
-# refuses it.
+# refuses it. `table` (#212) sets its budget AT the ceiling on purpose: the
+# spec's own regulator for a table is the row count, not a word count, and a
+# tighter number here would be a second ceiling nobody asked for.
 ABSOLUTE_BUDGET = 90
 
 PATTERNS = {
@@ -172,6 +220,78 @@ PATTERNS = {
             budget=25,
             purpose="A tese no alto e uma frase só no pé, com o palco inteiro entre as duas",
         ),
+        # THE PROVAS ARC BEGINS HERE (#212). A tese sozinha é uma afirmação; o
+        # que a torna crível é a evidência logo depois dela -- o próprio arco
+        # que #207 prescreve é contexto, tensão, TESE, PROVAS, plano, chamada.
+        # Os quatro abaixo são os primeiros padrões deste catálogo que dizem
+        # mais de uma coisa por slide, e é por isso que cada um carrega um
+        # `group` ou uma `table`: nenhum slot sozinho, dito uma vez, segura
+        # uma série.
+        Pattern(
+            name="big-number",
+            slots=(
+                Slot("number", FIGURE, "o número, sozinho no maior corpo do palco"),
+                Slot("caption", CLAIM, "o que o número prova"),
+                Slot("meta", META, "de onde veio o número, e quando foi medido"),
+            ),
+            required=("number", "caption"),
+            budget=25,
+            purpose="Um número gigante e a legenda que diz o que ele prova",
+        ),
+        Pattern(
+            name="inline-metrics",
+            slots=(
+                Slot("claim", CLAIM, "o que as métricas, juntas, provam"),
+            ),
+            required=("claim",),
+            budget=48,
+            purpose="De duas a quatro métricas lado a lado, cada uma com seu número e seu rótulo",
+            group=Group(
+                container="ul",
+                item="li",
+                fields=(
+                    Field("value", FIGURE, "o número da métrica"),
+                    Field("label", META, "o que esse número mede"),
+                ),
+                required_fields=("value", "label"),
+                minimum=2,
+                maximum=4,
+                purpose="cada `<li>` é uma métrica, com seu `value` e seu `label`",
+            ),
+        ),
+        Pattern(
+            name="timeline",
+            slots=(
+                Slot("claim", CLAIM, "o que a linha do tempo prova"),
+            ),
+            required=("claim",),
+            budget=60,
+            purpose="De três a seis marcos em sequência, um deles podendo ser o momento presente",
+            group=Group(
+                container="ol",
+                item="li",
+                fields=(
+                    Field("label", NAME, "o nome do marco"),
+                    Field("date", META, "quando o marco aconteceu"),
+                ),
+                required_fields=("label", "date"),
+                minimum=3,
+                maximum=6,
+                purpose="cada `<li>` é um marco, com seu `label` e sua `date`",
+                now_flag=True,
+            ),
+        ),
+        Pattern(
+            name="table",
+            slots=(
+                Slot("claim", CLAIM, "o que a tabela prova"),
+            ),
+            required=("claim",),
+            budget=ABSOLUTE_BUDGET,
+            purpose="Uma tabela com cabeçalho obrigatório e até seis linhas ao todo, "
+                    "cabeçalho incluído",
+            table=True,
+        ),
         Pattern(
             name="full-bleed-statement",
             slots=(
@@ -214,6 +334,14 @@ PATTERNS = {
         ),
     )
 }
+
+
+# THE TABLE'S ROW CEILING, HEADER INCLUDED (#212, and the spec's own "tabela
+# até 6 linhas"). Whoever counts the lines of a printed table counts the
+# header as one of them, so the ceiling below is on the table as a whole and
+# not on the body alone -- a table at the ceiling is one header row and five
+# data rows, never six of the latter.
+TABLE_MAX_ROWS = 6
 
 
 # THE TITLES THAT NAME A FOLDER INSTEAD OF A POINT. A slide whose claim is
@@ -267,6 +395,18 @@ def budget_of(name):
     return p.budget if p else None
 
 
+def group_of(name):
+    """The pattern's repeating group, or None for a pattern with none."""
+    p = PATTERNS.get(name)
+    return p.group if p else None
+
+
+def is_table(name):
+    """True when the pattern's evidence is a real <table>."""
+    p = PATTERNS.get(name)
+    return bool(p and p.table)
+
+
 # ── the reference the model reads ────────────────────────────────────────────
 # Generated, never written: `CATALOG.md` carries the block between the two
 # markers below and nothing else of this file's business. The prose around
@@ -307,6 +447,34 @@ def reference():
             need = "sim" if s.name in p.required else "não"
             out.append(f"| `{s.name}` | {ROLE_LABEL[s.role]} | {need} | {s.purpose} |")
         out.append("")
+
+        if p.group:
+            g = p.group
+            now = (
+                f" `<{g.item} now>` marca o momento presente, em no máximo um `<{g.item}>`."
+                if g.now_flag else ""
+            )
+            out += [
+                f"De {g.minimum} a {g.maximum} `<{g.item}>` dentro de um `<{g.container}>`, "
+                f"sem `class=` em nenhum dos dois — {g.purpose}.{now}",
+                "",
+                "| campo | papel | obrigatório | o que vai nele |",
+                "| --- | --- | --- | --- |",
+            ]
+            for f in g.fields:
+                need = "sim" if f.name in g.required_fields else "não"
+                out.append(f"| `{f.name}` | {ROLE_LABEL[f.role]} | {need} | {f.purpose} |")
+            out.append("")
+
+        if p.table:
+            out += [
+                f"Um `<table>` sem `class=`, com um `<thead>` de um `<tr>` de `<th>` "
+                "(o cabeçalho, obrigatório) e um `<tbody>` de um a "
+                f"{TABLE_MAX_ROWS - 1} `<tr>` de `<td>` — {TABLE_MAX_ROWS} linhas ao "
+                "todo, cabeçalho incluído, e toda linha do corpo com o mesmo número "
+                "de células que o cabeçalho.",
+                "",
+            ]
 
     out += [
         "### Títulos que reprovam",

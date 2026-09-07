@@ -137,10 +137,10 @@ link_skill "$HOME/.claude/skills/$NAME" "../../.agents/skills/$NAME" "$TARGET"
 #
 # Reading `SKILL.md` through the link proves the link resolves. It does not
 # prove the skill RUNS, and the two come apart exactly where it matters: a link
-# to a tree missing `engine/` reads its front door perfectly. So the documented
-# command runs, from each path in turn, and what is asserted is the property
-# the whole format rests on -- a page that carries its own fonts and therefore
-# opens with no network at all.
+# to a tree missing `compiler/` reads its front door perfectly. So the
+# documented command runs, from each path in turn, and what is asserted is the
+# property the whole format rests on -- a page with not one external reference
+# on it, which is the whole of "opens with the cable pulled".
 echo
 echo "checking via the installed path (Python 3 and nothing else)"
 echo
@@ -160,15 +160,32 @@ for base in "$HOME/.claude/skills/$NAME" "$HOME/.agents/skills/$NAME"; do
   # second build silently overwrites the first.
   n=$((${n:-0} + 1))
   out="$SCRATCH/from-$n.html"
-  # PYTHONDONTWRITEBYTECODE: `build.py` imports `register`, and without this
-  # the check would leave `engine/__pycache__/` inside the tree it just
+  # PYTHONDONTWRITEBYTECODE: `build.py` imports its siblings, and without
+  # this the check would leave `compiler/__pycache__/` inside the tree it just
   # installed. Verifying a skill must not modify it.
-  if PYTHONDONTWRITEBYTECODE=1 python3 "$base/engine/build.py" \
-       "$base/examples/argument.json" "$out" >/dev/null 2>&1; then
-    if grep -q "data:font/woff2" "$out" 2>/dev/null; then
-      ok "\`python3 engine/build.py\` runs from $base, and the page carries its fonts"
+  #
+  # The needle is what a page reaches OUT with -- an absolute URL, an
+  # `@import`, or a `src=`/`href=`/`url(` pointing at anything but itself. A
+  # deck going dark on the first network the room does not have is the failure
+  # this asserts against.
+  #
+  # ⚠️ `data:` AND `#` ARE STRIPPED FIRST, AND THAT IS THE WHOLE POINT. A
+  # `url(data:font/woff2;…)` reaches nowhere -- it is the exact mechanism
+  # `themes/base/tokens.css` prescribes for a theme that carries its own
+  # faces, and an `href="#icon"` is a jump inside the page. Matching them
+  # would red the moment an embedded font, an inlined icon sprite or an
+  # embedded image lands, and name a fix that is wrong. `base` uses the
+  # machine's own faces, so today nothing is stripped and nothing matches;
+  # writing it now is what stops a later ticket from loosening the rule under
+  # pressure.
+  if PYTHONDONTWRITEBYTECODE=1 python3 "$base/compiler/build.py" \
+       "$base/examples/statement.deck.html" "$out" >/dev/null 2>&1; then
+    if sed -e 's/url(["'"'"']\{0,1\}\(data:\|#\)[^)]*)//g' \
+           -e 's/\(src\|href\)="\(data:\|#\)[^"]*"//g' "$out" 2>/dev/null \
+         | grep -qiE 'https?://|src=|href=|@import|url\('; then
+      bad "built from $base, but the page reaches outside itself — it would need the network"
     else
-      bad "built from $base, but the page has no embedded font — it would need the network"
+      ok "\`python3 compiler/build.py\` runs from $base, and the page reaches nowhere"
     fi
   else
     bad "could not run a skill command from $base"

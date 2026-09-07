@@ -33,8 +33,52 @@ other file here is a command and carries the house's hyphen.
 """
 
 
+import re
+
+
 class Drifted(AssertionError):
     """The fixture no longer describes the tree; pick another needle."""
+
+
+# ── planting ─────────────────────────────────────────────────────────────────
+# The three below are the Python side's plant helpers, and they live here for
+# the same reason `Proof` does: `check-audit.proof.py` and
+# `check-catalog.proof.py` had a copy each of the same eight lines, and two
+# copies of one rule is what this file exists to refuse. `proof_driver.cjs`
+# mirrors the CLASS and not these -- the render proof plants into a page that
+# has already been laid out, by regex over markup nobody wrote by hand, and
+# there is no shared shape to port.
+
+def read(path):
+    """A fixture's text, or None when it is not there to plant into."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def swap(real, needle, replacement):
+    """Plant by substitution, and refuse to plant nothing."""
+    def plant():
+        if real is None:
+            raise Drifted("the fixture is not readable")
+        if needle not in real:
+            raise Drifted(f"the fixture no longer contains {needle!r}")
+        return real.replace(needle, replacement, 1)
+    return plant
+
+
+def cut(real, expression, what):
+    """Plant by deletion, and refuse to plant nothing."""
+    def plant():
+        if real is None:
+            raise Drifted("the fixture is not readable")
+        planted, n = re.subn(expression, "", real, count=1, flags=re.S)
+        if n == 0:
+            raise Drifted(f"the fixture no longer holds {what}")
+        return planted
+    return plant
 
 
 class Proof:

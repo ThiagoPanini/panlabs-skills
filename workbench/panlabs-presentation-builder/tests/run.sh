@@ -80,6 +80,13 @@
 #                                       makes the question of what its
 #                                       reference says academic.
 #
+# ⚠️ SPEC #207 PUTS THE REGISTER/REFERENCE EQUALITY AT THE FRONT DOOR ("a porta
+# de entrada cobra igualdade entre registro e referência publicada"), which is
+# the second of its three costuras. That seam is #218's and does not exist in
+# the v2 yet, so the check lands here as its own layer rather than waiting for
+# a file nobody has written -- and #218 is free to absorb it when the front
+# door arrives, which is one step to delete, not a rule to rediscover.
+#
 # ⚠️ THE TICKET THAT ADDED LAYER 2 (#209) SAID "camada quatro" IN ITS OWN
 # ACCEPTANCE CRITERIA. Read literally that would leave layers 2 and 3 empty
 # on purpose, for tickets that had not landed yet -- but #209 is #208's very

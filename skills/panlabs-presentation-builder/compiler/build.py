@@ -39,7 +39,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
 from audit import audit, report                                # noqa: E402
-from catalog import DECK_FIELDS, SLOT_TAG, role_of, slots_of   # noqa: E402
+from catalog import DECK_FIELDS, SLOT_TAG, slot_specs          # noqa: E402
 from source import Refused, inline_markup, read                # noqa: E402
 
 THEMES = os.path.join(ROOT, "themes")
@@ -122,10 +122,10 @@ def slide_markup(slide, index):
         written.setdefault(el.attrs.get("class", "").strip(), el)
 
     body = [
-        f'<{SLOT_TAG} class="{name}" data-role="{role_of(pattern, name)}">'
-        f"{inline_markup(written[name])}</{SLOT_TAG}>"
-        for name in slots_of(pattern)
-        if name in written
+        f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}">'
+        f"{inline_markup(written[slot.name])}</{SLOT_TAG}>"
+        for slot in slot_specs(pattern)
+        if slot.name in written
     ]
     current = " is-current" if index == 0 else ""
     return (

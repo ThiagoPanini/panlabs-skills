@@ -69,6 +69,16 @@ REPEATED_PATTERN = Ruler(
 
 # ── reading a slide, before anyone judges it ─────────────────────────────────
 
+def _at(n, node):
+    """Where a fix has to be applied, in the one form every ruler names it.
+
+    Slide number AND source line: the number is what the reader sees on the
+    stage, the line is what the reader edits, and a fix that gives only one of
+    them sends somebody counting sections by hand.
+    """
+    return f"slide {n} (line {node.line})"
+
+
 def _words(text):
     """Words the way the back row counts them: a token with a letter or a digit.
 
@@ -154,7 +164,7 @@ def _slot(el, at, pattern, seen):
 
 def _slide(node, n):
     fixes = []
-    at = f"slide {n} (line {node.line})"
+    at = _at(n, node)
 
     for key in sorted(k for k in node.attrs if k != "pattern"):
         fixes.append(
@@ -228,7 +238,7 @@ def _word_budget(deck):
         spent = sum(_words(plain_text(el)) for el in node.elements())
         if spent > ceiling:
             fixes.append(
-                f"slide {n} (line {node.line}): cut the slide to {ceiling} words "
+                f"{_at(n, node)}: cut the slide to {ceiling} words "
                 f'— the pattern "{pattern}" budgets {ceiling} and this one spends '
                 f"{spent}; what does not fit is what you say out loud"
             )
@@ -236,6 +246,11 @@ def _word_budget(deck):
 
 
 def _category_title(deck):
+    # THE CLAIM SLOTS AND NOTHING ELSE. A section divider's title carries the
+    # role NAME, not CLAIM, because naming the next section "Contexto" is the
+    # divider doing its job -- and "contexto" is both a refused title and the
+    # first act of the arc #207 prescribes. The register draws that line; this
+    # ruler only reads it.
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         claims = claims_of(node.attrs.get("pattern", ""))
@@ -246,7 +261,7 @@ def _category_title(deck):
             said = plain_text(el)
             if _bare(said) in CATEGORIES:
                 fixes.append(
-                    f'slide {n} (line {node.line}), slot "{slot}": rewrite '
+                    f'{_at(n, node)}, slot "{slot}": rewrite '
                     f'"{said}" as a claim with a verb or a number — a category '
                     "names the folder, and the page number already says where "
                     "the room is"
@@ -261,7 +276,7 @@ def _repeated_pattern(deck):
         pattern = node.attrs.get("pattern", "")
         if pattern and pattern == before:
             fixes.append(
-                f"slide {n} (line {node.line}): give this slide another pattern "
+                f"{_at(n, node)}: give this slide another pattern "
                 f'— "{pattern}" already ran on slide {n - 1}, and two slides in '
                 "the same shape read as one that failed to advance"
             )

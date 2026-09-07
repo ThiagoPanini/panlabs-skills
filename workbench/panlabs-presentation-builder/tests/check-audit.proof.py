@@ -29,13 +29,15 @@ doctrine's rulers need a deck with several patterns and several titles in it,
 and planting a second divider next to the first is not something a
 one-slide source can be asked to do.
 
-AND TWO CASES THAT DEMAND GREEN, at the bottom, because a check can also be
+AND THREE CASES THAT DEMAND GREEN, at the bottom, because a check can also be
 wrong by firing. `fill()` used to hunt for leftover `{{NAME}}` markers AFTER
 substituting the author's own text into the page, so a deck that said
 `{{TITLE}}` out loud was refused with a fix naming a file its author had
-never opened. And the category-title ruler matches a title WHOLE: a claim
-that happens to contain "visão geral" is a claim, and a ruler that read it as
-a substring would refuse the sentence that says the most.
+never opened. The category-title ruler matches a title WHOLE: a claim that
+happens to contain "visão geral" is a claim, and a ruler that read it as a
+substring would refuse the sentence that says the most. And it measures only
+the CLAIM slots, so the one slide whose job is to name a section may name it
+"Contexto" -- the first act of the arc #207 prescribes.
 
 IT PLANTS IN A TEMP DIRECTORY, NEVER IN THE SKILL. The build command takes a
 path, so the mutated source has to reach disk somewhere -- somewhere is a
@@ -45,7 +47,6 @@ either: a ruler that modified its subject would be measuring itself.
 """
 
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -53,21 +54,13 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from proof_driver import Drifted, Proof                                # noqa: E402
+from proof_driver import Proof, cut, read, swap                        # noqa: E402
 
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
 BUILD = os.path.join(SKILL, "compiler", "build.py")
 STATEMENT = os.path.join(SKILL, "examples", "statement.deck.html")
 FEW_WORDS = os.path.join(SKILL, "examples", "few-words.deck.html")
-
-
-def read(path):
-    try:
-        with open(path, encoding="utf-8") as fh:
-            return fh.read()
-    except OSError:
-        return None
 
 
 STATEMENT_SOURCE = read(STATEMENT)
@@ -101,29 +94,6 @@ def _run(text):
 def build(text):
     ok, said, _ = _run(text)
     return ok, said
-
-
-def swap(real, needle, replacement):
-    """Plant by substitution, and refuse to plant nothing."""
-    def plant():
-        if real is None:
-            raise Drifted("the example is not readable")
-        if needle not in real:
-            raise Drifted(f"the example no longer contains {needle!r}")
-        return real.replace(needle, replacement, 1)
-    return plant
-
-
-def cut(real, expression, what):
-    """Plant by deletion, and refuse to plant nothing."""
-    def plant():
-        if real is None:
-            raise Drifted("the example is not readable")
-        planted, n = re.subn(expression, "", real, count=1, flags=re.S)
-        if n == 0:
-            raise Drifted(f"the example no longer holds {what}")
-        return planted
-    return plant
 
 
 def block(title, real, cases, width):
@@ -207,6 +177,33 @@ def the_category_is_the_whole_title():
           "a title that contains a category and still makes a point")
     if not good:
         print(f"       <- {'refused: ' + said if not ok else 'the page lost the title'}")
+    return 0 if good else 1
+
+
+def the_divider_may_name_the_arc():
+    """A section divider called "Contexto" builds, and the thesis above it does not.
+
+    The category-title ruler measures CLAIM slots, and a divider's title
+    carries the role NAME: naming the next section after the arc's first act
+    is the divider doing its job, and #207 prescribes that very word
+    ("contexto → tensão → tese → provas → plano → chamada"). Reading the
+    divider as a claim would let this ruler refuse the spec.
+    """
+    if FEW_WORDS_SOURCE is None:
+        print(f"  FAIL {'setup':<22} no example to plant in")
+        return 1
+
+    planted = FEW_WORDS_SOURCE.replace(
+        "<p class=\"title\">O que a máquina mede</p>",
+        "<p class=\"title\">Contexto</p>", 1)
+    ok, said, page = _run(planted)
+    kept = bool(page) and ">Contexto<" in page
+    marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
+    good = ok and kept
+    print(f"  {'ok  ' if good else 'FAIL'} {'divider names a folder':<22} {marks} "
+          "the one slide whose whole job is naming one")
+    if not good:
+        print(f"       <- {'refused: ' + said if not ok else 'the page lost the name'}")
     return 0 if good else 1
 
 
@@ -309,9 +306,10 @@ def main():
     ], width=22)
 
     print()
-    print("and the two that demand green:  [built kept]")
+    print("and the three that demand green:  [built kept]")
     failed += the_page_is_not_a_template()
     failed += the_category_is_the_whole_title()
+    failed += the_divider_may_name_the_arc()
     return failed
 
 

@@ -218,10 +218,10 @@ async function main(argv) {
   const carries = (f) => fs.readFileSync(path.join(dir, f), 'utf8').match(STATEMENT);
   const chosen = files.find(carries);
   if (!chosen) {
-    console.log(`refused: no built page under --corpus ${dir} carries a `
-      + '<p class="statement" …> -- two of these plants rewrite the deck\'s own '
-      + 'statement to make their defect, and a corpus without one leaves them '
-      + 'nothing to plant into');
+    console.log(`refused: build a source with a full-bleed-statement slide into `
+      + `--corpus ${dir} -- two of these plants rewrite the deck's own statement `
+      + 'to make their defect, and no built page there carries a '
+      + '<p class="statement" …> for them to plant into');
     return 1;
   }
 

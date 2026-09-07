@@ -23,7 +23,6 @@ about the register.
 """
 
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -31,7 +30,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from proof_driver import Drifted, Proof                                # noqa: E402
+from proof_driver import Proof, cut, read, swap                        # noqa: E402
 
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
@@ -41,15 +40,8 @@ DOCUMENT = os.path.join(SKILL, "CATALOG.md")
 WRITE = "run `python3 compiler/catalog.py --write`"
 
 
-def read(path):
-    try:
-        with open(path, encoding="utf-8") as fh:
-            return fh.read()
-    except OSError:
-        return None
-
-
 REAL = read(DOCUMENT)
+REGISTER_SOURCE = read(REGISTER)
 
 
 def _check(text=None):
@@ -72,25 +64,24 @@ def _check(text=None):
         return done.returncode == 0, (done.stdout + done.stderr).strip()
 
 
-def swap(needle, replacement):
-    def plant():
-        if REAL is None:
-            raise Drifted(f"{DOCUMENT} is not readable")
-        if needle not in REAL:
-            raise Drifted(f"the document no longer contains {needle!r}")
-        return REAL.replace(needle, replacement, 1)
-    return plant
+def _check_register(register_text):
+    """`--check` run from a PLANTED COPY of the register, over the real document.
 
-
-def cut(expression, what):
-    def plant():
-        if REAL is None:
-            raise Drifted(f"{DOCUMENT} is not readable")
-        planted, n = re.subn(expression, "", REAL, count=1)
-        if n == 0:
-            raise Drifted(f"the document no longer holds {what}")
-        return planted
-    return plant
+    The ceiling is a fact about the register, not about the document, so this
+    is the one case that has to mutate `catalog.py` instead of `CATALOG.md`.
+    The copy goes to a temp directory -- the register itself is never written
+    to -- and it runs standalone because it imports nothing but the standard
+    library. `check()` weighs the ceiling BEFORE the drift, so the reference
+    the copy would have published never enters the verdict.
+    """
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    with tempfile.TemporaryDirectory(prefix="panlabs-register-proof-") as tmp:
+        planted = os.path.join(tmp, "catalog.py")
+        with open(planted, "w", encoding="utf-8") as fh:
+            fh.write(register_text)
+        done = subprocess.run([sys.executable, planted, "--check", DOCUMENT],
+                              capture_output=True, text=True, env=env, cwd=SKILL)
+        return done.returncode == 0, (done.stdout + done.stderr).strip()
 
 
 def the_prose_is_still_a_humans():
@@ -117,11 +108,11 @@ def the_prose_is_still_a_humans():
 
 
 def main():
-    if REAL is None:
+    if REAL is None or REGISTER_SOURCE is None:
         return Proof("the register's reference", lambda k: k, None, None, None).refuse(
             "put CATALOG.md back at the skill's root and run `python3 "
-            "compiler/catalog.py --write` — with no published reference there "
-            "is nothing for this ruler to keep in step"
+            "compiler/catalog.py --write` — with no register and no published "
+            "reference there is nothing for this ruler to keep in step"
         )
 
     proof = Proof(
@@ -137,26 +128,43 @@ def main():
         (
             "budget edited",
             "a ceiling raised in the document and nowhere else",
-            swap("até 25 palavras", "até 40 palavras"),
+            swap(REAL, "até 25 palavras", "até 40 palavras"),
             WRITE,
         ),
         (
             "slot renamed",
             "a slot the register never called that",
-            swap("`attribution`", "`author`"),
+            swap(REAL, "`attribution`", "`author`"),
             WRITE,
         ),
         (
             "row dropped",
             "a slot the register declares, missing from the table",
-            cut(r"\| `index` \|[^\n]*\n", "the section-divider's index row"),
+            cut(REAL, r"\| `index` \|[^\n]*\n", "the section-divider's index row"),
             WRITE,
         ),
         (
             "markers gone",
             "the block's own fence taken out",
-            swap("<!-- catalog:begin -->", ""),
+            swap(REAL, "<!-- catalog:begin -->", ""),
             "put <!-- catalog:begin --> and <!-- catalog:end --> back",
+        ),
+    ])
+
+    print()
+    failed += Proof(
+        title="the register against the ceiling",
+        label=lambda key: key,
+        invoke=lambda key, payload: _check_register(payload),
+        planted=lambda payload: payload != REGISTER_SOURCE,
+        control=lambda key: _check(),
+        width=22,
+    ).run([
+        (
+            "budget over the ceiling",
+            "a pattern registered with a budget #207 forbids",
+            swap(REGISTER_SOURCE, "budget=8,", "budget=800,"),
+            'bring the budget of "section-divider" down to 90 words',
         ),
     ])
 

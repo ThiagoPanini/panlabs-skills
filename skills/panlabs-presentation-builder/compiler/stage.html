@@ -106,6 +106,7 @@ body {
 .slide > p { margin: 0; max-width: 76%; }
 
 .slide [data-role="claim"],
+.slide [data-role="name"],
 .slide [data-role="figure"] {
   font-family: var(--font-display);
   font-size: var(--type-display);
@@ -137,9 +138,10 @@ body {
 /* ── how a few-word slide holds the stage ───────────────────────────────────
  * Every pattern here says almost nothing, and almost nothing is exactly what
  * leaves a projector half dark: the render gate refuses a slide whose content
- * spans less than 40% of the stage height. The composition that survives it
- * is an ANCHOR and a HORIZON -- something small on the top edge, something
- * large on the bottom one, and the stage as the pause between them.
+ * spans less of the stage height than the floor gate/render.cjs carries as
+ * OCCUPANCY_MIN_RATIO. The composition that survives it is an ANCHOR and a
+ * HORIZON -- something small on the top edge, something large on the bottom
+ * one, and the stage as the pause between them.
  *
  * `margin-top: auto` in a flex column is what draws it: each `auto` eats an
  * equal share of the leftover height, so two of them put one slot at the top

@@ -19,7 +19,9 @@ that fixed a height would be a pattern that broke on the next projector.
 A PATTERN'S REQUIRED SLOTS ARE WHAT KEEPS THE STAGE FULL. Everything in this
 first catalog says few words, and few words is exactly what leaves a
 projector half dark -- the render gate refuses a slide whose content spans
-less than 40% of the stage height (gate/render.cjs, calibrated in #209). A
+less of the stage height than the floor `gate/render.cjs` carries as
+OCCUPANCY_MIN_RATIO (calibrated in #209; the number lives there and is not
+restated here, so recalibrating it cannot leave a lie in this file). A
 slide with two words survives that floor by having an ANCHOR and a HORIZON:
 something small at the top edge and something large at the bottom, with the
 stage between them. That is why a cover requires its `meta` line and a pivot
@@ -35,7 +37,6 @@ are English; the prose that explains a pattern to its author is not.
 
 import argparse
 import os
-import sys
 from dataclasses import dataclass
 
 
@@ -61,15 +62,24 @@ SLOT_TAG = "p"
 # it". The stage reads it as `data-role=` on the emitted paragraph and styles
 # by it, so a pattern that adds a `meta` slot in a later ticket inherits the
 # treatment instead of restating it; the category-title ruler reads it to
-# know which slots are supposed to make a CLAIM. Four, and the reference
-# publishes them by these Portuguese names.
+# know which slots are supposed to make a CLAIM. The reference publishes them
+# by the Portuguese names below.
+#
+# NAME EXISTS BECAUSE OF THE ARC. A section divider's title is set as large as
+# any claim and is the only text on the stage that is SUPPOSED to name a
+# folder -- naming the next section "Contexto" is the divider doing its job,
+# and #207's own arc opens on that word. Reading it as a claim would let the
+# category-title ruler refuse the spec's first act, so the register says what
+# the text is and the ruler measures only what claims.
 CLAIM = "claim"        # the sentence the slide is there to say
+NAME = "name"          # a section's name -- where a category is the right word
 FIGURE = "figure"      # a number or token, set large and read as an image
 BODY = "body"          # the prose that supports the claim
 META = "meta"          # furniture: the label, the index, the source, the date
 
 ROLE_LABEL = {
     CLAIM: "afirmação",
+    NAME: "nome",
     FIGURE: "número",
     BODY: "corpo",
     META: "metadado",
@@ -82,7 +92,7 @@ class Slot:
 
     name: str
     role: str
-    purpose: str       # prosa portuguesa: o que vai nele, em uma linha
+    purpose: str       # Portuguese: the line the reference publishes about it
 
 
 @dataclass(frozen=True)
@@ -93,7 +103,7 @@ class Pattern:
     slots: tuple       # every slot the pattern accepts, in reading order
     required: tuple    # the slot names without which the slide is not the pattern
     budget: int        # words the WHOLE slide may spend, furniture included
-    purpose: str       # prosa portuguesa: para que serve, em uma linha
+    purpose: str       # Portuguese: the line the reference publishes about it
 
 
 # THE ORDER IS THE ARC, not the alphabet: a deck opens with a cover, turns on
@@ -107,6 +117,15 @@ class Pattern:
 # `kicker` are spent from the same 25 or 12 as the headline. Nothing here
 # counts what you SAY over the slide, which is where everything that did not
 # fit belongs.
+#
+# AND ONE CEILING OVER ALL OF THEM: no slide, whatever its pattern, spends
+# more than this. It is the spec's backstop for the patterns that have not
+# been registered yet -- the ones this catalog still owes are wider (two
+# columns 60, three columns and comparison 75), and the only place the
+# ceiling can be broken is here, when a budget is written. `--check` is what
+# refuses it.
+ABSOLUTE_BUDGET = 90
+
 PATTERNS = {
     p.name: p
     for p in (
@@ -176,7 +195,7 @@ PATTERNS = {
             name="section-divider",
             slots=(
                 Slot("index", FIGURE, "o número da seção que começa, no alto do palco"),
-                Slot("title", CLAIM, "o nome da seção, no pé do palco"),
+                Slot("title", NAME, "o nome da seção, no pé do palco"),
             ),
             required=("index", "title"),
             budget=8,
@@ -220,24 +239,21 @@ def pattern_names():
     return tuple(PATTERNS)
 
 
-def slots_of(name):
-    """The slot NAMES of a pattern, or () when the catalog never heard of it."""
-    p = PATTERNS.get(name)
-    return tuple(s.name for s in p.slots) if p else ()
-
-
 def slot_specs(name):
-    """The slots themselves, for whoever needs a role and not just a name."""
+    """The slots of a pattern, or () when the catalog never heard of it.
+
+    EVERY OTHER READER GOES THROUGH THIS ONE. A source reaches the audit
+    before anything has agreed it is valid, so "a pattern the catalog never
+    heard of" is a real case rather than a defensive one -- and it is
+    answered here, once, instead of at each caller.
+    """
     p = PATTERNS.get(name)
     return p.slots if p else ()
 
 
-def role_of(pattern, slot):
-    """The role of one slot, or "" when either name is a stranger here."""
-    for s in slot_specs(pattern):
-        if s.name == slot:
-            return s.role
-    return ""
+def slots_of(name):
+    """The slot NAMES of a pattern, in reading order."""
+    return tuple(s.name for s in slot_specs(name))
 
 
 def claims_of(name):
@@ -273,7 +289,9 @@ def reference():
         + " e ".join(f"`<{t}>`" for t in INLINE_TAGS)
         + ".",
         "",
-        f"São {len(PATTERNS)} padrões, na ordem do arco.",
+        f"São {len(PATTERNS)} padrões, na ordem do arco. O orçamento é do slide "
+        "inteiro, mobília inclusive, e nenhum slide passa de "
+        f"{ABSOLUTE_BUDGET} palavras seja qual for o padrão.",
         "",
     ]
     for p in PATTERNS.values():
@@ -309,26 +327,40 @@ def _block(text):
 
 
 def _document(path):
+    """The document's text, and why it could not be read. One of the two is None."""
     try:
         with open(path, encoding="utf-8") as fh:
-            return fh.read()
+            return fh.read(), None
     except OSError as e:
-        return e
+        return None, e.strerror
 
 
 def check(path):
-    """True when the document's block is this register. Says the fix when not.
+    """True when the register is in order and the document publishes it.
 
     The document is named by its BASENAME in every message, not by the path it
     was handed: the proof beside this file points `--check` at a planted copy
     in a temp directory, and a red that opened with six `../` would be naming
     a file nobody has.
     """
-    text = _document(path)
     where = os.path.basename(path)
-    if isinstance(text, OSError):
+
+    # THE REGISTER IS CHECKED BEFORE THE DOCUMENT, because a document that
+    # faithfully publishes a budget the spec forbids is two problems, and
+    # only one of them is the document's.
+    over = [p for p in PATTERNS.values() if p.budget > ABSOLUTE_BUDGET]
+    if over:
+        worst = max(over, key=lambda p: p.budget)
+        print(f'REFUSED · bring the budget of "{worst.name}" down to '
+              f"{ABSOLUTE_BUDGET} words or fewer in compiler/catalog.py — it "
+              f"declares {worst.budget}, over the ceiling #207 puts on any "
+              "slide whatever its pattern")
+        return False
+
+    text, why = _document(path)
+    if why:
         print(f"REFUSED · put {where} back and run `python3 compiler/catalog.py "
-              f"--write` — {text.strerror}")
+              f"--write` — {why}")
         return False
 
     found = _block(text)
@@ -355,10 +387,10 @@ def check(path):
 
 def write(path):
     """Put the register back into the document, between the markers."""
-    text = _document(path)
-    if isinstance(text, OSError):
+    text, why = _document(path)
+    if why:
         print(f"REFUSED · write {path} by hand first, with {BEGIN} and {END} in "
-              f"it — {text.strerror}")
+              f"it — {why}")
         return False
     if _block(text) is None:
         print(f"REFUSED · put {BEGIN} and {END} into {path} around the place the "
@@ -399,5 +431,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.dont_write_bytecode = True
     raise SystemExit(main())

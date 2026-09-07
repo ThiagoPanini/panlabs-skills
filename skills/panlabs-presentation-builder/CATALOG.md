@@ -14,7 +14,7 @@
 
 O cabeçalho é o próprio `<deck>`, e os cinco campos são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`. Um slot é um `<p>` com o nome do slot na `class=` e nada mais. Dentro de um slot a ênfase é livre, com duas marcações: `<em>` e `<strong>`.
 
-São 8 padrões, na ordem do arco.
+São 8 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
 
 ### `cover-headline` · até 25 palavras
 
@@ -79,7 +79,7 @@ O respiro entre duas seções — um número no alto, o nome embaixo.
 | slot | papel | obrigatório | o que vai nele |
 | --- | --- | --- | --- |
 | `index` | número | sim | o número da seção que começa, no alto do palco |
-| `title` | afirmação | sim | o nome da seção, no pé do palco |
+| `title` | nome | sim | o nome da seção, no pé do palco |
 
 ### `closing-call` · até 30 palavras
 

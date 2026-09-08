@@ -1,0 +1,90 @@
+<!-- The six forms one pattern draws (#213): horizontal and vertical bars, a
+     line, an area, a sparkline and a share. The numbers are synthetic -- what
+     the example demonstrates is the form, and the dated source every one of
+     them requires. Build it with `python3 compiler/build.py
+     examples/charts.deck.html /tmp/charts.html`. -->
+<deck title="Seis formas de desenhar um número"
+      occasion="Demonstração do catálogo, tema base"
+      theme="base"
+      lang="pt-BR"
+      minutes="6">
+
+  <section pattern="chart" type="bars-h">
+    <p class="title">O build caiu abaixo de dez minutos em quatro squads</p>
+    <p class="unit">minutos por build, mediana</p>
+    <p class="source">esteira de CI · jun/2026</p>
+    <ul>
+      <li><p class="label">Checkout</p><p class="value">6</p></li>
+      <li><p class="label">Catálogo</p><p class="value">9</p></li>
+      <li><p class="label">Pagamentos</p><p class="value">7</p></li>
+      <li><p class="label">Busca</p><p class="value">4</p></li>
+      <li mark><p class="label">Perfil</p><p class="value">11</p></li>
+    </ul>
+  </section>
+
+  <section pattern="chart" type="bars-v">
+    <p class="title">O defeito por rodada caiu de doze para três</p>
+    <p class="unit">defeitos encontrados na revisão</p>
+    <p class="source">revisões de deck · 2026</p>
+    <ul>
+      <li><p class="label">Jan</p><p class="value">12</p></li>
+      <li><p class="label">Fev</p><p class="value">9</p></li>
+      <li><p class="label">Mar</p><p class="value">14</p></li>
+      <li><p class="label">Abr</p><p class="value">7</p></li>
+      <li><p class="label">Mai</p><p class="value">5</p></li>
+      <li mark><p class="label">Jun</p><p class="value">3</p></li>
+    </ul>
+  </section>
+
+  <section pattern="chart" type="line">
+    <p class="title">A ocupação do palco subiu acima do piso em toda revisão</p>
+    <p class="unit">% da altura do palco ocupada</p>
+    <p class="source">portão de render · 2026</p>
+    <ul>
+      <li><p class="label">rev 1</p><p class="value">31</p></li>
+      <li><p class="label">rev 2</p><p class="value">44</p></li>
+      <li><p class="label">rev 3</p><p class="value">52</p></li>
+      <li><p class="label">rev 4</p><p class="value">61</p></li>
+      <li><p class="label">rev 5</p><p class="value">66</p></li>
+    </ul>
+  </section>
+
+  <section pattern="chart" type="area">
+    <p class="title">O acumulado de slides construídos passou de mil em maio</p>
+    <p class="unit">slides construídos, acumulado</p>
+    <p class="source">laudos arquivados · 2026</p>
+    <ul>
+      <li><p class="label">Jan</p><p class="value">120</p></li>
+      <li><p class="label">Fev</p><p class="value">310</p></li>
+      <li><p class="label">Mar</p><p class="value">520</p></li>
+      <li><p class="label">Abr</p><p class="value">780</p></li>
+      <li><p class="label">Mai</p><p class="value">1040</p></li>
+    </ul>
+  </section>
+
+  <section pattern="chart" type="sparkline">
+    <p class="title">O tempo de resposta caiu por seis meses seguidos</p>
+    <p class="unit">milissegundos no percentil 95</p>
+    <p class="source">telemetria de produção · 2026</p>
+    <ul>
+      <li><p class="label">Jan</p><p class="value">420</p></li>
+      <li><p class="label">Fev</p><p class="value">390</p></li>
+      <li><p class="label">Mar</p><p class="value">360</p></li>
+      <li><p class="label">Abr</p><p class="value">340</p></li>
+      <li><p class="label">Mai</p><p class="value">300</p></li>
+      <li><p class="label">Jun</p><p class="value">265</p></li>
+    </ul>
+  </section>
+
+  <section pattern="chart" type="share">
+    <p class="title">A plataforma leva 65% do orçamento deste ano</p>
+    <p class="unit">100% são o orçamento de 2026</p>
+    <p class="source">planejamento financeiro · 2026</p>
+    <ul>
+      <li><p class="label">Plataforma</p><p class="value">65</p></li>
+      <li><p class="label">Produto</p><p class="value">25</p></li>
+      <li><p class="label">Suporte</p><p class="value">10</p></li>
+    </ul>
+  </section>
+
+</deck>

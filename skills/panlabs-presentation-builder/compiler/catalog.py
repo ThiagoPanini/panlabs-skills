@@ -145,7 +145,46 @@ class Group:
     minimum: int
     maximum: int
     purpose: str          # Portuguese: the line the reference publishes about it
-    now_flag: bool = False  # one item, at most, may carry the bare `now` attribute
+    # ONE ITEM OF A GROUP MAY BE SINGLED OUT, AND THE REGISTER NAMES THE WORD.
+    # #212 wrote this as `now_flag: bool` with the attribute name "now" spelled
+    # out in the audit, the stage and the reference; #213 needs the same shape
+    # under another word (`mark`, the one point of a chart the accent is spent
+    # on), and a second hard-coded name is how one rule ends up living in four
+    # files. The register says the word once and every reader asks it.
+    flag: str = None            # the bare attribute at most one item may carry
+    flag_purpose: str = None    # Portuguese: what marking an item means here
+
+
+@dataclass(frozen=True)
+class ChartForm:
+    """One shape a chart may be drawn in, and what the series has to look like.
+
+    THE FORM IS WHERE THE COUNTS LIVE, NOT THE GROUP. A bar chart of nine bars
+    and a line of two points are both broken, and they are broken at different
+    numbers -- the group declares the ENVELOPE every form fits inside, and the
+    form declares the pair that actually judges a slide.
+    """
+
+    name: str
+    minimum: int
+    maximum: int
+    purpose: str            # Portuguese: the line the reference publishes about it
+    proportion: bool = False  # the values are shares of one whole and must total it
+
+
+@dataclass(frozen=True)
+class Chart:
+    """The forms one pattern may draw its series in, and how a slide picks one.
+
+    A CHART IS ONE PATTERN AND SIX DRAWINGS, not six patterns (#207's own
+    catalogue of eighteen names "gráfico com título-tese" once). What changes
+    between a bar and a line is the MARK, never the slots: the same thesis, the
+    same unit, the same dated source, the same label-and-value series.
+    """
+
+    attribute: str    # the <section> attribute that names the form: "type"
+    forms: tuple      # the ChartForm(s), in the order the reference publishes
+    total: int = 100  # what a proportion form's values have to add up to
 
 
 @dataclass(frozen=True)
@@ -160,6 +199,7 @@ class Pattern:
     group: Group = None      # a Group this pattern also carries, or None
     table: bool = False      # this pattern's evidence is a real <table>, not a group
     allow_break: bool = False  # may a slot force a line with BREAK_TAG (#211)
+    chart: Chart = None      # the group is drawn, not printed -- see Chart (#213)
 
 
 # THE ORDER IS THE ARC, not the alphabet: a deck opens with a cover, turns on
@@ -287,7 +327,8 @@ PATTERNS = {
                 minimum=3,
                 maximum=6,
                 purpose="cada `<li>` é um marco, com seu `label` e sua `date`",
-                now_flag=True,
+                flag="now",
+                flag_purpose="marca o momento presente",
             ),
         ),
         Pattern(
@@ -300,6 +341,74 @@ PATTERNS = {
             purpose="Uma tabela com cabeçalho obrigatório e até seis linhas ao todo, "
                     "cabeçalho incluído",
             table=True,
+        ),
+        # THE SERIES THE COMPILER DRAWS INSTEAD OF PRINTING (#213). Every other
+        # pattern above hands the stage the author's own words; this one hands
+        # `compiler/charts.py` a list of numbers and puts a drawing where the
+        # list was. #94 measured why the drawing is generated rather than
+        # written: the same bar chart costs 30 lines and 79 hand-placed
+        # coordinates as literal SVG against two lines of data through a
+        # generator, and the generator's axis came out cleaner than the hand's.
+        #
+        # THE UNIT AND THE DATED SOURCE ARE REQUIRED, and that is doctrine, not
+        # bookkeeping: a number with no unit is a number the room cannot argue
+        # with, and a number with no date is one it cannot check. #207 asks for
+        # both by name ("toda visualização carrega título-tese e legenda com
+        # fonte e data").
+        Pattern(
+            name="chart",
+            slots=(
+                Slot("title", CLAIM, "a tese que o gráfico prova — com verbo ou número"),
+                Slot("unit", META, "em que unidade os valores estão, ou o que os cem "
+                                   "por cento somam"),
+                Slot("source", META, "de onde veio o dado, e quando foi medido — a "
+                                     "data é obrigatória"),
+            ),
+            required=("title", "unit", "source"),
+            budget=60,
+            purpose="Um gráfico desenhado a partir dos dados escritos no próprio "
+                    "slide, com título-tese e fonte datada",
+            group=Group(
+                container="ul",
+                item="li",
+                fields=(
+                    Field("label", NAME, "o nome do ponto"),
+                    Field("value", FIGURE, "o número do ponto — dígitos, com vírgula "
+                                           "decimal e sem unidade"),
+                ),
+                required_fields=("label", "value"),
+                # THE ENVELOPE, NOT THE JUDGEMENT. Each form below carries the
+                # pair that actually measures a slide; these two are the union
+                # of all six, so a series outside them is outside every form.
+                minimum=2,
+                maximum=12,
+                purpose="cada `<li>` é um ponto da série, com seu `label` e seu `value`",
+                flag="mark",
+                flag_purpose="marca o ponto que o slide é sobre, na cor de acento",
+            ),
+            chart=Chart(
+                attribute="type",
+                forms=(
+                    ChartForm("bars-h", 2, 6,
+                              "barras horizontais — cada rótulo tem uma coluna só "
+                              "dele, e é a forma que aceita rótulo longo"),
+                    ChartForm("bars-v", 2, 8,
+                              "barras verticais — o rótulo fica sob a coluna, e por "
+                              "isso precisa ser curto"),
+                    ChartForm("line", 3, 8,
+                              "uma linha sobre uma grade com eixo, para a evolução "
+                              "de uma medida no tempo"),
+                    ChartForm("area", 3, 8,
+                              "a mesma linha com a área preenchida até o zero, para "
+                              "volume em vez de posição"),
+                    ChartForm("sparkline", 4, 12,
+                              "a linha sem eixo nem grade, com o último valor em "
+                              "destaque — a tendência, e um número"),
+                    ChartForm("share", 2, 3,
+                              "uma barra empilhada de fatias que somam cem, uma por "
+                              "cor que o tema empresta", proportion=True),
+                ),
+            ),
         ),
         Pattern(
             name="full-bleed-statement",
@@ -474,6 +583,27 @@ def is_table(name):
     return bool(p and p.table)
 
 
+def chart_of(name):
+    """The pattern's chart declaration, or None for a pattern that draws nothing."""
+    p = PATTERNS.get(name)
+    return p.chart if p else None
+
+
+def form_names(name):
+    """Every form this pattern's chart may be drawn in, in the reference's order."""
+    chart = chart_of(name)
+    return tuple(f.name for f in chart.forms) if chart else ()
+
+
+def form_of(name, form):
+    """One named form of a pattern's chart, or None when either is a stranger."""
+    chart = chart_of(name)
+    for f in (chart.forms if chart else ()):
+        if f.name == form:
+            return f
+    return None
+
+
 def role_of(pattern, slot_name):
     """The role of one named slot in one pattern, or None when either is a stranger."""
     for s in slot_specs(pattern):
@@ -546,13 +676,13 @@ def reference():
 
         if p.group:
             g = p.group
-            now = (
-                f" `<{g.item} now>` marca o momento presente, em no máximo um `<{g.item}>`."
-                if g.now_flag else ""
+            flag = (
+                f" `<{g.item} {g.flag}>` {g.flag_purpose}, em no máximo um `<{g.item}>`."
+                if g.flag else ""
             )
             out += [
                 f"De {g.minimum} a {g.maximum} `<{g.item}>` dentro de um `<{g.container}>`, "
-                f"sem `class=` em nenhum dos dois — {g.purpose}.{now}",
+                f"sem `class=` em nenhum dos dois — {g.purpose}.{flag}",
                 "",
                 "| campo | papel | obrigatório | o que vai nele |",
                 "| --- | --- | --- | --- |",
@@ -561,6 +691,29 @@ def reference():
                 need = "sim" if f.name in g.required_fields else "não"
                 out.append(f"| `{f.name}` | {ROLE_LABEL[f.role]} | {need} | {f.purpose} |")
             out.append("")
+
+        if p.chart:
+            c = p.chart
+            out += [
+                f"A série não é impressa, é desenhada: a `<section>` carrega um "
+                f"`{c.attribute}=` a mais, que diz em que forma. São "
+                f"{len(c.forms)} formas, e cada uma tem a sua faixa de pontos — "
+                "fora dela a construção recusa.",
+                "",
+                f"| `{c.attribute}=` | pontos | o que desenha |",
+                "| --- | --- | --- |",
+            ]
+            for f in c.forms:
+                out.append(f"| `{f.name}` | {f.minimum} a {f.maximum} | {f.purpose} |")
+            out += [
+                "",
+                f"Todo valor é um número — dígitos, com vírgula decimal e nada mais: "
+                f"a unidade mora no slot `unit`, e o número é desenhado do jeito que "
+                f"foi escrito. Negativo recusa. Numa forma de proporção "
+                f"(`{', '.join(f.name for f in c.forms if f.proportion)}`) os valores "
+                f"têm de somar exatamente {c.total}.",
+                "",
+            ]
 
         if p.table:
             out += [

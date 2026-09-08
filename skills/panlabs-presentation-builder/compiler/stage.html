@@ -393,6 +393,109 @@ body {
   border-bottom-width: calc(var(--stage-height) * 0.003);
 }
 
+/* ── pattern · chart (#213) ──────────────────────────────────────────────────
+ * The thesis on the top edge, the unit under it, the source on the bottom one,
+ * and the drawing holding the air between them. The claim comes down one step
+ * from display because a chart slide has two things to say and the picture is
+ * the louder of them -- the same step `big-number` spends on its caption.
+ *
+ * THE PLOT'S BOX IS LOCKED IN STAGE-HEIGHT UNITS, AND IT HAS TO BE. Everything
+ * a chart draws lives inside a viewBox, so a text inside it paints at its own
+ * size TIMES whatever scale the box happens to impose -- and a box sized by
+ * the flex line would take a different scale on a slide with a two-line title.
+ * At 1.5 by 0.44 of the stage height the box is exactly the 1350x396 viewBox
+ * compiler/charts.py draws into, so one unit is one pixel and the type floor
+ * the generator enforces is the type floor the render gate measures. Change
+ * either number here and the other has to move with it.
+ */
+.slide[data-pattern="chart"] .title {
+  font-size: var(--type-title);
+  max-width: 94%;
+}
+
+.slide[data-pattern="chart"] .unit { margin-top: 0.9em; }
+
+.slide[data-pattern="chart"] .plot {
+  display: block;
+  width: calc(var(--stage-height) * 1.5);
+  height: calc(var(--stage-height) * 0.44);
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* The source is written third and read last: the register orders the slots
+ * title, unit, source because that is the order they are AUTHORED in, and one
+ * line of `order` puts the dated legend under the drawing where a legend
+ * belongs -- rather than teaching the compiler a second rule about where a
+ * pattern's evidence goes. */
+.slide[data-pattern="chart"] .source { order: 1; }
+
+/* ── the chart's own paint ───────────────────────────────────────────────────
+ * NOT ONE COLOUR IS WRITTEN INSIDE THE SVG. compiler/charts.py emits geometry
+ * and class names and nothing else, and every fill and stroke a chart wears is
+ * bound here to a token of the active theme -- which is the whole of #213's
+ * "as cores vêm dos tokens; nenhum hex literal no SVG gerado", enforced by
+ * construction instead of by a ruler hunting for hexadecimal.
+ *
+ * A MARKED POINT IS THE ACCENT AND ITS NEIGHBOURS STEP BACK. Painting one mark
+ * with the accent is not enough on its own: `base`'s accent is a grey DIMMER
+ * than its first content colour, so the singled-out bar would read as the
+ * faded one. `:has()` is what makes the emphasis relative -- with nothing
+ * marked every mark stays bright, and the moment one is marked the rest recede
+ * to the second content colour. A browser without `:has()` paints every mark
+ * bright and the accent one on top of them, which is a weaker slide and never
+ * a wrong one.
+ */
+.slide[data-pattern="chart"] .plot text { font-family: var(--font-mono); }
+.slide[data-pattern="chart"] .plot .label { fill: var(--ink-muted); }
+.slide[data-pattern="chart"] .plot .value { fill: var(--ink); }
+.slide[data-pattern="chart"] .plot .callout { fill: var(--accent); }
+
+.slide[data-pattern="chart"] .plot .mark,
+.slide[data-pattern="chart"] .plot .dot { fill: var(--content-1); }
+
+.slide[data-pattern="chart"] .plot .mark.is-marked,
+.slide[data-pattern="chart"] .plot .dot.is-marked { fill: var(--accent); }
+
+.slide[data-pattern="chart"] .plot:has(.is-marked) .mark:not(.is-marked),
+.slide[data-pattern="chart"] .plot:has(.is-marked) .dot:not(.is-marked) {
+  fill: var(--content-2);
+}
+
+.slide[data-pattern="chart"] .plot .line {
+  fill: none;
+  stroke: var(--content-1);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.slide[data-pattern="chart"] .plot .area {
+  fill: var(--content-2);
+  fill-opacity: 0.3;
+}
+
+.slide[data-pattern="chart"] .plot .grid {
+  stroke: var(--hairline);
+  stroke-width: 1.5;
+}
+
+.slide[data-pattern="chart"] .plot .axis {
+  stroke: var(--hairline-strong);
+  stroke-width: 2;
+}
+
+/* One slice, one colour -- which is why a share is capped at three in the
+ * register: the fourth would have to invent a colour the theme never agreed
+ * to. THE ORDER IS THE THEME'S OWN, BRIGHTEST FIRST, and it was measured
+ * rather than assumed: with the accent leading, `base` painted the 65% slice
+ * in a grey DIMMER than the 25% beside it, and the eye went to the wrong one
+ * on a slide whose whole title was about the first. A share's slices are read
+ * as an order, so they are painted as one. */
+.slide[data-pattern="chart"] .plot .slice-1 { fill: var(--content-1); }
+.slide[data-pattern="chart"] .plot .slice-2 { fill: var(--accent); }
+.slide[data-pattern="chart"] .plot .slice-3 { fill: var(--content-2); }
+
 /* ── pattern · pull-quote ───────────────────────────────────────────────────
  * The quote in the air with the accent running down its side -- the one mark
  * that says "these are not our words" without spending a colour on it -- and

@@ -5,12 +5,13 @@ the contact sheet and a pair of eyes are for; what belongs here is the class
 of mistake the eye does not catch -- a class that is not in the catalog, a
 slot that is missing, a budget that is over.
 
-ONE RULER READS THE DIALECT AND THREE READ THE DOCTRINE. The first refuses a
-source the compiler cannot build; the other three build fine and would ship a
-deck that fails in the room -- a slide with a paragraph on it, a title that
-names a folder instead of making a point, the same shape twice in a row. All
-four are STATIC because the source already answers them: counting words,
-reading a title and comparing two `pattern=` attributes needs no browser, and
+ONE RULER READS THE DIALECT AND THE REST READ THE DOCTRINE. The first refuses
+a source the compiler cannot build; every other one builds fine and would ship
+a deck that fails in the room -- a slide with a paragraph on it, a title that
+names a folder instead of making a point, the same shape twice in a row, a
+chart whose shares do not add up. All of them are STATIC because the source
+already answers them: counting words, reading a title, comparing two
+`pattern=` attributes and adding up a column of numbers needs no browser, and
 a defect that can be named before a byte is written should be.
 
 EVERY RED NAMES ITS OWN FIX, IN THE IMPERATIVE. "unknown class" is a
@@ -22,15 +23,19 @@ The report is printed by the build command on every run, green or red, so
 that "what is wrong with this deck" is answerable without opening a browser.
 """
 
+import re
 import unicodedata
 from dataclasses import dataclass
+from decimal import Decimal
 
+import charts
 import icons
 from catalog import (BREAK_TAG, CATEGORY_TITLES, ICON, INLINE_TAGS, PATTERNS,
                      SLOT_TAG, TABLE_MAX_ROWS, allow_break_of, budget_of,
-                     claims_of, group_of, is_table, pattern_names,
-                     role_of_element, slot_specs, slots_of)
-from source import plain_text
+                     chart_of, claims_of, form_names, form_of, group_of,
+                     is_table, pattern_names, role_of_element, slot_specs,
+                     slots_of)
+from source import fields_of, plain_text
 
 
 @dataclass(frozen=True)
@@ -66,7 +71,7 @@ CATEGORY_TITLE = Ruler(
 
 REPEATED_PATTERN = Ruler(
     "repeated-pattern",
-    "no pattern runs on two slides in a row",
+    "no slide takes the same shape as the one before it",
 )
 
 ICON_KNOWN = Ruler(
@@ -77,6 +82,21 @@ ICON_KNOWN = Ruler(
 ICON_PAIRED = Ruler(
     "icon-paired",
     "a slot never appears without the one it is paired with",
+)
+
+CHART_DATA = Ruler(
+    "chart-data",
+    "every value a chart draws is a number, and a share adds up",
+)
+
+CHART_SOURCE = Ruler(
+    "chart-source",
+    "every chart says where its number came from, and when",
+)
+
+CHART_FIT = Ruler(
+    "chart-fit",
+    "every label a chart draws fits the room its form gives it",
 )
 
 
@@ -215,10 +235,18 @@ def _field_list(group):
     return f"each <{group.item}> declares {count}: " + ", ".join(fields)
 
 
-def _field(el, at, group, seen, allow_break):
+def _field(el, at, group, seen, allow_break, drawn=False):
     """One field inside a group's item -- the same shape as `_slot`, one level
     deeper, and kept as its own function rather than a shared one because the
-    vocabulary it reads is the group's fields, never the pattern's slots."""
+    vocabulary it reads is the group's fields, never the pattern's slots.
+
+    A DRAWN FIELD TAKES NO EMPHASIS (#213). Every other field here reaches the
+    page as a `<p>` and keeps whatever bold or highlight the author put in it;
+    a chart's field reaches it as SVG text, where there is nowhere for either
+    to go. `plain_text` would flatten them without a word, which is the one
+    outcome worth a red: a deck whose author asked for emphasis and got
+    silence is a deck that lies to its own source.
+    """
     fixes = []
     if el.tag != SLOT_TAG:
         return [
@@ -248,11 +276,31 @@ def _field(el, at, group, seen, allow_break):
         else:
             fixes.append(f'{at}: drop the class "{name}" — ' + _field_list(group))
 
-    fixes.extend(_emphasis(el, at, classes[0], allow_break))
+    if drawn:
+        for child in el.children:
+            if not isinstance(child, str):
+                fixes.append(
+                    f'{at}, field "{classes[0]}": drop the <{child.tag}> — this '
+                    "text is drawn into a chart, and a drawing has nowhere to "
+                    "put emphasis"
+                )
+    else:
+        fixes.extend(_emphasis(el, at, classes[0], allow_break))
     return fixes
 
 
-def _group(container, at, pattern, group):
+def _group(container, at, pattern, group, form=None, drawn=False):
+    """One group, judged against the bounds that actually apply to it.
+
+    THE FORM TIGHTENS WHAT THE GROUP DECLARES (#213). A chart's group carries
+    the envelope every one of its forms fits inside, and the form carries the
+    pair that measures a slide -- two points is a fine bar chart and a broken
+    line, and only the form knows which is being drawn.
+    """
+    low = form.minimum if form else group.minimum
+    high = form.maximum if form else group.maximum
+    named = f'the form "{form.name}"' if form else f'the pattern "{pattern}"'
+
     fixes = []
     for key in sorted(container.attrs):
         fixes.append(
@@ -266,25 +314,25 @@ def _group(container, at, pattern, group):
                 f"<{group.container}> holds <{group.item}> and nothing else"
             )
 
-    now_count = 0
+    flagged = 0
     item_count = 0
     for item in container.elements():
         if item.tag != group.item:
             fixes.append(
                 f"{at}: write each entry as <{group.item}>, not <{item.tag}> "
-                f'— the pattern "{pattern}" counts <{group.item}>, one per item'
+                f"— {named} counts <{group.item}>, one per item"
             )
             continue
         item_count += 1
 
-        extra = ("now",) if group.now_flag else ()
-        if group.now_flag and "now" in item.attrs:
-            now_count += 1
+        extra = (group.flag,) if group.flag else ()
+        if group.flag and group.flag in item.attrs:
+            flagged += 1
         for key in sorted(k for k in item.attrs if k not in extra):
             fixes.append(
                 f"{at}: drop {key}= from the <{group.item}>" + (
                     f" — the only attribute a <{group.item}> may carry is "
-                    "the bare `now`" if group.now_flag else
+                    f"the bare `{group.flag}`" if group.flag else
                     " — it carries no attribute of its own"
                 )
             )
@@ -295,13 +343,23 @@ def _group(container, at, pattern, group):
                 if sub.strip():
                     fixes.append(f"{at}: wrap the loose text in a field — " + _field_list(group))
                 continue
-            fixes.extend(_field(sub, at, group, seen, allow_break_of(pattern)))
+            fixes.extend(_field(sub, at, group, seen, allow_break_of(pattern), drawn))
 
+        # THE SAME HOLE `_slide` CLOSES ONE LEVEL UP (#213). An empty field is
+        # not a missing one, and for a drawn group it is worse than cosmetic:
+        # there is no number for the generator to place a mark at.
+        written = fields_of(item)
         for want in group.required_fields:
             if want not in seen:
                 fixes.append(
                     f'{at}: add the missing <{SLOT_TAG} class="{want}"> to a '
                     f"<{group.item}> — every item of this group needs it"
+                )
+            elif not plain_text(written[want]).strip():
+                fixes.append(
+                    f'{at}: write something in the <{SLOT_TAG} class="{want}"> of '
+                    f"a <{group.item}> — it is there and it is empty, and every "
+                    "item of this group needs it answered"
                 )
         for name in sorted(set(s for s in seen if seen.count(s) > 1)):
             fixes.append(
@@ -309,22 +367,20 @@ def _group(container, at, pattern, group):
                 "— an item declares the field once"
             )
 
-    if item_count < group.minimum:
+    if item_count < low:
         fixes.append(
-            f"{at}: add {group.minimum - item_count} more <{group.item}> — the "
-            f'pattern "{pattern}" needs {group.minimum} to {group.maximum}, and '
-            f"this one has {item_count}"
+            f"{at}: add {low - item_count} more <{group.item}> — {named} needs "
+            f"{low} to {high}, and this one has {item_count}"
         )
-    elif item_count > group.maximum:
+    elif item_count > high:
         fixes.append(
-            f"{at}: drop {item_count - group.maximum} <{group.item}> — the "
-            f'pattern "{pattern}" needs {group.minimum} to {group.maximum}, and '
-            f"this one has {item_count}"
+            f"{at}: drop {item_count - high} <{group.item}> — {named} needs "
+            f"{low} to {high}, and this one has {item_count}"
         )
-    if group.now_flag and now_count > 1:
+    if group.flag and flagged > 1:
         fixes.append(
-            f"{at}: keep `now` on at most one <{group.item}> — {now_count} are "
-            "marked as the present moment, and a timeline has only one"
+            f"{at}: keep `{group.flag}` on at most one <{group.item}> — "
+            f"{flagged} carry it, and {named} marks one"
         )
     return fixes
 
@@ -419,14 +475,23 @@ def _slide(node, n):
     fixes = []
     at = _at(n, node)
 
-    for key in sorted(k for k in node.attrs if k != "pattern"):
-        fixes.append(
-            f"{at}: drop {key}= from the <section> — a section carries "
-            "pattern= and nothing else"
-        )
-
+    # THE ALLOWED ATTRIBUTES COME FROM THE PATTERN, WHICH IS WHY THE PATTERN IS
+    # READ FIRST (#213). Every pattern but one carries `pattern=` and nothing
+    # else; a chart carries the register's own `type=` beside it, because the
+    # form is not a slot -- it says what the series is DRAWN as, and there is
+    # no text on the stage for it to be.
     known = ", ".join(pattern_names())
     pattern = node.attrs.get("pattern")
+    chart = chart_of(pattern) if pattern in PATTERNS else None
+
+    allowed = ("pattern",) + ((chart.attribute,) if chart else ())
+    carries = " and ".join(f"{k}=" for k in allowed)
+    for key in sorted(k for k in node.attrs if k not in allowed):
+        fixes.append(
+            f"{at}: drop {key}= from the <section> — a section carries "
+            f"{carries} and nothing else"
+        )
+
     if not pattern:
         return fixes + [f"{at}: give the <section> a pattern= from the catalog: {known}"]
     if pattern not in PATTERNS:
@@ -434,6 +499,23 @@ def _slide(node, n):
             f'{at}: replace the pattern "{pattern}" with one the catalog '
             f"declares: {known}"
         ]
+
+    form = None
+    if chart:
+        forms = ", ".join(form_names(pattern))
+        written = node.attrs.get(chart.attribute, "").strip()
+        if not written:
+            fixes.append(
+                f"{at}: give the <section> a {chart.attribute}= from the "
+                f"catalog: {forms}"
+            )
+        else:
+            form = form_of(pattern, written)
+            if form is None:
+                fixes.append(
+                    f'{at}: replace the {chart.attribute} "{written}" with one '
+                    f"the catalog declares: {forms}"
+                )
 
     group = group_of(pattern)
     table = is_table(pattern)
@@ -469,8 +551,8 @@ def _slide(node, n):
                     continue
                 evidence_seen = True
                 fixes.extend(
-                    _group(child, at, pattern, group) if group
-                    else _table(child, at, pattern)
+                    _group(child, at, pattern, group, form, drawn=bool(chart))
+                    if group else _table(child, at, pattern)
                 )
                 continue
             if want:
@@ -487,11 +569,31 @@ def _slide(node, n):
 
         fixes.extend(_slot(child, at, pattern, seen))
 
+    # A REQUIRED SLOT THAT IS THERE AND EMPTY IS NOT A SLOT THAT IS THERE, and
+    # until #213 only the first half of that was measured. `<p class="source">
+    # </p>` satisfied every check this ruler made and shipped a chart with no
+    # legend under it -- the same hole in every pattern, since a cover with an
+    # empty headline or a thesis with an empty sentence pass exactly as easily.
+    # The composition each pattern leans on is built out of its REQUIRED slots
+    # (the register's own note on the anchor and the horizon), so an empty one
+    # is a hole in the layout and not only in the prose.
+    said = {}
+    for el in node.elements():
+        name = el.attrs.get("class", "").strip()
+        if el.tag == SLOT_TAG and name:
+            said.setdefault(name, plain_text(el).strip())
+
     for want_slot in PATTERNS[pattern].required:
         if want_slot not in seen:
             fixes.append(
                 f'{at}: add the missing <{SLOT_TAG} class="{want_slot}"> — the '
                 f'pattern "{pattern}" is not itself without it'
+            )
+        elif not said.get(want_slot):
+            fixes.append(
+                f'{at}: write something in the <{SLOT_TAG} class="{want_slot}"> '
+                f'— the pattern "{pattern}" requires it, and an empty slot '
+                "holds a place on the stage without saying anything in it"
             )
     for name in sorted(set(s for s in seen if seen.count(s) > 1)):
         fixes.append(
@@ -522,7 +624,7 @@ def _vocabulary(deck):
 
 
 # ── the doctrine ─────────────────────────────────────────────────────────────
-# The three below read a source the compiler could build and refuse it anyway,
+# The ones below read a source the compiler could build and refuse it anyway,
 # because what they measure is what the v1 shipped green and lost the room
 # with. Each one skips a slide whose pattern the catalog does not know: the
 # vocabulary ruler has already named that, and a second red about a stranger
@@ -576,17 +678,36 @@ def _category_title(deck):
 
 
 def _repeated_pattern(deck):
+    # WHAT REPEATS IS THE SHAPE, AND FOR A CHART THE SHAPE IS THE FORM (#213).
+    # A bar chart followed by a line is not a slide that failed to advance --
+    # the room sees a different picture, which is the whole of what this ruler
+    # was ever measuring. A bar chart followed by another bar chart is, and
+    # still goes red.
+    #
+    # THIS IS NOT A LOOSENING; IT KEEPS THE RULER INVARIANT UNDER THE
+    # PACKAGING. #207 says "não repetir padrão em slides consecutivos" and it
+    # also chose to carry all six chart forms as ONE of its eighteen patterns
+    # ("gráfico com título-tese"). Had the six been six patterns instead, a bar
+    # beside a line would have passed this ruler without anybody calling it a
+    # weakening -- so reading `pattern=` alone would make the ruler's verdict
+    # depend on how the catalogue happens to be packaged rather than on what is
+    # on the stage. Comparing the shape is what makes the two packagings agree.
     fixes = []
     before = None
     for n, node in enumerate(deck.sections, start=1):
         pattern = node.attrs.get("pattern", "")
-        if pattern and pattern == before:
+        chart = chart_of(pattern)
+        form = node.attrs.get(chart.attribute, "").strip() if chart else ""
+        shape = (pattern, form)
+        if pattern and shape == before:
+            said, word = ((form, chart.attribute) if chart and form
+                          else (pattern, "pattern"))
             fixes.append(
-                f"{_at(n, node)}: give this slide another pattern "
-                f'— "{pattern}" already ran on slide {n - 1}, and two slides in '
+                f"{_at(n, node)}: give this slide another {word} "
+                f'— "{said}" already ran on slide {n - 1}, and two slides in '
                 "the same shape read as one that failed to advance"
             )
-        before = pattern
+        before = shape
     return fixes
 
 
@@ -634,10 +755,146 @@ def _icon_paired(deck):
     return fixes
 
 
+# ── the chart ────────────────────────────────────────────────────────────────
+# THE THREE BELOW READ NUMBERS, WHICH NO OTHER RULER IN THIS FILE DOES. Every
+# ruler above measures WORDS -- how many, which shape, whether a name is in a
+# register. A chart is the first thing this dialect carries whose defect is
+# arithmetic, and #94 measured that this is exactly where a hand goes wrong:
+# the markup always renders, and what is false is the sum, the unit, or a
+# label that has no room. None of the three is visible to the eye at speed and
+# none is visible to a markup validator at all.
+
+def _chart_of_slide(node):
+    """A chart slide as (chart, form, points), or three Nones for anything else.
+
+    IT ANSWERS NOTHING FOR EVERY SHAPE THE VOCABULARY RULER ALREADY NAMED. A
+    stranger pattern, a form nobody declared, a missing `<ul>` -- each already
+    has a red that says what to do, and a second red from down here would be
+    noise stacked on the fix.
+    """
+    pattern = node.attrs.get("pattern", "")
+    chart, group = chart_of(pattern), group_of(pattern)
+    if not (chart and group):
+        return None, None, None
+    form = form_of(pattern, node.attrs.get(chart.attribute, "").strip())
+    container = next((el for el in node.elements() if el.tag == group.container), None)
+    if form is None or container is None:
+        return None, None, None
+    return chart, form, charts.series(container, group)
+
+
+# A minus sign, in either of the two characters a keyboard and a word
+# processor produce for it.
+NEGATIVE = ("-", "−")
+
+# The date a source line has to carry. A year is the whole of it: "post-mortems
+# · 2026" and "IBGE, Censo 2022" both date a number well enough for a room to
+# ask how old it is, and demanding a full date would refuse the way every real
+# source is actually cited.
+DATED = re.compile(r"(19|20)\d{2}")
+
+
+def _chart_data(deck):
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        chart, form, points = _chart_of_slide(node)
+        if not points:
+            continue
+        at = _at(n, node)
+
+        for p in points:
+            # AN EMPTY FIELD IS NAMED BY THE VOCABULARY RULER, which refuses a
+            # required field that is present and says nothing (`_group`). One
+            # red per defect: saying "and it is not a number either" on top of
+            # that would be this ruler describing the same emptiness twice.
+            if not p.said:
+                continue
+            if p.value is not None:
+                continue
+            if p.said.lstrip().startswith(NEGATIVE):
+                fixes.append(
+                    f'{at}: write the value of "{p.label}" as a positive number '
+                    f'— "{p.said}" falls below the axis, and no form here draws '
+                    "a mark under one"
+                )
+            else:
+                fixes.append(
+                    f'{at}: write the value of "{p.label}" as digits with at most '
+                    f'one comma, not "{p.said}" — the unit belongs in the unit '
+                    "slot, and the number is drawn exactly as it is written"
+                )
+
+        good = [p.value for p in points if p.value is not None]
+        if len(good) == len(points):
+            if not any(good):
+                fixes.append(
+                    f"{at}: give the series a value above zero — every point is "
+                    "zero, and a chart of zeroes draws a flat nothing"
+                )
+            elif form.proportion and sum(good) != Decimal(chart.total):
+                said = format(sum(good).normalize(), "f").replace(".", ",")
+                fixes.append(
+                    f"{at}: make the values add up to {chart.total} — they add "
+                    f"up to {said}, and a share that does not total "
+                    f"{chart.total} is a share of something else"
+                )
+
+        if form.proportion:
+            for p in points:
+                if p.marked:
+                    fixes.append(
+                        f"{at}: drop `mark` from the <li> — a share paints one "
+                        "colour per slice, and marking one would break the map "
+                        "between a colour and the name beside it"
+                    )
+                    break
+    return fixes
+
+
+def _chart_source(deck):
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        _, _, points = _chart_of_slide(node)
+        if not points:
+            continue
+        for el in node.elements():
+            if el.attrs.get("class", "").strip() != "source":
+                continue
+            said = plain_text(el)
+            if said and not DATED.search(said):
+                fixes.append(
+                    f'{_at(n, node)}, slot "source": add the year the data is '
+                    f'from to "{said}" — a number the room cannot date is a '
+                    "number it cannot check"
+                )
+    return fixes
+
+
+def _chart_fit(deck):
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        _, form, points = _chart_of_slide(node)
+        if not points:
+            continue
+        for kind, said, ceiling in charts.overlong(form.name, points):
+            elsewhere = (
+                ', or draw the series as "bars-h", where every label has a '
+                "column of its own"
+                if kind == "label" and form.name != "bars-h" else ""
+            )
+            fixes.append(
+                f'{_at(n, node)}: shorten the {kind} "{said}" to {ceiling} '
+                f'characters — the "{form.name}" form gives it that much room, '
+                f"and a drawing neither wraps a label nor says it could not"
+                + elsewhere
+            )
+    return fixes
+
+
 # APPEND AT THE END. The order is the order the report prints, and the report
 # is read top to bottom by whoever is fixing a deck: the dialect first,
 # because a source that does not parse into slides has nothing for the
-# doctrine to measure, then the five that judge what the slides say.
+# doctrine to measure, then the ones that judge what the slides say.
 RULERS = (
     (VOCABULARY, _vocabulary),
     (WORD_BUDGET, _word_budget),
@@ -645,6 +902,9 @@ RULERS = (
     (REPEATED_PATTERN, _repeated_pattern),
     (ICON_KNOWN, _icon_known),
     (ICON_PAIRED, _icon_paired),
+    (CHART_DATA, _chart_data),
+    (CHART_SOURCE, _chart_source),
+    (CHART_FIT, _chart_fit),
 )
 
 

@@ -153,9 +153,14 @@ function pageMeasureFn() {
       // chart label declaring 24px inside a box drawn at half scale reaches
       // the room at 12, and the type-floor ruler would have called it 24 and
       // passed it. getBoundingClientRect already accounts for the transform,
-      // so only the font size needs the correction -- and today's charts are
-      // drawn at scale 1 by construction, which makes this a guard against a
-      // future viewBox rather than a fix for a defect in the tree.
+      // so only the font size needs the correction.
+      //
+      // IT IS INERT AT 1600x900 AND LOAD-BEARING EVERYWHERE ELSE. The chart's
+      // box is a fixed fraction of the stage height, so its scale is the stage
+      // height over 900 -- exactly 1 at the size this gate renders at, and
+      // nothing else. Measure a deck at a taller stage and the uncorrected
+      // reading falls under a floor that grew with the stage: a FALSE RED, on
+      // text that is painting larger than it ever did.
       let scale = 1;
       if (el.ownerSVGElement && typeof el.getScreenCTM === 'function') {
         const m = el.getScreenCTM();

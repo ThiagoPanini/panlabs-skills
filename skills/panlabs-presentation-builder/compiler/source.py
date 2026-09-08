@@ -145,6 +145,19 @@ def _squeeze(s):
     return re.sub(r"\s+", " ", s)
 
 
+def fields_of(item):
+    """One group item's children, by the field name each carries as its class.
+
+    IT LIVES HERE BECAUSE TWO READERS WANT IT AND THE RULE IS ONE. `build.py`
+    writes a group back out as markup and `charts.py` reads one into numbers;
+    both have to answer "which `<p>` is the value", and two copies of that
+    answer is how the day a field stops being named by `class=` breaks one of
+    them silently. This file already owns every other walk over the parsed
+    tree.
+    """
+    return {el.attrs.get("class", "").strip(): el for el in item.elements()}
+
+
 def plain_text(node, _top=True):
     """A slot's contents as a sentence: the emphasis flattened into the words.
 

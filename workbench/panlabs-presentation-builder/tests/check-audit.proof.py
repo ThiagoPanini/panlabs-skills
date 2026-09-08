@@ -634,16 +634,16 @@ def main():
             "value field left empty",
             "the field written, named, and never answered",
             swap(CHARTS_SOURCE, '<p class="value">6</p>', '<p class="value"></p>'),
-            'give "Checkout" a value',
+            'write something in the <p class="value">',
         ),
         (
             "label field left empty",
             "a mark with a number and no name",
             swap(CHARTS_SOURCE, '<p class="label">Checkout</p>', '<p class="label"></p>'),
-            'name the point whose value is "6"',
+            'write something in the <p class="label">',
         ),
         (
-            "share that misses cem",
+            "share short of a hundred",
             "three slices adding up to ninety-five",
             swap(CHARTS_SOURCE, SHARE_UL, SHARE_UL_SHORT),
             "make the values add up to 100",
@@ -677,6 +677,13 @@ def main():
             cut(CHARTS_SOURCE, r'\s*<p class="source">esteira de CI[^<]*</p>',
                 "the first chart's source"),
             'add the missing <p class="source">',
+        ),
+        (
+            "source left empty",
+            "the legend written, named, and saying nothing",
+            swap(CHARTS_SOURCE, '<p class="source">esteira de CI · jun/2026</p>',
+                 '<p class="source"></p>'),
+            'write something in the <p class="source">',
         ),
     ], width=24)
 

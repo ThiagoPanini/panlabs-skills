@@ -35,7 +35,7 @@ from catalog import (BREAK_TAG, CATEGORY_TITLES, ICON, INLINE_TAGS, PATTERNS,
                      chart_of, claims_of, form_names, form_of, group_of,
                      is_table, pattern_names, role_of_element, slot_specs,
                      slots_of)
-from source import plain_text
+from source import fields_of, plain_text
 
 
 @dataclass(frozen=True)
@@ -345,11 +345,21 @@ def _group(container, at, pattern, group, form=None, drawn=False):
                 continue
             fixes.extend(_field(sub, at, group, seen, allow_break_of(pattern), drawn))
 
+        # THE SAME HOLE `_slide` CLOSES ONE LEVEL UP (#213). An empty field is
+        # not a missing one, and for a drawn group it is worse than cosmetic:
+        # there is no number for the generator to place a mark at.
+        written = fields_of(item)
         for want in group.required_fields:
             if want not in seen:
                 fixes.append(
                     f'{at}: add the missing <{SLOT_TAG} class="{want}"> to a '
                     f"<{group.item}> — every item of this group needs it"
+                )
+            elif not plain_text(written[want]).strip():
+                fixes.append(
+                    f'{at}: write something in the <{SLOT_TAG} class="{want}"> of '
+                    f"a <{group.item}> — it is there and it is empty, and every "
+                    "item of this group needs it answered"
                 )
         for name in sorted(set(s for s in seen if seen.count(s) > 1)):
             fixes.append(
@@ -559,11 +569,31 @@ def _slide(node, n):
 
         fixes.extend(_slot(child, at, pattern, seen))
 
+    # A REQUIRED SLOT THAT IS THERE AND EMPTY IS NOT A SLOT THAT IS THERE, and
+    # until #213 only the first half of that was measured. `<p class="source">
+    # </p>` satisfied every check this ruler made and shipped a chart with no
+    # legend under it -- the same hole in every pattern, since a cover with an
+    # empty headline or a thesis with an empty sentence pass exactly as easily.
+    # The composition each pattern leans on is built out of its REQUIRED slots
+    # (the register's own note on the anchor and the horizon), so an empty one
+    # is a hole in the layout and not only in the prose.
+    said = {}
+    for el in node.elements():
+        name = el.attrs.get("class", "").strip()
+        if el.tag == SLOT_TAG and name:
+            said.setdefault(name, plain_text(el).strip())
+
     for want_slot in PATTERNS[pattern].required:
         if want_slot not in seen:
             fixes.append(
                 f'{at}: add the missing <{SLOT_TAG} class="{want_slot}"> — the '
                 f'pattern "{pattern}" is not itself without it'
+            )
+        elif not said.get(want_slot):
+            fixes.append(
+                f'{at}: write something in the <{SLOT_TAG} class="{want_slot}"> '
+                f'— the pattern "{pattern}" requires it, and an empty slot '
+                "holds a place on the stage without saying anything in it"
             )
     for name in sorted(set(s for s in seen if seen.count(s) > 1)):
         fixes.append(
@@ -652,8 +682,16 @@ def _repeated_pattern(deck):
     # A bar chart followed by a line is not a slide that failed to advance --
     # the room sees a different picture, which is the whole of what this ruler
     # was ever measuring. A bar chart followed by another bar chart is, and
-    # still goes red. Reading `pattern=` alone would have made the six forms
-    # unusable next to each other while letting nothing real through.
+    # still goes red.
+    #
+    # THIS IS NOT A LOOSENING; IT KEEPS THE RULER INVARIANT UNDER THE
+    # PACKAGING. #207 says "não repetir padrão em slides consecutivos" and it
+    # also chose to carry all six chart forms as ONE of its eighteen patterns
+    # ("gráfico com título-tese"). Had the six been six patterns instead, a bar
+    # beside a line would have passed this ruler without anybody calling it a
+    # weakening -- so reading `pattern=` alone would make the ruler's verdict
+    # depend on how the catalogue happens to be packaged rather than on what is
+    # on the stage. Comparing the shape is what makes the two packagings agree.
     fixes = []
     before = None
     for n, node in enumerate(deck.sections, start=1):
@@ -764,23 +802,12 @@ def _chart_data(deck):
             continue
         at = _at(n, node)
 
-        # AN EMPTY FIELD IS NOT A MISSING ONE, and only one of the two has a
-        # ruler above it. `<p class="value"></p>` satisfies every requirement
-        # the vocabulary ruler makes -- the field is there and it is named --
-        # and then there is no number for the generator to place a mark at.
         for p in points:
-            if not p.label.strip():
-                fixes.append(
-                    f'{at}: name the point whose value is "{p.said}" — its '
-                    f"<{SLOT_TAG} class=\"label\"> is empty, and an unnamed mark "
-                    "says nothing to the room"
-                )
+            # AN EMPTY FIELD IS NAMED BY THE VOCABULARY RULER, which refuses a
+            # required field that is present and says nothing (`_group`). One
+            # red per defect: saying "and it is not a number either" on top of
+            # that would be this ruler describing the same emptiness twice.
             if not p.said:
-                fixes.append(
-                    f'{at}: give "{p.label}" a value — its <{SLOT_TAG} '
-                    'class="value"> is empty, and a point with no number is a '
-                    "point nothing can be drawn at"
-                )
                 continue
             if p.value is not None:
                 continue

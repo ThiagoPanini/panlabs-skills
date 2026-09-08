@@ -43,7 +43,8 @@ import icons                                                    # noqa: E402
 from audit import audit, report                                # noqa: E402
 from catalog import (DECK_FIELDS, ICON, SLOT_TAG, chart_of, group_of,  # noqa: E402
                      is_table, role_of_element, slot_specs)
-from source import Refused, inline_markup, plain_text, read     # noqa: E402
+from source import (Refused, fields_of, inline_markup,         # noqa: E402
+                    plain_text, read)
 
 THEMES = os.path.join(ROOT, "themes")
 SKELETON = os.path.join(HERE, "stage.html")
@@ -118,7 +119,7 @@ def group_markup(container, group):
         # hard-coded "now"), and the stage reads the same word off the emitted
         # `<li>` -- `li[now]` in compiler/stage.html is the other end of it.
         flag = f" {group.flag}" if group.flag and group.flag in item.attrs else ""
-        fields = {el.attrs.get("class", "").strip(): el for el in item.elements()}
+        fields = fields_of(item)
         cells = "".join(
             f'<{SLOT_TAG} class="{f.name}" data-role="{f.role}">'
             f"{inline_markup(fields[f.name])}</{SLOT_TAG}>"

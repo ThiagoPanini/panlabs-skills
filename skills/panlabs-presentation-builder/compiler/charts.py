@@ -27,11 +27,19 @@ in this skill is ever measured in pixels.
 SVG DOES NOT MEASURE TEXT, AND THAT IS THE ONE THING THIS FILE CANNOT DO FOR
 THE AUTHOR. A label longer than the space its form gives it does not wrap and
 does not error -- it runs under its neighbour or off the edge, and the
-clipping is invisible to every ruler that measures against the STAGE. `room()`
-is what closes that hole: it publishes, per form and per point count, how many
-characters actually fit, and `compiler/audit.py` refuses the source before a
+clipping is invisible to every ruler that measures against the STAGE.
+`overlong()` is what closes that hole: each form says how many characters it
+actually has room for, and `compiler/audit.py` refuses the source before a
 byte is drawn. It can do that because the labels are set in the mono face,
 where every character is the same width.
+
+A FORM IS ONE ENTRY IN ONE TABLE. `FORMS` below carries, per form, the
+function that draws it, the function that says how much room it leaves, and
+whose number it puts in words -- because these three were once three separate
+tables, and the third defaulted: a seventh form added to the drawing table and
+forgotten in the other two would have silently opted out of ever having its
+labels measured. One record per form is what makes forgetting impossible
+rather than merely unlikely.
 """
 
 import html
@@ -40,7 +48,7 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
-from source import plain_text
+from source import fields_of, plain_text
 
 # ── the plot's own coordinate system ─────────────────────────────────────────
 PLOT_W = 1350
@@ -115,7 +123,7 @@ def series(container, group):
     for item in container.elements():
         if item.tag != group.item:
             continue
-        fields = {el.attrs.get("class", "").strip(): el for el in item.elements()}
+        fields = fields_of(item)
         label = plain_text(fields["label"]) if "label" in fields else ""
         said = plain_text(fields["value"]).strip() if "value" in fields else ""
         out.append(Point(label=label, said=said, value=parse(said),
@@ -123,80 +131,16 @@ def series(container, group):
     return out
 
 
-# ── how much room a label has, per form ──────────────────────────────────────
+# ── how much room a label has ────────────────────────────────────────────────
+# Each form's own `_room_…` sits beside the `_draw_…` it measures, because the
+# two are the same geometry read twice -- once to place a string and once to
+# say how long a string may be. Kept apart, they drift, and the drift is
+# invisible: a ruler that over-reports room passes exactly the label that then
+# collides.
 
 def _chars(units, size):
     """How many characters of `size` fit across `units`, rounded down."""
     return max(1, int(units / (size * ADVANCE)))
-
-
-def _room(form, n):
-    """The character ceilings a form gives one label and one value, at N points.
-
-    A form that draws no number per point carries no `value` key at all, so
-    the caller has nothing to measure rather than a number it must know to
-    ignore.
-    """
-    if form == "bars-h":
-        return {"label": _chars(BH_LABEL_W, LABEL), "value": _chars(BH_VALUE_W - 14, VALUE)}
-    if form == "bars-v":
-        col = PLOT_W / n
-        return {"label": _chars(col * 0.92, LABEL), "value": _chars(col * 0.92, VALUE)}
-    # THE ONLY THING THAT CROWDS AN X LABEL IS THE NEXT ONE. Both forms below
-    # anchor their first and last labels to the ends of the plot rather than
-    # centring them (see `_curve`), so neither can run off an edge and the
-    # distance between two neighbours is the whole constraint. The gutter is
-    # taken at its minimum, which is what every realistic axis produces -- a
-    # tick label past ten characters widens it, and makes this ceiling
-    # generous by a character or two rather than wrong.
-    if form in ("line", "area"):
-        span = (PLOT_W - AX_INSET) - (AX_LABEL_W + AX_INSET)
-        return {"label": _chars(span / max(1, n - 1) * 0.92, LABEL)}
-    if form == "sparkline":
-        span = (PLOT_W - SP_CALLOUT_W - SP_PAD) - SP_PAD
-        return {"label": _chars(span / max(1, n - 1) * 0.92, LABEL),
-                "value": _chars(SP_CALLOUT_W - 40, CALLOUT)}
-    if form == "share":
-        entry = PLOT_W / n - SH_SWATCH - 32
-        # One under, because a slice's number is drawn with its percent sign.
-        return {"label": _chars(entry, LABEL),
-                "value": max(1, _chars(entry, SHARE_VALUE) - 1)}
-    return {}
-
-
-# WHOSE NUMBER IS ACTUALLY DRAWN, per form. A line and an area put every value
-# on the grid and none of them in words; a sparkline draws exactly one, the
-# last, which is the figure it exists to leave behind. Measuring a value no
-# form ever paints would be a red about nothing, and this table is why the
-# audit never has to know which is which.
-DRAWN_VALUES = {
-    "bars-h": "every", "bars-v": "every", "share": "every",
-    "sparkline": "last", "line": "none", "area": "none",
-}
-
-
-def overlong(form, points):
-    """Every drawn string this form has no room for: (kind, text, ceiling).
-
-    THIS IS THE HOLE SVG LEAVES OPEN AND NOTHING ELSE CLOSES. A label wider
-    than its slot does not wrap and does not error -- it runs under its
-    neighbour, or off the plot's own edge where the clipping hides it from
-    every ruler that measures against the stage. Refusing it in the source is
-    the only place it can be caught, and it is catchable at all only because
-    the chart's text is set in the mono face.
-    """
-    ceiling = _room(form, max(1, len(points)))
-    drawn = DRAWN_VALUES.get(form, "none")
-    said = []
-    for i, p in enumerate(points):
-        if "label" in ceiling and len(p.label) > ceiling["label"]:
-            said.append(("label", p.label, ceiling["label"]))
-        if "value" not in ceiling:
-            continue
-        if drawn == "every" or (drawn == "last" and i == len(points) - 1):
-            if len(p.said) > ceiling["value"]:
-                said.append(("value", p.said, ceiling["value"]))
-    return said
 
 
 # ── writing an element ───────────────────────────────────────────────────────
@@ -323,18 +267,19 @@ def _ticks(low, high, step):
 # a long name, and the number sits at the end of its own bar -- close enough to
 # the mark that nobody has to read across a grid to pair them.
 
-BH_LABEL_W = 340
-BH_VALUE_W = 150
+BH_LABEL_W = 340     # the label column's CEILING -- see `_bars_h`
+BH_VALUE_W = 150     # the band the number at a bar's end is written into
 BH_GAP = 20
+BH_VALUE_GAP = 14    # from a bar's end to its own number
 
 
 def _bars_h(points):
     # THE COLUMN IS AS WIDE AS THE LONGEST NAME AND NEVER WIDER. `BH_LABEL_W`
-    # is the CEILING `_room` refuses against, not a fixed indent -- held fixed,
-    # a chart of five-letter names would open with a third of the stage empty
-    # and its bars a third shorter for nothing.
-    width = max(len(p.label) for p in points) * LABEL * ADVANCE
-    label_w = min(BH_LABEL_W, width)
+    # is the CEILING `_room_bars_h` refuses against, not a fixed indent -- held
+    # fixed, a chart of five-letter names would open with a third of the stage
+    # empty and its bars a third shorter for nothing.
+    widest = max(len(p.label) for p in points) * LABEL * ADVANCE
+    label_w = min(BH_LABEL_W, widest)
     x0 = label_w + BH_GAP
     track = PLOT_W - x0 - BH_GAP - BH_VALUE_W
     top = max(p.value for p in points)
@@ -344,8 +289,8 @@ def _bars_h(points):
     out = [_line(x0, 0, x0, PLOT_H, "axis")]
     for i, p in enumerate(points):
         middle = row * i + row / 2
-        width = float(p.value / top) * track
-        out.append(_rect(x0, middle - thick / 2, width, thick,
+        length = float(p.value / top) * track
+        out.append(_rect(x0, middle - thick / 2, length, thick,
                          "mark is-marked" if p.marked else "mark"))
         # RIGHT-ALIGNED AGAINST THE AXIS, not left against the plot's edge. A
         # column of labels set flush left leaves a gap of its own between the
@@ -354,9 +299,17 @@ def _bars_h(points):
         # own mark whatever its length.
         out.append(_text(label_w, middle, LABEL, "label", p.label,
                          anchor="end", baseline="central"))
-        out.append(_text(x0 + width + 14, middle, VALUE, "value", p.said,
+        out.append(_text(x0 + length + BH_VALUE_GAP, middle, VALUE, "value", p.said,
                          anchor="start", baseline="central"))
     return out
+
+
+def _room_bars_h(points):
+    # The longest bar ends where the track does, so its number starts there
+    # plus the gap and runs to the plot's own edge -- the two terms below are
+    # the same ones `_bars_h` subtracts to find the track.
+    return {"label": _chars(BH_LABEL_W, LABEL),
+            "value": _chars(BH_GAP + BH_VALUE_W - BH_VALUE_GAP, VALUE)}
 
 
 # ── bars-v ───────────────────────────────────────────────────────────────────
@@ -389,6 +342,12 @@ def _bars_v(points):
     return out
 
 
+def _room_bars_v(points):
+    # Both strings are centred on their own column, so the column IS the room.
+    column = PLOT_W / len(points) * 0.92
+    return {"label": _chars(column, LABEL), "value": _chars(column, VALUE)}
+
+
 # ── line and area ────────────────────────────────────────────────────────────
 # One drawing with one difference: the area closes down to the axis.
 
@@ -411,11 +370,46 @@ def _edge_anchor(i, last):
     return "start" if i == 0 else ("end" if i == last else "middle")
 
 
-def _curve(points, filled):
+def _spread(x0, x1, points, at):
+    """The points, laid across the plot at even intervals."""
+    gap = (x1 - x0) / max(1, len(points) - 1)
+    return [(x0 + gap * i, at(p.value)) for i, p in enumerate(points)]
+
+
+def _x_labels(plotted, points, y):
+    """The row of names under a curve, anchored so neither end can leave.
+
+    ONE COPY, BECAUSE THE RULER MEASURES ONE THING. `line`, `area` and
+    `sparkline` all lay this row out identically, and it is the row
+    `overlong()` computes a ceiling against -- a second copy that drifted by
+    one anchor would make that ceiling a statement about a layout only one of
+    them used.
+    """
+    end = len(points) - 1
+    return [
+        _text(x, y, LABEL, "label", p.label, anchor=_edge_anchor(i, end),
+              baseline="hanging")
+        for i, ((x, _y), p) in enumerate(zip(plotted, points))
+    ]
+
+
+def _axis(points, filled):
+    """The ticks a curve is drawn against, and the gutter they need.
+
+    BOTH THE DRAWING AND THE RULER ASK THIS ONE FUNCTION. The gutter is not a
+    constant: a tick label wider than `AX_LABEL_W` pushes the whole plot right,
+    which narrows the room every x label below has. Computed in only one of the
+    two places, the ruler would over-report that room -- and a ruler wrong in
+    the generous direction passes exactly the label it exists to refuse.
+    """
     low, high, step = scale([p.value for p in points], zero_based=filled)
     ticks = _ticks(low, high, step)
-    gutter = max(AX_LABEL_W,
-                 max(len(_tick_label(t)) for t in ticks) * LABEL * ADVANCE + 16)
+    widest = max(len(_tick_label(t)) for t in ticks) * LABEL * ADVANCE
+    return ticks, low, high, max(AX_LABEL_W, widest + 16)
+
+
+def _curve(points, filled):
+    ticks, low, high, gutter = _axis(points, filled)
     x0 = gutter + AX_INSET
     x1 = PLOT_W - AX_INSET
     y0 = 16
@@ -432,21 +426,32 @@ def _curve(points, filled):
         out.append(_text(gutter - 16, y, LABEL, "label", _tick_label(tick),
                          anchor="end", baseline="central"))
 
-    gap = (x1 - x0) / max(1, len(points) - 1)
-    plotted = [(x0 + gap * i, at(p.value)) for i, p in enumerate(points)]
+    plotted = _spread(x0, x1, points, at)
     if filled:
         out.append(f'<polygon class="area" points="'
                    + _points([(plotted[0][0], y1)] + plotted + [(plotted[-1][0], y1)])
                    + '"/>')
     out.append(f'<polyline class="line" points="{_points(plotted)}"/>')
 
-    last = len(points) - 1
-    for i, ((x, y), p) in enumerate(zip(plotted, points)):
+    for (x, y), p in zip(plotted, points):
         out.append(_dot(x, y, 10 if p.marked else 7,
                         "dot is-marked" if p.marked else "dot"))
-        out.append(_text(x, y1 + AX_GAP + 2, LABEL, "label", p.label,
-                         anchor=_edge_anchor(i, last), baseline="hanging"))
+    out.extend(_x_labels(plotted, points, y1 + AX_GAP + 2))
     return out
+
+
+def _room_curve(points, filled):
+    # THE GUTTER IS MEASURED, NOT ASSUMED. A series whose ticks run long
+    # narrows the plot, and this ruler has to see the same plot the drawing
+    # will make. When a value has not parsed the axis cannot be computed at
+    # all, and the minimum gutter is the honest fallback -- `chart-data` is
+    # already red on that source, so nothing ships on this answer.
+    if any(p.value is None for p in points):
+        gutter = AX_LABEL_W
+    else:
+        gutter = _axis(points, filled)[3]
+    span = (PLOT_W - AX_INSET) - (gutter + AX_INSET)
+    return {"label": _chars(span / max(1, len(points) - 1) * 0.92, LABEL)}
 
 
 # ── sparkline ────────────────────────────────────────────────────────────────
@@ -456,6 +461,7 @@ def _curve(points, filled):
 
 SP_PAD = 60
 SP_CALLOUT_W = 210
+SP_CALLOUT_GAP = 30    # from the last point to the number it delivers
 
 
 def _sparkline(points):
@@ -472,22 +478,26 @@ def _sparkline(points):
             return (y0 + y1) / 2
         return y1 - float((v - low) / reach) * (y1 - y0)
 
-    gap = (x1 - x0) / (len(points) - 1)
-    plotted = [(x0 + gap * i, at(p.value)) for i, p in enumerate(points)]
+    plotted = _spread(x0, x1, points, at)
     out = [f'<polyline class="line" points="{_points(plotted)}"/>']
 
     last = plotted[-1]
     out.append(_dot(last[0], last[1], 11, "dot is-marked"))
-    out.append(_text(last[0] + 30, last[1], CALLOUT, "callout", points[-1].said,
-                     anchor="start", baseline="central"))
+    out.append(_text(last[0] + SP_CALLOUT_GAP, last[1], CALLOUT, "callout",
+                     points[-1].said, anchor="start", baseline="central"))
 
-    end = len(points) - 1
-    for i, ((x, y), p) in enumerate(zip(plotted, points)):
+    for (x, y), p in zip(plotted, points):
         if p.marked:
             out.append(_dot(x, y, 10, "dot is-marked"))
-        out.append(_text(x, y1 + AX_GAP + 2, LABEL, "label", p.label,
-                         anchor=_edge_anchor(i, end), baseline="hanging"))
+    out.extend(_x_labels(plotted, points, y1 + AX_GAP + 2))
     return out
+
+
+def _room_sparkline(points):
+    span = (PLOT_W - SP_CALLOUT_W - SP_PAD) - SP_PAD
+    return {"label": _chars(span / max(1, len(points) - 1) * 0.92, LABEL),
+            # The callout starts a gap past the last point and runs to the edge.
+            "value": _chars(SP_CALLOUT_W + SP_PAD - SP_CALLOUT_GAP, CALLOUT)}
 
 
 # ── share ────────────────────────────────────────────────────────────────────
@@ -500,6 +510,7 @@ SH_BAR_Y = 26
 SH_BAR_H = 180
 SH_SEG_GAP = 6
 SH_SWATCH = 26
+SH_SWATCH_GAP = 16   # from a legend swatch to the name beside it
 SH_LABEL_Y = 288
 SH_VALUE_Y = 348
 
@@ -518,23 +529,74 @@ def _share(points):
         left = entry * i
         out.append(_rect(left, SH_LABEL_Y - SH_SWATCH / 2, SH_SWATCH, SH_SWATCH,
                          f"slice slice-{i + 1}"))
-        out.append(_text(left + SH_SWATCH + 16, SH_LABEL_Y, LABEL, "label", p.label,
-                         anchor="start", baseline="central"))
-        out.append(_text(left + SH_SWATCH + 16, SH_VALUE_Y, SHARE_VALUE, "value",
-                         f"{p.said}%", anchor="start"))
+        out.append(_text(left + SH_SWATCH + SH_SWATCH_GAP, SH_LABEL_Y, LABEL,
+                         "label", p.label, anchor="start", baseline="central"))
+        out.append(_text(left + SH_SWATCH + SH_SWATCH_GAP, SH_VALUE_Y, SHARE_VALUE,
+                         "value", f"{p.said}%", anchor="start"))
     return out
 
 
-# ── the drawing ──────────────────────────────────────────────────────────────
+def _room_share(points):
+    entry = PLOT_W / len(points) - SH_SWATCH - SH_SWATCH_GAP * 2
+    return {"label": _chars(entry, LABEL),
+            # One under, because a slice's number is drawn with its percent sign.
+            "value": max(1, _chars(entry, SHARE_VALUE) - 1)}
+
+
+# ── the table of forms ───────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class Drawing:
+    """Everything one form of chart is, in one record.
+
+    `values` says WHOSE NUMBER IS ACTUALLY DRAWN. A line and an area put every
+    value on the grid and none of them in words; a sparkline draws exactly one,
+    the last, which is the figure it exists to leave behind. Measuring a value
+    no form ever paints would be a red about nothing -- and holding the answer
+    here, beside the drawing and the room, is what stops a form from being
+    added to one table and forgotten in another.
+    """
+
+    paint: object      # points -> the SVG elements of the drawing
+    room: object       # points -> the character ceilings it leaves
+    values: str        # "every", "last" or "none"
+
 
 FORMS = {
-    "bars-h": _bars_h,
-    "bars-v": _bars_v,
-    "line": lambda points: _curve(points, filled=False),
-    "area": lambda points: _curve(points, filled=True),
-    "sparkline": _sparkline,
-    "share": _share,
+    "bars-h": Drawing(paint=_bars_h, room=_room_bars_h, values="every"),
+    "bars-v": Drawing(paint=_bars_v, room=_room_bars_v, values="every"),
+    "line": Drawing(paint=lambda p: _curve(p, filled=False),
+                    room=lambda p: _room_curve(p, filled=False), values="none"),
+    "area": Drawing(paint=lambda p: _curve(p, filled=True),
+                    room=lambda p: _room_curve(p, filled=True), values="none"),
+    "sparkline": Drawing(paint=_sparkline, room=_room_sparkline, values="last"),
+    "share": Drawing(paint=_share, room=_room_share, values="every"),
 }
+
+
+def overlong(form, points):
+    """Every drawn string this form has no room for: (kind, text, ceiling).
+
+    THIS IS THE HOLE SVG LEAVES OPEN AND NOTHING ELSE CLOSES. A label wider
+    than its slot does not wrap and does not error -- it runs under its
+    neighbour, or off the plot's own edge where the clipping hides it from
+    every ruler that measures against the stage. Refusing it in the source is
+    the only place it can be caught, and it is catchable at all only because
+    the chart's text is set in the mono face.
+    """
+    drawing = FORMS[form]
+    ceiling = drawing.room(points)
+    over = []
+    for i, p in enumerate(points):
+        if "label" in ceiling and len(p.label) > ceiling["label"]:
+            over.append(("label", p.label, ceiling["label"]))
+        if "value" not in ceiling:
+            continue
+        if drawing.values == "every" or (drawing.values == "last"
+                                         and i == len(points) - 1):
+            if len(p.said) > ceiling["value"]:
+                over.append(("value", p.said, ceiling["value"]))
+    return over
 
 
 def draw(form, points):
@@ -545,6 +607,6 @@ def draw(form, points):
     it costs nothing on the stage, where the same numbers are already painted.
     """
     said = ", ".join(f"{p.label} {p.said}" for p in points)
-    body = "".join(FORMS[form](points))
+    body = "".join(FORMS[form].paint(points))
     return (f'<svg class="plot" viewBox="0 0 {PLOT_W} {PLOT_H}" role="img" '
             f'aria-label="{html.escape(said, quote=True)}">{body}</svg>')

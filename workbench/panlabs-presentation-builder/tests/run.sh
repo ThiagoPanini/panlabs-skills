@@ -32,9 +32,13 @@
 # VERBATIM: the CDP client itself (already living in the skill as
 # `gate/cdp.cjs` since #208), the network watch over CDP, and the platform-
 # font read (`CSS.getPlatformFontsForNode`, the one thing page JS cannot
-# answer on its own). Box overflow is NOT the old per-chart pixel bleed --
-# v2 has no chart yet (#213), so it is a straight rect comparison against the
-# stage's own edges, in CSS pixels, over every leaf of real text. The other
+# answer on its own). Box overflow is NOT the old per-chart pixel bleed: it is
+# a straight rect comparison against the stage's own edges, in CSS pixels, over
+# every leaf of real text -- and now that #213 has landed charts, that is what
+# measures them too, because the generator never places a mark by hand. What
+# the charts DID add to this layer is the type floor learning about scale: an
+# SVG label paints at its own size times its viewBox's, and the proof halves a
+# real chart's viewBox to demand the ruler notice. The other
 # four families the v1 measured (legibility contrast, surface inversion,
 # line-count outliers, stacking order) have no v2 equivalent: the current
 # engine doesn't yet have the constructs they were measuring (a card grid, a

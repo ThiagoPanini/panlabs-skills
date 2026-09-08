@@ -148,7 +148,25 @@ function pageMeasureFn() {
       if (!ownText.trim()) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 2 || r.height < 2) continue;
-      leaves.push({ sel: describe(el), rect: rectOf(el), fontSizePx: parseFloat(cs.fontSize) });
+      // SVG TEXT PAINTS AT ITS OWN SIZE TIMES ITS VIEWBOX'S SCALE, and
+      // getComputedStyle only ever reports the first of the two (#213). A
+      // chart label declaring 24px inside a box drawn at half scale reaches
+      // the room at 12, and the type-floor ruler would have called it 24 and
+      // passed it. getBoundingClientRect already accounts for the transform,
+      // so only the font size needs the correction -- and today's charts are
+      // drawn at scale 1 by construction, which makes this a guard against a
+      // future viewBox rather than a fix for a defect in the tree.
+      let scale = 1;
+      if (el.ownerSVGElement && typeof el.getScreenCTM === 'function') {
+        const m = el.getScreenCTM();
+        if (m) {
+          const area = Math.abs(m.a * m.d - m.b * m.c);
+          if (area > 0) scale = Math.sqrt(area);
+        }
+      }
+      leaves.push({
+        sel: describe(el), rect: rectOf(el), fontSizePx: parseFloat(cs.fontSize) * scale,
+      });
     }
   }
   return { stage, pageNumber, leaves };

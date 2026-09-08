@@ -13,7 +13,7 @@ O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inl
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **dezesseis padrões** hoje — sete de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), e agora duas colunas, três colunas, comparação e lista com ícones. Faltam dois — o gráfico com título-tese e a figura sob medida —, mais as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos, que chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo tem **dezessete padrões** hoje — sete de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, e agora o gráfico com título-tese em seis formas. Falta um — a figura sob medida —, mais as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos, que chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## O dialeto
 
@@ -39,9 +39,11 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
 
 **Um padrão pode carregar um grupo**, que é uma série ao invés de um fato só — a métrica que se repete, o marco da linha do tempo, a linha da tabela. Um grupo é um `<ul>`, um `<ol>` ou um `<table>` — sem `class=`, porque a própria tag já diz o que é —, e cada item dentro dele (um `<li>`, ou uma `<tr>` de tabela) carrega seus próprios campos do mesmo jeito que um slide carrega slots: um `<p>` por campo, o nome do campo na `class=`. Um marco da linha do tempo aceita ainda `<li now>`, para marcar o momento presente.
 
+**O gráfico é o grupo que o compilador desenha em vez de imprimir.** A `<section pattern="chart">` carrega um `type=` a mais — `bars-h`, `bars-v`, `line`, `area`, `sparkline` ou `share` —, a tese no `title`, a unidade no `unit`, a fonte com data no `source`, e a série num `<ul>` de `<li>` com `label` e `value`; `<li mark>` põe a cor de acento no ponto que o slide é sobre. O que sai é SVG gerado por [`compiler/charts.py`](compiler/charts.py), sem `<canvas>` e sem biblioteca, com **nenhuma cor escrita dentro dele** — a marca leva uma classe, o tema pinta. O valor é um número puro, dígitos com vírgula decimal, desenhado exatamente como foi escrito: a unidade mora no `unit`, negativo reprova, e numa proporção os valores têm de somar cem.
+
 **O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot, quantas palavras o slide inteiro pode gastar e, quando houver, o grupo que carrega. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
 
-[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones.
+[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico.
 
 ## Construir
 
@@ -63,13 +65,18 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
    ✓ vocabulary · every pattern, class and tag in the source is one the catalog declares
    ✓ word-budget · no slide spends more words than its pattern budgets
    ✓ category-title · every claim on the stage makes a point, not a category
-   ✓ repeated-pattern · no pattern runs on two slides in a row
+   ✓ repeated-pattern · no slide takes the same shape as the one before it
    ✓ icon-known · every icon a slide names is one the vendored Lucide set carries
    ✓ icon-paired · a slot never appears without the one it is paired with
-   6 rulers, green
+   ✓ chart-data · every value a chart draws is a number, and a share adds up
+   ✓ chart-source · every chart says where its number came from, and when
+   ✓ chart-fit · every label a chart draws fits the room its form gives it
+   9 rulers, green
 ```
 
-**Uma régua lê o dialeto e cinco leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras cinco construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, o mesmo padrão em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, e um item de lista com o ícone e sem o texto ou vice-versa. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=` e conferir um nome contra um registro não precisa de navegador.
+**Uma régua lê o dialeto e oito leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, a mesma forma em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, um item de lista com o ícone e sem o texto ou vice-versa, um valor de gráfico que não é número ou uma proporção que não soma cem, um gráfico cuja fonte não diz de quando é o dado, e um rótulo maior do que o espaço que a forma dá a ele. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=`, conferir um nome contra um registro e somar uma coluna de números não precisa de navegador.
+
+**A forma do gráfico conta como forma.** Dois slides seguidos de `pattern="chart"` passam quando o `type=` difere — barra depois de linha não é um slide que deixou de avançar —, e reprovam quando é o mesmo.
 
 **Laudo vermelho não escreve arquivo nenhum.** Meio deck no disco é pior do que nenhum, porque parece pronto. Cada linha vermelha nomeia o conserto no imperativo — `drop the class "highlight" — the pattern "full-bleed-statement" declares one slot: statement` —, e consertar é ida e volta de máquina: corrija a fonte e rode de novo, sem trazer isso para o humano.
 
@@ -132,5 +139,7 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser ver os quatro padrões que carregam uma série numa fonte só | [`examples/evidence.deck.html`](examples/evidence.deck.html) |
 | quiser ver colunas, comparação e lista com ícones numa fonte só | [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) |
 | for escolher um ícone, ou conferir a licença do conjunto | [`themes/base/icons/`](themes/base/icons/) |
+| for escolher a forma de um gráfico, ou ver as seis numa fonte só | [`examples/charts.deck.html`](examples/charts.deck.html) |
+| quiser saber como um gráfico é desenhado, ou por que um rótulo não coube | [`compiler/charts.py`](compiler/charts.py) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

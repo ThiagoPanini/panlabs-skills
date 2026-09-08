@@ -42,6 +42,14 @@ const { findChrome } = require(path.join(SKILL, 'gate', 'cdp.cjs'));
 let REAL_PATH = null;
 let REAL_HTML = null;
 
+// The chart deck is a SECOND fixture and not a seventh case on the first one,
+// because a plant has to differ from the page it was planted into: measured
+// against the statement deck, "this chart's HTML is not that deck's HTML"
+// would pass the `planted` assertion without changing anything at all. Its own
+// real bytes and its own green control are what keep all four assertions real.
+let CHART_PATH = null;
+let CHART_HTML = null;
+
 function _real() {
   return REAL_HTML;
 }
@@ -60,9 +68,9 @@ async function _measureWithRetry(filePath, attempt = 1) {
   }
 }
 
-async function _measurePlanted(html) {
+async function _measurePlanted(html, from) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'panlabs-render-proof-'));
-  const tmpFile = path.join(dir, path.basename(REAL_PATH));
+  const tmpFile = path.join(dir, path.basename(from || REAL_PATH));
   fs.writeFileSync(tmpFile, html);
   try {
     return await _measureWithRetry(tmpFile);
@@ -158,6 +166,26 @@ function plantMovingPageNumber() {
   return withSecondSlide.replace('</style>', `${rule}</style>`);
 }
 
+// --------------------------------------------------------------------------
+// 7 - type-floor, through a viewBox (#213)
+// --------------------------------------------------------------------------
+// THE ONE DEFECT getComputedStyle CANNOT SEE. A chart's text lives inside a
+// viewBox, so what it paints is its declared size TIMES the box's scale;
+// doubling the viewBox against the same CSS box halves everything drawn in it,
+// and every label that declared 24px reaches the room at 12. Before the gate
+// multiplied by the element's own CTM this planted page was GREEN -- the ruler
+// read the 24 the author wrote and never the 12 the room got.
+const VIEWBOX = /viewBox="0 0 (\d+) (\d+)"/;
+
+function plantShrunkViewBox() {
+  const m = CHART_HTML.match(VIEWBOX);
+  if (!m) throw new Drifted('no chart viewBox found to halve');
+  // The aspect ratio is kept, so the box still fits its CSS size exactly and
+  // the ONLY thing that changed is the scale everything inside it is drawn at.
+  const wide = `viewBox="0 0 ${Number(m[1]) * 2} ${Number(m[2]) * 2}"`;
+  return CHART_HTML.split(m[0]).join(wide);
+}
+
 // The asserted phrase is always the FIX and never the diagnosis, same rule
 // proof_driver.py/check-audit.proof.py already spend: "under the 40% floor"
 // is a diagnosis and leaves the reader to guess what to do; "give the slide
@@ -181,6 +209,12 @@ const CASES = [
 
   ['page-number', 'duplicates the slide and moves the footer on the second one',
     plantMovingPageNumber, 'drop whatever moved the page number'],
+];
+
+// The chart deck's own case, against the chart deck's own control.
+const CHART_CASES = [
+  ['type-floor', "doubles the chart's viewBox, halving every label it draws",
+    plantShrunkViewBox, 'raise'],
 ];
 
 async function main(argv) {
@@ -228,9 +262,25 @@ async function main(argv) {
   REAL_PATH = path.join(dir, chosen);
   REAL_HTML = fs.readFileSync(REAL_PATH, 'utf8');
 
+  // The same rule one line down: the chart case needs a page that HAS a chart
+  // on it, and the alphabet is not what decides which file that is.
+  const drawn = (f) => fs.readFileSync(path.join(dir, f), 'utf8').includes('<svg class="plot"');
+  const charted = files.find(drawn);
+  if (!charted) {
+    return new Proof({ title: 'render.proof' }).refuse(
+      `build a source with a chart slide into --corpus ${dir} — the viewBox `
+      + 'plant needs a page that carries an <svg class="plot"> to halve, and no '
+      + 'built page there has one'
+    );
+  }
+  CHART_PATH = path.join(dir, charted);
+  CHART_HTML = fs.readFileSync(CHART_PATH, 'utf8');
+
   let GREEN;
+  let CHART_GREEN;
   try {
     GREEN = await _measureWithRetry(REAL_PATH);
+    CHART_GREEN = await _measureWithRetry(CHART_PATH);
   } catch (e) {
     return new Proof({ title: 'render.proof' }).refuse(`could not measure the real corpus: ${e.message}`);
   }
@@ -256,16 +306,35 @@ async function main(argv) {
     },
   });
 
-  let bad = await PROOF.run(CASES);
+  const CHART_PROOF = new Proof({
+    title: 'render.proof · over the chart deck',
+    label: (ruler) => ruler,
+    invoke: async (ruler, html) => {
+      const measured = await _measurePlanted(html, CHART_PATH);
+      const fails = gate.BY_NAME[ruler](measured);
+      return [fails.length === 0, summarize(fails) || '(no message)'];
+    },
+    planted: (html) => html !== CHART_HTML,
+    control: async (ruler) => {
+      const fails = gate.BY_NAME[ruler](CHART_GREEN);
+      return [fails.length === 0, summarize(fails)];
+    },
+  });
 
-  const covered = new Set(CASES.map((c) => c[0]));
+  let bad = await PROOF.run(CASES);
+  console.log();
+  bad += await CHART_PROOF.run(CHART_CASES);
+
+  const all = CASES.concat(CHART_CASES);
+  const covered = new Set(all.map((c) => c[0]));
   const uncovered = gate.RULERS.map((r) => r.name).filter((n) => !covered.has(n));
+  console.log();
   if (uncovered.length) {
     console.log(`  FAIL coverage            no defect planted for: ${uncovered.join(', ')}. `
       + 'Add a case to CASES for each');
     bad += 1;
   } else {
-    console.log(`  ok   coverage            ${CASES.length} planted defects over all `
+    console.log(`  ok   coverage            ${all.length} planted defects over all `
       + `${gate.RULERS.length} rulers, against the real corpus`);
   }
   return bad;

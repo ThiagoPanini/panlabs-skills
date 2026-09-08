@@ -38,10 +38,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
+import charts                                                   # noqa: E402
 import icons                                                    # noqa: E402
 from audit import audit, report                                # noqa: E402
-from catalog import (DECK_FIELDS, ICON, SLOT_TAG, group_of, is_table,  # noqa: E402
-                     role_of_element, slot_specs)
+from catalog import (DECK_FIELDS, ICON, SLOT_TAG, chart_of, group_of,  # noqa: E402
+                     is_table, role_of_element, slot_specs)
 from source import Refused, inline_markup, plain_text, read     # noqa: E402
 
 THEMES = os.path.join(ROOT, "themes")
@@ -112,7 +113,11 @@ def group_markup(container, group):
     for item in container.elements():
         if item.tag != group.item:
             continue
-        now = " now" if group.now_flag and "now" in item.attrs else ""
+        # THE REGISTER NAMES THE WORD AND THIS WRITES IT BACK OUT. `Group.flag`
+        # is the one place the attribute is spelled (#213 generalised #212's
+        # hard-coded "now"), and the stage reads the same word off the emitted
+        # `<li>` -- `li[now]` in compiler/stage.html is the other end of it.
+        flag = f" {group.flag}" if group.flag and group.flag in item.attrs else ""
         fields = {el.attrs.get("class", "").strip(): el for el in item.elements()}
         cells = "".join(
             f'<{SLOT_TAG} class="{f.name}" data-role="{f.role}">'
@@ -120,7 +125,7 @@ def group_markup(container, group):
             for f in group.fields
             if f.name in fields
         )
-        items.append(f"<{group.item}{now}>{cells}</{group.item}>")
+        items.append(f"<{group.item}{flag}>{cells}</{group.item}>")
     return f'<{group.container}>{"".join(items)}</{group.container}>'
 
 
@@ -179,6 +184,13 @@ def slide_markup(slide, index):
     place it by -- and every pattern that has one writes its evidence after
     the claim that frames it, never before.
 
+    A CHART'S GROUP IS DRAWN, NOT PRINTED (#213). The same `<ul>` every other
+    group reaches the page as goes to `compiler/charts.py` instead, and what
+    lands is the SVG it returns -- the numbers are on the stage as marks and
+    as the text beside them, and the list they were written in has no second
+    job. The form travels onto the section as `data-chart=` for the same
+    reason `data-pattern=` does: the built page should say what it is.
+
     AN ICON SLOT PRINTS NO TEXT, EVER. Its content is a Lucide name -- furniture
     for the sprite this same build already validated and embedded, never a
     sentence the audience reads -- so it renders as a `<use>` reference instead
@@ -209,16 +221,22 @@ def slide_markup(slide, index):
 
     body = [one(slot) for slot in slot_specs(pattern) if slot.name in written]
 
+    chart = chart_of(pattern)
     group = group_of(pattern)
-    if group and container is not None:
+    form = ""
+    if chart and container is not None:
+        form = slide.attrs.get(chart.attribute, "").strip()
+        body.append(charts.draw(form, charts.series(container, group)))
+    elif group and container is not None:
         body.append(group_markup(container, group))
     elif is_table(pattern) and container is not None:
         body.append(table_markup(container))
 
     current = " is-current" if index == 0 else ""
+    drawn = f' data-chart="{html.escape(form, quote=True)}"' if form else ""
     return (
         f'<section class="slide{current}" data-pattern="{html.escape(pattern)}"'
-        f' aria-label="slide {index + 1}">\n'
+        f'{drawn} aria-label="slide {index + 1}">\n'
         + "\n".join(body)
         + "\n</section>"
     )

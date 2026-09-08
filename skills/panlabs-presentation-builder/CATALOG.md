@@ -12,13 +12,15 @@
 
 **Um ícone é o nome de um slot, nunca um atributo.** O slot de papel **ícone** carrega só o nome Lucide como texto — `<p class="item-1-icon">circle-check</p>` — porque a mesma regra de sempre vale aqui: um slot carrega `class=` e nada mais. O compilador confere o nome contra o conjunto vendorizado em [`themes/base/icons/`](themes/base/icons/) e escreve, na página construída, só os ícones que o deck de fato usa — nunca o conjunto inteiro. A licença do conjunto está ao lado, em [`themes/base/icons/LICENSE`](themes/base/icons/LICENSE).
 
-[`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/statement.deck.html`](examples/statement.deck.html) é a afirmação de tela cheia sozinha; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones. Os quatro compilam pelo comando documentado no [`SKILL.md`](SKILL.md).
+**O gráfico é um grupo que o compilador desenha em vez de imprimir (#213).** Você escreve a tese, a unidade, a fonte datada e a série — rótulo e valor por ponto —, e a `<section>` ganha um `type=` a mais dizendo em que forma. O que chega à página é um SVG gerado, e a medição do [#94](https://github.com/ThiagoPanini/panlabs-skills/issues/94) é o motivo de ser assim: o mesmo gráfico de barras custou 30 linhas e 79 coordenadas escritas à mão contra duas linhas de dado por um gerador, e o eixo do gerador saiu melhor do que o da mão. **Nenhuma cor é escrita no SVG** — cada marca leva uma classe, e o tema pinta; é assim que o mesmo gráfico troca de identidade junto com o deck. **Um valor é um número puro**, dígitos com vírgula decimal: a unidade mora no slot `unit`, e o número é desenhado exatamente como foi escrito. **Rótulo tem largura máxima**, porque SVG não mede texto e um rótulo comprido não quebra linha nem reclama — ele passa por baixo do vizinho ou sai pela borda; o compilador recusa antes, dizendo em quantos caracteres ele cabe.
+
+[`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/statement.deck.html`](examples/statement.deck.html) é a afirmação de tela cheia sozinha; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico. Os cinco compilam pelo comando documentado no [`SKILL.md`](SKILL.md).
 
 <!-- catalog:begin -->
 
 O cabeçalho é o próprio `<deck>`, e os cinco campos são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`. Um slot é um `<p>` com o nome do slot na `class=` e nada mais. O vocabulário de ênfase inline fecha em três marcações: `<strong>` e `<mark>`, sempre disponíveis, e `<br/>` (quebra forçada), disponível só nos padrões que o dizem.
 
-São 16 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
+São 17 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
 
 ### `cover-headline` · até 25 palavras
 
@@ -108,6 +110,36 @@ Uma tabela com cabeçalho obrigatório e até seis linhas ao todo, cabeçalho in
 | `claim` | afirmação | sim | o que a tabela prova |
 
 Um `<table>` sem `class=`, com um `<thead>` de um `<tr>` de `<th>` (o cabeçalho, obrigatório) e um `<tbody>` de um a 5 `<tr>` de `<td>` — 6 linhas ao todo, cabeçalho incluído, e toda linha do corpo com o mesmo número de células que o cabeçalho.
+
+### `chart` · até 60 palavras
+
+Um gráfico desenhado a partir dos dados escritos no próprio slide, com título-tese e fonte datada.
+
+| slot | papel | obrigatório | o que vai nele |
+| --- | --- | --- | --- |
+| `title` | afirmação | sim | a tese que o gráfico prova — com verbo ou número |
+| `unit` | metadado | sim | em que unidade os valores estão, ou o que os cem por cento somam |
+| `source` | metadado | sim | de onde veio o dado, e quando foi medido — a data é obrigatória |
+
+De 2 a 12 `<li>` dentro de um `<ul>`, sem `class=` em nenhum dos dois — cada `<li>` é um ponto da série, com seu `label` e seu `value`. `<li mark>` marca o ponto que o slide é sobre, na cor de acento, em no máximo um `<li>`.
+
+| campo | papel | obrigatório | o que vai nele |
+| --- | --- | --- | --- |
+| `label` | nome | sim | o nome do ponto |
+| `value` | número | sim | o número do ponto — dígitos, com vírgula decimal e sem unidade |
+
+A série não é impressa, é desenhada: a `<section>` carrega um `type=` a mais, que diz em que forma. São 6 formas, e cada uma tem a sua faixa de pontos — fora dela a construção recusa.
+
+| `type=` | pontos | o que desenha |
+| --- | --- | --- |
+| `bars-h` | 2 a 6 | barras horizontais — cada rótulo tem uma coluna só dele, e é a forma que aceita rótulo longo |
+| `bars-v` | 2 a 8 | barras verticais — o rótulo fica sob a coluna, e por isso precisa ser curto |
+| `line` | 3 a 8 | uma linha sobre uma grade com eixo, para a evolução de uma medida no tempo |
+| `area` | 3 a 8 | a mesma linha com a área preenchida até o zero, para volume em vez de posição |
+| `sparkline` | 4 a 12 | a linha sem eixo nem grade, com o último valor em destaque — a tendência, e um número |
+| `share` | 2 a 3 | uma barra empilhada de fatias que somam cem, uma por cor que o tema empresta |
+
+Todo valor é um número — dígitos, com vírgula decimal e nada mais: a unidade mora no slot `unit`, e o número é desenhado do jeito que foi escrito. Negativo recusa. Numa forma de proporção (`share`) os valores têm de somar exatamente 100.
 
 ### `full-bleed-statement` · até 12 palavras
 

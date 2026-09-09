@@ -148,11 +148,6 @@ def build(text, assets=(), theme=None):
     return ok, said
 
 
-def _storyboard(text, assets=(), theme=None):
-    """The page written beside the deck, for a case that asks what it says."""
-    return _run(text, assets, theme)[3]
-
-
 def block(title, real, cases, width, theme=None):
     """One fixture's worth of cases, sharing one green control.
 
@@ -230,9 +225,10 @@ def figure_block(title, cases, width):
 
 # ── #217's needles: the art direction, and the arc it promises ───────────────
 # THE HEADER'S SECOND HALF, EXACTLY AS THE STATEMENT DECK WRITES IT. It is the
-# smallest direction in the corpus -- eight choices, five of them prose -- and
-# planting into a two-slide deck is what keeps a red about the header a red
-# about the header alone: there is no arc there to also be wrong about.
+# smallest direction the register admits -- the eight required choices, three of
+# them prose and five drawn from a closed set -- and planting into a two-slide
+# deck is what keeps a red about the header a red about the header alone: there
+# is no arc there to also be wrong about.
 DIRECTION = """  <direction>
     <p class="cover">cover-headline</p>
     <p class="signature">nenhuma — este deck é curto demais para um motivo voltar</p>
@@ -712,11 +708,8 @@ def the_photograph_is_not_a_moment():
     beside the deck marks the peaks the ruler counted, from the same list -- so
     two marks in the storyboard is the second half of "the deck holds two".
     """
-    ok, said, _, _ = _run(FIGURE_SOURCE, GOOD_ASSETS)
-    board = None
+    ok, said, _, board = _run(FIGURE_SOURCE, GOOD_ASSETS)
     figures = (FIGURE_SOURCE or "").count('<section pattern="figure-caption"')
-    if ok:
-        board = _storyboard(FIGURE_SOURCE, GOOD_ASSETS)
     marked = (board or "").count("· momento")
     good = ok and figures == 3 and marked == 2
     marks = f"[{'+' if ok else '-'}{'+' if figures == 3 and marked == 2 else '-'}]"
@@ -1353,6 +1346,14 @@ def main():
                  '<p class="renounced-1">cover-headline</p>'),
             'stop renouncing "cover-headline"',
         ),
+        (
+            "renouncing the closing",
+            "the one contradiction no source could answer: the doctrine "
+            "requires the shape the header gave up",
+            swap(STATEMENT_SOURCE, '<p class="renounced-1">chart</p>',
+                 '<p class="renounced-1">closing-call</p>'),
+            'stop renouncing "closing-call"',
+        ),
     ], width=26)
 
     print()
@@ -1397,6 +1398,17 @@ def main():
             "six peaks on a profile the scale is not lent to",
             swap(CHARTS_SOURCE, 'motion="cinematic"', 'motion="editorial"'),
             'write motion="cinematic" on the <deck>',
+        ),
+    ], width=26)
+
+    print()
+    failed += block("a chart spends colour too (#217)", CHARTS_SOURCE, [
+        (
+            "a chart, and no semantics",
+            "six charts drawn in two borrowed colours the header never explains",
+            cut(CHARTS_SOURCE, r'\s*<p class="content-1">.*?</p>',
+                "the meaning of --content-1"),
+            "say what --content-1 means in this deck",
         ),
     ], width=26)
 

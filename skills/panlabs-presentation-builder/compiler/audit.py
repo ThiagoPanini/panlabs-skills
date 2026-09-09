@@ -841,6 +841,16 @@ def _slide(node, n):
 # -- a pattern, evidence, notes, fragments -- taken out, rather than a second
 # dialect grown beside the first.
 #
+# AND IT REPEATS `_slide`'S OPENING CASCADE RATHER THAN SHARING IT, WHICH WAS
+# WEIGHED. The two walks look alike -- loose text, a tag that is not `<p>`, an
+# attribute nobody declared, two classes on one name -- but every branch differs
+# in what it PERMITS: a slot may carry the bare `step` and a choice may not, a
+# slide's prose may force a line where its pattern allows it and a header's
+# never may, a slide names its slots from a pattern and a header names its
+# choices from the register. A shared helper would take four flags to say that,
+# and a helper with a flag per caller is two functions wearing one name. The
+# duplication that stayed is a shape; the rules underneath it are not shared.
+#
 # A NAME FROM A CLOSED SET IS HELD TO IT; PROSE IS HELD TO BEING THERE. The
 # cover, the scale and the three renunciations name something this register
 # knows, and a stranger among them is a direction pointing at nothing. The
@@ -949,11 +959,16 @@ def _direction(node):
                 "with one of: " + ", ".join(choice.options)
             )
 
-    # AND THE TWO WAYS THE DIRECTION CAN CONTRADICT ITSELF. Three renunciations
-    # that name the same pattern are one renunciation written three times, and a
-    # deck that renounces the cover it declared has given up the slide it opens
-    # on -- both build a deck nobody could have meant, and neither is visible to
-    # any ruler reading the SLIDES.
+    # AND THE THREE WAYS THE DIRECTION CAN CONTRADICT ITSELF. Three renunciations
+    # that name the same pattern are one renunciation written three times; a deck
+    # that renounces the cover it declared has given up the slide it opens on;
+    # and a deck that renounces the closing has given up the slide the doctrine
+    # requires. None of the three is visible to any ruler reading the SLIDES --
+    # and the third is worse than incoherent, it is UNSATISFIABLE: `_arc_closing`
+    # demands a closing at the end and `_renounced_pattern` refuses the very same
+    # slide, so the build has two reds and no source can answer both. A refusal
+    # whose fix does not exist is the one shape of red this file must never
+    # print, so it is caught here, where the fix is one word in the header.
     given_up = [said.get(n, "") for n in RENOUNCE_CHOICES]
     for name in sorted({p for p in given_up if p and given_up.count(p) > 1}):
         fixes.append(
@@ -967,6 +982,11 @@ def _direction(node):
         fixes.append(
             f'{at}: stop renouncing "{cover}" — it is the cover this direction '
             "declared, and a deck cannot open on a pattern it gave up"
+        )
+    for name in sorted(set(given_up) & set(closings())):
+        fixes.append(
+            f'{at}: stop renouncing "{name}" — every deck ends on a closing, so '
+            "a deck that gives that shape up is a deck no source can satisfy"
         )
     return fixes
 
@@ -1480,6 +1500,10 @@ def _moment_scale(deck, theme):
     scale = scale_of(said.get(MOMENTS_CHOICE, ""))
     if scale is None:
         return []
+    # ENGLISH, AND NOT `Scale.span`. That property is the Portuguese the
+    # reference and the storyboard publish for a person to read; this is a fix
+    # the compiler PRINTS, and CLAUDE.md's seam runs between the two. The
+    # register is still the only place the numbers live.
     span = (f"{scale.minimum} to {scale.maximum}" if scale.maximum is not None
             else f"{scale.minimum} or more")
 
@@ -1518,6 +1542,23 @@ def _moment_scale(deck, theme):
 
 
 def _colour_semantics(deck, theme):
+    """Every content colour a slide spends, held to a meaning the header gave it.
+
+    A COLOUR IS SPENT TWO WAYS, AND BOTH COUNT. A drawing is the one place an
+    author writes a colour by hand, and `figures.paints` reads it back off the
+    element -- that half is exact, down to the attribute. A CHART spends colour
+    without anybody typing one: `compiler/stage.html` draws its marks, its line,
+    its area and its slices out of the two the theme lends, and the room sees
+    them exactly as it sees a figure's. `Chart.content` is where the register
+    says which, and it says both rather than which-form-reaches-which, for the
+    reason written beside it.
+
+    LEAVING THE CHART OUT WAS THE FIRST CUT AT THIS, AND IT WAS WRONG. It made
+    the ruler exact and made the promise empty: a deck of six charts spends both
+    colours across every slide, declares neither, and would have gone green on
+    the pattern #207's own user story ("a mesma cor marque a mesma coisa do
+    começo ao fim, para ler o deck pela cor sem legenda") is most about.
+    """
     said = _direction_said(deck)
     if said is None:
         return []
@@ -1531,22 +1572,36 @@ def _colour_semantics(deck, theme):
     # eight strokes in the same undeclared colour is one mistake, not eight.
     fixes = []
     told = set()
+
+    def charge(n, node, token, instead):
+        """One red per colour, naming the first slide that spends it.
+
+        The fix is a single line in the header whatever the count, so a drawing
+        that paints eight strokes in the same undeclared colour is one mistake
+        and not eight -- and a deck of six charts spending the same two is two.
+        """
+        choice = lent.get(token)
+        if choice is None or said.get(choice.name) or choice.token in told:
+            return
+        told.add(choice.token)
+        fixes.append(
+            f'{_at(n, node)}: say what {choice.token} means in this deck, with a '
+            f'<{SLOT_TAG} class="{choice.name}"> in the <{DIRECTION_TAG}>, or '
+            f"{instead} — the theme lends two content colours and the direction "
+            "is where each one is given its meaning, once, for the whole deck"
+        )
+
     for n, node in enumerate(deck.sections, start=1):
         for figure, el in _figures_of_slide(node):
             if el.tag != figure.drawn:
                 continue
             for tag, key, value in figures.paints(el, figure):
-                choice = lent.get(figures.token(value.strip()))
-                if choice is None or said.get(choice.name) or choice.token in told:
-                    continue
-                told.add(choice.token)
-                fixes.append(
-                    f'{_at(n, node)}: say what {choice.token} means in this deck, '
-                    f'with a <{SLOT_TAG} class="{choice.name}"> in the '
-                    f"<{DIRECTION_TAG}>, or repaint the {key} of the <{tag}> — "
-                    "the theme lends two content colours and the direction is "
-                    "where each one is given its meaning, once, for the whole deck"
-                )
+                charge(n, node, figures.token(value.strip()),
+                       f"repaint the {key} of the <{tag}>")
+        chart = chart_of(node.attrs.get("pattern", ""))
+        if chart:
+            for token in chart.content:
+                charge(n, node, token, "draw this slide some other way")
     return fixes
 
 

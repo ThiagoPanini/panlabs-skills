@@ -112,12 +112,14 @@ def render(deck, theme, moments):
         # being told.
         printed = f"`{value}`" if choice.options else cell(value)
         if choice.name == MOMENTS_CHOICE:
+            # THE RANGE IS THE REGISTER'S TO WRITE, not this page's. `Scale.span`
+            # is the one place it is spelled in Portuguese, and CATALOG.md's own
+            # table of scales prints the same property -- the reference and the
+            # storyboard saying a range two different ways would be two ends of
+            # one contract, over a string a reader compares by eye.
             scale = scale_of(value)
             if scale:
-                span = (f"{scale.minimum} a {scale.maximum}"
-                        if scale.maximum is not None
-                        else f"{scale.minimum} ou mais")
-                printed += f" — {span}, e este deck tem {len(moments)}"
+                printed += f" — {scale.span}, e este deck tem {len(moments)}"
         lines.append(f"| {choice.label} | {printed} |")
 
     lines += [
@@ -131,8 +133,14 @@ def render(deck, theme, moments):
         pattern = slide.attrs.get("pattern", "")
         arc = slide.attrs.get(ARC_ATTR, "").strip()
         shape = f"`{pattern}`" + (" · momento" if n in moments else "")
+        # SUBSCRIPTED, NOT `.get`, FOR THE SAME REASON THE HEADER IS READ
+        # STRAIGHT. The vocabulary ruler refuses a `<section>` whose `arc=` is
+        # missing or is not one of the six, so by the time this runs every slide
+        # has a label. A fallback here would print the English identifier into a
+        # Portuguese table and call it a row -- silence where a KeyError would
+        # have named a broken check.
         lines.append(
-            f"| {n} | {ARC_LABEL.get(arc, arc)} | {shape} | {cell(message(slide))} |"
+            f"| {n} | {ARC_LABEL[arc]} | {shape} | {cell(message(slide))} |"
         )
     lines.append("")
     return "\n".join(lines)

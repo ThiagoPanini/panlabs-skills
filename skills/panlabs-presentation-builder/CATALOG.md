@@ -302,7 +302,7 @@ A capa sai destes padrões: `cover-headline`, `cover-numbered`.
 | `standard` | 3 a 5 | de três a cinco — o ritmo padrão, com pico e respiro |
 | `high` | 6 ou mais | seis ou mais, e só com `motion="cinematic"` — o palco assumido, nunca o acidente |
 
-As duas cores de conteúdo são as únicas que o tema empresta além do acento, e a direção diz o que cada uma significa neste deck. Uma figura que pinte com uma cor que a direção não declarou reprova a construção — é assim que a mesma cor marca a mesma coisa do primeiro slide ao último.
+As duas cores de conteúdo são as únicas que o tema empresta além do acento, e a direção diz o que cada uma significa neste deck. Um slide que gaste uma cor que a direção não declarou reprova a construção — uma figura pintada com ela, e também um gráfico, que o palco desenha nas duas sem ninguém escrever cor nenhuma. É assim que a mesma cor marca a mesma coisa do primeiro slide ao último.
 
 ### A função no arco
 

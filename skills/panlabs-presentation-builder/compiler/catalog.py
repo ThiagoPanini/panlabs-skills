@@ -260,6 +260,20 @@ class Chart:
     attribute: str    # the <section> attribute that names the form: "type"
     forms: tuple      # the ChartForm(s), in the order the reference publishes
     total: int = 100  # what a proportion form's values have to add up to
+    # WHAT THE STAGE SPENDS DRAWING ONE (#217), AND WHY IT IS A PATTERN-WIDE
+    # ANSWER RATHER THAN A PER-FORM ONE. `compiler/stage.html` paints a mark, a
+    # dot, a line, an area and a slice out of these two tokens, and WHICH of them
+    # a given slide reaches depends on the form AND on whether a point is
+    # marked -- a line with no mark touches only the first. Naming that exactly
+    # would mean a copy of that cascade living here, in step with a stylesheet,
+    # by hand: the two-ended contract this register exists to have one end of.
+    #
+    # So it names both, and the ruler asks a deck showing a chart to say what
+    # both mean. The over-approximation costs one line in a header and can only
+    # ever err toward asking; the exact version errs toward a colour reaching the
+    # room with nothing said about it, which is the defect #207's own user story
+    # ("a mesma cor marque a mesma coisa do começo ao fim") is about.
+    content: tuple = ("--content-1", "--content-2")
 
 
 @dataclass(frozen=True)
@@ -421,6 +435,15 @@ class Pattern:
     # slide com figura desenhada, gráfico animado ou afirmação de tela cheia" --
     # the three patterns below, with the drawn/imported split for the figure
     # settled per slide, because a photograph is not a drawing.
+    #
+    # AND "GRÁFICO ANIMADO" IS READ AS "GRÁFICO", DELIBERATELY. This engine
+    # animates a slide's ARRIVAL by motion profile and never a chart's marks
+    # (compiler/stage.html), so the spec's adjective describes a feature that
+    # does not exist here yet. Read literally, no chart would ever count -- and a
+    # deck of six charts would declare itself "sober" while being a wall of
+    # peaks, which is the exact rhythm the scale exists to measure. Counting the
+    # chart is what keeps the scale about the DECK rather than about a feature;
+    # the day chart animation lands, this line does not have to change.
     cover: bool = False      # a deck may open on this one
     moment: bool = False     # a slide of this pattern is one of the deck's moments
     # AND THE ONE A DECK HAS TO END ON. #207 makes the closing mandatory ("fecho
@@ -995,6 +1018,21 @@ class Scale:
     purpose: str          # Portuguese: the line the reference publishes about it
     motion: str = None    # the one motion profile this scale may be declared with
 
+    @property
+    def span(self):
+        """The count this scale admits, written the way its readers publish it.
+
+        PORTUGUESE, AND ON THE RECORD RATHER THAN AT EACH READER. `reference()`
+        below and `compiler/storyboard.py` both print this range for a person to
+        read, and they had a copy each -- with two different tests for the open
+        ceiling, which is how one of them ends up printing "6 a None" the day a
+        fourth scale lands. The audit's own English version stays where it is:
+        that one is a message the program PRINTS, and CLAUDE.md's seam runs
+        between the two.
+        """
+        return (f"{self.minimum} a {self.maximum}" if self.maximum is not None
+                else f"{self.minimum} ou mais")
+
 
 MOMENT_SCALES = (
     Scale("sober", 1, 2,
@@ -1376,15 +1414,16 @@ def reference():
         "| --- | --- | --- |",
     ]
     for s in MOMENT_SCALES:
-        span = f"{s.minimum} a {s.maximum}" if s.maximum else f"{s.minimum} ou mais"
-        out.append(f"| `{s.name}` | {span} | {s.purpose} |")
+        out.append(f"| `{s.name}` | {s.span} | {s.purpose} |")
 
     out += [
         "",
         "As duas cores de conteúdo são as únicas que o tema empresta além do "
-        "acento, e a direção diz o que cada uma significa neste deck. Uma figura "
-        "que pinte com uma cor que a direção não declarou reprova a construção — é "
-        "assim que a mesma cor marca a mesma coisa do primeiro slide ao último.",
+        "acento, e a direção diz o que cada uma significa neste deck. Um slide que "
+        "gaste uma cor que a direção não declarou reprova a construção — uma figura "
+        "pintada com ela, e também um gráfico, que o palco desenha nas duas sem "
+        "ninguém escrever cor nenhuma. É assim que a mesma cor marca a mesma coisa "
+        "do primeiro slide ao último.",
         "",
         "### A função no arco",
         "",
@@ -1396,8 +1435,10 @@ def reference():
         + ".",
         "",
         "**O deck termina em fecho, e o fecho pede alguma coisa.** O último slide "
-        f"é um `closing-call` com `{ARC_ATTR}=\"{ARC_CALL}\"`; um deck que acaba sem "
-        "pedir nada é um deck de que a sala sai sem saber o que se espera dela.",
+        "é um "
+        + " ou ".join(f"`{n}`" for n in closings())
+        + f" com `{ARC_ATTR}=\"{ARC_CALL}\"`; um deck que acaba sem pedir nada é "
+        "um deck de que a sala sai sem saber o que se espera dela.",
     ]
     return "\n".join(out)
 

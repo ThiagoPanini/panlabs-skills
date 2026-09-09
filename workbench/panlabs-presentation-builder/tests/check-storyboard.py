@@ -22,8 +22,9 @@ below are a second, deliberately dumber reader of the same dialect.
 TWO QUESTIONS, AND THE SECOND IS THE ONE #217 ASKS BY NAME:
 
   reflects      one row per slide, in order, each carrying that slide's own
-                pattern and its own function in the arc, and the header table
-                carrying every choice the direction wrote
+                pattern, its own function in the arc and words the deck really
+                says, and the header table carrying every choice the direction
+                wrote
   reproducible  the same source built twice, byte for byte the same page --
                 so a diff after a one-word fix is a diff of one word
 

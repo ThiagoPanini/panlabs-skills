@@ -23,14 +23,17 @@ The asserted phrase is always the FIX and never the diagnosis. "unknown
 class" would pass an assertion on a message that tells the reader nothing to
 do; `drop the class "highlight"` cannot.
 
-ONE EXAMPLE PER KIND OF GROUND, BECAUSE A PLANT NEEDS SOMETHING TO PLANT
-INTO. The statement deck is one slide, which is all the dialect's own rulers
-need; the doctrine's rulers need a deck with several patterns and several
-titles in it, and planting a second divider next to the first is not
-something a one-slide source can be asked to do. Every ticket that adds a
-construct adds the example that carries it, and the block that plants into
-it -- notes and fragments (#215) have no needle in a deck that writes
-neither.
+TWO GROUNDS, BECAUSE A PLANT NEEDS SOMETHING TO PLANT INTO. Until #219 the
+tree carried seven small decks, one per ticket, and each block here planted
+into whichever of them happened to hold its construct. #219 collapsed the
+seven into the two the spec asks for -- one per theme, covering the eighteen
+patterns between them -- and every needle below is now aimed at one of those
+two. Which one is decided by what the deck HOLDS and never by which is
+shorter: `proposal` is the deck of words, and carries the dialect's own
+rulers, the doctrine's, the notes, the fragments and the one drawn figure
+whose colours a header can still be held to; `canonical` is the deck of
+numbers, and carries every group, every chart form, the imported picture and
+the scale of moments a deck of six charts is under.
 
 AND THE CASES AT THE BOTTOM DEMAND GREEN, because a check can also be wrong
 by firing. `fill()` used to hunt for leftover `{{NAME}}` markers AFTER
@@ -64,27 +67,17 @@ from proof_driver import Drifted, Proof, cut, read, swap               # noqa: E
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
 BUILD = os.path.join(SKILL, "compiler", "build.py")
-STATEMENT = os.path.join(SKILL, "examples", "statement.deck.html")
-FEW_WORDS = os.path.join(SKILL, "examples", "few-words.deck.html")
-EVIDENCE = os.path.join(SKILL, "examples", "evidence.deck.html")
-SIDE_BY_SIDE = os.path.join(SKILL, "examples", "side-by-side.deck.html")
-CHARTS = os.path.join(SKILL, "examples", "charts.deck.html")
-FIGURE = os.path.join(SKILL, "examples", "figure.deck.html")
-PRESENTING = os.path.join(SKILL, "examples", "presenting.deck.html")
+PROPOSAL = os.path.join(SKILL, "examples", "proposal.deck.html")
+CANONICAL = os.path.join(SKILL, "examples", "canonical.deck.html")
 
-# THE ONE FIXTURE THAT IS NOT TEXT. Every other example is entirely readable as
-# a string; the figure deck points at a picture, and half of what #214 asks be
+# THE ONE FIXTURE THAT IS NOT TEXT. Both decks are entirely readable as a
+# string; the canonical one points at a picture, and half of what #214 asks be
 # refused is a fact about that FILE rather than about the deck naming it.
 CAPTURE = os.path.join(SKILL, "examples", "capture.png")
 
 
-STATEMENT_SOURCE = read(STATEMENT)
-FEW_WORDS_SOURCE = read(FEW_WORDS)
-EVIDENCE_SOURCE = read(EVIDENCE)
-SIDE_BY_SIDE_SOURCE = read(SIDE_BY_SIDE)
-CHARTS_SOURCE = read(CHARTS)
-FIGURE_SOURCE = read(FIGURE)
-PRESENTING_SOURCE = read(PRESENTING)
+PROPOSAL_SOURCE = read(PROPOSAL)
+CANONICAL_SOURCE = read(CANONICAL)
 
 
 def _read_bytes(path):
@@ -148,7 +141,25 @@ def build(text, assets=(), theme=None):
     return ok, said
 
 
-def block(title, real, cases, width, theme=None):
+# ONE BUILD PER (SOURCE, FILES, THEME), HOWEVER MANY BLOCKS STAND ON IT (#219).
+# A block's green control is the build of the UNPLANTED ground, and two blocks
+# standing on the same deck cannot disagree about it. That was free while the
+# tree carried seven decks and almost every block had one to itself; with the
+# corpus down to two, sixteen blocks were paying sixteen builds -- and, through
+# `build.py`'s own call to the render gate, sixteen Chromium launches -- to
+# re-derive two answers. `check-render.proof.cjs` keeps the same cache one floor
+# over, for the same reason and since the same ticket.
+_CONTROLS = {}
+
+
+def control_for(real, assets, theme):
+    key = (real, assets, theme)
+    if key not in _CONTROLS:
+        _CONTROLS[key] = build(real, assets, theme=theme)
+    return _CONTROLS[key]
+
+
+def block(title, real, cases, width, theme=None, assets=()):
     """One fixture's worth of cases, sharing one green control.
 
     THE CONTROL IS BUILT ONCE PER BLOCK, not once per case, and the reason is
@@ -165,25 +176,31 @@ def block(title, real, cases, width, theme=None):
     faces and promises no repertoire, `panlabs` ships two cut faces and
     promises 159 characters -- so a block that could only build in the header's
     own theme could not reach it at all.
-    """
-    settled = []
 
+    `assets=` WRITES THE FILES THE DECK POINTS AT BESIDE THE PLANTED COPY
+    (#219). Until the corpus became two decks, every block here planted into a
+    source that was pure text, and the one deck naming a picture had a block
+    shape of its own. The canonical deck names one AND carries every group and
+    every chart form, so the blocks that plant into it are ordinary blocks that
+    happen to need the picture on disk -- and without it the GREEN CONTROL goes
+    red on `figure-asset`, which is a whole block failing over a file nobody
+    planted. `figure_block` below stays separate, because its own cases plant
+    into the BYTES.
+    """
     def control(_key):
-        if not settled:
-            settled.append(build(real, theme=theme))
-        return settled[0]
+        return control_for(real, assets, theme)
 
     return Proof(
         title=title,
         label=lambda key: key,
-        invoke=lambda key, payload: build(payload, theme=theme),
+        invoke=lambda key, payload: build(payload, assets, theme=theme),
         planted=lambda payload: payload != real,
         control=control,
         width=width,
     ).run(cases)
 
 
-# ── the figure deck, whose payload is a source AND the files beside it (#214) ──
+# ── the deck whose payload is a source AND the files beside it (#214) ────────
 # THE PLANT IS NOT ALWAYS IN THE TEXT. Two of the cases below leave the deck
 # untouched and change the BYTES of the picture it points at -- a file over the
 # ceiling, a file that is not the format its own name promised -- and a
@@ -192,7 +209,7 @@ def block(title, real, cases, width, theme=None):
 # as one payload is what keeps all four of ADR 0001's assertions real.
 
 GOOD_ASSETS = ((CAPTURE_NAME, CAPTURE_BYTES),)
-REAL_FIGURE = (FIGURE_SOURCE, GOOD_ASSETS)
+REAL_FIGURE = (CANONICAL_SOURCE, GOOD_ASSETS)
 
 
 def in_source(plant):
@@ -202,16 +219,12 @@ def in_source(plant):
 
 def in_file(payload):
     """A plant that leaves the deck's words alone and changes the file itself."""
-    return lambda: (FIGURE_SOURCE, ((CAPTURE_NAME, payload),))
+    return lambda: (CANONICAL_SOURCE, ((CAPTURE_NAME, payload),))
 
 
 def figure_block(title, cases, width):
-    settled = []
-
     def control(_key):
-        if not settled:
-            settled.append(build(*REAL_FIGURE))
-        return settled[0]
+        return control_for(REAL_FIGURE[0], REAL_FIGURE[1], None)
 
     return Proof(
         title=title,
@@ -224,17 +237,18 @@ def figure_block(title, cases, width):
 
 
 # ── #217's needles: the art direction, and the arc it promises ───────────────
-# THE HEADER'S SECOND HALF, EXACTLY AS THE STATEMENT DECK WRITES IT. It is the
-# smallest direction the register admits -- the eight required choices, three of
-# them prose and five drawn from a closed set -- and planting into a two-slide
-# deck is what keeps a red about the header a red about the header alone: there
-# is no arc there to also be wrong about.
+# THE HEADER'S SECOND HALF, EXACTLY AS THE PROPOSAL DECK WRITES IT. Every case
+# that plants into the header plants into this block, so it is spelled out once
+# and held to the file by `swap`'s own drift check rather than rebuilt from
+# parts.
 DIRECTION = """  <direction>
     <p class="cover">cover-headline</p>
-    <p class="signature">nenhuma — este deck é curto demais para um motivo voltar</p>
-    <p class="register">primeira pessoa do plural, frase curta, sem jargão de ferramenta</p>
+    <p class="signature">a hairline em pé, entre dois lados, repetida em todo slide que divide o palco</p>
+    <p class="register">primeira pessoa do plural, presente, uma oração por frase</p>
     <p class="moments">sober</p>
-    <p class="difference">o exemplo canônico abre por um número e assina com a hairline da seção; este abre pela manchete e não assina nada</p>
+    <p class="difference">o exemplo canônico abre por um número e assina com a hairline deitada na base do palco; este abre pela manchete e assina com a hairline em pé, no meio dele</p>
+    <p class="content-1">a fila do que foi pedido, que anda toda semana</p>
+    <p class="content-2">a fila do que está gasto, que só anda quando quebra</p>
     <p class="renounced-1">chart</p>
     <p class="renounced-2">table</p>
     <p class="renounced-3">timeline</p>
@@ -250,47 +264,65 @@ def the_header_last():
     put back at the end, which is exactly the mistake an author makes by writing
     the slides first and the direction afterwards.
     """
-    if STATEMENT_SOURCE is None:
+    if PROPOSAL_SOURCE is None:
         raise Drifted("the fixture is not readable")
-    if DIRECTION + "\n\n" not in STATEMENT_SOURCE:
-        raise Drifted("the statement deck no longer opens on the direction block")
-    return (STATEMENT_SOURCE
+    if DIRECTION + "\n\n" not in PROPOSAL_SOURCE:
+        raise Drifted("the proposal deck no longer opens on the direction block")
+    return (PROPOSAL_SOURCE
             .replace(DIRECTION + "\n\n", "", 1)
             .replace("\n</deck>", "\n" + DIRECTION + "\n\n</deck>", 1))
 
 
-# The statement deck's only moment, and the same words carried by a pattern that
-# is not one. #207 counts a moment as a drawn figure, a chart or a full-bleed
-# statement, so a thesis title saying the identical sentence takes the deck to
+# The proposal deck's only moment, and the same thing said by a pattern that is
+# not one. #207 counts a moment as a drawn figure, a chart or a full-bleed
+# statement, so a thesis title saying what the drawing showed takes the deck to
 # ZERO -- which no scale admits, and which is the floor's whole point.
-STATEMENT_MOMENT = """  <section pattern="full-bleed-statement" arc="tension">
-    <p class="statement">Nenhuma suíte verde substitui a <strong>primeira fileira</strong> lendo o slide projetado.</p>
+#
+# THE PROPOSAL DECK HOLDS EXACTLY ONE MOMENT, AND THAT IS WHY THIS CASE CAN
+# EXIST (#219). A deck with two of them cannot be brought to none by a single
+# plant, and a plant that changed two slides at once would be proving that two
+# defects together go red.
+PROPOSAL_MOMENT = """  <section pattern="figure-caption" arc="tension">
+    <p class="title">Uma fila anda; a outra para no primeiro dia</p>
+    <p class="caption">As duas filas da semana, desenhadas — a de cima entrega, a de baixo espera quebrar</p>
+    <svg viewBox="0 0 1200 400">
+      <text x="14" y="58" font-size="32" text-anchor="start" dominant-baseline="central" fill="var(--content-1)">o que foi pedido</text>
+      <rect x="14" y="96" width="1154" height="12" rx="6" fill="var(--content-1)"/>
+      <circle cx="1168" cy="102" r="18" fill="var(--content-1)"/>
+
+      <text x="14" y="248" font-size="32" text-anchor="start" dominant-baseline="central" fill="var(--content-2)">o que está gasto</text>
+      <rect x="14" y="286" width="222" height="12" rx="6" fill="var(--content-2)"/>
+      <circle cx="250" cy="292" r="18" fill="none" stroke="var(--content-2)" stroke-width="4"/>
+      <line x1="276" y1="292" x2="1168" y2="292" stroke="var(--hairline-strong)" stroke-width="4" stroke-dasharray="14 12"/>
+      <text x="1168" y="352" font-size="30" text-anchor="end" dominant-baseline="central" fill="var(--ink-muted)">até quebrar</text>
+    </svg>
+    <notes>Este é o único momento do deck, e a escala declarada no cabeçalho diz «sober» — um ou dois é o que cabe nela.<br/>É também o único slide que gasta as duas cores de conteúdo, e o cabeçalho diz o que cada uma significa.</notes>
   </section>"""
 
-STATEMENT_NO_MOMENT = """  <section pattern="thesis-title" arc="tension">
-    <p class="title">A régua verde não é a plateia</p>
-    <p class="sentence">Nenhuma suíte verde substitui a <strong>primeira fileira</strong> lendo o slide projetado.</p>
+PROPOSAL_NO_MOMENT = """  <section pattern="thesis-title" arc="tension">
+    <p class="title">Uma fila anda; a outra para no primeiro dia</p>
+    <p class="sentence">As duas filas da semana, e a que nunca começa é a que cobra depois.</p>
   </section>"""
 
-# The few-words deck's closing, as its source writes it. Planting a SECOND copy
-# of it before the divider is what makes a deck that asks for something and then
-# keeps talking -- the one shape of broken closing that a deck with a perfectly
-# good last slide can still have.
-FEW_WORDS_CLOSING = """  <section pattern="closing-call" arc="call">
-    <p class="thesis">O palco cabe <strong>menos</strong> do que a página.</p>
-    <p class="call">Escreva a frase; corte o resto.</p>
-    <p class="meta">python3 compiler/build.py</p>
+# The proposal deck's closing, minus its notes. Planting a SECOND copy of it
+# before the divider is what makes a deck that asks for something and then keeps
+# talking -- the one shape of broken closing that a deck with a perfectly good
+# last slide can still have.
+PROPOSAL_CLOSING = """  <section pattern="closing-call" arc="call">
+    <p class="thesis">Uma hora reservada custa menos que o dia que ela evita.</p>
+    <p class="call">Aprovem a terça de manhã, a partir da próxima semana.</p>
+    <p class="meta">Revisão em três meses</p>
   </section>"""
 
 
-# The whole of the fifth slide of the few-words deck, as its source writes it.
+# The whole of the sixth slide of the proposal deck, as its source writes it.
 # The repeated-pattern ruler is the one check that cannot be planted by
 # changing a slide: it needs a SECOND slide of the same pattern next to the
 # first, and duplicating a section that is valid on its own is what makes the
 # repetition the only thing red.
 DIVIDER = """  <section pattern="section-divider" arc="evidence">
     <p class="index">02</p>
-    <p class="title">O que a máquina mede</p>
+    <p class="title">O que a hora compra</p>
   </section>"""
 
 # Thirty words where the pattern budgets twelve -- the ticket's own number
@@ -302,43 +334,44 @@ THIRTY_WORDS = (
     "telão."
 )
 
-# Every group and table `evidence.deck.html` carries, exactly as its source
+# Every group and table `canonical.deck.html` carries, exactly as its source
 # writes them -- the needles the cases below plant against and the ground
 # the "row dropped" / "item dropped" cases below cut into. #212's own
 # acceptance criteria name three of these numbers verbatim: seven lines in a
 # table, one item in the metrics, two marks in the timeline.
 METRICS_UL = """    <ul>
-      <li><p class="value">42%</p><p class="label">conversão</p></li>
-      <li><p class="value">1,8×</p><p class="label">tempo de resposta</p></li>
-      <li><p class="value">−12%</p><p class="label">churn</p></li>
+      <li><p class="value">9</p><p class="label">equipes</p></li>
+      <li><p class="value">1310</p><p class="label">entregas</p></li>
+      <li><p class="value">3,4×</p><p class="label">frequência</p></li>
     </ul>"""
 
 METRICS_UL_ONE = """    <ul>
-      <li><p class="value">42%</p><p class="label">conversão</p></li>
+      <li><p class="value">9</p><p class="label">equipes</p></li>
     </ul>"""
 
 TIMELINE_OL = """    <ol>
-      <li><p class="label">Descoberta</p><p class="date">Jan</p></li>
-      <li><p class="label">Piloto</p><p class="date">Mar</p></li>
-      <li now><p class="label">Lançamento</p><p class="date">Jun</p></li>
-      <li><p class="label">Expansão</p><p class="date">Set</p></li>
+      <li><p class="label">Piloto</p><p class="date">Fev/26</p></li>
+      <li><p class="label">Cinco equipes</p><p class="date">Jun/26</p></li>
+      <li now><p class="label">Nove equipes</p><p class="date">Dez/26</p></li>
+      <li><p class="label">Toda a casa</p><p class="date">Set/27</p></li>
     </ol>"""
 
 TIMELINE_OL_TWO = """    <ol>
-      <li><p class="label">Descoberta</p><p class="date">Jan</p></li>
-      <li><p class="label">Piloto</p><p class="date">Mar</p></li>
+      <li><p class="label">Piloto</p><p class="date">Fev/26</p></li>
+      <li><p class="label">Cinco equipes</p><p class="date">Jun/26</p></li>
     </ol>"""
 
 TIMELINE_OL_TWO_NOW = """    <ol>
-      <li now><p class="label">Descoberta</p><p class="date">Jan</p></li>
-      <li now><p class="label">Piloto</p><p class="date">Mar</p></li>
-      <li><p class="label">Lançamento</p><p class="date">Jun</p></li>
-      <li><p class="label">Expansão</p><p class="date">Set</p></li>
+      <li now><p class="label">Piloto</p><p class="date">Fev/26</p></li>
+      <li now><p class="label">Cinco equipes</p><p class="date">Jun/26</p></li>
+      <li><p class="label">Nove equipes</p><p class="date">Dez/26</p></li>
+      <li><p class="label">Toda a casa</p><p class="date">Set/27</p></li>
     </ol>"""
 
-TABLE_BODY = """        <tr><td>Checkout</td><td>14 min</td><td>6 min</td></tr>
-        <tr><td>Catálogo</td><td>21 min</td><td>9 min</td></tr>
-        <tr><td>Pagamentos</td><td>18 min</td><td>7 min</td></tr>"""
+TABLE_BODY = """        <tr><td>Cartografia</td><td>9 h</td><td>3 h</td></tr>
+        <tr><td>Correnteza</td><td>14 h</td><td>5 h</td></tr>
+        <tr><td>Âncora</td><td>21 h</td><td>9 h</td></tr>
+        <tr><td>Farol</td><td>6 h</td><td>2 h</td></tr>"""
 
 # Six data rows plus the header is seven lines of a table -- one over #212's
 # own ceiling ("tabela de sete linhas ... reprovam").
@@ -347,18 +380,18 @@ TABLE_BODY_SIX = "\n".join(
     for n in range(1, 7)
 )
 
-# #213'S OWN NEEDLES. The chart deck's first slide is a `bars-h` of five
-# points, its third is a `line` of five, and its last is a `share` of three --
-# which is what lets the cases below plant a count against the FORM's bounds
-# rather than the group's. `bars-h` allows six and the group allows twelve, so
-# a seventh bar is refused by the form alone: that difference is the whole
-# reason a form carries a pair of numbers of its own.
+# #213'S OWN NEEDLES. The canonical deck's first chart is a `bars-h` of five
+# points, its third a `line` of four, and its last a `share` of three -- which
+# is what lets the cases below plant a count against the FORM's bounds rather
+# than the group's. `bars-h` allows six and the group allows twelve, so a
+# seventh bar is refused by the form alone: that difference is the whole reason
+# a form carries a pair of numbers of its own.
 BARS_UL = """    <ul>
-      <li><p class="label">Checkout</p><p class="value">6</p></li>
-      <li><p class="label">Catálogo</p><p class="value">9</p></li>
-      <li><p class="label">Pagamentos</p><p class="value">7</p></li>
-      <li><p class="label">Busca</p><p class="value">4</p></li>
-      <li mark><p class="label">Perfil</p><p class="value">11</p></li>
+      <li><p class="label">Cartografia</p><p class="value">3</p></li>
+      <li><p class="label">Correnteza</p><p class="value">5</p></li>
+      <li><p class="label">Bússola</p><p class="value">4</p></li>
+      <li mark><p class="label">Âncora</p><p class="value">9</p></li>
+      <li><p class="label">Farol</p><p class="value">2</p></li>
     </ul>"""
 
 BARS_UL_SEVEN = "    <ul>\n" + "\n".join(
@@ -367,50 +400,51 @@ BARS_UL_SEVEN = "    <ul>\n" + "\n".join(
 ) + "\n    </ul>"
 
 LINE_UL = """    <ul>
-      <li><p class="label">rev 1</p><p class="value">31</p></li>
-      <li><p class="label">rev 2</p><p class="value">44</p></li>
-      <li><p class="label">rev 3</p><p class="value">52</p></li>
-      <li><p class="label">rev 4</p><p class="value">61</p></li>
-      <li><p class="label">rev 5</p><p class="value">66</p></li>
+      <li><p class="label">1º tri</p><p class="value">48</p></li>
+      <li><p class="label">2º tri</p><p class="value">31</p></li>
+      <li><p class="label">3º tri</p><p class="value">19</p></li>
+      <li mark><p class="label">4º tri</p><p class="value">8</p></li>
     </ul>"""
 
 LINE_UL_TWO = """    <ul>
-      <li><p class="label">rev 1</p><p class="value">31</p></li>
-      <li><p class="label">rev 2</p><p class="value">44</p></li>
+      <li><p class="label">1º tri</p><p class="value">48</p></li>
+      <li><p class="label">2º tri</p><p class="value">31</p></li>
     </ul>"""
 
 # Every value written and legal, and they add up to 95 -- the one defect is
 # arithmetic, which is exactly the class #94 measured a hand getting wrong.
 SHARE_UL = """    <ul>
-      <li><p class="label">Plataforma</p><p class="value">65</p></li>
-      <li><p class="label">Produto</p><p class="value">25</p></li>
-      <li><p class="label">Suporte</p><p class="value">10</p></li>
+      <li><p class="label">Manutenção</p><p class="value">50</p></li>
+      <li><p class="label">Novas equipes</p><p class="value">30</p></li>
+      <li><p class="label">Plataforma</p><p class="value">20</p></li>
     </ul>"""
 
 SHARE_UL_SHORT = SHARE_UL.replace(
-    '<p class="value">25</p>', '<p class="value">20</p>')
+    '<p class="value">30</p>', '<p class="value">25</p>')
 
 SHARE_UL_MARKED = SHARE_UL.replace(
-    '<li><p class="label">Plataforma</p>', '<li mark><p class="label">Plataforma</p>')
+    '<li><p class="label">Manutenção</p>', '<li mark><p class="label">Manutenção</p>')
 
-# The whole first slide of the chart deck, so a second copy of it can be put
-# next to the first -- the only way to plant a repetition, same as the divider
-# above.
+# The whole first chart slide of the canonical deck, so a second copy of it can
+# be put next to the first -- the only way to plant a repetition, same as the
+# divider above.
 BARS_SLIDE = """  <section pattern="chart" type="bars-h" arc="evidence">
-    <p class="title">O build caiu abaixo de dez minutos em quatro squads</p>
-    <p class="unit">minutos por build, mediana</p>
-    <p class="source">esteira de CI · jun/2026</p>
-""" + BARS_UL + "\n  </section>"
+    <p class="title">Cinco equipes cortaram a espera pela metade</p>
+    <p class="unit">horas entre o merge e a produção, mediana</p>
+    <p class="source">painel do Estaleiro · dez/2026</p>
+""" + BARS_UL + """
+    <notes>A Âncora está marcada porque é a que ainda não caiu: é dela que o plano do próximo ano trata.</notes>
+  </section>"""
 
-# #214'S OWN NEEDLES, all from the figure deck. The junction dot of the second
-# drawing is the one shape a whole element can be swapped for without touching
+# #214'S OWN NEEDLES, all from the canonical deck's one drawing. The dot on the
+# bracket is the one shape a whole element can be swapped for without touching
 # anything the other cases plant into, so the three cases that need to REPLACE
 # an element share it.
-DOT = '<circle cx="600" cy="170" r="9" fill="var(--accent)"/>'
-ARROWHEAD = '<polygon points="764,96 780,105 764,114" fill="var(--accent)"/>'
-FIRST_BOX = ('<rect x="90" y="40" width="300" height="130" rx="14" fill="none" '
-             'stroke="var(--hairline-strong)" stroke-width="3"/>')
-CYCLE_BOX = 'viewBox="0 0 1280 530"'
+DOT = '<circle cx="296" cy="294" r="10" fill="var(--content-1)"/>'
+ARROWHEAD = '<polygon points="316,111 336,122 316,133" fill="var(--accent)"/>'
+FIRST_BOX = ('<rect x="14" y="46" width="242" height="152" rx="16" fill="none" '
+             'stroke="var(--hairline-strong)" stroke-width="4"/>')
+CYCLE_BOX = 'viewBox="0 0 1200 400"'
 CAPTURE_SRC = 'src="capture.png"'
 
 # One byte over the ceiling `Figure.max_bytes` declares in compiler/catalog.py,
@@ -424,16 +458,15 @@ OVER_CEILING = b"\x89PNG\r\n\x1a\n" + b"\0" * (2 * 1024 * 1024 + 1)
 # the browser decodes nothing, which is the blank rectangle by another road.
 WRONG_FORMAT = b"GIF89a" + b"\0" * 64
 
-# #215'S OWN NEEDLE. The cover slide's note, exactly as the presenting deck
+# #215'S OWN NEEDLE. The cover slide's note, exactly as the proposal deck
 # writes it -- the one string every notes case below plants against. It is a
 # whole `<notes>` element and not a phrase inside one, because three of the
 # four cases (empty, doubled, attributed) are about the ELEMENT and there is
 # nothing smaller to cut for them.
-PRESENTING_NOTE = (
-    "<notes>Este deck existe para ser <strong>apresentado</strong>, não lido: "
-    "cada slide aqui exercita uma parte do palco.<br/>Comece dizendo que a "
-    "plateia nunca verá botão nenhum — tudo o que move este deck é tecla."
-    "</notes>"
+PROPOSAL_NOTE = (
+    "<notes>Abra dizendo que o pedido é <strong>uma hora</strong>, e que o "
+    "resto do deck é a conta dessa hora.<br/>A palavra «oficina» é deliberada: "
+    "não é reunião, não é cerimônia, é gente consertando coisa.</notes>"
 )
 
 # What a colour looks like, in any of the four notations a hand reaches for.
@@ -451,14 +484,14 @@ def the_page_is_not_a_template():
     back to a substitution per hole brings back a refusal that blames
     `compiler/stage.html` for a sentence its author wrote.
     """
-    if STATEMENT_SOURCE is None:
+    if PROPOSAL_SOURCE is None:
         print(f"  FAIL {'setup':<22} no example to plant in")
         return 1
 
-    planted = STATEMENT_SOURCE.replace("Nenhuma suíte verde",
-                                       "Nenhuma {{TITLE}} verde", 1)
+    planted = PROPOSAL_SOURCE.replace("O reparo que ninguém agenda",
+                                       "O {{TITLE}} que ninguém agenda", 1)
     ok, said, page, _ = _run(planted)
-    kept = bool(page) and "Nenhuma {{TITLE}} verde" in page
+    kept = bool(page) and "O {{TITLE}} que ninguém agenda" in page
     marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
     good = ok and kept
     print(f"  {'ok  ' if good else 'FAIL'} {'author prose':<22} {marks} "
@@ -477,12 +510,12 @@ def the_category_is_the_whole_title():
     for "visão geral" inside it would refuse exactly the sentences the
     doctrine is asking for.
     """
-    if FEW_WORDS_SOURCE is None:
+    if PROPOSAL_SOURCE is None:
         print(f"  FAIL {'setup':<22} no example to plant in")
         return 1
 
-    planted = FEW_WORDS_SOURCE.replace(
-        "Um slide diz uma coisa",
+    planted = PROPOSAL_SOURCE.replace(
+        "Três coisas cabem numa hora",
         "A visão geral do time falhou em três semanas", 1)
     ok, said, page, _ = _run(planted)
     kept = bool(page) and "falhou em três semanas" in page
@@ -504,12 +537,12 @@ def the_divider_may_name_the_arc():
     ("contexto → tensão → tese → provas → plano → chamada"). Reading the
     divider as a claim would let this ruler refuse the spec.
     """
-    if FEW_WORDS_SOURCE is None:
+    if PROPOSAL_SOURCE is None:
         print(f"  FAIL {'setup':<22} no example to plant in")
         return 1
 
-    planted = FEW_WORDS_SOURCE.replace(
-        "<p class=\"title\">O que a máquina mede</p>",
+    planted = PROPOSAL_SOURCE.replace(
+        "<p class=\"title\">O que a hora compra</p>",
         "<p class=\"title\">Contexto</p>", 1)
     ok, said, page, _ = _run(planted)
     kept = bool(page) and ">Contexto<" in page
@@ -532,7 +565,7 @@ def the_chart_svg_carries_no_colour():
     the colour into the mark -- the deck would still build, still render, and
     quietly wear `base` in every theme.
     """
-    ok, said, page, _ = _run(CHARTS_SOURCE)
+    ok, said, page, _ = _run(CANONICAL_SOURCE, GOOD_ASSETS)
     plots = PLOT.findall(page or "")
     stained = [p for p in plots if STAIN.search(p)]
     good = ok and len(plots) >= 6 and not stained
@@ -565,18 +598,24 @@ def the_figure_wears_only_the_theme():
     into bytes on the page. A red here is not a broken check, it is a corpus
     that stopped being an example of the thing it demonstrates.
     """
-    ok, said, page, _ = _run(FIGURE_SOURCE, GOOD_ASSETS)
+    ok, said, page, _ = _run(CANONICAL_SOURCE, GOOD_ASSETS)
+    # HOW MANY DRAWINGS THE DECK HAS IS THE DECK'S BUSINESS, so the expected
+    # count is read off the source rather than written here: a case that had to
+    # be edited every time an example gained a figure is a case somebody
+    # eventually edits by lowering the number.
+    expected = (CANONICAL_SOURCE or "").count("<svg viewBox=")
     drawings = DRAWN.findall(page or "")
     stray = [v for d in drawings for v in PAINT.findall(d)
              if v != "none" and not THEME_TOKEN.match(v)]
     pictures = IMPORTED.findall(page or "")
     inline = bool(pictures) and all('src="data:image/png;base64,' in p for p in pictures)
-    kept = len(drawings) == 2 and not stray and inline and CAPTURE_SRC not in (page or "")
+    kept = (expected > 0 and len(drawings) == expected and not stray and inline
+            and CAPTURE_SRC not in (page or ""))
 
     good = ok and kept
     marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
     print(f"  {'ok  ' if good else 'FAIL'} {'figure wears tokens':<22} {marks} "
-          f"{len(drawings)} drawings in tokens, {len(pictures)} picture inline")
+          f"{len(drawings)} drawn in tokens, {len(pictures)} imported inline")
     if not good:
         if not ok:
             print(f"       <- refused: {said}")
@@ -585,14 +624,14 @@ def the_figure_wears_only_the_theme():
         elif not inline:
             print("       <- the <img> did not become a data: URI")
         else:
-            print(f"       <- expected 2 drawings on the page, found {len(drawings)}")
+            print(f"       <- expected {expected} drawings on the page, found {len(drawings)}")
     return 0 if good else 1
 
 
-# One sentence out of the presenting deck's first note, and the `<section>` a
+# One sentence out of the proposal deck's first note, and the `<section>` a
 # built slide is written as. What the case below asks is where the first one
 # ended up relative to the second.
-NOTE_PHRASE = "exercita uma parte do palco"
+NOTE_PHRASE = "é gente consertando coisa"
 SLIDE = re.compile(r'<section class="slide.*?</section>', re.S)
 
 
@@ -608,11 +647,11 @@ def the_notes_never_reach_the_stage():
     profile is checked in the same breath because it travels the same way: a
     field of the header that has to reach the built page to mean anything.
     """
-    ok, said, page, _ = _run(PRESENTING_SOURCE)
+    ok, said, page, _ = _run(PROPOSAL_SOURCE)
     page = page or ""
     in_panel = '<div class="note" data-note-for="1"' in page and NOTE_PHRASE in page
     on_stage = any(NOTE_PHRASE in slide for slide in SLIDE.findall(page))
-    wearing = 'data-motion="cinematic"' in page
+    wearing = 'data-motion="editorial"' in page
     good = ok and in_panel and not on_stage and wearing
     marks = f"[{'+' if ok else '-'}{'+' if in_panel and not on_stage and wearing else '-'}]"
     print(f"  {'ok  ' if good else 'FAIL'} {'notes off the stage':<22} {marks} "
@@ -625,7 +664,7 @@ def the_notes_never_reach_the_stage():
         elif not in_panel:
             print("       <- no <div class=\"note\"> on the page carries the note")
         else:
-            print("       <- the page never says data-motion=\"cinematic\"")
+            print("       <- the page never says data-motion=\"editorial\"")
     return 0 if good else 1
 
 
@@ -651,7 +690,7 @@ def the_theme_may_not_invent_a_token():
             fh.write(":root {\n  --accent: #123456;\n  --brand-blue: #1D6ABC;\n}\n")
         src = os.path.join(tmp, "planted.deck.html")
         with open(src, "w", encoding="utf-8") as fh:
-            fh.write(STATEMENT_SOURCE)
+            fh.write(PROPOSAL_SOURCE)
         done = subprocess.run(
             [sys.executable, os.path.join(tmp, "compiler", "build.py"), src,
              os.path.join(tmp, "out.html"), "--theme", "stranger"],
@@ -682,8 +721,8 @@ def the_unfaced_theme_promises_nothing():
     fired here would be refusing a deck for a promise nobody made -- which is
     the way a check is wrong by firing rather than by staying quiet.
     """
-    planted = FEW_WORDS_SOURCE.replace("corte o resto", "corte o resto →", 1)
-    changed = planted != FEW_WORDS_SOURCE
+    planted = PROPOSAL_SOURCE.replace("sem culpa.", "sem culpa →", 1)
+    changed = planted != PROPOSAL_SOURCE
     ok, said = build(planted, theme="base")
     good = ok and changed
     marks = f"[{'+' if changed else '-'}{'+' if ok else '-'}]"
@@ -694,34 +733,66 @@ def the_unfaced_theme_promises_nothing():
     return 0 if good else 1
 
 
+SECTION = re.compile(r"<section\b.*?</section>", re.S)
+
+
+def figure_slides(text):
+    """(slide number, whether it is DRAWN) for every figure slide of a source.
+
+    READ OFF THE SOURCE, NEVER WRITTEN HERE. Which slide of the canonical deck
+    holds the picture and which holds the drawing is the deck's business, and a
+    pair of numbers typed into this file is a pair somebody eventually edits to
+    match a deck they just changed -- which is the case passing by being taught
+    the answer.
+    """
+    rows = []
+    for n, chunk in enumerate(SECTION.findall(text or ""), start=1):
+        if 'pattern="figure-caption"' in chunk:
+            rows.append((n, "<svg" in chunk))
+    return rows
+
+
 def the_photograph_is_not_a_moment():
-    """The figure deck holds two moments, and it has three figure slides.
+    """The canonical deck has two figure slides, and only the drawn one is a peak.
 
     THE PLANT CANNOT PROVE THIS ONE, WHICH IS WHY IT IS HERE. #207 counts "figura
     desenhada" as a moment and says nothing about a photograph, so the ruler
     settles the difference by reading the tag -- and a ruler that stopped reading
-    it would count three where the header declares one or two, and refuse a deck
+    it would count one moment more than the header declares, and refuse a deck
     whose art direction is exactly right. That failure has no needle: it is a red
     that should never happen, and the only way to hold it is to demand the green.
 
     IT IS ALSO WHERE THE STORYBOARD AND THE RULER ARE HELD TOGETHER. The page
-    beside the deck marks the peaks the ruler counted, from the same list -- so
-    two marks in the storyboard is the second half of "the deck holds two".
+    beside the deck marks the peaks the ruler counted, from the same list, so the
+    assertion is made ROW BY ROW rather than on a total: the picture's row must
+    not carry a peak and the drawing's must. A count would pass just as happily
+    with the two the wrong way round.
     """
-    ok, said, _, board = _run(FIGURE_SOURCE, GOOD_ASSETS)
-    figures = (FIGURE_SOURCE or "").count('<section pattern="figure-caption"')
-    marked = (board or "").count("· momento")
-    good = ok and figures == 3 and marked == 2
-    marks = f"[{'+' if ok else '-'}{'+' if figures == 3 and marked == 2 else '-'}]"
+    ok, said, _, board = _run(CANONICAL_SOURCE, GOOD_ASSETS)
+    figures = figure_slides(CANONICAL_SOURCE)
+    rows = {r.split("|")[1].strip(): r for r in (board or "").splitlines()
+            if r.startswith("| ")}
+    both = len(figures) >= 2 and any(d for _, d in figures) and any(
+        not d for _, d in figures)
+    told = both and all(
+        "figure-caption" in rows.get(str(n), "")
+        and ("· momento" in rows.get(str(n), "")) is drawn
+        for n, drawn in figures
+    )
+    good = ok and told
+    marks = f"[{'+' if ok else '-'}{'+' if told else '-'}]"
     print(f"  {'ok  ' if good else 'FAIL'} {'a picture is not a peak':<23} {marks} "
-          f"{figures} figure slides, {marked} of them counted as moments")
+          f"{len(figures)} figure slides, and only the drawn one counts as a moment")
     if not good:
         if not ok:
             print(f"       <- refused: {said}")
-        elif figures != 3:
-            print(f"       <- the fixture has {figures} figure slides, not 3")
+        elif not both:
+            print(f"       <- the fixture needs one DRAWN figure slide and one "
+                  f"imported; it has {figures}")
         else:
-            print(f"       <- the storyboard marks {marked} moments, not 2")
+            for n, drawn in figures:
+                print(f"       <- slide {n} is {'drawn' if drawn else 'imported'} "
+                      f"and its row is {rows.get(str(n), '(missing)').strip()!r}")
     return 0 if good else 1
 
 
@@ -729,14 +800,9 @@ def main():
     missing = [
         os.path.relpath(path, SKILL)
         for path, text in (
-            (STATEMENT, STATEMENT_SOURCE),
-            (FEW_WORDS, FEW_WORDS_SOURCE),
-            (EVIDENCE, EVIDENCE_SOURCE),
-            (SIDE_BY_SIDE, SIDE_BY_SIDE_SOURCE),
-            (CHARTS, CHARTS_SOURCE),
-            (FIGURE, FIGURE_SOURCE),
+            (PROPOSAL, PROPOSAL_SOURCE),
+            (CANONICAL, CANONICAL_SOURCE),
             (CAPTURE, CAPTURE_BYTES),
-            (PRESENTING, PRESENTING_SOURCE),
         )
         if text is None
     ]
@@ -747,115 +813,116 @@ def main():
             "author"
         )
 
-    failed = block("the vocabulary ruler", STATEMENT_SOURCE, [
+    failed = block("the vocabulary ruler", PROPOSAL_SOURCE, [
         (
             "foreign class",
             "a class the catalog never declared",
-            swap(STATEMENT_SOURCE, 'class="statement"', 'class="highlight"'),
+            swap(PROPOSAL_SOURCE, 'class="question"', 'class="highlight"'),
             'drop the class "highlight"',
         ),
         (
             "unknown pattern",
             "a pattern the catalog never declared",
-            swap(STATEMENT_SOURCE, 'pattern="full-bleed-statement"',
+            swap(PROPOSAL_SOURCE, 'pattern="pivot-question"',
                  'pattern="mega-cover"'),
             'replace the pattern "mega-cover"',
         ),
         (
             "missing slot",
             "the pattern's required slot taken away",
-            cut(STATEMENT_SOURCE, r'<p class="statement">.*?</p>', "the statement slot"),
-            'add the missing <p class="statement">',
+            cut(PROPOSAL_SOURCE, r'<p class="question">.*?</p>', "the question slot"),
+            'add the missing <p class="question">',
         ),
         (
             "smuggled geometry",
             "a size typed into the source as an attribute",
-            swap(STATEMENT_SOURCE, "<strong>", '<strong style="font-size:9px">'),
+            swap(PROPOSAL_SOURCE, "<strong>uma hora</strong>",
+                 '<strong style="font-size:9px">uma hora</strong>'),
             "drop style= from the <strong>",
         ),
     ], width=22)
 
     print()
-    failed += block("the doctrine rulers", STATEMENT_SOURCE, [
+    # ONE BLOCK, BECAUSE THE TWO GROUNDS BECAME ONE (#219). These cases used to
+    # be split -- a budget planted into a two-slide deck, a category title and a
+    # repeated divider into a deck long enough to have both -- and "over a deck"
+    # was what told the reader which ground each stood on. Both stand on the
+    # proposal deck now, so the second title distinguished nothing.
+    failed += block("the doctrine rulers", PROPOSAL_SOURCE, [
         (
             "budget over",
             "thirty words where the pattern budgets twelve",
-            swap(STATEMENT_SOURCE,
-                 "Nenhuma suíte verde substitui a <strong>primeira fileira</strong> "
-                 "lendo o slide projetado.",
+            swap(PROPOSAL_SOURCE,
+                 "Quando consertamos, pela última vez, algo pequeno?",
                  THIRTY_WORDS),
             "cut the slide to 12 words",
         ),
-    ], width=22)
-
-    print()
-    failed += block("the doctrine rulers, over a deck", FEW_WORDS_SOURCE, [
         (
             "category title",
             "the biggest type on the stage naming a folder",
-            swap(FEW_WORDS_SOURCE, "Um slide diz uma coisa", "Próximos passos"),
+            swap(PROPOSAL_SOURCE, "Três coisas cabem numa hora", "Próximos passos"),
             'rewrite "Próximos passos" as a claim',
         ),
         (
             "pattern twice in a row",
             "a second divider right after the first",
-            swap(FEW_WORDS_SOURCE, DIVIDER, DIVIDER + "\n\n" + DIVIDER),
+            swap(PROPOSAL_SOURCE, DIVIDER, DIVIDER + "\n\n" + DIVIDER),
             "give this slide another pattern",
         ),
     ], width=22)
 
     print()
-    failed += block("the group and table rulers", EVIDENCE_SOURCE, [
+    failed += block("the group and table rulers", CANONICAL_SOURCE, [
         (
             "table over the ceiling",
             "a header plus six data rows -- seven lines, one over the ceiling",
-            swap(EVIDENCE_SOURCE, TABLE_BODY, TABLE_BODY_SIX),
+            swap(CANONICAL_SOURCE, TABLE_BODY, TABLE_BODY_SIX),
             "drop 1 <tr>",
         ),
         (
             "table with no header",
             "the <thead> taken away",
-            cut(EVIDENCE_SOURCE, r"\s*<thead>.*?</thead>", "the table's header"),
+            cut(CANONICAL_SOURCE, r"\s*<thead>.*?</thead>", "the table's header"),
             "give the <table> exactly one <thead>",
         ),
         (
             "metrics under the floor",
             "one metric where the pattern needs two to four",
-            swap(EVIDENCE_SOURCE, METRICS_UL, METRICS_UL_ONE),
+            swap(CANONICAL_SOURCE, METRICS_UL, METRICS_UL_ONE),
             "add 1 more <li>",
         ),
         (
             "timeline under the floor",
             "two marks where the pattern needs three to six",
-            swap(EVIDENCE_SOURCE, TIMELINE_OL, TIMELINE_OL_TWO),
+            swap(CANONICAL_SOURCE, TIMELINE_OL, TIMELINE_OL_TWO),
             "add 1 more <li>",
         ),
         (
             "two moments at once",
             "two marks both claiming to be the present moment",
-            swap(EVIDENCE_SOURCE, TIMELINE_OL, TIMELINE_OL_TWO_NOW),
+            swap(CANONICAL_SOURCE, TIMELINE_OL, TIMELINE_OL_TWO_NOW),
             "keep `now` on at most one",
         ),
-    ], width=24)
+    ], width=24, assets=GOOD_ASSETS)
 
     print()
-    failed += block("the compiler's refusals", STATEMENT_SOURCE, [
+    failed += block("the compiler's refusals", PROPOSAL_SOURCE, [
         (
             "no deck",
             "the element the whole source hangs from, gone",
-            cut(STATEMENT_SOURCE, r"<deck\b[^>]*>", "its opening <deck> tag"),
+            cut(PROPOSAL_SOURCE, r"<deck\b[^>]*>", "its opening <deck> tag"),
             "wrap the whole source in a <deck",
         ),
         (
             "header field gone",
             "one of the fields the header has to say",
-            swap(STATEMENT_SOURCE, 'occasion="Retrospectiva de engenharia"', ""),
+            swap(PROPOSAL_SOURCE, 'occasion="Planejamento do trimestre"', ""),
             "give the <deck> an occasion=",
         ),
         (
             "attribute with no value",
             "a header field written but never answered",
-            swap(STATEMENT_SOURCE, 'title="A régua e a plateia"', "title"),
+            swap(PROPOSAL_SOURCE, 'title="Uma hora por semana para a oficina"', "title"),
             "give the <deck> a title=",
         ),
         # THE NEEDLE MOVED WHEN THE SECOND THEME LANDED (#216). This case used
@@ -867,42 +934,43 @@ def main():
         (
             "theme not carried",
             "a theme the skill does not have on disk",
-            swap(STATEMENT_SOURCE, 'theme="base"', 'theme="corporate"'),
+            swap(PROPOSAL_SOURCE, 'theme="base"', 'theme="corporate"'),
             "build with a theme this skill carries",
         ),
     ], width=22)
 
     print()
-    failed += block("the closed inline vocabulary (#211)", SIDE_BY_SIDE_SOURCE, [
+    failed += block("the closed inline vocabulary (#211)", PROPOSAL_SOURCE, [
         (
             "foreign tag",
             "<em>, which no longer belongs to the closed set",
-            swap(SIDE_BY_SIDE_SOURCE, "<mark>bastam</mark>", "<em>bastam</em>"),
+            swap(PROPOSAL_SOURCE, "<mark>mesma semana</mark>",
+                 "<em>mesma semana</em>"),
             "drop the <em>",
         ),
         (
             "break not permitted",
             "a forced break inside a pattern that never declared allow_break",
-            swap(SIDE_BY_SIDE_SOURCE, "um catálogo que", "um catálogo<br/>que"),
+            swap(PROPOSAL_SOURCE, "A gente nunca tem", "A gente<br/>nunca tem"),
             "does not permit a forced break",
         ),
         (
             "break not self-closed",
             "<br> left open, swallowing the text that follows it",
-            swap(SIDE_BY_SIDE_SOURCE, "depois:<br/>caixa", "depois:<br>x</br>caixa"),
+            swap(PROPOSAL_SOURCE, "manhã,<br/>na ordem", "manhã,<br>x</br>na ordem"),
             "self-close the <br/>",
         ),
     ], width=22)
 
     print()
-    failed += block("the list ceiling (#211)", SIDE_BY_SIDE_SOURCE, [
+    failed += block("the list ceiling (#211)", PROPOSAL_SOURCE, [
         (
             "sixth item",
             "a sixth icon+text pair, past the five the register declares",
             swap(
-                SIDE_BY_SIDE_SOURCE,
-                '<p class="item-5-text">A licença mora ao lado do sprite, em themes/base/icons.</p>',
-                '<p class="item-5-text">A licença mora ao lado do sprite, em themes/base/icons.</p>\n'
+                PROPOSAL_SOURCE,
+                '<p class="item-5-text" step>O que sobra volta para a fila, sem culpa.</p>',
+                '<p class="item-5-text" step>O que sobra volta para a fila, sem culpa.</p>\n'
                 '    <p class="item-6-icon">star</p>\n'
                 '    <p class="item-6-text">Um sexto item que o catálogo nunca declarou.</p>',
             ),
@@ -911,165 +979,166 @@ def main():
     ], width=22)
 
     print()
-    failed += block("the icon-known ruler (#211)", SIDE_BY_SIDE_SOURCE, [
+    failed += block("the icon-known ruler (#211)", PROPOSAL_SOURCE, [
         (
             "unknown icon",
             "a name the vendored Lucide set never shipped",
-            swap(SIDE_BY_SIDE_SOURCE, ">circle-check<", ">circle-checkmark<"),
-            'replace the icon "circle-checkmark"',
+            swap(PROPOSAL_SOURCE, ">calendar-check<", ">calendar-checkmark<"),
+            'replace the icon "calendar-checkmark"',
         ),
     ], width=22)
 
     print()
-    failed += block("the icon-paired ruler (#211)", SIDE_BY_SIDE_SOURCE, [
+    failed += block("the icon-paired ruler (#211)", PROPOSAL_SOURCE, [
         (
             "icon without its text",
             "an item's icon left in, its text taken away",
-            cut(SIDE_BY_SIDE_SOURCE,
-                r'\s*<p class="item-3-text">[^<]*</p>\n', "item-3-text"),
+            cut(PROPOSAL_SOURCE,
+                r'\s*<p class="item-3-text" step>[^<]*</p>\n', "item-3-text"),
             'add the missing <p class="item-3-text">',
         ),
         (
             "text without its icon",
             "an item's text left in, its icon taken away",
-            cut(SIDE_BY_SIDE_SOURCE,
-                r'\s*<p class="item-3-icon">[^<]*</p>\n', "item-3-icon"),
+            cut(PROPOSAL_SOURCE,
+                r'\s*<p class="item-3-icon" step>[^<]*</p>\n', "item-3-icon"),
             'add the missing <p class="item-3-icon">',
         ),
     ], width=22)
 
     print()
-    failed += block("the chart's dialect (#213)", CHARTS_SOURCE, [
+    failed += block("the chart's dialect (#213)", CANONICAL_SOURCE, [
         (
             "form not declared",
             "a chart drawn in a shape the register never carried",
-            swap(CHARTS_SOURCE, 'type="bars-h"', 'type="donut"'),
+            swap(CANONICAL_SOURCE, 'type="bars-h"', 'type="donut"'),
             'replace the type "donut"',
         ),
         (
             "no form at all",
             "a chart that never says what it is drawn as",
-            swap(CHARTS_SOURCE, '<section pattern="chart" type="bars-h"',
+            swap(CANONICAL_SOURCE, '<section pattern="chart" type="bars-h"',
                  '<section pattern="chart"'),
             "give the <section> a type=",
         ),
         (
             "over the form's ceiling",
             "seven bars where bars-h takes six, and the group would take twelve",
-            swap(CHARTS_SOURCE, BARS_UL, BARS_UL_SEVEN),
+            swap(CANONICAL_SOURCE, BARS_UL, BARS_UL_SEVEN),
             "drop 1 <li>",
         ),
         (
             "under the form's floor",
             "two points where a line needs three",
-            swap(CHARTS_SOURCE, LINE_UL, LINE_UL_TWO),
+            swap(CANONICAL_SOURCE, LINE_UL, LINE_UL_TWO),
             "add 1 more <li>",
         ),
         (
             "same form twice over",
             "a second bars-h right after the first",
-            swap(CHARTS_SOURCE, BARS_SLIDE, BARS_SLIDE + "\n\n" + BARS_SLIDE),
+            swap(CANONICAL_SOURCE, BARS_SLIDE, BARS_SLIDE + "\n\n" + BARS_SLIDE),
             "give this slide another type",
         ),
         (
             "emphasis on drawn text",
             "a bold inside a label that reaches the page as a drawing",
-            swap(CHARTS_SOURCE, '<p class="label">Checkout</p>',
-                 '<p class="label"><strong>Checkout</strong></p>'),
+            swap(CANONICAL_SOURCE, '<p class="label">Cartografia</p>',
+                 '<p class="label"><strong>Cartografia</strong></p>'),
             "drop the <strong>",
         ),
-    ], width=24)
+    ], width=24, assets=GOOD_ASSETS)
 
     print()
-    failed += block("the chart's numbers (#213)", CHARTS_SOURCE, [
+    failed += block("the chart's numbers (#213)", CANONICAL_SOURCE, [
         (
             "value is not a number",
             "the unit typed into the value, where the number belongs alone",
-            swap(CHARTS_SOURCE, '<p class="value">6</p>', '<p class="value">6 min</p>'),
-            'write the value of "Checkout" as digits',
+            swap(CANONICAL_SOURCE, '<p class="value">3</p>', '<p class="value">3 h</p>'),
+            'write the value of "Cartografia" as digits',
         ),
         (
             "value below the axis",
             "a negative where no form draws a mark",
-            swap(CHARTS_SOURCE, '<p class="value">6</p>', '<p class="value">-6</p>'),
-            'write the value of "Checkout" as a positive number',
+            swap(CANONICAL_SOURCE, '<p class="value">3</p>', '<p class="value">-3</p>'),
+            'write the value of "Cartografia" as a positive number',
         ),
         (
             "label with no value",
             "a point named and never measured",
-            cut(CHARTS_SOURCE, r'<p class="value">6</p>', "the first bar's value"),
+            cut(CANONICAL_SOURCE, r'<p class="value">3</p>', "the first bar's value"),
             'add the missing <p class="value">',
         ),
         (
             "value field left empty",
             "the field written, named, and never answered",
-            swap(CHARTS_SOURCE, '<p class="value">6</p>', '<p class="value"></p>'),
+            swap(CANONICAL_SOURCE, '<p class="value">3</p>', '<p class="value"></p>'),
             'write something in the <p class="value">',
         ),
         (
             "label field left empty",
             "a mark with a number and no name",
-            swap(CHARTS_SOURCE, '<p class="label">Checkout</p>', '<p class="label"></p>'),
+            swap(CANONICAL_SOURCE, '<p class="label">Cartografia</p>', '<p class="label"></p>'),
             'write something in the <p class="label">',
         ),
         (
             "share short of a hundred",
             "three slices adding up to ninety-five",
-            swap(CHARTS_SOURCE, SHARE_UL, SHARE_UL_SHORT),
+            swap(CANONICAL_SOURCE, SHARE_UL, SHARE_UL_SHORT),
             "make the values add up to 100",
         ),
         (
             "a marked slice",
             "the accent spent on one slice of a bar that is already all colour",
-            swap(CHARTS_SOURCE, SHARE_UL, SHARE_UL_MARKED),
+            swap(CANONICAL_SOURCE, SHARE_UL, SHARE_UL_MARKED),
             "drop `mark` from the <li>",
         ),
         (
             "label with no room",
             "a name three times the width the column gives it",
-            swap(CHARTS_SOURCE, '<p class="label">Jan</p>',
+            swap(CANONICAL_SOURCE, '<p class="label">Jan</p>',
                  '<p class="label">Infraestrutura de dados</p>'),
             'shorten the label "Infraestrutura de dados"',
         ),
-    ], width=24)
+    ], width=24, assets=GOOD_ASSETS)
 
     print()
-    failed += block("the dated legend (#213)", CHARTS_SOURCE, [
+    failed += block("the dated legend (#213)", CANONICAL_SOURCE, [
         (
             "source with no date",
             "where the number came from, and never when",
-            swap(CHARTS_SOURCE, "esteira de CI · jun/2026", "esteira de CI"),
+            swap(CANONICAL_SOURCE, "painel do Estaleiro · dez/2026",
+                 "painel do Estaleiro"),
             "add the year the data is from",
         ),
         (
             "no source at all",
             "a chart citing nothing",
-            cut(CHARTS_SOURCE, r'\s*<p class="source">esteira de CI[^<]*</p>',
+            cut(CANONICAL_SOURCE, r'\s*<p class="source">painel do Estaleiro[^<]*</p>',
                 "the first chart's source"),
             'add the missing <p class="source">',
         ),
         (
             "source left empty",
             "the legend written, named, and saying nothing",
-            swap(CHARTS_SOURCE, '<p class="source">esteira de CI · jun/2026</p>',
+            swap(CANONICAL_SOURCE, '<p class="source">painel do Estaleiro · dez/2026</p>',
                  '<p class="source"></p>'),
             'write something in the <p class="source">',
         ),
-    ], width=24)
+    ], width=24, assets=GOOD_ASSETS)
 
     print()
     failed += figure_block("the figure's paint (#214)", [
         (
             "a hex in a fill",
             "the accent written as the hexadecimal it happens to be today",
-            in_source(swap(FIGURE_SOURCE, ARROWHEAD,
+            in_source(swap(CANONICAL_SOURCE, ARROWHEAD,
                            ARROWHEAD.replace('fill="var(--accent)"', 'fill="#c8c8c8"'))),
             "repaint the fill of the <polygon>",
         ),
         (
             "a colour by its name",
             "a stroke painted in a word no theme can move",
-            in_source(swap(FIGURE_SOURCE, FIRST_BOX,
+            in_source(swap(CANONICAL_SOURCE, FIRST_BOX,
                            FIRST_BOX.replace('stroke="var(--hairline-strong)"',
                                              'stroke="white"'))),
             "repaint the stroke of the <rect>",
@@ -1077,8 +1146,8 @@ def main():
         (
             "a token nobody declares",
             "a variable that looks like a token and is not one",
-            in_source(swap(FIGURE_SOURCE, DOT,
-                           DOT.replace('fill="var(--accent)"', 'fill="var(--brand-blue)"'))),
+            in_source(swap(CANONICAL_SOURCE, DOT,
+                           DOT.replace('fill="var(--content-1)"', 'fill="var(--brand-blue)"'))),
             "repaint the fill of the <circle>",
         ),
     ], width=24)
@@ -1088,13 +1157,13 @@ def main():
         (
             "a script in the drawing",
             "the one element that would make a slide run code",
-            in_source(swap(FIGURE_SOURCE, DOT, '<script>fetch("https://x")</script>')),
+            in_source(swap(CANONICAL_SOURCE, DOT, '<script>fetch("https://x")</script>')),
             "drop the <script>",
         ),
         (
             "a picture off the network",
             "an <image> fetching a file the deck does not carry",
-            in_source(swap(FIGURE_SOURCE, DOT,
+            in_source(swap(CANONICAL_SOURCE, DOT,
                            '<image href="https://example.com/logo.png" x="0" y="0" '
                            'width="10" height="10"/>')),
             "drop the <image>",
@@ -1102,21 +1171,21 @@ def main():
         (
             "a link on a shape",
             "the reference wearing an attribute instead of a tag",
-            in_source(swap(FIGURE_SOURCE, DOT,
+            in_source(swap(CANONICAL_SOURCE, DOT,
                            DOT.replace("/>", ' href="https://example.com/x"/>'))),
             "drop href= from the <circle>",
         ),
         (
             "smuggled geometry",
             "a colour typed past the paint ruler, inside a style=",
-            in_source(swap(FIGURE_SOURCE, FIRST_BOX,
+            in_source(swap(CANONICAL_SOURCE, FIRST_BOX,
                            FIRST_BOX.replace("/>", ' style="fill:red"/>'))),
             "drop style= from the <rect>",
         ),
         (
             "no viewBox",
             "a drawing with no size of its own",
-            in_source(swap(FIGURE_SOURCE, CYCLE_BOX, "")),
+            in_source(swap(CANONICAL_SOURCE, CYCLE_BOX, "")),
             "give the <svg> a viewBox=",
         ),
     ], width=24)
@@ -1126,21 +1195,21 @@ def main():
         (
             "an attribute nobody declared",
             "an alt= the compiler writes itself, typed by hand",
-            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC,
+            in_source(swap(CANONICAL_SOURCE, CAPTURE_SRC,
                            CAPTURE_SRC + ' alt="uma captura"')),
             "drop alt= from the <img>",
         ),
         (
             "an image written open",
             "the <img> unclosed, swallowing the slide after it",
-            in_source(swap(FIGURE_SOURCE, f"<img {CAPTURE_SRC}/>",
+            in_source(swap(CANONICAL_SOURCE, f"<img {CAPTURE_SRC}/>",
                            f"<img {CAPTURE_SRC}>")),
             "self-close the <img/>",
         ),
         (
             "two figures on one slide",
             "a drawing put next to the picture, both claiming the slot",
-            in_source(swap(FIGURE_SOURCE, f"<img {CAPTURE_SRC}/>",
+            in_source(swap(CANONICAL_SOURCE, f"<img {CAPTURE_SRC}/>",
                            '<svg viewBox="0 0 10 10"><rect x="1" y="1" '
                            'width="8" height="8" fill="var(--ink)"/></svg>\n    '
                            f"<img {CAPTURE_SRC}/>")),
@@ -1149,20 +1218,20 @@ def main():
         (
             "a path that finds nothing",
             "the src= pointing where no file is",
-            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC, 'src="ausente.png"')),
+            in_source(swap(CANONICAL_SOURCE, CAPTURE_SRC, 'src="ausente.png"')),
             "put the image at",
         ),
         (
             "a URL instead of a path",
             "a picture the page would have to fetch",
-            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC,
+            in_source(swap(CANONICAL_SOURCE, CAPTURE_SRC,
                            'src="https://example.com/capture.png"')),
             "write src= as a path to a file on disk",
         ),
         (
             "a format nobody embeds",
             "an extension outside the five the compiler carries",
-            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC, 'src="capture.tiff"')),
+            in_source(swap(CANONICAL_SOURCE, CAPTURE_SRC, 'src="capture.tiff"')),
             'save "capture.tiff" as one of',
         ),
         (
@@ -1180,50 +1249,49 @@ def main():
     ], width=24)
 
     print()
-    failed += block("the speaker notes (#215)", PRESENTING_SOURCE, [
+    failed += block("the speaker notes (#215)", PROPOSAL_SOURCE, [
         (
             "foreign tag in a note",
             "<em>, which is no more welcome off the stage than on it",
-            swap(PRESENTING_SOURCE, "<strong>apresentado</strong>",
-                 "<em>apresentado</em>"),
+            swap(PROPOSAL_SOURCE, "<strong>uma hora</strong>", "<em>uma hora</em>"),
             "drop the <em>",
         ),
         (
             "note left empty",
             "the tag written, and the detail it was for never kept",
-            swap(PRESENTING_SOURCE, PRESENTING_NOTE, "<notes></notes>"),
+            swap(PROPOSAL_SOURCE, PROPOSAL_NOTE, "<notes></notes>"),
             "write something in the <notes>",
         ),
         (
             "two notes on one slide",
             "a second set of notes the compiler would drop in silence",
-            swap(PRESENTING_SOURCE, PRESENTING_NOTE,
-                 PRESENTING_NOTE + "\n    " + PRESENTING_NOTE),
+            swap(PROPOSAL_SOURCE, PROPOSAL_NOTE,
+                 PROPOSAL_NOTE + "\n    " + PROPOSAL_NOTE),
             "keep one <notes>",
         ),
         (
             "attribute on a note",
             "an attribute on the one tag that carries none",
-            swap(PRESENTING_SOURCE, "<notes>Este deck existe",
-                 '<notes for="quem apresenta">Este deck existe'),
+            swap(PROPOSAL_SOURCE, "<notes>Abra dizendo",
+                 '<notes for="quem apresenta">Abra dizendo'),
             "drop for= from the <notes>",
         ),
     ], width=24)
 
     print()
-    failed += block("fragments (#215)", PRESENTING_SOURCE, [
+    failed += block("fragments (#215)", PROPOSAL_SOURCE, [
         (
             "step with a number in it",
             "a reveal order typed into the attribute, beside the one the "
             "register already keeps",
-            swap(PRESENTING_SOURCE, '<p class="sentence" step>',
+            swap(PROPOSAL_SOURCE, '<p class="sentence" step>',
                  '<p class="sentence" step="2">'),
             "write `step` bare",
         ),
         (
             "half a pair marked",
             "an item's text arriving one beat after its own icon",
-            swap(PRESENTING_SOURCE, '<p class="item-3-icon" step>',
+            swap(PROPOSAL_SOURCE, '<p class="item-3-icon" step>',
                  '<p class="item-3-icon">'),
             'mark <p class="item-3-icon"> with `step` too',
         ),
@@ -1234,95 +1302,95 @@ def main():
     # already wrote rather than from one #215 added: `<li>` carries the group's
     # own flag or nothing. The case is here to hold that boundary, because a
     # series revealed a row at a time is the obvious next thing somebody tries.
-    failed += block("a series arrives whole (#215)", EVIDENCE_SOURCE, [
+    failed += block("a series arrives whole (#215)", CANONICAL_SOURCE, [
         (
             "step on a group item",
             "a metric marked to arrive on its own beat",
-            swap(EVIDENCE_SOURCE, '<li><p class="value">42%</p>',
-                 '<li step><p class="value">42%</p>'),
+            swap(CANONICAL_SOURCE, '<li><p class="value">9</p>',
+                 '<li step><p class="value">9</p>'),
             "drop step= from the <li>",
         ),
-    ], width=24)
+    ], width=24, assets=GOOD_ASSETS)
 
     print()
-    failed += block("the header's motion profile (#215)", STATEMENT_SOURCE, [
+    failed += block("the header's motion profile (#215)", PROPOSAL_SOURCE, [
         (
             "motion gone",
             "the art direction's first field missing from the header",
-            swap(STATEMENT_SOURCE, '\n      motion="static"', ""),
+            swap(PROPOSAL_SOURCE, '\n      motion="editorial"', ""),
             "give the <deck> a motion=",
         ),
         (
             "profile nobody declared",
             "a fourth profile, which no rule on the stage answers",
-            swap(STATEMENT_SOURCE, 'motion="static"', 'motion="dramatic"'),
+            swap(PROPOSAL_SOURCE, 'motion="editorial"', 'motion="dramatic"'),
             "write motion= as one of",
         ),
     ], width=24)
 
     print()
-    failed += block("the theme-repertoire ruler (#216)", FEW_WORDS_SOURCE, [
+    failed += block("the theme-repertoire ruler (#216)", PROPOSAL_SOURCE, [
         (
             "a character no face has",
             "an arrow the docs' Inter was cut without",
-            swap(FEW_WORDS_SOURCE, "corte o resto", "corte o resto →"),
+            swap(PROPOSAL_SOURCE, "sem culpa.", "sem culpa →"),
             'rewrite "→" (U+2192)',
         ),
         (
             "a tick nobody carries",
             "a check mark neither face ever had",
-            swap(FEW_WORDS_SOURCE, "Catálogo v2", "Catálogo v2 ✓"),
+            swap(PROPOSAL_SOURCE, ">Proposta<", ">Proposta ✓<"),
             'rewrite "✓" (U+2713)',
         ),
     ], width=24, theme="panlabs")
 
     print()
-    failed += block("a note is painted too (#216)", PRESENTING_SOURCE, [
+    failed += block("a note is painted too (#216)", PROPOSAL_SOURCE, [
         (
             "a character in a note",
             "a glyph in the panel only the presenter opens",
-            swap(PRESENTING_SOURCE, "<notes>", "<notes>⌫ "),
+            swap(PROPOSAL_SOURCE, "<notes>", "<notes>⌫ "),
             'rewrite "⌫" (U+232B)',
         ),
     ], width=24, theme="panlabs")
 
     print()
-    failed += block("the art direction's own dialect (#217)", STATEMENT_SOURCE, [
+    failed += block("the art direction's own dialect (#217)", PROPOSAL_SOURCE, [
         (
             "no art direction",
             "a deck whose form nobody chose",
-            swap(STATEMENT_SOURCE, DIRECTION + "\n\n", ""),
+            swap(PROPOSAL_SOURCE, DIRECTION + "\n\n", ""),
             "add a <direction> as the first child",
         ),
         (
             "a choice gone",
             "the signature taken out of the header",
-            cut(STATEMENT_SOURCE, r'\s*<p class="signature">.*?</p>', "the signature"),
+            cut(PROPOSAL_SOURCE, r'\s*<p class="signature">.*?</p>', "the signature"),
             'add the missing <p class="signature">',
         ),
         (
             "a choice nobody declared",
             "a name the register never heard of, in the header",
-            swap(STATEMENT_SOURCE, 'class="signature"', 'class="palette"'),
+            swap(PROPOSAL_SOURCE, 'class="signature"', 'class="palette"'),
             'drop the class "palette"',
         ),
         (
             "an attribute on the block",
             "geometry wearing the clothes of a header",
-            swap(STATEMENT_SOURCE, "<direction>", '<direction theme="panlabs">'),
+            swap(PROPOSAL_SOURCE, "<direction>", '<direction theme="panlabs">'),
             "drop theme= from the <direction>",
         ),
         (
             "a cover the catalog has not",
             "the deck opening on a pattern nobody wrote",
-            swap(STATEMENT_SOURCE, '<p class="cover">cover-headline</p>',
+            swap(PROPOSAL_SOURCE, '<p class="cover">cover-headline</p>',
                  '<p class="cover">mega-cover</p>'),
             'replace "mega-cover"',
         ),
         (
             "a scale nobody declared",
             "a fourth scale of moments, which no ruler can hold a count to",
-            swap(STATEMENT_SOURCE, '<p class="moments">sober</p>',
+            swap(PROPOSAL_SOURCE, '<p class="moments">sober</p>',
                  '<p class="moments">calm</p>'),
             'replace "calm"',
         ),
@@ -1335,14 +1403,14 @@ def main():
         (
             "one renunciation twice",
             "three renunciations that give up two shapes",
-            swap(STATEMENT_SOURCE, '<p class="renounced-2">table</p>',
+            swap(PROPOSAL_SOURCE, '<p class="renounced-2">table</p>',
                  '<p class="renounced-2">chart</p>'),
             'renounce something other than "chart"',
         ),
         (
             "renouncing its own cover",
             "a deck that gave up the pattern it opens on",
-            swap(STATEMENT_SOURCE, '<p class="renounced-1">chart</p>',
+            swap(PROPOSAL_SOURCE, '<p class="renounced-1">chart</p>',
                  '<p class="renounced-1">cover-headline</p>'),
             'stop renouncing "cover-headline"',
         ),
@@ -1350,124 +1418,133 @@ def main():
             "renouncing the closing",
             "the one contradiction no source could answer: the doctrine "
             "requires the shape the header gave up",
-            swap(STATEMENT_SOURCE, '<p class="renounced-1">chart</p>',
+            swap(PROPOSAL_SOURCE, '<p class="renounced-1">chart</p>',
                  '<p class="renounced-1">closing-call</p>'),
             'stop renouncing "closing-call"',
         ),
     ], width=26)
 
     print()
-    failed += block("the function in the arc (#217)", STATEMENT_SOURCE, [
+    failed += block("the function in the arc (#217)", PROPOSAL_SOURCE, [
         (
             "no function at all",
             "a slide that never says what it is there for",
-            swap(STATEMENT_SOURCE,
-                 '<section pattern="full-bleed-statement" arc="tension">',
-                 '<section pattern="full-bleed-statement">'),
+            swap(PROPOSAL_SOURCE,
+                 '<section pattern="pivot-question" arc="tension">',
+                 '<section pattern="pivot-question">'),
             "give the <section> an arc=",
         ),
         (
             "a function nobody declared",
             "a seventh act, which no arc in the register has",
-            swap(STATEMENT_SOURCE, 'arc="tension"', 'arc="epilogue"'),
+            swap(PROPOSAL_SOURCE, 'arc="tension"', 'arc="epilogue"'),
             'replace the arc "epilogue"',
         ),
     ], width=26)
 
     print()
-    failed += block("the scale of moments (#217)", STATEMENT_SOURCE, [
+    failed += block("the scale of moments (#217)", PROPOSAL_SOURCE, [
         (
             "a deck with no moment",
             "the one peak rewritten as a pattern that is not one",
-            swap(STATEMENT_SOURCE, STATEMENT_MOMENT, STATEMENT_NO_MOMENT),
+            swap(PROPOSAL_SOURCE, PROPOSAL_MOMENT, PROPOSAL_NO_MOMENT),
             "no scale admits none",
         ),
     ], width=26)
 
     print()
-    failed += block("a scale the deck outgrew (#217)", CHARTS_SOURCE, [
+    failed += block("a scale the deck outgrew (#217)", CANONICAL_SOURCE, [
         (
             "sober, with six moments",
             "the ticket's own case: six charts under the smallest scale",
-            swap(CHARTS_SOURCE, '<p class="moments">high</p>',
+            swap(CANONICAL_SOURCE, '<p class="moments">high</p>',
                  '<p class="moments">sober</p>'),
             "bring the deck to 1 to 2 moments",
         ),
         (
             "high, without the stage",
             "six peaks on a profile the scale is not lent to",
-            swap(CHARTS_SOURCE, 'motion="cinematic"', 'motion="editorial"'),
+            swap(CANONICAL_SOURCE, 'motion="cinematic"', 'motion="editorial"'),
             'write motion="cinematic" on the <deck>',
         ),
-    ], width=26)
+    ], width=26, assets=GOOD_ASSETS)
 
     print()
-    failed += block("a chart spends colour too (#217)", CHARTS_SOURCE, [
+    failed += block("a chart spends colour too (#217)", CANONICAL_SOURCE, [
         (
             "a chart, and no semantics",
             "six charts drawn in two borrowed colours the header never explains",
-            cut(CHARTS_SOURCE, r'\s*<p class="content-1">.*?</p>',
+            cut(CANONICAL_SOURCE, r'\s*<p class="content-1">.*?</p>',
                 "the meaning of --content-1"),
             "say what --content-1 means in this deck",
         ),
-    ], width=26)
+    ], width=26, assets=GOOD_ASSETS)
 
     print()
-    failed += block("the renounced pattern in use (#217)", FEW_WORDS_SOURCE, [
+    failed += block("the renounced pattern in use (#217)", PROPOSAL_SOURCE, [
         (
             "a shape given up and used",
             "a renunciation the deck walks back four slides later",
-            swap(FEW_WORDS_SOURCE, '<p class="renounced-3">timeline</p>',
+            swap(PROPOSAL_SOURCE, '<p class="renounced-3">timeline</p>',
                  '<p class="renounced-3">pull-quote</p>'),
             'stop renouncing "pull-quote"',
         ),
     ], width=26)
 
     print()
-    failed += block("the closing that asks (#217)", FEW_WORDS_SOURCE, [
+    failed += block("the closing that asks (#217)", PROPOSAL_SOURCE, [
         (
             "no closing at all",
             "a deck that stops instead of closing",
-            cut(FEW_WORDS_SOURCE, r'\s*<section pattern="closing-call".*?</section>',
+            cut(PROPOSAL_SOURCE, r'\s*<section pattern="closing-call".*?</section>',
                 "the closing"),
             'end the deck on a "closing-call" slide',
         ),
         (
             "a closing that asks nothing",
             "the last slide doing some other act of the arc",
-            swap(FEW_WORDS_SOURCE, '<section pattern="closing-call" arc="call">',
+            swap(PROPOSAL_SOURCE, '<section pattern="closing-call" arc="call">',
                  '<section pattern="closing-call" arc="plan">'),
             'write arc="call" on the closing',
         ),
         (
             "a closing in the middle",
             "a deck that asks for something and then keeps talking",
-            swap(FEW_WORDS_SOURCE, DIVIDER, FEW_WORDS_CLOSING + "\n\n" + DIVIDER),
+            swap(PROPOSAL_SOURCE, DIVIDER, PROPOSAL_CLOSING + "\n\n" + DIVIDER),
             "move this closing to the end of the deck",
         ),
     ], width=26)
 
     print()
-    failed += figure_block("the colours the direction lends (#217)", [
+    # THE ONE BLOCK THAT HAS TO RUN OVER THE DECK WITH NO CHART IN IT (#219).
+    # `_colour_semantics` charges a colour two ways -- a drawing that paints one
+    # by hand, and a chart that spends both without anybody typing one -- and it
+    # names the FIRST slide that spends each. In a deck carrying six charts and
+    # a drawing the charts always come first, so the drawing's half of the ruler
+    # is never the half that answers, and a plant here would be measuring the
+    # chart. The proposal deck renounces the chart and paints both borrowed
+    # colours by hand on one slide, which is the only ground on which the
+    # drawing's branch is the one under test.
+    failed += block("the colours the direction lends (#217)", PROPOSAL_SOURCE, [
         (
             "a colour with no meaning",
             "a figure painting with a colour the header never declared",
-            in_source(cut(FIGURE_SOURCE, r'\s*<p class="content-2">.*?</p>',
-                          "the meaning of --content-2")),
+            cut(PROPOSAL_SOURCE, r'\s*<p class="content-2">.*?</p>',
+                "the meaning of --content-2"),
             "say what --content-2 means in this deck",
         ),
         (
             "the other colour, undeclared",
-            "the drawing repainted in the content colour nobody borrowed",
-            in_source(swap(FIGURE_SOURCE, 'stroke="var(--content-2)"',
-                           'stroke="var(--content-1)"')),
+            "the drawing left painting with a colour nobody borrowed",
+            cut(PROPOSAL_SOURCE, r'\s*<p class="content-1">.*?</p>',
+                "the meaning of --content-1"),
             "say what --content-1 means in this deck",
         ),
         (
             "a scale the deck is under",
-            "two drawn figures declared as three to five",
-            in_source(swap(FIGURE_SOURCE, '<p class="moments">sober</p>',
-                           '<p class="moments">standard</p>')),
+            "one drawn figure declared as three to five",
+            swap(PROPOSAL_SOURCE, '<p class="moments">sober</p>',
+                 '<p class="moments">standard</p>'),
             "bring the deck to 3 to 5 moments",
         ),
     ], width=26)

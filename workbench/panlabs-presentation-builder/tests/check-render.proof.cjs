@@ -22,11 +22,11 @@
 // page by surviving past the compiler, which is the reason this gate exists
 // standing beside the audit rather than folded into it.
 //
-// THE GREEN CONTROL IS MEASURED EXACTLY ONCE PER FIXTURE. Every ruler sharing one
+// THE GREEN CONTROL IS MEASURED EXACTLY ONCE PER PAGE. Every ruler sharing one
 // Chromium pass over the real corpus is the same corpus gate/render.cjs
-// itself would measure; re-launching a browser per case to re-derive a
-// result that cannot change between cases would only make the proof slow
-// for no assertion gained.
+// itself would measure; re-launching a browser per case -- or per fixture, when
+// two of them land on the same built page -- to re-derive a result that cannot
+// change would only make the proof slow for no assertion gained.
 'use strict';
 
 const fs = require('fs');
@@ -39,32 +39,42 @@ const SKILL = path.resolve(HERE, '..', '..', '..', 'skills', 'panlabs-presentati
 const gate = require(path.join(SKILL, 'gate', 'render.cjs'));
 const { findChrome, launch } = require(path.join(SKILL, 'gate', 'cdp.cjs'));
 
+// FOUR FIXTURES, CHOSEN BY WHAT A BUILT PAGE CARRIES AND NEVER BY ITS NAME.
+// Each block below needs a page that HAS the construct its plants mutate -- a
+// full-bleed statement to rewrite, a chart whose viewBox can be halved, an
+// imported picture to resize, a slide that reveals in beats -- and `main()`
+// finds each by reading the corpus rather than by naming a file. That is why
+// #219 collapsing seven example decks into two touched nothing here.
+//
+// ⚠️ TWO FIXTURES MAY NOW BE THE SAME PAGE, AND THE MEASUREMENT IS SHARED WHEN
+// THEY ARE. They were four separate files when they were written, and the
+// reason they were four is still exactly right: a plant has to DIFFER from the
+// page it was planted into, so a chart case measured against a deck with no
+// chart in it would pass `planted` without changing anything. What changed is
+// that one deck can now satisfy three of the four, and re-launching Chromium
+// over identical bytes to re-derive an identical green control would buy
+// nothing -- `measured()` below keeps one measurement per PATH. The blocks stay
+// separate because what each one plants is still a different question.
 let REAL_PATH = null;
 let REAL_HTML = null;
 
-// The chart deck is a SECOND fixture and not a seventh case on the first one,
-// because a plant has to differ from the page it was planted into: measured
-// against the statement deck, "this chart's HTML is not that deck's HTML"
-// would pass the `planted` assertion without changing anything at all. Its own
-// real bytes and its own green control are what keep all four assertions real.
 let CHART_PATH = null;
 let CHART_HTML = null;
 
-// And a THIRD, for the same reason again (#214). A figure is the one thing on
-// a stage that is content without being text, and until #214 no ruler here
-// could see one: `pageMeasureFn` collected leaves by looking for a text node,
-// so a picture filling the projector edge to edge weighed exactly nothing.
-// Both cases below plant into the figure deck, and both were GREEN before that
-// change -- the first because the overflowing element carried no words, the
+// #214's two: a figure is the one thing on a stage that is content without
+// being text, and until #214 no ruler here could see one -- `pageMeasureFn`
+// collected leaves by looking for a text node, so a picture filling the
+// projector edge to edge weighed exactly nothing. Both cases below plant into
+// the page carrying an imported picture, and both were GREEN before that
+// change: the first because the overflowing element carried no words, the
 // second because the box CSS gave it is not the box it paints in.
 let FIGURE_PATH = null;
 let FIGURE_HTML = null;
 
-// And a FOURTH, for the same reason a fourth time (#215): the zero-step ruler
-// only ever looks at a slide that carries fragments, so a deck with none is a
-// page this ruler is green about without having measured anything. The
-// presenting deck's own green control is the assertion that matters here --
-// it opens three of its five slides on a partial stage and passes, which is
+// #215's: the zero-step ruler only ever looks at a slide that carries
+// fragments, so a deck with none is a page this ruler is green about without
+// having measured anything. The green control is the assertion that matters
+// here -- the deck opens several slides on a partial stage and passes, which is
 // what makes the red beside it mean something.
 let FRAGMENT_PATH = null;
 let FRAGMENT_HTML = null;
@@ -194,7 +204,7 @@ function plantMovingPageNumber() {
 // the ruler had nothing to compare against the stage and said so in green.
 function plantOversizePicture() {
   if (!FIGURE_HTML.includes('<img class="figure"')) {
-    throw new Drifted('no <img class="figure"> on the figure deck to grow');
+    throw new Drifted('no <img class="figure"> on the built page to grow');
   }
   if (!FIGURE_HTML.includes('</style>')) throw new Drifted('no </style> to plant an override before');
   const rule = '.slide[data-pattern="figure-caption"] img.figure'
@@ -275,13 +285,13 @@ const CASES = [
     plantMovingPageNumber, 'drop whatever moved the page number'],
 ];
 
-// The chart deck's own case, against the chart deck's own control.
+// The chart fixture's own case, against its own control.
 const CHART_CASES = [
   ['type-floor', "doubles the chart's viewBox, halving every label it draws",
     plantShrunkViewBox, 'raise'],
 ];
 
-// And the figure deck's own.
+// And the imported picture's own.
 const FIGURE_CASES = [
   ['box-overflow', 'blows the picture up until it bleeds off the stage',
     plantOversizePicture, 'shorten img.figure'],
@@ -346,6 +356,50 @@ async function theFigureCountsAsContent() {
   }
   console.log(`  ${good ? 'ok  ' : 'FAIL'} occupancy                [${good ? '+' : '-'}] `
     + 'a slide holding a figure and not one word of its own');
+  if (!good) console.log(`       <- ${why}`);
+  return good ? 0 : 1;
+}
+
+// --------------------------------------------------------------------------
+// AND ONE MORE THAT DEMANDS GREEN: the page number past the ninth slide (#219)
+// --------------------------------------------------------------------------
+// THE FOOTER IS ANCHORED BY `right` AND `bottom`, SO ITS LEFT EDGE MOVES ON ITS
+// OWN. "9/18" and "10/18" are not the same width, and until #219 this ruler
+// compared `x` -- which held every deck of nine slides or fewer and refused
+// every deck of ten or more with a red naming a defect nobody had introduced.
+// The corpus #219 landed is the first in this tree to cross that line, and it
+// went red from slide ten onwards on a page whose footer had never moved a
+// pixel.
+//
+// A PLANT CANNOT PROVE A RED THAT SHOULD NO LONGER HAPPEN, so this demands
+// green -- and it demands the WIDTH DIFFERENCE BE REAL first, because a green
+// over a deck whose page numbers all happen to be the same width would be a
+// green about nothing. The plant above still goes red: a rule that nudges the
+// footer out of its corner moves both gaps, and the digit a tenth slide adds
+// moves neither.
+async function thePageNumberIsReadAtItsCorner(green) {
+  let good = false;
+  let why = '';
+  try {
+    const withNum = green.slides.filter((s) => s.dom.pageNumber && s.dom.stage);
+    if (withNum.length < 10) {
+      throw new Drifted(`the corpus deck has ${withNum.length} slides with a page `
+        + 'number on them, and a two-digit one is what this case is about');
+    }
+    const first = withNum[0].dom.pageNumber;
+    const wider = withNum.some((s) => Math.abs(s.dom.pageNumber.x - first.x) > 0.5);
+    if (!wider) {
+      throw new Drifted('every page number on this deck is the same width, so a '
+        + 'ruler reading the left edge would pass too — nothing is being proved');
+    }
+    const fails = gate.BY_NAME['page-number'](green);
+    good = fails.length === 0;
+    if (!good) why = fails[0];
+  } catch (e) {
+    why = e.message;
+  }
+  console.log(`  ${good ? 'ok  ' : 'FAIL'} page-number             [${good ? '+' : '-'}] `
+    + 'a deck long enough for the footer to grow a digit');
   if (!good) console.log(`       <- ${why}`);
   return good ? 0 : 1;
 }
@@ -455,7 +509,7 @@ async function theStagePresents() {
   return good ? 0 : 1;
 }
 
-// The presenting deck's own case, against the presenting deck's own control.
+// The fragment fixture's own cases, against its own control.
 const FRAGMENT_CASES = [
   ['zero-step', 'marks every slot on every slide as a fragment',
     plantEveryStep, 'take `step` off one of the'],
@@ -551,15 +605,26 @@ async function main(argv) {
   FRAGMENT_PATH = path.join(dir, fragmented);
   FRAGMENT_HTML = fs.readFileSync(FRAGMENT_PATH, 'utf8');
 
+  // ONE MEASUREMENT PER PATH, however many fixtures land on it (#219). The
+  // green control of a fixture is the gate's verdict over the UNPLANTED page,
+  // and two fixtures pointing at the same file cannot disagree about it -- so a
+  // second Chromium launch there would spend thirty seconds re-deriving a
+  // result already in hand.
+  const seen = new Map();
+  const measured = async (p) => {
+    if (!seen.has(p)) seen.set(p, await _measureWithRetry(p));
+    return seen.get(p);
+  };
+
   let GREEN;
   let CHART_GREEN;
   let FIGURE_GREEN;
   let FRAGMENT_GREEN;
   try {
-    GREEN = await _measureWithRetry(REAL_PATH);
-    CHART_GREEN = await _measureWithRetry(CHART_PATH);
-    FIGURE_GREEN = await _measureWithRetry(FIGURE_PATH);
-    FRAGMENT_GREEN = await _measureWithRetry(FRAGMENT_PATH);
+    GREEN = await measured(REAL_PATH);
+    CHART_GREEN = await measured(CHART_PATH);
+    FIGURE_GREEN = await measured(FIGURE_PATH);
+    FRAGMENT_GREEN = await measured(FRAGMENT_PATH);
   } catch (e) {
     return new Proof({ title: 'render.proof' }).refuse(`could not measure the real corpus: ${e.message}`);
   }
@@ -598,9 +663,9 @@ async function main(argv) {
   const CHART_PROOF = fixtureProof(
     'render.proof · over the chart deck', CHART_PATH, CHART_HTML, CHART_GREEN);
   const FIGURE_PROOF = fixtureProof(
-    'render.proof · over the figure deck', FIGURE_PATH, FIGURE_HTML, FIGURE_GREEN);
+    'render.proof · over the imported figure', FIGURE_PATH, FIGURE_HTML, FIGURE_GREEN);
   const FRAGMENT_PROOF = fixtureProof(
-    'render.proof · over the presenting deck',
+    'render.proof · over the deck that reveals in beats',
     FRAGMENT_PATH, FRAGMENT_HTML, FRAGMENT_GREEN);
 
   let bad = await PROOF.run(CASES);
@@ -611,9 +676,10 @@ async function main(argv) {
   console.log();
   bad += await FRAGMENT_PROOF.run(FRAGMENT_CASES);
   console.log();
-  console.log('and the three that demand green:  [green]');
+  console.log('and the four that demand green:  [green]');
   bad += await theFigureIsMeasuredWhereItPaints();
   bad += await theFigureCountsAsContent();
+  bad += await thePageNumberIsReadAtItsCorner(GREEN);
   bad += await theStagePresents();
 
   const all = CASES.concat(CHART_CASES, FIGURE_CASES, FRAGMENT_CASES);

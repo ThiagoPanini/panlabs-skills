@@ -65,7 +65,7 @@ WORKTREE_MARK = "/.claude/worktrees/"
 # The documented command, and the one source every example is built from in
 # `SKILL.md`'s first fence. `--theme` is spelled out for the reason in the
 # header: the embedded face is the assertion, and only one theme has one.
-SOURCE = "examples/statement.deck.html"
+SOURCE = "examples/proposal.deck.html"
 THEME = "panlabs"
 EMBEDDED_FACE = "data:font/woff2"
 

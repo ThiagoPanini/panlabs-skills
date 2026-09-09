@@ -293,13 +293,13 @@ def plant_dangling_in_a_table_row():
 def plant_build_into_the_tree():
     """A destination that EXISTS inside the tree, so only family 5 fires.
 
-    Writing over `examples/statement.deck.html` is the realistic version of
+    Writing over `examples/proposal.deck.html` is the realistic version of
     this defect: the documented command overwrites the example it ships with,
     and the installed package grows a file per run.
     """
     return dict(skill_md=_front() + fence(
         "python3 compiler/build.py /tmp/x.deck.html "
-        "examples/statement.deck.html"))
+        "examples/proposal.deck.html"))
 
 
 def plant_contact_sheet_into_the_tree():

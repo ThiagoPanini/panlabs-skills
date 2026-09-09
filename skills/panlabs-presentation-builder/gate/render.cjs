@@ -539,21 +539,45 @@ function rulerPlatformFont(m) {
   return fixes;
 }
 
+// THE CORNER IS WHAT IS MEASURED, AND IT IS NOT THE TOP-LEFT ONE (#219). The
+// footer is anchored by `right` and `bottom` in compiler/stage.html, so its
+// LEFT edge is wherever its own width leaves it -- and its width grows the
+// moment the deck crosses ten slides and "9/11" becomes "10/11". Reading `x`
+// held every deck of nine or fewer slides perfectly and refused every deck of
+// ten or more with a red naming a defect nobody had introduced; #219's own
+// corpus is the first in this tree to pass that line, and it went red on
+// slides 10 and 11 of a page whose footer had never moved a pixel.
+//
+// So the two numbers compared are the GAPS to the stage's own right and bottom
+// edges, which is the promise the ruler was always making in words. A same-
+// origin rule nudging the footer out of its corner still moves both, so the
+// plant in check-render.proof.cjs is red exactly as before; the digit that a
+// hundredth slide adds moves neither.
+function _corner(s) {
+  const p = s.dom.pageNumber;
+  const stage = s.dom.stage;
+  if (!stage) return null;
+  return {
+    right: stage.x + stage.width - (p.x + p.width),
+    bottom: stage.y + stage.height - (p.y + p.height),
+  };
+}
+
 function rulerPageNumber(m) {
   const fixes = [];
-  const withNum = m.slides.filter((s) => s.dom.pageNumber);
+  const withNum = m.slides.filter((s) => s.dom.pageNumber && s.dom.stage);
   if (!withNum.length) return fixes;
   const base = withNum[0];
+  const b = _corner(base);
   const EPS = 0.5;
   for (const s of withNum.slice(1)) {
-    const p = s.dom.pageNumber;
-    const b = base.dom.pageNumber;
-    if (Math.abs(p.x - b.x) > EPS || Math.abs(p.y - b.y) > EPS) {
+    const p = _corner(s);
+    if (Math.abs(p.right - b.right) > EPS || Math.abs(p.bottom - b.bottom) > EPS) {
       fixes.push(
-        `slide ${s.n + 1}: drop whatever moved the page number — it sits at `
-        + `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}) instead of (${b.x.toFixed(1)}, `
-        + `${b.y.toFixed(1)}) like slide ${base.n + 1}, and it has to stay in the same corner `
-        + 'on every slide'
+        `slide ${s.n + 1}: drop whatever moved the page number — it sits `
+        + `${p.right.toFixed(1)} from the stage's right edge and ${p.bottom.toFixed(1)} `
+        + `from its bottom, instead of ${b.right.toFixed(1)} and ${b.bottom.toFixed(1)} `
+        + `like slide ${base.n + 1}, and it has to stay in the same corner on every slide`
       );
     }
   }

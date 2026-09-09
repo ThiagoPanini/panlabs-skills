@@ -102,13 +102,27 @@
 #                                       anywhere. This layer holds the tokens
 #                                       against `panlabs-docs` and the
 #                                       manifest against the bytes, then
-#                                       builds one deck in both themes. It is
-#                                       last because it is the layer most
+#                                       builds one deck in both themes. It sits
+#                                       below everything that measures the
+#                                       COMPILER because it is the layer most
 #                                       likely to SKIP: without the docs
 #                                       cloned beside this repository the
 #                                       drift check has nothing to compare,
 #                                       and says so by name rather than
 #                                       failing.
+#   5  THE STORYBOARD                   the page `compiler/storyboard.py`
+#                                       writes beside every deck, which no
+#                                       ruler inside the compiler ever reads
+#                                       back. It holds one storyboard to the
+#                                       source it came from -- a row per slide,
+#                                       in order, carrying that slide's own
+#                                       pattern, its own function in the arc
+#                                       and words the deck really says -- and
+#                                       holds the generator to writing the same
+#                                       page twice. It is last because it is
+#                                       the only layer about a SECOND file: a
+#                                       storyboard is worth measuring only
+#                                       once there is a deck beside it.
 #
 # ⚠️ SPEC #207 PUTS THE REGISTER/REFERENCE EQUALITY AT THE FRONT DOOR ("a porta
 # de entrada cobra igualdade entre registro e referência publicada"), which is
@@ -305,7 +319,7 @@ step "every face's manifest describes the bytes beside it" \
   node "$HERE/check-fonts.cjs"
 
 # AND THE DECK THAT PROVES A PATTERN IS NOT A THEME. #216's own acceptance
-# asks for the seven-slide deck of few words to compile in EVERY theme: `base`
+# asks for the deck of few words to compile in EVERY theme: `base`
 # is the one that proves the patterns hold with no brand behind them, and
 # `panlabs` is the one that proves the theme is a sheet of overrides rather
 # than a second engine. Layer 1 already built every example in the theme its
@@ -357,13 +371,39 @@ build_across_themes() {
     return 1
   fi
   if [ "$sheets" -eq "$n" ]; then
-    echo "   ✓ the seven-slide deck built and rendered in $n themes, $sheets contact sheets beside it"
+    echo "   ✓ the few-words deck built and rendered in $n themes, $sheets contact sheets beside it"
   else
-    echo "   ✓ the seven-slide deck built in $n themes; $sheets of $n contact sheets —"
+    echo "   ✓ the few-words deck built in $n themes; $sheets of $n contact sheets —"
     echo "     the render gate SKIPped for want of a Chromium, so there is nothing to look at"
   fi
 }
 step "the same deck compiles in every theme"  build_across_themes
+
+echo
+echo "════ layer 5 · the storyboard ════"
+# THE ONE ARTIFACT NO RULER INSIDE THE COMPILER EVER READS. Every check in layer
+# 0 stops at the SOURCE; `compiler/storyboard.py` runs after all of them have
+# passed, and the page it writes beside the deck is read by a person rather than
+# by a machine. A compiler that skipped a slide there, printed the arc one row
+# out of step, or dropped a line of the art direction would leave every layer
+# above green -- and the reader it was written for, who asked for the story to
+# stay beside the deck so the next ask could be about the ARC instead of about
+# slide seven, is exactly the reader with no way to tell.
+#
+# IT COMES LAST BECAUSE IT IS THE ONLY LAYER THAT IS ABOUT A SECOND FILE. Layer 1
+# already answers whether the corpus builds at all; a storyboard is worth holding
+# to a deck only once there is a deck.
+#
+# ⚠️ IT BUILDS WITHOUT A BROWSER, AND SAVES THIRTY-FIVE SECONDS DOING IT. The
+# check runs `build.py` with no `node` on the PATH, so `gate/render.cjs` degrades
+# to the named SKIP #209 built it to degrade to. Layer 2 above is where a render
+# verdict is asserted for this same corpus; paying for fourteen more Chromium
+# launches to read fourteen Markdown tables would buy nothing twice.
+step "the storyboard check proves it measures" \
+  python3 "$HERE/check-storyboard.proof.py"
+
+step "every storyboard describes the deck beside it, and is the same page twice" \
+  python3 "$HERE/check-storyboard.py"
 
 echo
 if [ "$failed" -ne 0 ]; then
@@ -371,4 +411,4 @@ if [ "$failed" -ne 0 ]; then
   for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, and the second theme still wears the identity it snapshotted."
+echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, and every storyboard still describes the deck beside it."

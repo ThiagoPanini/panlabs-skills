@@ -104,6 +104,39 @@ NOTES_TAG = "notes"
 # because whether anything painted is a question only a browser answers.
 STEP_ATTR = "step"
 
+# WHAT A SLIDE IS FOR, WHICH IS NOT WHAT IT LOOKS LIKE (#217). A pattern names
+# the shape; the arc function names the job, and neither implies the other -- a
+# chart can be the tension or the evidence, and a full-bleed statement can be
+# either. #207's arc is these six words in this order, and every `<section>`
+# says which one it is doing in `ARC_ATTR`.
+#
+# WHY EVERY SLIDE CARRIES IT AND NOT JUST THE STORYBOARD. The storyboard is
+# GENERATED, and a generated document can only publish what the source already
+# knows. The alternative is the arc written twice -- once in the deck, once in a
+# file beside it -- which is a contract with two ends and the silent drift that
+# comes with one: #207's own lesson from the v1 is that "a cópia que o agente lê
+# é sempre a que envelheceu". The source says it once, and
+# `compiler/storyboard.py` reads it back out.
+ARC_ATTR = "arc"
+
+ARC_FUNCTIONS = ("context", "tension", "thesis", "evidence", "plan", "call")
+
+# The last act, named once so that the ruler charging a deck for its closing
+# does not spell the word a second time.
+ARC_CALL = "call"
+
+# The reference and the storyboard publish the arc in Portuguese, the same seam
+# `ROLE_LABEL` sits on one section down: the name is an identifier, the label is
+# prose for whoever reads the story back.
+ARC_LABEL = {
+    "context": "contexto",
+    "tension": "tensão",
+    "thesis": "tese",
+    "evidence": "provas",
+    "plan": "plano",
+    "call": "chamada",
+}
+
 
 # ── what a slot is for ───────────────────────────────────────────────────────
 # The role is the register's answer to "how loud is this, and who measures
@@ -227,6 +260,20 @@ class Chart:
     attribute: str    # the <section> attribute that names the form: "type"
     forms: tuple      # the ChartForm(s), in the order the reference publishes
     total: int = 100  # what a proportion form's values have to add up to
+    # WHAT THE STAGE SPENDS DRAWING ONE (#217), AND WHY IT IS A PATTERN-WIDE
+    # ANSWER RATHER THAN A PER-FORM ONE. `compiler/stage.html` paints a mark, a
+    # dot, a line, an area and a slice out of these two tokens, and WHICH of them
+    # a given slide reaches depends on the form AND on whether a point is
+    # marked -- a line with no mark touches only the first. Naming that exactly
+    # would mean a copy of that cascade living here, in step with a stylesheet,
+    # by hand: the two-ended contract this register exists to have one end of.
+    #
+    # So it names both, and the ruler asks a deck showing a chart to say what
+    # both mean. The over-approximation costs one line in a header and can only
+    # ever err toward asking; the exact version errs toward a colour reaching the
+    # room with nothing said about it, which is the defect #207's own user story
+    # ("a mesma cor marque a mesma coisa do começo ao fim") is about.
+    content: tuple = ("--content-1", "--content-2")
 
 
 @dataclass(frozen=True)
@@ -378,6 +425,33 @@ class Pattern:
     allow_break: bool = False  # may a slot force a line with BREAK_TAG (#211)
     chart: Chart = None      # the group is drawn, not printed -- see Chart (#213)
     figure: Figure = None    # the slot the catalog does not limit -- see Figure (#214)
+    # THE TWO THINGS AN ART DIRECTION PICKS A PATTERN *BY* (#217), and they are
+    # facts about the pattern rather than about a deck -- which is why they are
+    # declared here once instead of listed by name in a ruler that would then
+    # have to be edited every time the catalog grows.
+    #
+    # `cover` is what makes "escolhe a capa entre os padrões de capa" a closed
+    # question. `moment` is #207's own definition read into this register: "um
+    # slide com figura desenhada, gráfico animado ou afirmação de tela cheia" --
+    # the three patterns below, with the drawn/imported split for the figure
+    # settled per slide, because a photograph is not a drawing.
+    #
+    # AND "GRÁFICO ANIMADO" IS READ AS "GRÁFICO", DELIBERATELY. This engine
+    # animates a slide's ARRIVAL by motion profile and never a chart's marks
+    # (compiler/stage.html), so the spec's adjective describes a feature that
+    # does not exist here yet. Read literally, no chart would ever count -- and a
+    # deck of six charts would declare itself "sober" while being a wall of
+    # peaks, which is the exact rhythm the scale exists to measure. Counting the
+    # chart is what keeps the scale about the DECK rather than about a feature;
+    # the day chart animation lands, this line does not have to change.
+    cover: bool = False      # a deck may open on this one
+    moment: bool = False     # a slide of this pattern is one of the deck's moments
+    # AND THE ONE A DECK HAS TO END ON. #207 makes the closing mandatory ("fecho
+    # obrigatório que volta à tese e pede algo à plateia"), and the ruler that
+    # charges a deck for it asks the register which pattern that is rather than
+    # spelling a name -- a name spelled in a ruler is a name that outlives the
+    # pattern it referred to.
+    closing: bool = False    # the deck's last slide is one of these
 
 
 # THE ORDER IS THE ARC, not the alphabet: a deck opens with a cover, turns on
@@ -415,6 +489,7 @@ PATTERNS = {
             required=("title", "meta"),
             budget=25,
             purpose="A capa que abre pela manchete — o deck se apresenta pelo que afirma",
+            cover=True,
         ),
         Pattern(
             name="cover-numbered",
@@ -426,6 +501,7 @@ PATTERNS = {
             required=("number", "title"),
             budget=25,
             purpose="A capa que abre por um número, com o título dizendo o que ele mede",
+            cover=True,
         ),
         Pattern(
             name="pivot-question",
@@ -587,6 +663,7 @@ PATTERNS = {
                               "cor que o tema empresta", proportion=True),
                 ),
             ),
+            moment=True,
         ),
         # THE SLOT THE CATALOG DOES NOT LIMIT (#214). Every pattern above says
         # what goes in it; this one says only what the figure may be BUILT
@@ -615,6 +692,7 @@ PATTERNS = {
             purpose="Uma figura desenhada sob medida, ou uma imagem embutida por "
                     "caminho, com a legenda embaixo",
             figure=FIGURE_SPEC,
+            moment=True,
         ),
         Pattern(
             name="full-bleed-statement",
@@ -624,6 +702,7 @@ PATTERNS = {
             required=("statement",),
             budget=12,
             purpose="Uma frase em corpo de display, segurando o palco sozinha",
+            moment=True,
         ),
         Pattern(
             name="two-columns",
@@ -713,6 +792,7 @@ PATTERNS = {
             required=("thesis", "call"),
             budget=30,
             purpose="O fecho que volta à tese e pede alguma coisa",
+            closing=True,
         ),
     )
 }
@@ -892,6 +972,200 @@ def allow_break_of(name):
     return bool(p and p.allow_break)
 
 
+# ── the art direction of one deck (#217) ─────────────────────────────────────
+# WHERE THE FREEDOM LIVES, AND EXACTLY HOW MUCH OF IT THERE IS. #207 draws the
+# line: the theme locks the surface, the faces, the hairlines, the radius, the
+# icon set and the accent, and everything a DECK still gets to decide is written
+# in the block below -- the cover it opens on, a geometric signature that
+# repeats, what each borrowed colour means, the register of the text, how many
+# moments it holds, three patterns it gives up on purpose, and how it differs
+# from the skill's canonical example.
+#
+# IT IS A HEADER, NOT A SLIDE. The block is the first child of `<deck>` and
+# reaches no stage: nothing in it is painted, and #207's "nenhum CSS por deck"
+# stays true to the letter. What it feeds is the STORYBOARD -- where a deck is
+# still cheap to fix, because it is still text -- and the four rulers in
+# `compiler/audit.py` that hold the slides to what the direction promised.
+#
+# THE SHAPE IS THE ONE THE MODEL ALREADY WRITES. A choice is a `<p>` with the
+# choice's name in its `class=`, exactly like a slide's slot, and the three
+# renunciations are numbered `renounced-1` … `renounced-3` the same way
+# `icon-list` numbers its five items. No new container, no prose smuggled into
+# an attribute, and nothing to learn that the dialect did not already teach.
+DIRECTION_TAG = "direction"
+
+
+@dataclass(frozen=True)
+class Scale:
+    """One declared scale of moments, and the count of them it admits.
+
+    A MOMENT IS A SLIDE THAT HOLDS THE STAGE ALONE -- #207's "figura desenhada,
+    gráfico animado ou afirmação de tela cheia", which is `Pattern.moment` one
+    section up. The scale is declared BEFORE a slide exists, in the calibration
+    round, and this is what holds the built deck to it: a deck that promised
+    sober and shipped six peaks is a deck whose art direction stopped describing
+    it, and nothing else in this compiler would notice.
+
+    THE CEILING IS OPEN AT THE TOP AND THE FLOOR NEVER IS. `maximum=None` is
+    "seis ou mais"; there is no scale admitting ZERO, and that is the spec's own
+    arithmetic rather than an omission -- a deck with no moment at all has no
+    peak, and #207 asks for the strongest moment of a deck by name.
+    """
+
+    name: str
+    minimum: int
+    maximum: int          # None: no ceiling
+    purpose: str          # Portuguese: the line the reference publishes about it
+    motion: str = None    # the one motion profile this scale may be declared with
+
+    @property
+    def span(self):
+        """The count this scale admits, written the way its readers publish it.
+
+        PORTUGUESE, AND ON THE RECORD RATHER THAN AT EACH READER. `reference()`
+        below and `compiler/storyboard.py` both print this range for a person to
+        read, and they had a copy each -- with two different tests for the open
+        ceiling, which is how one of them ends up printing "6 a None" the day a
+        fourth scale lands. The audit's own English version stays where it is:
+        that one is a message the program PRINTS, and CLAUDE.md's seam runs
+        between the two.
+        """
+        return (f"{self.minimum} a {self.maximum}" if self.maximum is not None
+                else f"{self.minimum} ou mais")
+
+
+MOMENT_SCALES = (
+    Scale("sober", 1, 2,
+          "um ou dois momentos — a proposta sóbria, que não pede palco"),
+    Scale("standard", 3, 5,
+          "de três a cinco — o ritmo padrão, com pico e respiro"),
+    Scale("high", 6, None,
+          "seis ou mais, e só com `motion=\"cinematic\"` — o palco assumido, "
+          "nunca o acidente",
+          motion="cinematic"),
+)
+
+
+@dataclass(frozen=True)
+class Choice:
+    """One decision the art direction records, written as a slot of its own.
+
+    `options` IS WHAT MAKES A CHOICE A CHOICE. A name drawn from a closed set is
+    held against it; free prose is only held to being there at all, because the
+    signature and the register are sentences a person wrote and this register has
+    nothing to measure a sentence against.
+
+    `token` IS SET ON THE TWO COLOURS AND NOWHERE ELSE. Their name IS a theme
+    token, so the ruler that refuses an undeclared colour reads the token from
+    here rather than pasting `--` in front of a class name -- the day the tokens
+    are renamed, this file is the one place that has to say so.
+    """
+
+    name: str
+    purpose: str        # Portuguese: the line the reference publishes about it
+    label: str          # Portuguese: how the storyboard names this line
+    options: tuple = ()      # the closed set the value comes from, () for prose
+    token: str = None        # the theme token this choice lends a meaning to
+
+
+def covers():
+    """Every pattern a deck may open on, in the arc's order."""
+    return tuple(n for n, p in PATTERNS.items() if p.cover)
+
+
+def moment_of(name):
+    """Whether a slide of this pattern can be one of the deck's moments."""
+    p = PATTERNS.get(name)
+    return bool(p and p.moment)
+
+
+def closings():
+    """Every pattern a deck may end on, in the arc's order."""
+    return tuple(n for n, p in PATTERNS.items() if p.closing)
+
+
+# The three choices whose value is not prose, named once so that a reader --
+# and a ruler -- asks the register instead of matching on a class name.
+COVER_CHOICE = "cover"
+MOMENTS_CHOICE = "moments"
+COLOUR_CHOICES = ("content-1", "content-2")
+RENOUNCE_CHOICES = ("renounced-1", "renounced-2", "renounced-3")
+
+DIRECTION_CHOICES = (
+    Choice(COVER_CHOICE,
+           "o padrão de capa em que este deck abre — um dos padrões de capa do "
+           "catálogo",
+           "capa",
+           options=covers()),
+    Choice("signature",
+           "a assinatura geométrica que se repete: o motivo que volta e faz do "
+           "deck uma peça em vez de uma pilha",
+           "assinatura"),
+    Choice("register",
+           "o registro do texto — em que pessoa, em que tom e com que "
+           "vocabulário os slides falam",
+           "registro"),
+    Choice(MOMENTS_CHOICE,
+           "a escala de momentos que este deck se dá, e é contra ela que a "
+           "contagem é cobrada",
+           "momentos",
+           options=tuple(s.name for s in MOMENT_SCALES)),
+    Choice("difference",
+           "em que este deck difere do exemplo canônico da skill, na capa e na "
+           "assinatura",
+           "diferença"),
+    Choice(COLOUR_CHOICES[0],
+           "o que a primeira cor de conteúdo significa neste deck, do primeiro "
+           "slide ao último — sem esta linha, nada pode pintar com ela",
+           "`--content-1`",
+           token="--content-1"),
+    Choice(COLOUR_CHOICES[1],
+           "o mesmo para a segunda cor de conteúdo — o tema empresta duas, e "
+           "o deck declara as que gasta",
+           "`--content-2`",
+           token="--content-2"),
+) + tuple(
+    Choice(name,
+           f"o {ordinal} padrão do catálogo de que este deck abre mão — usá-lo "
+           "reprova a construção",
+           f"renúncia {n}",
+           options=pattern_names())
+    for n, (name, ordinal) in enumerate(
+        zip(RENOUNCE_CHOICES, ("primeiro", "segundo", "terceiro")), start=1)
+)
+
+# EVERY CHOICE BUT THE TWO COLOURS. #207 lends "até duas cores de conteúdo" --
+# up to two -- so a deck painted in ink and accent alone declares neither, and
+# the ruler that refuses an undeclared colour is the one that gives the pair
+# their teeth. The three renunciations are required at three: #207 asks for
+# "três renúncias explícitas", and a direction that could renounce nothing would
+# be a direction that gave nothing up.
+DIRECTION_REQUIRED = tuple(
+    c.name for c in DIRECTION_CHOICES if c.name not in COLOUR_CHOICES
+)
+
+
+def choice_of(name):
+    """One named choice of the art direction, or None for a stranger."""
+    for c in DIRECTION_CHOICES:
+        if c.name == name:
+            return c
+    return None
+
+
+def choice_names():
+    """Every choice the art direction records, in reading order."""
+    return tuple(c.name for c in DIRECTION_CHOICES)
+
+
+def scale_of(name):
+    """One named scale of moments, or None when the register never heard of it."""
+    for s in MOMENT_SCALES:
+        if s.name == name:
+            return s
+    return None
+
+
 # ── the reference the model reads ────────────────────────────────────────────
 # Generated, never written: `CATALOG.md` carries the block between the two
 # markers below and nothing else of this file's business. The prose around
@@ -948,6 +1222,11 @@ def reference():
         + ". Ele decide como um slide chega e como um fragmento entra, e mais nada; "
         "numa máquina que pediu menos movimento nenhuma animação roda, seja qual "
         "for o perfil.",
+        "",
+        f"O cabeçalho não acaba aí: o primeiro filho do `<deck>` é um "
+        f"`<{DIRECTION_TAG}>` com a direção de arte, e toda `<section>` carrega um "
+        f"`{ARC_ATTR}=` dizendo a sua função no arco. As duas últimas seções deste "
+        "documento são sobre isso.",
         "",
         f"São {len(PATTERNS)} padrões, na ordem do arco. O orçamento é do slide "
         "inteiro, mobília inclusive, e nenhum slide passa de "
@@ -1093,6 +1372,73 @@ def reference():
         "branco até o primeiro avanço, e a sala lê isso como um slide que não "
         "carregou; o portão de render reprova, e o conserto é tirar o "
         f"`{STEP_ATTR}` de um deles.",
+        "",
+        "### A direção de arte",
+        "",
+        f"O primeiro filho do `<deck>` é um `<{DIRECTION_TAG}>`, e é ali que a "
+        "direção de arte deste deck fica gravada. Cada escolha é um `<p>` com o "
+        "nome dela na `class=`, do mesmo jeito que um slot de slide. **Nada disso "
+        "chega ao palco e nada disso pinta coisa alguma** — o que a direção "
+        "alimenta é o storyboard, onde a história ainda é barata de corrigir, e as "
+        "réguas que cobram do deck aquilo que ela prometeu.",
+        "",
+        "| escolha | obrigatória | o que vai nela |",
+        "| --- | --- | --- |",
+    ]
+    for c in DIRECTION_CHOICES:
+        need = "sim" if c.name in DIRECTION_REQUIRED else "não"
+        out.append(f"| `{c.name}` | {need} | {c.purpose} |")
+
+    moments = [n for n in PATTERNS if moment_of(n)]
+    # The one moment pattern whose slide has to be READ before it counts: a
+    # drawing is a moment and a photograph is not, and the register knows which
+    # patterns carry a figure without this line naming one by hand.
+    drawn_moment = next(n for n in moments if figure_of(n))
+    out += [
+        "",
+        "A capa sai destes padrões: "
+        + ", ".join(f"`{n}`" for n in covers())
+        + ".",
+        "",
+        "**Momento é um slide que segura o palco sozinho** — uma figura desenhada "
+        "à mão, um gráfico, ou uma afirmação de tela cheia. São estes padrões: "
+        + ", ".join(f"`{n}`" for n in moments)
+        + f" — e um `{drawn_moment}` só conta quando a figura é um "
+        f"`<{FIGURE_SPEC.drawn}>` desenhado, nunca quando é um "
+        f"`<{FIGURE_SPEC.imported}>` embutido: uma fotografia não é um desenho.",
+        "",
+        f"`{MOMENTS_CHOICE}` diz quantos deles este deck se dá, e a contagem é "
+        "cobrada contra a escala declarada:",
+        "",
+        f"| `{MOMENTS_CHOICE}` | momentos | |",
+        "| --- | --- | --- |",
+    ]
+    for s in MOMENT_SCALES:
+        out.append(f"| `{s.name}` | {s.span} | {s.purpose} |")
+
+    out += [
+        "",
+        "As duas cores de conteúdo são as únicas que o tema empresta além do "
+        "acento, e a direção diz o que cada uma significa neste deck. Um slide que "
+        "gaste uma cor que a direção não declarou reprova a construção — uma figura "
+        "pintada com ela, e também um gráfico, que o palco desenha nas duas sem "
+        "ninguém escrever cor nenhuma. É assim que a mesma cor marca a mesma coisa "
+        "do primeiro slide ao último.",
+        "",
+        "### A função no arco",
+        "",
+        f"Toda `<section>` carrega um `{ARC_ATTR}=` além do `pattern=`: o padrão "
+        "diz que forma o slide tem, a função diz para que ele está ali, e nenhum "
+        f"dos dois implica o outro. São {len(ARC_FUNCTIONS)} funções, na ordem do "
+        "arco: "
+        + ", ".join(f"`{a}` ({ARC_LABEL[a]})" for a in ARC_FUNCTIONS)
+        + ".",
+        "",
+        "**O deck termina em fecho, e o fecho pede alguma coisa.** O último slide "
+        "é um "
+        + " ou ".join(f"`{n}`" for n in closings())
+        + f" com `{ARC_ATTR}=\"{ARC_CALL}\"`; um deck que acaba sem pedir nada é "
+        "um deck de que a sala sai sem saber o que se espera dela.",
     ]
     return "\n".join(out)
 

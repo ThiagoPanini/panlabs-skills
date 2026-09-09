@@ -7,13 +7,13 @@ description: Gera uma apresentação HTML de arquivo único, offline, em slides 
 
 > **O modelo escreve a FONTE. O compilador desenha o PALCO.**
 
-A fonte de um deck é um arquivo em **HTML restrito**: um cabeçalho com os metadados, uma `<section>` por slide, um padrão do catálogo nomeado em cada seção, e um slot de texto por conteúdo. Não existe nela onde escrever uma medida, uma cor, uma classe inventada ou um `style=` — o compilador recusa, e a recusa nomeia o próprio conserto.
+A fonte de um deck é um arquivo em **HTML restrito**: um cabeçalho com os metadados e a direção de arte, uma `<section>` por slide, um padrão do catálogo e uma função no arco nomeados em cada seção, e um slot de texto por conteúdo. Não existe nela onde escrever uma medida, uma cor, uma classe inventada ou um `style=` — o compilador recusa, e a recusa nomeia o próprio conserto.
 
 O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inline, o script viaja inline, e não há uma única referência externa na página. Ele **pagina**: um slide por vez num palco 16:9 centrado na janela, setas para avançar e voltar, número de página fixo no mesmo canto, visão geral em grade, notas do apresentador e a lista de atalhos — tudo por tecla, e **nenhum botão sobre o slide**.
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e agora a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Os **dois temas** existem: `base`, sem marca, e `panlabs`, com as fontes e as cores da documentação da casa. Falta a jornada de três turnos, que chega pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e agora a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Os **dois temas** existem: `base`, sem marca, e `panlabs`, com as fontes e as cores da documentação da casa. A **direção de arte** mora no cabeçalho, cada slide declara a **função dele no arco**, e o **storyboard** sai ao lado do deck a cada construção. Falta a jornada de três turnos, que chega pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## O dialeto
 
@@ -22,20 +22,38 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
       occasion="Retrospectiva de engenharia"
       theme="base"
       lang="pt-BR"
-      minutes="1"
+      minutes="2"
       motion="static">
 
-  <section pattern="full-bleed-statement">
+  <direction>
+    <p class="cover">cover-headline</p>
+    <p class="signature">nenhuma — este deck é curto demais para um motivo voltar</p>
+    <p class="register">primeira pessoa do plural, frase curta, sem jargão de ferramenta</p>
+    <p class="moments">sober</p>
+    <p class="difference">o exemplo canônico abre por um número; este abre pela manchete</p>
+    <p class="renounced-1">chart</p>
+    <p class="renounced-2">table</p>
+    <p class="renounced-3">timeline</p>
+  </direction>
+
+  <section pattern="full-bleed-statement" arc="tension">
     <p class="statement">Nenhuma suíte verde substitui a <strong>primeira fileira</strong> lendo o slide projetado.</p>
     <notes>Diga que a suíte da v1 estava verde na véspera da apresentação que não funcionou.</notes>
+  </section>
+
+  <section pattern="closing-call" arc="call">
+    <p class="thesis">A máquina mede o defeito que o olho não vê; o olho mede o resto.</p>
+    <p class="call">Abra o próximo deck no projetor antes de mandá-lo.</p>
   </section>
 
 </deck>
 ```
 
-**O cabeçalho é o próprio `<deck>`**, e todos os campos dele são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`, `motion`. Faltou um, o compilador recusa dizendo qual. `motion` é o perfil de movimento — `static`, `editorial` ou `cinematic` — e é a primeira peça da direção de arte a morar no cabeçalho.
+**O cabeçalho é o `<deck>` mais o `<direction>` logo abaixo dele.** No `<deck>`, todos os campos são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`, `motion`. Faltou um, o compilador recusa dizendo qual. `motion` é o perfil de movimento — `static`, `editorial` ou `cinematic`.
 
-**Uma `<section>` é um slide**, e o `pattern=` dela é um nome do catálogo. **Um slot é um `<p>` com o nome do slot na `class=`** — e nada mais: um segundo atributo é geometria vestida de prosa, e geometria não atravessa esta costura.
+**O `<direction>` é a direção de arte deste deck, e é o primeiro filho do `<deck>`.** Cada escolha é um `<p>` com o nome dela na `class=`, como um slot de slide: a `cover` em que o deck abre, a `signature` que se repete, o `register` do texto, a escala de `moments`, a `difference` em relação ao exemplo canônico, e três `renounced-N` — padrões de que este deck abre mão. `content-1` e `content-2` são opcionais e dizem o que cada cor emprestada significa aqui; **um slide que gaste uma cor que a direção não declarou reprova** — uma figura pintada com ela, e também um gráfico, que o palco desenha nas duas. Nada disso chega ao palco e nada disso pinta coisa alguma: a direção alimenta o storyboard e as réguas.
+
+**Uma `<section>` é um slide**, e ela carrega dois nomes: o `pattern=` é a forma que ela toma no catálogo, e o `arc=` é a função dela no arco — `context`, `tension`, `thesis`, `evidence`, `plan` ou `call`. Um não implica o outro: um gráfico pode ser a tensão ou a prova. **O último slide é um `closing-call` com `arc="call"`** — o fecho é obrigatório, e um deck que para em vez de fechar reprova. **Um slot é um `<p>` com o nome do slot na `class=`** — e nada mais: um segundo atributo é geometria vestida de prosa, e geometria não atravessa esta costura.
 
 **O vocabulário de ênfase inline fecha em três marcações.** `<strong>` (negrito) e `<mark>` (destaque com uma régua na cor de acento) valem em qualquer slot; `<br/>`, vazio e sem atributo, força uma quebra de linha só nos padrões que o dizem — o [`CATALOG.md`](CATALOG.md) lista quais. Qualquer outra tag é recusada, `<em>` inclusive: o vocabulário fechou nestas três de propósito.
 
@@ -51,7 +69,7 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
 
 **O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot, quantas palavras o slide inteiro pode gastar e, quando houver, o grupo que carrega. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
 
-[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico; [`examples/figure.deck.html`](examples/figure.deck.html) traz um ciclo desenhado à mão, uma figura dividindo o palco com um título e uma imagem embutida por caminho; [`examples/presenting.deck.html`](examples/presenting.deck.html) é o deck do próprio palco, com notas em todo slide, fragmentos em três deles e o perfil cinemático no cabeçalho.
+[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível — e é o menor deck que a doutrina admite, porque um deck fecha; [`examples/few-words.deck.html`](examples/few-words.deck.html) tem um slide por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) tem um slide por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico; [`examples/figure.deck.html`](examples/figure.deck.html) traz um ciclo desenhado à mão, uma figura dividindo o palco com um título e uma imagem embutida por caminho; [`examples/presenting.deck.html`](examples/presenting.deck.html) é o deck do próprio palco, com notas em todo slide, fragmentos em três deles e o perfil cinemático no cabeçalho.
 
 ## Construir
 
@@ -63,6 +81,21 @@ python3 compiler/build.py /tmp/proposta.deck.html /tmp/proposta.html --theme bas
 `--theme` sobrescreve o tema que o cabeçalho declara — é o que permite reconstruir o mesmo deck em `base` para provar que o padrão se sustenta sem marca nenhuma atrás dele, ou em `panlabs` para vê-lo com a identidade da casa. Os dois temas são estes; um nome que não seja um deles é recusado com a lista do que existe.
 
 **Tudo o que o comando tem a dizer sai na saída padrão**, e o código de saída é o veredito: `0` o arquivo foi escrito, `1` não foi. A saída é determinística — não há relógio dentro dela, então duas construções da mesma fonte não diferem em um byte.
+
+## O storyboard
+
+Toda construção bem-sucedida escreve **um segundo arquivo ao lado do deck**, com o mesmo nome e o sufixo `.storyboard.md`: `/tmp/exemplo.html` traz `/tmp/exemplo.storyboard.md` junto. Ele é a história do deck em uma página — a direção de arte inteira numa tabela, e depois **uma linha por slide, com a função no arco, o padrão e a mensagem**, com os momentos marcados.
+
+Ele existe porque **estrutura é mais barata de corrigir em texto do que em slide**. Com o storyboard ao lado, o próximo pedido pode ser «o slide 4 está fazendo a tensão de novo» em vez de «encurte o slide sete» — e ele é gerado da fonte, nunca escrito à mão, então não há uma segunda cópia da história para divergir da primeira. Como o deck, é reproduzível byte a byte.
+
+```markdown
+## Storyboard
+
+| # | função | padrão | mensagem |
+| --- | --- | --- | --- |
+| 1 | tensão | `full-bleed-statement` · momento | Nenhuma suíte verde substitui a primeira fileira lendo o slide projetado. |
+| 2 | chamada | `closing-call` | Abra o próximo deck no projetor antes de mandá-lo. |
+```
 
 ## Apresentar
 
@@ -102,10 +135,16 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
    ✓ figure-paint · every colour a drawn figure wears is a token of the theme
    ✓ figure-asset · every image a figure points at is there, and fits under the ceiling
    ✓ theme-repertoire · every character the deck prints is one the theme's own faces carry
-   12 rulers, green
+   ✓ moment-scale · the deck holds as many moments as the scale it declared
+   ✓ colour-semantics · every content colour a slide paints with is one the direction declared
+   ✓ renounced-pattern · no slide takes a shape the direction gave up
+   ✓ arc-closing · the deck ends on a closing, and the closing asks for something
+   16 rulers, green
 ```
 
-**Uma régua lê o dialeto e onze leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, a mesma forma em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, um item de lista com o ícone e sem o texto ou vice-versa, um valor de gráfico que não é número ou uma proporção que não soma cem, um gráfico cuja fonte não diz de quando é o dado, um rótulo maior do que o espaço que a forma dá a ele, uma cor escrita dentro de uma figura em vez de um token do tema, uma imagem que não resolve, passa do teto de bytes ou não é do formato que o próprio nome promete, e um caractere que as fontes do tema não carregam. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=`, conferir um nome contra um registro, somar uma coluna de números e perguntar ao disco se um arquivo está lá não precisa de navegador.
+**Uma régua lê o dialeto e quinze leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, a mesma forma em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, um item de lista com o ícone e sem o texto ou vice-versa, um valor de gráfico que não é número ou uma proporção que não soma cem, um gráfico cuja fonte não diz de quando é o dado, um rótulo maior do que o espaço que a forma dá a ele, uma cor escrita dentro de uma figura em vez de um token do tema, uma imagem que não resolve, passa do teto de bytes ou não é do formato que o próprio nome promete, e um caractere que as fontes do tema não carregam.
+
+**E quatro leem a direção de arte de volta contra os slides.** Elas são as únicas aqui que medem o deck contra uma promessa que ele mesmo fez no próprio cabeçalho: quantos momentos ele teria — um momento é uma figura desenhada, um gráfico ou uma afirmação de tela cheia, e a escala `high` só é emprestada ao movimento cinemático —, que cores de conteúdo significam alguma coisa nele, que padrões ele abriu mão de usar, e que ele acabaria pedindo alguma coisa. Sem `<direction>` no cabeçalho as quatro ficam caladas: a régua do dialeto já nomeou a falta, e quatro vermelhos sobre promessas que ninguém fez enterrariam o único conserto que produz todos eles. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=`, conferir um nome contra um registro, somar uma coluna de números e perguntar ao disco se um arquivo está lá não precisa de navegador.
 
 **A forma do gráfico conta como forma.** Dois slides seguidos de `pattern="chart"` passam quando o `type=` difere — barra depois de linha não é um slide que deixou de avançar —, e reprovam quando é o mesmo.
 
@@ -186,5 +225,6 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser o valor de um token da identidade da casa, e de onde ele veio | [`themes/panlabs/tokens.css`](themes/panlabs/tokens.css) |
 | quiser saber que caracteres o tema `panlabs` sabe pintar, ou refazer o corte das fontes | [`themes/panlabs/fonts/README.md`](themes/panlabs/fonts/README.md) |
 | for embutir as fontes de um tema novo, ou entender o `@font-face` que sai | [`compiler/fonts.py`](compiler/fonts.py) |
+| quiser saber o que sai no storyboard, ou de onde vem a mensagem de um slide | [`compiler/storyboard.py`](compiler/storyboard.py) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

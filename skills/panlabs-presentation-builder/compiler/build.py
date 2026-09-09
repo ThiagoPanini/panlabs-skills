@@ -42,10 +42,12 @@ import charts                                                   # noqa: E402
 import figures                                                  # noqa: E402
 import fonts                                                    # noqa: E402
 import icons                                                    # noqa: E402
-from audit import audit, report                                # noqa: E402
-from catalog import (DECK_FIELDS, EVIDENCE_TAGS, ICON, MOTION_PROFILES,  # noqa: E402
-                     NOTES_TAG, SLOT_TAG, STEP_ATTR, chart_of, figure_of,
-                     group_of, is_table, role_of_element, slot_specs)
+import storyboard                                               # noqa: E402
+from audit import audit, moments_of, report                    # noqa: E402
+from catalog import (ARC_ATTR, DECK_FIELDS, EVIDENCE_TAGS, ICON,  # noqa: E402
+                     MOTION_PROFILES, NOTES_TAG, SLOT_TAG, STEP_ATTR,
+                     chart_of, figure_of, group_of, is_table,
+                     role_of_element, slot_specs)
 from source import (Refused, fields_of, inline_markup,         # noqa: E402
                     plain_text, read)
 
@@ -389,9 +391,16 @@ def slide_markup(slide, index, base):
 
     current = " is-current" if index == 0 else ""
     drawn = f' data-chart="{html.escape(form, quote=True)}"' if form else ""
+    # THE FUNCTION TRAVELS ONTO THE PAGE FOR THE SAME REASON THE PATTERN DOES
+    # (#217): the built artifact should say what it is. Nothing on the stage
+    # paints by it -- an arc function is narrative and not composition -- but a
+    # deck opened six months later answers "what was slide 9 doing here" without
+    # its source beside it.
+    arc = slide.attrs.get(ARC_ATTR, "").strip()
+    doing = f' data-arc="{html.escape(arc, quote=True)}"' if arc else ""
     return (
         f'<section class="slide{current}" data-pattern="{html.escape(pattern)}"'
-        f'{drawn} aria-label="slide {index + 1}">\n'
+        f'{drawn}{doing} aria-label="slide {index + 1}">\n'
         + "\n".join(body)
         + "\n</section>"
     )
@@ -537,6 +546,15 @@ def main(argv=None):
         fh.write(page)
 
     print(f"   wrote {args.output}")
+
+    # THE STORYBOARD GOES BESIDE THE DECK, AND ONLY AFTER IT (#217). #207 asks
+    # for the story to stay "gravado ao lado do deck" so the next ask can be
+    # about the arc rather than about slide seven -- and it is written second on
+    # purpose: a storyboard with no deck beside it describes a page that does not
+    # exist. A red audit has already returned above, so nothing here writes half
+    # of anything.
+    print(f"   wrote {storyboard.write(args.output, deck, theme, moments_of(deck))}")
+
     render_gate(args.output)
     return 0
 

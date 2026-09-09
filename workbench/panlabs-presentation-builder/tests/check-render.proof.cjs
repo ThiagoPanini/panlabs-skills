@@ -498,18 +498,26 @@ async function theStagePresents() {
     //
     // #220 put a third deck in the corpus, the alphabet handed this case one
     // with no fragment on slide 2, and the assertion went red for the right
-    // reason. So the arrow is pressed until the deck MOVES -- however many
-    // beats the picked page happens to hide on the way -- and only then are the
-    // notes and the progress bar held to where it landed. That is corpus-
-    // independent, and it is the thing the step's own name promises.
+    // reason. So the arrow is pressed until THE PROGRESS BAR moves -- however
+    // many beats the picked page hides on the way -- and only then is the note
+    // panel held to it: the slide the notes name has to be the slide the
+    // progress bar points at. No slide number is written here, so the step no
+    // longer cares which deck the pick handed it or where its beats fall.
+    //
+    // WHAT IT STILL ASSUMES is that the slide it lands on CARRIES notes, since
+    // a slide without them leaves the panel empty and nothing to follow. Every
+    // deck in this corpus does, because "what does not fit goes to the notes"
+    // is the doctrine `NARRATIVE.md` states; a corpus that stopped honouring it
+    // would go red here, which is the right place to hear about it.
+    const ADVANCES = 8;   // more beats than any one slide in the corpus hides
     let moved = null;
-    for (let i = 0; i < 8 && moved === null; i += 1) {
+    for (let i = 0; i < ADVANCES && moved === null; i += 1) {
       const after = await press('ArrowRight');
-      if (after.note.join() !== '2') moved = after;
+      if (after.progress !== s.progress) moved = after;
     }
+    const landedOn = moved && String(Math.round(Number(moved.progress) * moved.slides));
     steps.push(['the notes follow the deck, and the progress bar with them',
-      moved !== null && moved.note.join() === '3'
-        && moved.progress === String(3 / moved.slides)]);
+      moved !== null && landedOn !== '2' && moved.note.join() === landedOn]);
   } catch (e) {
     why = e.message;
   } finally {

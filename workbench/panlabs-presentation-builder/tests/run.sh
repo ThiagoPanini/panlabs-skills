@@ -357,15 +357,33 @@ step "the corpus draws every pattern and every chart form the register declares"
 # a machine CAN hold -- that it still builds and still renders -- and `DATA.md`
 # is where the other half is written down for a person.
 build_benchmark() {
-  local src="$HERE/../benchmark/matt-pocock.deck.html"
-  if [ ! -e "$src" ]; then
-    echo "   ✗ the benchmark is gone from $src — #220's acceptance deck is the"
+  local n=0 bad=0 src name
+  # DISCOVERED, NOT NAMED, the same way `build_corpus` above discovers
+  # `examples/` -- and by the same suffix, which is what lets `benchmark/` hold
+  # `BRIEF.md` and `DATA.md` beside the source without either being handed to
+  # the compiler. A deck named here would be a deck `tools/render-examples.sh`
+  # rebuilt and this suite never measured.
+  for src in "$HERE"/../benchmark/*.deck.html; do
+    [ -e "$src" ] || continue
+    name="$(basename "$src" .deck.html)"
+    if python3 "$SKILL/compiler/build.py" "$src" "$OUTPUT_DIR/$name.html"; then
+      n=$((n + 1))
+    else
+      bad=$((bad + 1))
+    fi
+  done
+  if [ "$((n + bad))" -eq 0 ]; then
+    echo "   ✗ benchmark/ has no source to build — #220's acceptance deck is the"
     echo "     only corpus member whose numbers are real, and a corpus without"
     echo "     it is green about two synthetic decks and nothing else"
     return 1
   fi
-  python3 "$SKILL/compiler/build.py" "$src" "$OUTPUT_DIR/matt-pocock.html" || return 1
-  echo "   ✓ the benchmark built into the same temp directory as the examples"
+  if [ "$bad" -ne 0 ]; then
+    echo "   ✗ $bad of $((n + bad)) benchmark source(s) refused — fix what the"
+    echo "     compiler named above; no later layer will measure a partial corpus"
+    return 1
+  fi
+  echo "   ✓ $n benchmark source(s) built into the same temp directory as the examples"
 }
 step "the benchmark builds through the documented command"  build_benchmark
 

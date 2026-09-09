@@ -42,6 +42,10 @@ Tickets da spec fechados, em acumulado, por dia.
 
 A spec nasceu em **2026-09-07** com **58** user stories e **13** tickets (#208 a #220); doze fecharam, cada um pelo seu PR — **#221 a #232**, todos com squash na `main`. O décimo terceiro é o #220, que é este.
 
+**E um décimo quarto nasceu depois, durante a execução.** O **#233**, aberto em **2026-09-09T20:50:48Z**, também é «Part of #207»: o #219 nomeou o exemplo canônico, a precondição que segurava a régua da `difference` caiu, e a régua virou ticket. Os slides falam dos **treze que o `/to-tickets` cortou**, que é o que aquele comando de fato produziu em 07/set; o décimo quarto é uma coisa diferente, e ele está nas notas do slide 13 porque é uma boa história sobre o pipeline e não sobre o corte.
+
+**O comando do grilling desta spec foi o `/grill-me`, e não o `/grill-with-docs`.** O handoff `tmp/panlabs-presentation-builder/handoff-v2-grilling-2026-09-06/HANDOFF.md` diz assim, com todas as letras: «O agente deve invocar a skill `grilling` (via `/grill-me`) para manter o formato de rodadas». Os dois chamam a mesma primitiva; o `/grill-with-docs` acrescenta o `domain-modeling` por cima, e é ele que a figura do slide 11 desenha por ser o caminho canônico do `ask-matt`. A tabela do slide 12 diz o que **esta** spec rodou, e a diferença está nas notas daquele slide.
+
 ## Gráfico 3 · As categorias em proporção (F1, 2026-07-30)
 
 As 41 skills do upstream em seis categorias, e a fronteira que importa: o `.claude-plugin/plugin.json` traz um array de **22 caminhos explícitos** — as «promovidas» —, e o que está fora dele não é publicado pela via de plugin.

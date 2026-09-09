@@ -65,10 +65,10 @@ esac
 built=0
 sheets=0
 bad=0
-# THE TWO EXAMPLES FIRST, THEN THE BENCHMARK. The examples are DISCOVERED, so a
-# third one is a third one this tool rebuilds without being told; the benchmark
-# is NAMED, because it is one file in a directory of prose and there is nothing
-# to discover it by that would not also try to build `BRIEF.md`.
+# THE TWO EXAMPLES FIRST, THEN THE BENCHMARK, AND BOTH BY DISCOVERY. `*.deck.html`
+# is what picks either one, so a deck added to either directory is a deck this
+# tool rebuilds without being told -- and the suffix is what keeps `BRIEF.md` and
+# `DATA.md` out of it, which is why `benchmark/` can hold prose beside a source.
 for src in "$SKILL"/examples/*.deck.html "$HERE"/../benchmark/*.deck.html; do
   [ -e "$src" ] || continue
   name="$(basename "$src" .deck.html)"

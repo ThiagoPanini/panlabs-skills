@@ -29,12 +29,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 import charts
+import figures
 import icons
-from catalog import (BREAK_TAG, CATEGORY_TITLES, ICON, INLINE_TAGS, PATTERNS,
-                     SLOT_TAG, TABLE_MAX_ROWS, allow_break_of, budget_of,
-                     chart_of, claims_of, form_names, form_of, group_of,
-                     is_table, pattern_names, role_of_element, slot_specs,
-                     slots_of)
+from catalog import (BREAK_TAG, CATEGORY_TITLES, EVIDENCE_TAGS, ICON,
+                     INLINE_TAGS, PATTERNS, SLOT_TAG, TABLE_MAX_ROWS,
+                     allow_break_of, budget_of, chart_of, claims_of,
+                     evidence_of, figure_of, form_names, form_of, group_of,
+                     pattern_names, role_of_element, slot_specs, slots_of)
 from source import fields_of, plain_text
 
 
@@ -97,6 +98,16 @@ CHART_SOURCE = Ruler(
 CHART_FIT = Ruler(
     "chart-fit",
     "every label a chart draws fits the room its form gives it",
+)
+
+FIGURE_PAINT = Ruler(
+    "figure-paint",
+    "every colour a drawn figure wears is a token of the theme",
+)
+
+FIGURE_ASSET = Ruler(
+    "figure-asset",
+    "every image a figure points at is there, and fits under the ceiling",
 )
 
 
@@ -467,8 +478,91 @@ def _table(table, at, pattern):
     return fixes
 
 
-# ── the containers a group or a table is written as, and nothing else can be ──
-CONTAINER_TAGS = ("ul", "ol", "table")
+# ── a figure ──────────────────────────────────────────────────────────────────
+# THE VOCABULARY IS THE WHOLE GUARD, and it is the same guard the rest of this
+# file spends. #214 asks that a drawing with a `<script>` in it, or one
+# reaching outside the page, be refused -- and neither needs a rule of its own:
+# `<script>`, `<use>`, `<image>`, `<foreignObject>`, `href=`, `style=` and every
+# `on…=` are simply not in `Figure.tags` and `Figure.attrs`. A vocabulary with
+# one hole punched per threat is a vocabulary that has a hole for the threat
+# nobody thought of; a closed one has none by construction.
+#
+# WHAT IS *IN* THE COLOURS IS NOT THIS RULER'S BUSINESS. `fill=` is a legal
+# attribute whose VALUE may still be a hexadecimal, and a value is a different
+# question from a name -- `figure-paint` below is where that verdict lives, so
+# a red about a literal colour reads as one line about colour instead of
+# hiding inside a list about vocabulary.
+
+def _drawing(node, at, figure, root=False):
+    fixes = []
+
+    if root:
+        said = figures.attribute(node, figure.box).strip()
+        if not said:
+            fixes.append(
+                f"{at}: give the <{figure.drawn}> a {figure.box}= — without one "
+                "the drawing has no size of its own, and the stage has nothing "
+                "to scale it against"
+            )
+        elif not figures.box_is_sound(said):
+            fixes.append(
+                f'{at}: write the {figure.box}= as four numbers with the last '
+                f'two above zero, not "{said}" — they are the drawing\'s own '
+                "width and height"
+            )
+
+    allowed = {a.lower() for a in figure.attrs}
+    for key in sorted(k for k in node.attrs if k.lower() not in allowed):
+        fixes.append(
+            f"{at}: drop {key}= from the <{node.tag}> — a figure carries only "
+            'the attributes CATALOG.md lists under "figure-caption", and '
+            f"{key}= is not one of them"
+        )
+
+    for child in node.children:
+        if isinstance(child, str):
+            if child.strip() and node.tag not in figure.words:
+                fixes.append(
+                    f"{at}: put the loose text inside a <{figure.words[0]}> — "
+                    "a drawing says a word only there"
+                )
+            continue
+        if child.tag not in figure.tags:
+            fixes.append(
+                f"{at}: drop the <{child.tag}> — a drawing is built from "
+                + ", ".join(f"<{t}>" for t in figure.tags)
+                + ", and nothing else crosses this seam"
+            )
+            continue
+        fixes.extend(_drawing(child, at, figure))
+    return fixes
+
+
+def _figure(node, at, figure):
+    """One figure: the drawing walked, or the image's one attribute checked.
+
+    WHERE THE FILE IS AND WHAT IS IN IT BELONGS TO `figure-asset`, not here.
+    This ruler reads the source, and whether a path resolves is a fact about
+    the disk -- keeping them apart is what lets a red say "self-close the
+    <img/>" without also guessing at what the file it names might contain.
+    """
+    if node.tag == figure.imported:
+        fixes = [
+            f"{at}: drop {key}= from the <{figure.imported}> — an image carries "
+            f"{figure.path}= and nothing else"
+            for key in sorted(k for k in node.attrs if k != figure.path)
+        ]
+        # AN UNCLOSED <img> EATS THE REST OF THE SLIDE. `html.parser` knows no
+        # void elements, so `<img src=…>` written open swallows the caption
+        # that follows it into itself -- and the red the reader would otherwise
+        # get is "add the missing caption", about a caption they can see.
+        if node.children:
+            fixes.append(
+                f"{at}: self-close the <{figure.imported}/> — written open it "
+                "swallows everything after it on the slide"
+            )
+        return fixes
+    return _drawing(node, at, figure, root=True)
 
 
 def _slide(node, n):
@@ -518,16 +612,26 @@ def _slide(node, n):
                 )
 
     group = group_of(pattern)
-    table = is_table(pattern)
-    # THE WORD THE PATTERN CALLS ITS OWN EVIDENCE, and the tag it is written
-    # as. A `table` pattern never carries a `Group` -- its columns are the
-    # deck's own words, not the register's (`_table`'s own docstring) -- so a
-    # message about it says "table", never "group".
-    kind = "table" if table else "group"
-    want = "table" if table else (group.container if group else None)
+    figure = figure_of(pattern)
+    # WHAT THE PATTERN SHOWS BESIDES ITS WORDS, ASKED OF THE REGISTER ONCE. A
+    # group, a table and a figure are three shapes of the same thing -- written
+    # as a tag of their own rather than as a named `<p>` -- and this used to be
+    # an `if group … elif table …` chain that a fourth shape would have grown a
+    # third branch in, here and in `build.py` both. `kind` is the word every
+    # message below uses, so a red about a missing figure says "figure".
+    evidence = evidence_of(pattern)
+    kind = evidence.kind if evidence else ""
+    tags = evidence.tags if evidence else ()
+    named = " or ".join(f"<{t}>" for t in tags)
 
     seen = []
     evidence_seen = False
+    # WRONG TAG IS STILL AN ANSWER, and the difference decides how many reds one
+    # mistake costs. A `<ul>` where a figure goes already has a fix naming both
+    # halves ("write the figure as <svg> or <img>, not <ul>"); adding "and this
+    # slide has none" underneath it is the ruler describing the same mistake
+    # twice, which is the shape audit.py refuses everywhere else it counts.
+    evidence_tried = False
     for child in node.children:
         if isinstance(child, str):
             if child.strip():
@@ -536,8 +640,9 @@ def _slide(node, n):
                 )
             continue
 
-        if child.tag in CONTAINER_TAGS:
-            if want and child.tag == want:
+        if child.tag in EVIDENCE_TAGS:
+            evidence_tried = True
+            if child.tag in tags:
                 # A SECOND CONTAINER IS NEVER A SECOND CHANCE. Every pattern
                 # that carries evidence carries exactly one -- `build.py`'s
                 # `slide_markup` picks the LAST one it sees and drops the
@@ -545,25 +650,29 @@ def _slide(node, n):
                 # ruler exists to catch before it reaches the page.
                 if evidence_seen:
                     fixes.append(
-                        f"{at}: keep one <{want}> — the pattern \"{pattern}\" "
-                        f"carries one {kind}, not two"
+                        f'{at}: keep one {kind} — the pattern "{pattern}" '
+                        "carries one, not two"
                     )
                     continue
                 evidence_seen = True
-                fixes.extend(
-                    _group(child, at, pattern, group, form, drawn=bool(chart))
-                    if group else _table(child, at, pattern)
-                )
+                if figure:
+                    fixes.extend(_figure(child, at, figure))
+                elif group:
+                    fixes.extend(
+                        _group(child, at, pattern, group, form, drawn=bool(chart))
+                    )
+                else:
+                    fixes.extend(_table(child, at, pattern))
                 continue
-            if want:
+            if tags:
                 fixes.append(
-                    f"{at}: write the {kind} as <{want}>, not <{child.tag}> — "
-                    f'the pattern "{pattern}" needs its evidence in a <{want}>'
+                    f"{at}: write the {kind} as {named}, not <{child.tag}> — "
+                    f'the pattern "{pattern}" needs its evidence there'
                 )
             else:
                 fixes.append(
                     f"{at}: drop the <{child.tag}> — the pattern \"{pattern}\" "
-                    "has no group; " + _slot_list(pattern)
+                    "shows nothing besides its words; " + _slot_list(pattern)
                 )
             continue
 
@@ -600,10 +709,10 @@ def _slide(node, n):
             f'{at}: keep one <{SLOT_TAG} class="{name}"> — the pattern '
             f'"{pattern}" declares the slot once'
         )
-    if want and not evidence_seen:
+    if tags and not (evidence_seen or evidence_tried):
         fixes.append(
-            f"{at}: add a <{want}> — the pattern \"{pattern}\" needs its "
-            "evidence and this slide has none"
+            f'{at}: add the {kind} — the pattern "{pattern}" needs its '
+            f"evidence, written as {named}, and this slide has none"
         )
     return fixes
 
@@ -891,6 +1000,64 @@ def _chart_fit(deck):
     return fixes
 
 
+# ── the figure ───────────────────────────────────────────────────────────────
+# THE TWO BELOW MEASURE THE ONE SLOT THE CATALOG DOES NOT LIMIT (#214), and
+# each measures the half of it that the vocabulary ruler structurally cannot.
+# `fill=` is a legal attribute, so a hexadecimal inside one is a VALUE nobody
+# else weighs; a `src=` is a legal attribute, so a path that moved is a fact
+# about the DISK nobody else can see. Both defects build, render and ship: the
+# first as a figure wearing `base` in every theme, the second as the blank
+# rectangle #207 calls a "retrato vazio".
+
+def _figures_of_slide(node):
+    """The (figure, element) pairs on one slide, or nothing for every other one.
+
+    A slide that carries no figure pattern, or whose figure the vocabulary
+    ruler has already named, yields nothing -- one red per defect, and a
+    second one from down here would be noise stacked on the fix.
+    """
+    figure = figure_of(node.attrs.get("pattern", ""))
+    if not figure:
+        return
+    for el in node.elements():
+        if el.tag in (figure.drawn, figure.imported):
+            yield figure, el
+
+
+def _figure_paint(deck):
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        for figure, el in _figures_of_slide(node):
+            if el.tag != figure.drawn:
+                continue
+            for tag, key, said in figures.paints(el, figure):
+                value = said.strip()
+                if value == figure.unpainted or figures.token(value) in figure.tokens:
+                    continue
+                fixes.append(
+                    f"{_at(n, node)}: repaint the {key} of the <{tag}> as "
+                    f'"{figure.unpainted}" or one of the theme\'s own tokens, '
+                    f'not "{said}" — the tokens are '
+                    + ", ".join(figure.tokens)
+                    + ", and a colour written into a drawing is a drawing that "
+                    "wears base in every theme there will ever be"
+                )
+    return fixes
+
+
+def _figure_asset(deck):
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        for figure, el in _figures_of_slide(node):
+            if el.tag != figure.imported:
+                continue
+            said = figures.attribute(el, figure.path)
+            resolved = figures.resolve(said, deck.base, figure)
+            if resolved.fix:
+                fixes.append(f"{_at(n, node)}: {resolved.fix}")
+    return fixes
+
+
 # APPEND AT THE END. The order is the order the report prints, and the report
 # is read top to bottom by whoever is fixing a deck: the dialect first,
 # because a source that does not parse into slides has nothing for the
@@ -905,6 +1072,8 @@ RULERS = (
     (CHART_DATA, _chart_data),
     (CHART_SOURCE, _chart_source),
     (CHART_FIT, _chart_fit),
+    (FIGURE_PAINT, _figure_paint),
+    (FIGURE_ASSET, _figure_asset),
 )
 
 

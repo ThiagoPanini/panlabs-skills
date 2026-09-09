@@ -46,6 +46,13 @@ class Element:
 class Deck:
     header: dict            # the `<deck>` attributes, verbatim
     children: list          # every Element directly under `<deck>`, verbatim
+    # WHERE THE SOURCE WAS READ FROM, because a figure may point at a file
+    # (#214) and the only honest anchor for that path is the directory the
+    # author was writing in -- not the directory the build happened to be run
+    # from, which is a different place every time somebody runs it. It is a
+    # fact ABOUT the source rather than a judgement of it, which is why it
+    # rides here and not in the audit.
+    base: str = ""
 
     @property
     def sections(self):
@@ -112,7 +119,7 @@ class _Reader(HTMLParser):
         self.stack[-1].children.append(data)
 
 
-def read(text):
+def read(text, base=""):
     """Parse a source into a Deck. Refuses only when there is no deck at all."""
     reader = _Reader()
     reader.feed(text)
@@ -131,7 +138,7 @@ def read(text):
         )
 
     deck = decks[0]
-    return Deck(header=dict(deck.attrs), children=deck.elements())
+    return Deck(header=dict(deck.attrs), children=deck.elements(), base=base)
 
 
 # ── back out to markup ───────────────────────────────────────────────────────
@@ -140,7 +147,7 @@ def read(text):
 # here without being in the catalog is a rule that stopped being enforced,
 # and it should stop the build rather than reach the page.
 
-def _squeeze(s):
+def squeeze(s):
     """Runs of whitespace become one space. Boundaries are left alone."""
     return re.sub(r"\s+", " ", s)
 
@@ -176,7 +183,7 @@ def plain_text(node, _top=True):
     out = []
     for child in node.children:
         if isinstance(child, str):
-            out.append(_squeeze(child))
+            out.append(squeeze(child))
         elif child.tag == BREAK_TAG:
             out.append(" ")
         else:
@@ -203,7 +210,7 @@ def inline_markup(node, _top=True):
     out = []
     for child in node.children:
         if isinstance(child, str):
-            out.append(html.escape(_squeeze(child), quote=False))
+            out.append(html.escape(squeeze(child), quote=False))
             continue
         if child.tag == BREAK_TAG:
             out.append(f"<{BREAK_TAG}/>")

@@ -23,6 +23,7 @@ about the register.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,7 @@ SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
 REGISTER = os.path.join(SKILL, "compiler", "catalog.py")
 DOCUMENT = os.path.join(SKILL, "CATALOG.md")
+TOKENS = os.path.join(SKILL, "themes", "base", "tokens.css")
 
 WRITE = "run `python3 compiler/catalog.py --write`"
 
@@ -67,16 +69,27 @@ def _check(text=None):
 def _check_register(register_text):
     """`--check` run from a PLANTED COPY of the register, over the real document.
 
-    The ceiling is a fact about the register, not about the document, so this
-    is the one case that has to mutate `catalog.py` instead of `CATALOG.md`.
-    The copy goes to a temp directory -- the register itself is never written
-    to -- and it runs standalone because it imports nothing but the standard
-    library. `check()` weighs the ceiling BEFORE the drift, so the reference
-    the copy would have published never enters the verdict.
+    Two of the things `--check` weighs are facts about the REGISTER and not
+    about the document -- the word ceiling every budget sits under, and whether
+    the theme really declares the tokens a figure may paint with -- so those
+    cases have to mutate `catalog.py` instead of `CATALOG.md`. The copy goes to
+    a temp directory: the register itself is never written to, and it runs
+    standalone because it imports nothing but the standard library. `check()`
+    weighs both of these BEFORE the drift, so the reference the copy would have
+    published never enters the verdict.
+
+    THE COPY LANDS IN A TREE AND NOT IN A BARE DIRECTORY (#214). The register
+    finds `themes/base/tokens.css` relative to its OWN location, because the
+    tokens it names belong to the theme rather than to itself -- so a copy with
+    no theme beside it would refuse for want of a stylesheet, and every case
+    here would prove a red about the fixture instead of about the plant.
     """
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     with tempfile.TemporaryDirectory(prefix="panlabs-register-proof-") as tmp:
-        planted = os.path.join(tmp, "catalog.py")
+        os.makedirs(os.path.join(tmp, "compiler"))
+        os.makedirs(os.path.join(tmp, "themes", "base"))
+        shutil.copyfile(TOKENS, os.path.join(tmp, "themes", "base", "tokens.css"))
+        planted = os.path.join(tmp, "compiler", "catalog.py")
         with open(planted, "w", encoding="utf-8") as fh:
             fh.write(register_text)
         done = subprocess.run([sys.executable, planted, "--check", DOCUMENT],
@@ -153,18 +166,30 @@ def main():
 
     print()
     failed += Proof(
-        title="the register against the ceiling",
+        title="the register against the theme, and against the ceiling",
         label=lambda key: key,
         invoke=lambda key, payload: _check_register(payload),
         planted=lambda payload: payload != REGISTER_SOURCE,
         control=lambda key: _check(),
-        width=22,
+        width=25,
     ).run([
         (
             "budget over the ceiling",
             "a pattern registered with a budget #207 forbids",
             swap(REGISTER_SOURCE, "budget=8,", "budget=800,"),
             'bring the budget of "section-divider" down to 90 words',
+        ),
+        # THE ONE NAME IN THIS REGISTER THAT THE REGISTER DOES NOT OWN (#214).
+        # Every other name in `catalog.py` is the catalog's own word; a paint
+        # token belongs to the theme, and one the theme never declared is the
+        # only kind of drift here with no red anywhere and no pixel either --
+        # `var(--brand-blue)` resolves to nothing, and the shape paints
+        # nothing, and every ruler in the skill stays green about it.
+        (
+            "a token the theme dropped",
+            "a colour a figure could name and no stylesheet declares",
+            swap(REGISTER_SOURCE, '"--accent",', '"--brand-blue",'),
+            "take --brand-blue out of FIGURE_TOKENS",
         ),
     ])
 

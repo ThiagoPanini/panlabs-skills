@@ -119,9 +119,17 @@ function gotoSlideFn(n) {
 }
 
 // Everything computable from the live DOM once a slide is current: the
-// stage's own box, the page number's box, and every leaf of real text inside
-// the current slide -- an element with a direct, non-empty text node of its
-// own, painted, and large enough to be more than a hairline.
+// stage's own box, the page number's box, and every leaf of real content
+// inside the current slide -- an element with a direct, non-empty text node of
+// its own, painted and larger than a hairline, plus every figure (#214), which
+// is content with no words in it at all.
+//
+// A FIGURE CARRIES `fontSizePx: null`, AND THAT IS THE WHOLE OF HOW THE THREE
+// RULERS TELL THEM APART. Overflow and occupancy ask where a thing is and how
+// much of the stage it covers, which a picture answers exactly as a sentence
+// does; the type floor asks how big its letters are, which a picture has none
+// of -- so it skips the ones with no size rather than inventing a number for
+// them.
 function pageMeasureFn() {
   function describe(el) {
     if (el.id) return '#' + el.id;
@@ -131,6 +139,29 @@ function pageMeasureFn() {
   function rectOf(el) {
     const r = el.getBoundingClientRect();
     return { x: r.left, y: r.top, width: r.width, height: r.height };
+  }
+  // THE BOX CSS GAVE A FIGURE IS NOT ALWAYS THE BOX IT PAINTS IN. An <img>
+  // under `object-fit: contain` and an <svg> under the default
+  // `preserveAspectRatio` both letterbox their content inside it, centred --
+  // so a wide strip in a tall box leaves real darkness above and below that
+  // the element's own rect knows nothing about. Measuring the CSS box would
+  // let exactly that slide pass the occupancy floor while the room sees a
+  // band of picture with the stage empty around it.
+  function paintedRect(el, r) {
+    let w = 0;
+    let h = 0;
+    if (el.tagName.toLowerCase() === 'img') {
+      w = el.naturalWidth;
+      h = el.naturalHeight;
+    } else if (el.viewBox && el.viewBox.baseVal) {
+      w = el.viewBox.baseVal.width;
+      h = el.viewBox.baseVal.height;
+    }
+    if (!(w > 0 && h > 0) || r.width <= 0 || r.height <= 0) return r;
+    const scale = Math.min(r.width / w, r.height / h);
+    const pw = w * scale;
+    const ph = h * scale;
+    return { x: r.x + (r.width - pw) / 2, y: r.y + (r.height - ph) / 2, width: pw, height: ph };
   }
   const stageEl = document.querySelector('.stage');
   const stage = stageEl ? rectOf(stageEl) : null;
@@ -172,6 +203,13 @@ function pageMeasureFn() {
       leaves.push({
         sel: describe(el), rect: rectOf(el), fontSizePx: parseFloat(cs.fontSize) * scale,
       });
+    }
+    for (const el of current.querySelectorAll('.figure')) {
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      const r = paintedRect(el, rectOf(el));
+      if (r.width < 2 || r.height < 2) continue;
+      leaves.push({ sel: describe(el), rect: r, fontSizePx: null });
     }
   }
   return { stage, pageNumber, leaves };
@@ -321,6 +359,8 @@ function rulerTypeFloor(m) {
     if (!st) continue;
     const floor = st.height * TYPE_FLOOR_RATIO;
     for (const l of s.dom.leaves) {
+      // A figure has no letters to be under a floor -- see pageMeasureFn.
+      if (l.fontSizePx === null) continue;
       if (l.fontSizePx < floor - 0.5) {
         fixes.push(
           `slide ${s.n + 1}: raise ${l.sel} to at least ${floor.toFixed(1)}px — it paints at `
@@ -339,8 +379,8 @@ function rulerOccupancy(m) {
     const st = s.dom.stage;
     if (!st) continue;
     if (!s.dom.leaves.length) {
-      fixes.push(`slide ${s.n + 1}: give it a slot to fill — no visible text is on the stage, `
-        + 'and an empty slide is not a slide');
+      fixes.push(`slide ${s.n + 1}: give it a slot to fill — no visible text and no figure is `
+        + 'on the stage, and an empty slide is not a slide');
       continue;
     }
     let top = Infinity;

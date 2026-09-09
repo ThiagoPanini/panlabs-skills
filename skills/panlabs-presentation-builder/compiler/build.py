@@ -39,10 +39,12 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
 import charts                                                   # noqa: E402
+import figures                                                  # noqa: E402
 import icons                                                    # noqa: E402
 from audit import audit, report                                # noqa: E402
-from catalog import (DECK_FIELDS, ICON, SLOT_TAG, chart_of, group_of,  # noqa: E402
-                     is_table, role_of_element, slot_specs)
+from catalog import (DECK_FIELDS, EVIDENCE_TAGS, ICON, SLOT_TAG,  # noqa: E402
+                     chart_of, figure_of, group_of, is_table,
+                     role_of_element, slot_specs)
 from source import (Refused, fields_of, inline_markup,         # noqa: E402
                     plain_text, read)
 
@@ -166,7 +168,7 @@ def icons_used(deck):
     return used
 
 
-def slide_markup(slide, index):
+def slide_markup(slide, index, base):
     """One section, with its slots in the order the CATALOG declares them.
 
     Source order is what the author happened to type; catalog order is what
@@ -196,6 +198,12 @@ def slide_markup(slide, index):
     for the sprite this same build already validated and embedded, never a
     sentence the audience reads -- so it renders as a `<use>` reference instead
     of the `<p>` every other slot gets.
+
+    A FIGURE IS THE THIRD SHAPE OF EVIDENCE (#214), and the one whose bytes may
+    live outside the source: a drawing is re-serialised against the register's
+    own vocabulary, an image is read from disk and written back inline as a
+    `data:` URI. `base` is the directory the source was read from, because that
+    is where its author was writing the path from.
     """
     pattern = slide.attrs["pattern"]
     written = {}
@@ -204,7 +212,7 @@ def slide_markup(slide, index):
         cls = el.attrs.get("class", "").strip()
         if cls:
             written.setdefault(cls, el)
-        elif el.tag in ("ul", "ol", "table"):
+        elif el.tag in EVIDENCE_TAGS:
             container = el
 
     def one(slot):
@@ -224,8 +232,23 @@ def slide_markup(slide, index):
 
     chart = chart_of(pattern)
     group = group_of(pattern)
+    figure = figure_of(pattern)
     form = ""
-    if chart and container is not None:
+    if figure and container is not None:
+        described = figures.described_by(slide, figure)
+        if container.tag == figure.drawn:
+            body.append(figures.drawing(container, figure, described))
+        else:
+            resolved = figures.resolve(
+                figures.attribute(container, figure.path), base, figure)
+            if resolved.fix:
+                # THE SECOND LOCK, same one `inline_markup` keeps. The
+                # `figure-asset` ruler already refused this source, so reaching
+                # here means a check stopped being enforced -- and half a deck
+                # with a picture nobody could read is worse than no deck.
+                raise Refused(resolved.fix)
+            body.append(figures.image(figure, resolved, described))
+    elif chart and container is not None:
         form = slide.attrs.get(chart.attribute, "").strip()
         body.append(charts.draw(form, charts.series(container, group)))
     elif group and container is not None:
@@ -329,7 +352,7 @@ def main(argv=None):
         refuse(f"point at a source this command can read — {e.strerror}: {args.source}")
 
     try:
-        deck = read(text)
+        deck = read(text, base=os.path.dirname(os.path.abspath(args.source)))
     except Refused as e:
         refuse(str(e))
 
@@ -350,7 +373,8 @@ def main(argv=None):
         raise SystemExit(1)
 
     try:
-        slides = "\n".join(slide_markup(s, i) for i, s in enumerate(sections))
+        slides = "\n".join(
+            slide_markup(s, i, deck.base) for i, s in enumerate(sections))
     except Refused as e:
         refuse(str(e))
 

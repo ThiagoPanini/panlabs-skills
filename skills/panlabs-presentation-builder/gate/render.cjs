@@ -4,14 +4,24 @@
 //
 //   node gate/render.cjs <built.html> [--out DIR]
 //
-// SIX RULERS, each a defect the eye does not reliably catch at 1600x900:
+// SEVEN RULERS, each a defect the eye does not reliably catch at 1600x900:
 // content clipped past the stage's own edge, text under the type floor, a
 // slide that leaves most of the projector dark, a request the network had to
-// answer, a declared face that never painted, and a page number that moved.
-// Every red names its own fix, same doctrine as compiler/audit.py -- the
-// audit's rulers judge the SOURCE before a byte is written, these judge the
-// PAGE after it exists, because none of the six is knowable without a real
-// layout pass.
+// answer, a declared face that never painted, a page number that moved, and a
+// slide whose every slot is a fragment, leaving the stage blank until the
+// first advance. Every red names its own fix, same doctrine as
+// compiler/audit.py -- the audit's rulers judge the SOURCE before a byte is
+// written, these judge the PAGE after it exists, because none of the seven is
+// knowable without a real layout pass.
+//
+// EVERY SLIDE IS MEASURED TWICE, AND THE TWO READINGS ANSWER DIFFERENT
+// QUESTIONS (#215). At its ZERO STEP -- no fragment revealed -- the only
+// question is whether anything painted at all, which is what the room sees
+// while the presenter is still talking. SETTLED, with every fragment
+// revealed, is the slide the deck actually delivers, and it is what the other
+// six rulers read: measuring occupancy or overflow against a slide that has
+// not finished arriving would refuse the reveal itself, calling a two-beat
+// argument a half-empty stage.
 //
 // A CONTACT SHEET IS WRITTEN NEXT TO THE INPUT ON EVERY RUN, red or green:
 // one PNG tiling every slide, because a laudo answers "what is wrong" and a
@@ -125,12 +135,43 @@ function decodeImagesFn() {
 // Caller-driven, reload-free navigation: toggle `.is-current` exactly the
 // way the page's own inline script does, without depending on that script's
 // closed-over state -- this gate is measuring the page from OUTSIDE it.
+//
+// IT LANDS ON THE SLIDE'S ZERO STEP, and that is not an accident of writing
+// it this way: no fragment carries `.is-revealed` until something adds it, so
+// toggling `.is-current` from out here puts the slide in exactly the state
+// the room sees before the presenter's first advance (#215).
 function gotoSlideFn(n) {
   const slides = document.querySelectorAll('.slide');
   for (let i = 0; i < slides.length; i++) slides[i].classList.toggle('is-current', i === n);
   const readout = document.querySelector('[data-page-current]');
   if (readout) readout.textContent = String(n + 1);
+  // The progress bar reads a custom property the page's own script keeps, and
+  // the contact sheet is a picture of the deck: left alone it would show every
+  // slide standing at slide one's progress, which is a picture of this gate.
+  const stage = document.querySelector('.stage');
+  if (stage) stage.style.setProperty('--progress', String((n + 1) / slides.length));
   return slides.length;
+}
+
+// The other half of the pair: every fragment of the current slide revealed,
+// so the next reading is of the slide as the deck finally delivers it.
+function revealFragmentsFn() {
+  const slide = document.querySelector('.slide.is-current');
+  if (!slide) return 0;
+  const list = slide.querySelectorAll('[data-fragment]');
+  for (let i = 0; i < list.length; i++) list[i].classList.add('is-revealed');
+  return list.length;
+}
+
+// THE GATE MEASURES A SETTLED STAGE, SO IT TURNS THE DECK'S MOTION OFF FIRST
+// (#215). A slide caught mid-transition reports a box about the clock rather
+// than about the deck -- a cinematic profile takes 620ms and this gate waits
+// 60. Setting the profile to `static` is the page's own vocabulary, not a
+// hack around it: `compiler/stage.html` keys every animation and transition
+// off `body[data-motion=…]`, and `static` is the name for none of them.
+function motionOffFn() {
+  document.body.setAttribute('data-motion', 'static');
+  return document.body.getAttribute('data-motion');
 }
 
 // Everything computable from the live DOM once a slide is current: the
@@ -188,8 +229,10 @@ function pageMeasureFn() {
   const pn = document.querySelector('.page-number');
   const pageNumber = pn ? rectOf(pn) : null;
 
-  const leaves = [];
   const current = document.querySelector('.slide.is-current');
+  const fragments = current ? current.querySelectorAll('[data-fragment]').length : 0;
+
+  const leaves = [];
   if (current) {
     for (const el of current.querySelectorAll('*')) {
       const cs = getComputedStyle(el);
@@ -220,8 +263,14 @@ function pageMeasureFn() {
           if (area > 0) scale = Math.sqrt(area);
         }
       }
+      // THE ROLE TRAVELS ONTO THE LEAF because one ruler needs to tell what a
+      // slide SAYS from what it says about itself (#215). `data-role` is the
+      // register's own word, put on the paragraph by build.py; anything with
+      // none -- a chart's drawn label, a figure -- is content by default,
+      // which is the honest reading for both.
       leaves.push({
         sel: describe(el), rect: rectOf(el), fontSizePx: parseFloat(cs.fontSize) * scale,
+        role: el.getAttribute('data-role'),
       });
     }
     for (const el of current.querySelectorAll('.figure')) {
@@ -229,10 +278,10 @@ function pageMeasureFn() {
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const r = paintedRect(el, rectOf(el));
       if (r.width < 2 || r.height < 2) continue;
-      leaves.push({ sel: describe(el), rect: r, fontSizePx: null });
+      leaves.push({ sel: describe(el), rect: r, fontSizePx: null, role: null });
     }
   }
-  return { stage, pageNumber, leaves };
+  return { stage, pageNumber, leaves, fragments };
 }
 
 // ---------------------------------------------------------------------
@@ -315,6 +364,7 @@ async function measureFile(filePath) {
   await b.evaluate(evalCall(decodeImagesFn));
   const title = await b.evaluate('() => document.title');
   const fontTokens = await b.evaluate(evalCall(fontTokensFn));
+  await b.evaluate(evalCall(motionOffFn));
   const total = await b.evaluate("() => document.querySelectorAll('.slide').length");
   if (!total) {
     await b.close();
@@ -325,6 +375,12 @@ async function measureFile(filePath) {
   for (let n = 0; n < total; n++) {
     if (n > 0) await b.evaluate(evalCall(gotoSlideFn, n));       // eslint-disable-line no-await-in-loop
     await sleep(60);                                              // eslint-disable-line no-await-in-loop
+    // The opening beat first, while nothing has been revealed, then the same
+    // slide with every fragment in place -- see the two-readings note at the
+    // top of this file for which ruler reads which.
+    const zero = await b.evaluate(evalCall(pageMeasureFn));       // eslint-disable-line no-await-in-loop
+    await b.evaluate(evalCall(revealFragmentsFn));                // eslint-disable-line no-await-in-loop
+    await sleep(60);                                              // eslint-disable-line no-await-in-loop
     const dom = await b.evaluate(evalCall(pageMeasureFn));        // eslint-disable-line no-await-in-loop
     const roleFonts = {};
     for (const role of Object.keys(fontSelectors)) {
@@ -332,8 +388,11 @@ async function measureFile(filePath) {
       // eslint-disable-next-line no-await-in-loop
       roleFonts[role] = sels.length ? await b.platformFontsAll(sels.join(',')) : [];
     }
+    // THE CONTACT SHEET SHOWS THE SETTLED SLIDE. It answers "does this look
+    // like a deck", and a grid of half-revealed slides answers a question
+    // nobody asked.
     const shotB64 = dom.stage ? await b.shot(dom.stage) : await b.shot();  // eslint-disable-line no-await-in-loop
-    slides.push({ n, dom, roleFonts, shotB64 });
+    slides.push({ n, dom, zero, roleFonts, shotB64 });
   }
 
   const sheetB64 = await composeContactSheet(b, slides);
@@ -501,6 +560,39 @@ function rulerPageNumber(m) {
   return fixes;
 }
 
+// THE ONE RULER THAT READS THE OPENING BEAT (#215). Every ruler above judges
+// the settled slide; this one judges what the room looks at while the
+// presenter is still talking. A slide with no fragments at all never reaches
+// it, because its zero step and its settled state are the same slide.
+//
+// WHAT IT ASKS IS FOR SOMETHING THE SLIDE SAYS, NOT MERELY FOR INK. The
+// looser reading -- "did anything paint" -- was written first and the render
+// refused it: a pivot question whose kicker holds the top edge and whose
+// question is a fragment paints exactly one line, in mono, at the type floor,
+// in the corner of an otherwise black stage. That is not a slide waiting for
+// its second beat; it is the screen #207 names ("sem que o slide apareça
+// vazio antes do primeiro passo, para a tela nunca parecer quebrada"), and
+// the contact sheet is what said so. Furniture is furniture whether or not it
+// is painted, so the role the register already puts on every slot is the
+// whole of the test: a `meta` line does not count, and everything else does.
+//
+// IT STILL ASKS FOR ONE THING ONLY. How much of the stage the opening beat
+// covers is a question `occupancy` answers about the slide as delivered, and
+// asking it twice at two different thresholds would be two rulers arguing.
+function rulerZeroStep(m) {
+  const fixes = [];
+  for (const s of m.slides) {
+    if (!s.zero || !s.zero.fragments) continue;
+    if (s.zero.leaves.some((l) => l.role !== 'meta')) continue;
+    fixes.push(
+      `slide ${s.n + 1}: take \`step\` off one of the ${s.zero.fragments} fragments — `
+      + 'before the first advance the stage carries nothing but furniture, and the room '
+      + 'reads that as a slide that failed to load while you are still talking'
+    );
+  }
+  return fixes;
+}
+
 const RULERS = [
   { name: 'box-overflow', headline: "no leaf paints past the stage's own edges", measure: rulerOverflow },
   { name: 'type-floor', headline: 'no leaf paints smaller than 2.2% of the stage height', measure: rulerTypeFloor },
@@ -508,6 +600,7 @@ const RULERS = [
   { name: 'network-zero', headline: 'the deck makes no request the network has to answer', measure: rulerNetwork },
   { name: 'platform-font', headline: 'the face that painted is the one the theme declares', measure: rulerPlatformFont },
   { name: 'page-number', headline: 'the page number sits in the same place on every slide', measure: rulerPageNumber },
+  { name: 'zero-step', headline: 'a slide with fragments says something before the first advance', measure: rulerZeroStep },
 ];
 const BY_NAME = Object.fromEntries(RULERS.map((r) => [r.name, r.measure]));
 

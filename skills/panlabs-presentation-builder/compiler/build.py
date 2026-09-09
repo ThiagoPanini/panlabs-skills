@@ -42,9 +42,9 @@ import charts                                                   # noqa: E402
 import figures                                                  # noqa: E402
 import icons                                                    # noqa: E402
 from audit import audit, report                                # noqa: E402
-from catalog import (DECK_FIELDS, EVIDENCE_TAGS, ICON, SLOT_TAG,  # noqa: E402
-                     chart_of, figure_of, group_of, is_table,
-                     role_of_element, slot_specs)
+from catalog import (DECK_FIELDS, EVIDENCE_TAGS, ICON, MOTION_PROFILES,  # noqa: E402
+                     NOTES_TAG, SLOT_TAG, STEP_ATTR, chart_of, figure_of,
+                     group_of, is_table, role_of_element, slot_specs)
 from source import (Refused, fields_of, inline_markup,         # noqa: E402
                     plain_text, read)
 
@@ -83,6 +83,18 @@ def check_header(deck):
         fixes.append(
             f'write minutes= as a whole number of minutes, not "{minutes}" — '
             "it is what sizes the deck against the time on the agenda"
+        )
+
+    # THE PROFILE IS A NAME THE REGISTER CARRIES, AND THE STAGE ANSWERS IT
+    # (#215). Anything else here would reach the built page as a `data-motion`
+    # no stylesheet has a rule for, which is a deck that silently loses its
+    # own art direction -- the one class of defect worth stopping a build for.
+    motion = deck.header.get("motion", "").strip()
+    if motion and motion not in MOTION_PROFILES:
+        fixes.append(
+            f'write motion= as one of {", ".join(MOTION_PROFILES)}, not '
+            f'"{motion}" — the profile decides how a slide arrives and how a '
+            "fragment enters, and the stage has a rule for each of the three"
         )
     if fixes:
         refuse(*fixes)
@@ -168,6 +180,33 @@ def icons_used(deck):
     return used
 
 
+def notes_markup(deck):
+    """Every slide's speaker notes, as one block each, for the panel (#215).
+
+    THEY ARE EMITTED OUTSIDE THE STAGE, AND THAT IS THE WHOLE POINT. A note
+    written into the `<section>` would be one stylesheet mistake away from the
+    projector -- #207 asks for the detail to stay with the presenter and off
+    the audience's screen, and the cheapest way to keep a promise like that is
+    for the text to never be inside the thing being projected. The panel is a
+    sibling of the stage; what ties a block to its slide is the number it
+    carries, read by the stage's own script.
+
+    A SLIDE WITH NO NOTES GETS NO BLOCK. The panel says so itself rather than
+    carrying an empty one per slide, which would put the deck's slide count
+    into the page a second time, in a second place, to say nothing.
+    """
+    blocks = []
+    for index, slide in enumerate(deck.sections, start=1):
+        note = next((el for el in slide.elements() if el.tag == NOTES_TAG), None)
+        if note is None:
+            continue
+        blocks.append(
+            f'<div class="note" data-note-for="{index}" hidden>'
+            f"{inline_markup(note)}</div>"
+        )
+    return "\n".join(blocks)
+
+
 def slide_markup(slide, index, base):
     """One section, with its slots in the order the CATALOG declares them.
 
@@ -204,6 +243,15 @@ def slide_markup(slide, index, base):
     own vocabulary, an image is read from disk and written back inline as a
     `data:` URI. `base` is the directory the source was read from, because that
     is where its author was writing the path from.
+
+    A FRAGMENT'S NUMBER IS COUNTED HERE AND WRITTEN NOWHERE ELSE (#215). The
+    source says only THAT a slot arrives late, with the bare `step`; the beat
+    it arrives on is its place in the catalog's own reading order, which is
+    the same order this function already emits in. Reordering the register
+    therefore reorders the reveal, and there is no second ordering to fall out
+    of step with the first. A PAIR SHARES ONE BEAT, because the register
+    already says the two travel together -- an icon that arrives one advance
+    after its own line is the "retrato vazio" #207 refuses, one beat wide.
     """
     pattern = slide.attrs["pattern"]
     written = {}
@@ -215,16 +263,29 @@ def slide_markup(slide, index, base):
         elif el.tag in EVIDENCE_TAGS:
             container = el
 
+    beats = {}
+    beat = 0
+    for slot in slot_specs(pattern):
+        el = written.get(slot.name)
+        if el is None or STEP_ATTR not in el.attrs or slot.name in beats:
+            continue
+        beats[slot.name] = beat
+        pair = written.get(slot.pairs_with)
+        if pair is not None and STEP_ATTR in pair.attrs:
+            beats[slot.pairs_with] = beat
+        beat += 1
+
     def one(slot):
         el = written[slot.name]
+        step = f' data-fragment="{beats[slot.name]}"' if slot.name in beats else ""
         if slot.role == ICON:
             name = html.escape(plain_text(el).strip(), quote=True)
             return (
-                f'<svg class="icon" data-role="icon" aria-hidden="true" '
+                f'<svg class="icon" data-role="icon"{step} aria-hidden="true" '
                 f'focusable="false"><use href="#icon-{name}"></use></svg>'
             )
         return (
-            f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}">'
+            f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}"{step}>'
             f"{inline_markup(el)}</{SLOT_TAG}>"
         )
 
@@ -404,6 +465,7 @@ def main(argv=None):
             "DECK_ATTRS": attrs,
             "ICONS": icons.sprite(icons_used(deck)),
             "SLIDES": slides,
+            "NOTES": notes_markup(deck),
             "PAGE_TOTAL": str(len(sections)),
         },
     )

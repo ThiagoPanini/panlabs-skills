@@ -23,14 +23,17 @@ The asserted phrase is always the FIX and never the diagnosis. "unknown
 class" would pass an assertion on a message that tells the reader nothing to
 do; `drop the class "highlight"` cannot.
 
-TWO EXAMPLES, BECAUSE TWO KINDS OF DEFECT NEED DIFFERENT GROUND. The
-statement deck is one slide, which is all the dialect's own rulers need; the
-doctrine's rulers need a deck with several patterns and several titles in it,
-and planting a second divider next to the first is not something a
-one-slide source can be asked to do.
+ONE EXAMPLE PER KIND OF GROUND, BECAUSE A PLANT NEEDS SOMETHING TO PLANT
+INTO. The statement deck is one slide, which is all the dialect's own rulers
+need; the doctrine's rulers need a deck with several patterns and several
+titles in it, and planting a second divider next to the first is not
+something a one-slide source can be asked to do. Every ticket that adds a
+construct adds the example that carries it, and the block that plants into
+it -- notes and fragments (#215) have no needle in a deck that writes
+neither.
 
-AND THREE CASES THAT DEMAND GREEN, at the bottom, because a check can also be
-wrong by firing. `fill()` used to hunt for leftover `{{NAME}}` markers AFTER
+AND THE CASES AT THE BOTTOM DEMAND GREEN, because a check can also be wrong
+by firing. `fill()` used to hunt for leftover `{{NAME}}` markers AFTER
 substituting the author's own text into the page, so a deck that said
 `{{TITLE}}` out loud was refused with a fix naming a file its author had
 never opened. The category-title ruler matches a title WHOLE: a claim that
@@ -66,6 +69,7 @@ EVIDENCE = os.path.join(SKILL, "examples", "evidence.deck.html")
 SIDE_BY_SIDE = os.path.join(SKILL, "examples", "side-by-side.deck.html")
 CHARTS = os.path.join(SKILL, "examples", "charts.deck.html")
 FIGURE = os.path.join(SKILL, "examples", "figure.deck.html")
+PRESENTING = os.path.join(SKILL, "examples", "presenting.deck.html")
 
 # THE ONE FIXTURE THAT IS NOT TEXT. Every other example is entirely readable as
 # a string; the figure deck points at a picture, and half of what #214 asks be
@@ -79,6 +83,7 @@ EVIDENCE_SOURCE = read(EVIDENCE)
 SIDE_BY_SIDE_SOURCE = read(SIDE_BY_SIDE)
 CHARTS_SOURCE = read(CHARTS)
 FIGURE_SOURCE = read(FIGURE)
+PRESENTING_SOURCE = read(PRESENTING)
 
 
 def _read_bytes(path):
@@ -340,6 +345,18 @@ OVER_CEILING = b"\x89PNG\r\n\x1a\n" + b"\0" * (2 * 1024 * 1024 + 1)
 # the browser decodes nothing, which is the blank rectangle by another road.
 WRONG_FORMAT = b"GIF89a" + b"\0" * 64
 
+# #215'S OWN NEEDLE. The cover slide's note, exactly as the presenting deck
+# writes it -- the one string every notes case below plants against. It is a
+# whole `<notes>` element and not a phrase inside one, because three of the
+# four cases (empty, doubled, attributed) are about the ELEMENT and there is
+# nothing smaller to cut for them.
+PRESENTING_NOTE = (
+    "<notes>Este deck existe para ser <strong>apresentado</strong>, não lido: "
+    "cada slide aqui exercita uma parte do palco.<br/>Comece dizendo que a "
+    "plateia nunca verá botão nenhum — tudo o que move este deck é tecla."
+    "</notes>"
+)
+
 # What a colour looks like, in any of the four notations a hand reaches for.
 # `fill=` and `stroke=` are here because a chart that painted itself would not
 # need a hexadecimal to break the rule -- `fill="currentColor"` would do it.
@@ -493,6 +510,46 @@ def the_figure_wears_only_the_theme():
     return 0 if good else 1
 
 
+# One sentence out of the presenting deck's first note, and the `<section>` a
+# built slide is written as. What the case below asks is where the first one
+# ended up relative to the second.
+NOTE_PHRASE = "exercita uma parte do palco"
+SLIDE = re.compile(r'<section class="slide.*?</section>', re.S)
+
+
+def the_notes_never_reach_the_stage():
+    """The note is on the page, in the panel, and inside no slide at all.
+
+    #207 ASKS FOR THIS IN ONE SENTENCE ("para o detalhe ficar comigo e não na
+    tela da plateia"), and it is the one promise in this ticket that a green
+    audit says nothing about: a note emitted into the `<section>` and hidden
+    by a rule would pass every ruler in the file and be one stylesheet
+    mistake -- or one `Ctrl+A` in a browser -- away from the projector. The
+    assertion is therefore about PLACE and not about paint. The motion
+    profile is checked in the same breath because it travels the same way: a
+    field of the header that has to reach the built page to mean anything.
+    """
+    ok, said, page = _run(PRESENTING_SOURCE)
+    page = page or ""
+    in_panel = '<div class="note" data-note-for="1"' in page and NOTE_PHRASE in page
+    on_stage = any(NOTE_PHRASE in slide for slide in SLIDE.findall(page))
+    wearing = 'data-motion="cinematic"' in page
+    good = ok and in_panel and not on_stage and wearing
+    marks = f"[{'+' if ok else '-'}{'+' if in_panel and not on_stage and wearing else '-'}]"
+    print(f"  {'ok  ' if good else 'FAIL'} {'notes off the stage':<22} {marks} "
+          "the note reaches the panel, and no <section> on the page carries it")
+    if not good:
+        if not ok:
+            print(f"       <- refused: {said}")
+        elif on_stage:
+            print("       <- the note is inside a <section class=\"slide\">")
+        elif not in_panel:
+            print("       <- no <div class=\"note\"> on the page carries the note")
+        else:
+            print("       <- the page never says data-motion=\"cinematic\"")
+    return 0 if good else 1
+
+
 def main():
     missing = [
         os.path.relpath(path, SKILL)
@@ -504,6 +561,7 @@ def main():
             (CHARTS, CHARTS_SOURCE),
             (FIGURE, FIGURE_SOURCE),
             (CAPTURE, CAPTURE_BYTES),
+            (PRESENTING, PRESENTING_SOURCE),
         )
         if text is None
     ]
@@ -615,7 +673,7 @@ def main():
         ),
         (
             "header field gone",
-            "one of the five the header has to say",
+            "one of the fields the header has to say",
             swap(STATEMENT_SOURCE, 'occasion="Retrospectiva de engenharia"', ""),
             "give the <deck> an occasion=",
         ),
@@ -941,12 +999,94 @@ def main():
     ], width=24)
 
     print()
-    print("and the five that demand green:  [built kept]")
+    failed += block("the speaker notes (#215)", PRESENTING_SOURCE, [
+        (
+            "foreign tag in a note",
+            "<em>, which is no more welcome off the stage than on it",
+            swap(PRESENTING_SOURCE, "<strong>apresentado</strong>",
+                 "<em>apresentado</em>"),
+            "drop the <em>",
+        ),
+        (
+            "note left empty",
+            "the tag written, and the detail it was for never kept",
+            swap(PRESENTING_SOURCE, PRESENTING_NOTE, "<notes></notes>"),
+            "write something in the <notes>",
+        ),
+        (
+            "two notes on one slide",
+            "a second set of notes the compiler would drop in silence",
+            swap(PRESENTING_SOURCE, PRESENTING_NOTE,
+                 PRESENTING_NOTE + "\n    " + PRESENTING_NOTE),
+            "keep one <notes>",
+        ),
+        (
+            "attribute on a note",
+            "an attribute on the one tag that carries none",
+            swap(PRESENTING_SOURCE, "<notes>Este deck existe",
+                 '<notes for="quem apresenta">Este deck existe'),
+            "drop for= from the <notes>",
+        ),
+    ], width=24)
+
+    print()
+    failed += block("fragments (#215)", PRESENTING_SOURCE, [
+        (
+            "step with a number in it",
+            "a reveal order typed into the attribute, beside the one the "
+            "register already keeps",
+            swap(PRESENTING_SOURCE, '<p class="sentence" step>',
+                 '<p class="sentence" step="2">'),
+            "write `step` bare",
+        ),
+        (
+            "half a pair marked",
+            "an item's text arriving one beat after its own icon",
+            swap(PRESENTING_SOURCE, '<p class="item-3-icon" step>',
+                 '<p class="item-3-icon">'),
+            'mark <p class="item-3-icon"> with `step` too',
+        ),
+    ], width=24)
+
+    print()
+    # A GROUP'S ITEM IS NOT A FRAGMENT, and the red comes from the rule #212
+    # already wrote rather than from one #215 added: `<li>` carries the group's
+    # own flag or nothing. The case is here to hold that boundary, because a
+    # series revealed a row at a time is the obvious next thing somebody tries.
+    failed += block("a series arrives whole (#215)", EVIDENCE_SOURCE, [
+        (
+            "step on a group item",
+            "a metric marked to arrive on its own beat",
+            swap(EVIDENCE_SOURCE, '<li><p class="value">42%</p>',
+                 '<li step><p class="value">42%</p>'),
+            "drop step= from the <li>",
+        ),
+    ], width=24)
+
+    print()
+    failed += block("the header's motion profile (#215)", STATEMENT_SOURCE, [
+        (
+            "motion gone",
+            "the art direction's first field missing from the header",
+            swap(STATEMENT_SOURCE, '\n      motion="static"', ""),
+            "give the <deck> a motion=",
+        ),
+        (
+            "profile nobody declared",
+            "a fourth profile, which no rule on the stage answers",
+            swap(STATEMENT_SOURCE, 'motion="static"', 'motion="dramatic"'),
+            "write motion= as one of",
+        ),
+    ], width=24)
+
+    print()
+    print("and the ones that demand green:  [built kept]")
     failed += the_page_is_not_a_template()
     failed += the_category_is_the_whole_title()
     failed += the_divider_may_name_the_arc()
     failed += the_chart_svg_carries_no_colour()
     failed += the_figure_wears_only_the_theme()
+    failed += the_notes_never_reach_the_stage()
     return failed
 
 

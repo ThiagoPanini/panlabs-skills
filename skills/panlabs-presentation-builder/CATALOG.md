@@ -10,17 +10,21 @@
 
 **Um grupo é uma série, e é a primeira vez que este catálogo precisa de uma (#212).** `número gigante`, `tabela` e `linha do tempo` dizem mais de um fato por slide, e um slot dito uma vez não segura isso. Onde há um grupo, o slide carrega um `<ul>`, um `<ol>` ou um `<table>` — sem `class=` em nenhum dos dois, porque cada padrão tem no máximo um grupo e a própria tag já diz o que é. Um item é um `<li>` (ou uma `<tr>` de uma tabela), com os campos do grupo escritos exatamente como um slot: um `<p>` por campo, o nome do campo na `class=`.
 
+**O que não cabe no slide vai para as notas, e o slide pode chegar em batidas (#215).** Um `<notes>` por seção guarda o que você fala por cima, fora do orçamento de palavras e fora do palco — ele viaja para um painel que só quem apresenta abre. E um slot marcado com o `step` pelado só aparece depois de um avanço, na ordem em que o padrão lê os slots: é uma escolha de ritmo, não de composição, e por isso o palco não se mexe quando a batida cai. O que o portão de render recusa é o palco em branco antes da primeira delas.
+
 **Um ícone é o nome de um slot, nunca um atributo.** O slot de papel **ícone** carrega só o nome Lucide como texto — `<p class="item-1-icon">circle-check</p>` — porque a mesma regra de sempre vale aqui: um slot carrega `class=` e nada mais. O compilador confere o nome contra o conjunto vendorizado em [`themes/base/icons/`](themes/base/icons/) e escreve, na página construída, só os ícones que o deck de fato usa — nunca o conjunto inteiro. A licença do conjunto está ao lado, em [`themes/base/icons/LICENSE`](themes/base/icons/LICENSE).
 
 **O gráfico é um grupo que o compilador desenha em vez de imprimir (#213).** Você escreve a tese, a unidade, a fonte datada e a série — rótulo e valor por ponto —, e a `<section>` ganha um `type=` a mais dizendo em que forma. O que chega à página é um SVG gerado, e a medição do [#94](https://github.com/ThiagoPanini/panlabs-skills/issues/94) é o motivo de ser assim: o mesmo gráfico de barras custou 30 linhas e 79 coordenadas escritas à mão contra duas linhas de dado por um gerador, e o eixo do gerador saiu melhor do que o da mão. **Nenhuma cor é escrita no SVG** — cada marca leva uma classe, e o tema pinta; é assim que o mesmo gráfico troca de identidade junto com o deck. **Um valor é um número puro**, dígitos com vírgula decimal: a unidade mora no slot `unit`, e o número é desenhado exatamente como foi escrito. **Rótulo tem largura máxima**, porque SVG não mede texto e um rótulo comprido não quebra linha nem reclama — ele passa por baixo do vizinho ou sai pela borda; o compilador recusa antes, dizendo em quantos caracteres ele cabe.
 
 **A figura é o slot que este catálogo não limita (#214).** Todo padrão acima diz o que vai dentro dele; `figura com legenda` diz apenas **de que** a figura pode ser feita, porque o momento em que o catálogo não tem o que o slide pede — um ciclo, um organograma, um fluxo — é o momento que a spec se recusa a sacrificar. Você escreve um `<svg>` e desenha, ou aponta um `<img src="…"/>` para um arquivo e o compilador o embute em base64. Sem `title`, a figura fica com o palco inteiro; com ele, divide. **Toda cor é do tema**: `fill` e `stroke` só aceitam `none` ou `var(--token)`, e é isso que faz o mesmo desenho trocar de identidade junto com o deck. **O vocabulário do desenho é fechado**, e é ele — e não uma regra por ameaça — que recusa `<script>`, `<use>`, `href=` e `style=`. **E o arquivo é conferido antes de virar página**: caminho que não existe, peso acima do teto e bytes que não são do formato que a extensão promete recusam a construção, que é como «retrato vazio proibido» deixa de ser doutrina e vira régua.
 
-[`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/statement.deck.html`](examples/statement.deck.html) é a afirmação de tela cheia sozinha; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico; [`examples/figure.deck.html`](examples/figure.deck.html) cobre as duas metades da figura e as duas composições dela. Os seis compilam pelo comando documentado no [`SKILL.md`](SKILL.md).
+[`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/statement.deck.html`](examples/statement.deck.html) é a afirmação de tela cheia sozinha; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico; [`examples/figure.deck.html`](examples/figure.deck.html) cobre as duas metades da figura e as duas composições dela; [`examples/presenting.deck.html`](examples/presenting.deck.html) é o deck do próprio palco, com notas do apresentador em todo slide e fragmentos em três deles. Os sete compilam pelo comando documentado no [`SKILL.md`](SKILL.md).
 
 <!-- catalog:begin -->
 
-O cabeçalho é o próprio `<deck>`, e os cinco campos são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`. Um slot é um `<p>` com o nome do slot na `class=` e nada mais. O vocabulário de ênfase inline fecha em três marcações: `<strong>` e `<mark>`, sempre disponíveis, e `<br/>` (quebra forçada), disponível só nos padrões que o dizem.
+O cabeçalho é o próprio `<deck>`, e todos os campos dele são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`, `motion`. Um slot é um `<p>` com o nome do slot na `class=` — e, no máximo, o `step` pelado que faz dele um fragmento. O vocabulário de ênfase inline fecha em três marcações: `<strong>` e `<mark>`, sempre disponíveis, e `<br/>` (quebra forçada), disponível só nos padrões que o dizem.
+
+`motion` é o perfil de movimento do deck, e vale um destes: `static`, `editorial`, `cinematic`. Ele decide como um slide chega e como um fragmento entra, e mais nada; numa máquina que pediu menos movimento nenhuma animação roda, seja qual for o perfil.
 
 São 18 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
 
@@ -256,5 +260,15 @@ Um slot de papel **afirmação** que diga só uma destas reprova a construção 
 ### Quebra forçada
 
 `<br/>` só é aceito, vazio e sem atributo, dentro da prosa destes padrões — nos demais a construção recusa: `two-columns`, `three-columns`, `comparison`.
+
+### Notas do apresentador
+
+Um slide carrega no máximo um `<notes>`, sem `class=` e sem atributo — a tag já diz o que é. O que vai nele é prosa, com as mesmas marcações de ênfase e com `<br/>` sempre disponível, e **não conta no orçamento de palavras**: a nota é lida por uma pessoa num painel, não pela sala num telão. Nada dela chega ao palco. Um `<notes>` vazio reprova — ou escreva a nota, ou tire a tag.
+
+### Fragmentos
+
+Um slot marcado com o `step` pelado (`<p class="sentence" step>`) só aparece depois que o apresentador avança. A ordem é a ordem em que o padrão lê os slots, nunca um número escrito no atributo — `step="2"` reprova. Dois slots que o registro emparelha (o ícone e o texto de um item) entram no mesmo passo, e marcar um sem marcar o outro reprova. Um item de grupo não é fragmento: uma série é uma prova só, e meia linha do tempo é uma linha do tempo mentindo sobre o próprio eixo.
+
+**O passo zero não pode ser vazio.** Marcar todos os slots deixa o palco em branco até o primeiro avanço, e a sala lê isso como um slide que não carregou; o portão de render reprova, e o conserto é tirar o `step` de um deles.
 
 <!-- catalog:end -->

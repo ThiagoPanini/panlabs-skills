@@ -22,7 +22,7 @@
 // page by surviving past the compiler, which is the reason this gate exists
 // standing beside the audit rather than folded into it.
 //
-// THE GREEN CONTROL IS MEASURED EXACTLY ONCE. Six rulers sharing one
+// THE GREEN CONTROL IS MEASURED EXACTLY ONCE PER FIXTURE. Every ruler sharing one
 // Chromium pass over the real corpus is the same corpus gate/render.cjs
 // itself would measure; re-launching a browser per case to re-derive a
 // result that cannot change between cases would only make the proof slow
@@ -37,7 +37,7 @@ const { Drifted, Proof } = require('./proof_driver.cjs');
 const HERE = __dirname;
 const SKILL = path.resolve(HERE, '..', '..', '..', 'skills', 'panlabs-presentation-builder');
 const gate = require(path.join(SKILL, 'gate', 'render.cjs'));
-const { findChrome } = require(path.join(SKILL, 'gate', 'cdp.cjs'));
+const { findChrome, launch } = require(path.join(SKILL, 'gate', 'cdp.cjs'));
 
 let REAL_PATH = null;
 let REAL_HTML = null;
@@ -238,6 +238,18 @@ function plantEveryStep() {
   return planted;
 }
 
+// AND THE HALF-EMPTY ONE, which is the case the looser reading of this ruler
+// let through. The pivot question's kicker is a `meta` line: mark only the
+// question and the stage still paints -- one mono line at the type floor, in
+// the corner -- so "did anything paint" says yes and the room says the slide
+// is broken. Planting exactly that is what holds the ruler at the reading the
+// contact sheet demanded.
+function plantOnlyFurniture() {
+  const planted = FRAGMENT_HTML.replace('<p class="question"', '<p data-fragment="0" class="question"');
+  if (planted === FRAGMENT_HTML) throw new Drifted('no <p class="question"> to turn into a fragment');
+  return planted;
+}
+
 // The asserted phrase is always the FIX and never the diagnosis, same rule
 // proof_driver.py/check-audit.proof.py already spend: "under the 40% floor"
 // is a diagnosis and leaves the reader to guess what to do; "give the slide
@@ -338,10 +350,118 @@ async function theFigureCountsAsContent() {
   return good ? 0 : 1;
 }
 
+// --------------------------------------------------------------------------
+// AND ONE MORE THAT DEMANDS GREEN: the stage actually presents (#215)
+// --------------------------------------------------------------------------
+// #215's first acceptance criterion is "visão geral, notas, ajuda, progresso e
+// fragmentos funcionam no deck de exemplo", and four of those five are not
+// things any RULER can see: gate/render.cjs measures a page sitting still, and
+// what this criterion asks about is what the page does when a key is pressed.
+// So this drives it -- one browser, the same CDP client the gate uses, the
+// keys a presenter would actually press -- and asserts the state each one is
+// supposed to produce.
+//
+// IT PRESSES `?` FROM INSIDE THE OVERVIEW ON PURPOSE. The overview prints a
+// hint along its bottom edge saying `?` shows the shortcuts, and the first
+// draft of the key map bound that key in the deck's table and not in the
+// overview's -- so the hint named a key nothing answered, in the one mode a
+// presenter reaches for help from. Nothing measured it; a person pressing the
+// key did. This is that press, kept.
+function pressFn(key) {
+  document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  return true;
+}
+
+function readStateFn() {
+  const stage = document.querySelector('.stage');
+  const slides = [].slice.call(document.querySelectorAll('.slide'));
+  const open = [].slice.call(document.querySelectorAll('.panel'))
+    .filter((p) => !p.hidden).map((p) => p.getAttribute('data-panel'));
+  const note = [].slice.call(document.querySelectorAll('[data-note-for]'))
+    .filter((n) => !n.hidden).map((n) => n.getAttribute('data-note-for'));
+  return {
+    overview: stage.classList.contains('is-overview'),
+    tileCols: stage.style.getPropertyValue('--tile-cols'),
+    progress: stage.style.getPropertyValue('--progress'),
+    current: slides.filter((s) => s.classList.contains('is-current')).length,
+    focus: slides.findIndex((s) => s.classList.contains('is-focus')),
+    slides: slides.length,
+    open,
+    note,
+    helpRows: document.querySelectorAll('.keys dt').length,
+    hintShown: getComputedStyle(document.querySelector('.overview-hint')).display !== 'none',
+    buttons: document.querySelectorAll('button').length,
+  };
+}
+
+async function theStagePresents() {
+  const steps = [];
+  let why = '';
+  let b = null;
+  try {
+    b = await launch({ width: 1600, height: 900 });
+    await b.goto('file://' + path.resolve(FRAGMENT_PATH));
+    const press = async (key) => {
+      await b.evaluate(gate.evalCall(pressFn, key));
+      await new Promise((r) => setTimeout(r, 120));
+      return b.evaluate(gate.evalCall(readStateFn));
+    };
+
+    let s = await b.evaluate(gate.evalCall(readStateFn));
+    steps.push(['no button anywhere on the page', s.buttons === 0]);
+    steps.push(['the progress bar opens at one slide of five',
+      s.progress === String(1 / s.slides)]);
+
+    s = await press('o');
+    steps.push(['`o` tiles every slide over the stage',
+      s.overview && s.current === s.slides && s.tileCols !== '' && s.hintShown]);
+
+    s = await press('ArrowRight');
+    steps.push(['an arrow moves the selection, and jumps nothing', s.focus === 1 && s.overview]);
+
+    s = await press('?');
+    steps.push(['`?` opens the shortcuts FROM the overview, with every key on it',
+      s.open.join() === 'help' && s.helpRows >= 10 && s.overview]);
+
+    s = await press('Escape');
+    steps.push(['esc closes the panel and leaves the grid standing',
+      s.open.length === 0 && s.overview]);
+
+    s = await press('Enter');
+    steps.push(['enter jumps to the selected slide and closes the grid',
+      !s.overview && s.current === 1]);
+
+    s = await press('n');
+    steps.push(['`n` opens the notes of the slide it jumped to',
+      s.open.join() === 'notes' && s.note.join() === '2']);
+
+    s = await press('ArrowRight');
+    steps.push(['the notes follow the deck, and the progress bar with them',
+      s.note.join() === '2' && s.progress === String(2 / s.slides)]);
+  } catch (e) {
+    why = e.message;
+  } finally {
+    if (b) await b.close();
+  }
+
+  const bad = steps.filter(([, ok]) => !ok);
+  const good = !why && steps.length === 9 && bad.length === 0;
+  console.log(`  ${good ? 'ok  ' : 'FAIL'} the stage presents      [${good ? '+' : '-'}] `
+    + `overview, help, notes and progress answer the keys (${steps.length - bad.length}/${steps.length})`);
+  if (!good) {
+    if (why) console.log(`       <- ${why}`);
+    for (const [what] of bad) console.log(`       <- ${what}: no`);
+  }
+  return good ? 0 : 1;
+}
+
 // The presenting deck's own case, against the presenting deck's own control.
 const FRAGMENT_CASES = [
   ['zero-step', 'marks every slot on every slide as a fragment',
     plantEveryStep, 'take `step` off one of the'],
+
+  ['zero-step', "marks the pivot question, leaving only its kicker on the stage",
+    plantOnlyFurniture, 'nothing but furniture'],
 ];
 
 async function main(argv) {
@@ -450,65 +570,38 @@ async function main(argv) {
     return uniq.length > 3 ? `${shown} (+${uniq.length - 3} more)` : shown;
   }
 
-  const PROOF = new Proof({
-    title: 'render.proof',
-    label: (ruler) => ruler,
-    invoke: async (ruler, html) => {
-      const measured = await _measurePlanted(html);
-      const fails = gate.BY_NAME[ruler](measured);
-      return [fails.length === 0, summarize(fails) || '(no message)'];
-    },
-    planted: (html) => html !== REAL_HTML,
-    control: async (ruler) => {
-      const fails = gate.BY_NAME[ruler](GREEN);
-      return [fails.length === 0, summarize(fails)];
-    },
-  });
+  // ONE FIXTURE, ONE PROOF, AND THE SHAPE WRITTEN ONCE. Each fixture differs
+  // in exactly three things -- which page a plant is written next to, which
+  // bytes "planted" is measured against, and which green control it is held
+  // to -- and every one of the four blocks that used to stand here spelled
+  // the other nine lines out again. #215 was the fourth copy, and four copies
+  // of a shape is the point where the next ticket's fifth is a certainty
+  // rather than a risk.
+  function fixtureProof(title, realPath, realHtml, green) {
+    return new Proof({
+      title,
+      label: (ruler) => ruler,
+      invoke: async (ruler, html) => {
+        const measured = await _measurePlanted(html, realPath);
+        const fails = gate.BY_NAME[ruler](measured);
+        return [fails.length === 0, summarize(fails) || '(no message)'];
+      },
+      planted: (html) => html !== realHtml,
+      control: async (ruler) => {
+        const fails = gate.BY_NAME[ruler](green);
+        return [fails.length === 0, summarize(fails)];
+      },
+    });
+  }
 
-  const CHART_PROOF = new Proof({
-    title: 'render.proof · over the chart deck',
-    label: (ruler) => ruler,
-    invoke: async (ruler, html) => {
-      const measured = await _measurePlanted(html, CHART_PATH);
-      const fails = gate.BY_NAME[ruler](measured);
-      return [fails.length === 0, summarize(fails) || '(no message)'];
-    },
-    planted: (html) => html !== CHART_HTML,
-    control: async (ruler) => {
-      const fails = gate.BY_NAME[ruler](CHART_GREEN);
-      return [fails.length === 0, summarize(fails)];
-    },
-  });
-
-  const FIGURE_PROOF = new Proof({
-    title: 'render.proof · over the figure deck',
-    label: (ruler) => ruler,
-    invoke: async (ruler, html) => {
-      const measured = await _measurePlanted(html, FIGURE_PATH);
-      const fails = gate.BY_NAME[ruler](measured);
-      return [fails.length === 0, summarize(fails) || '(no message)'];
-    },
-    planted: (html) => html !== FIGURE_HTML,
-    control: async (ruler) => {
-      const fails = gate.BY_NAME[ruler](FIGURE_GREEN);
-      return [fails.length === 0, summarize(fails)];
-    },
-  });
-
-  const FRAGMENT_PROOF = new Proof({
-    title: 'render.proof · over the presenting deck',
-    label: (ruler) => ruler,
-    invoke: async (ruler, html) => {
-      const measured = await _measurePlanted(html, FRAGMENT_PATH);
-      const fails = gate.BY_NAME[ruler](measured);
-      return [fails.length === 0, summarize(fails) || '(no message)'];
-    },
-    planted: (html) => html !== FRAGMENT_HTML,
-    control: async (ruler) => {
-      const fails = gate.BY_NAME[ruler](FRAGMENT_GREEN);
-      return [fails.length === 0, summarize(fails)];
-    },
-  });
+  const PROOF = fixtureProof('render.proof', REAL_PATH, REAL_HTML, GREEN);
+  const CHART_PROOF = fixtureProof(
+    'render.proof · over the chart deck', CHART_PATH, CHART_HTML, CHART_GREEN);
+  const FIGURE_PROOF = fixtureProof(
+    'render.proof · over the figure deck', FIGURE_PATH, FIGURE_HTML, FIGURE_GREEN);
+  const FRAGMENT_PROOF = fixtureProof(
+    'render.proof · over the presenting deck',
+    FRAGMENT_PATH, FRAGMENT_HTML, FRAGMENT_GREEN);
 
   let bad = await PROOF.run(CASES);
   console.log();
@@ -518,9 +611,10 @@ async function main(argv) {
   console.log();
   bad += await FRAGMENT_PROOF.run(FRAGMENT_CASES);
   console.log();
-  console.log('and the two that demand green:  [green]');
+  console.log('and the three that demand green:  [green]');
   bad += await theFigureIsMeasuredWhereItPaints();
   bad += await theFigureCountsAsContent();
+  bad += await theStagePresents();
 
   const all = CASES.concat(CHART_CASES, FIGURE_CASES, FRAGMENT_CASES);
   const covered = new Set(all.map((c) => c[0]));

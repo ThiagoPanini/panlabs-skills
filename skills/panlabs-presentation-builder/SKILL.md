@@ -66,19 +66,21 @@ python3 compiler/build.py /tmp/proposta.deck.html /tmp/proposta.html --theme bas
 
 ## Apresentar
 
-O arquivo construído se apresenta sozinho, **por teclado e só por teclado**: não existe barra de botões, e o que a plateia vê no telão é o deck e mais nada. Diga isto a quem for apresentar, porque o único jeito de descobrir os atalhos dentro do próprio arquivo é a tecla de ajuda.
+O arquivo construído se apresenta sozinho, **por teclado e só por teclado**: não existe barra de botões, e o que a plateia vê no telão é o deck e mais nada.
+
+**A lista completa de atalhos mora dentro do próprio arquivo, sob a tecla `?`**, e é gerada do mesmo mapa de teclas que o deck de fato obedece — nenhuma tecla que funciona fica de fora dela. O que precisa ser dito aqui é só o que quem apresenta não tem como descobrir sozinho antes de abrir aquele painel:
 
 | tecla | |
 |---|---|
-| `→` `↓` `espaço` `PageDown` | avança um fragmento, ou o slide quando não há mais nenhum |
-| `←` `↑` `⌫` `PageUp` | volta um fragmento, ou o slide inteiro — e um slide para trás volta revelado |
-| `Home` `End` | primeiro e último slide |
-| `o` | visão geral em grade; `enter` ou um clique saltam para o slide, `esc` volta ao que estava |
-| `n` | abre e fecha o painel de notas do slide corrente |
-| `?` (ou `h`) | a lista de atalhos |
-| `esc` | fecha o que estiver aberto |
+| `→` `espaço` | avança — e um clicker comum manda exatamente isto, ou `PageDown` |
+| `←` | volta; um slide para trás volta revelado |
+| `o` | a visão geral em grade; as setas escolhem, `enter` salta |
+| `n` | as notas do apresentador |
+| `?` | **todo o resto** |
 
 Uma barra de progresso fica na borda de baixo do palco, na tinta secundária e nunca no acento: quão longe o deck está não é o que ele significa.
+
+**A interface do palco é escrita em português, e não acompanha o `lang=` do deck.** Um deck em inglês sai com o painel de ajuda em português; #207 põe a internacionalização «além do idioma do deck» fora de escopo, e traduzir esse punhado de rótulos é dívida conhecida, não descuido.
 
 **O perfil de movimento decide duas coisas e mais nada**: como um slide chega e como um fragmento entra. `static` não anima nem uma nem outra — é o perfil de uma proposta sóbria, que não deveria precisar pedir para não ter efeito de palco. `editorial` faz o slide subir um fio e aparecer em 280 ms; `cinematic` gasta 620 ms, com uma escala mínima junto. **Numa máquina que declarou preferir menos movimento, nenhuma animação roda, seja qual for o perfil** — a preferência do sistema vence os três.
 

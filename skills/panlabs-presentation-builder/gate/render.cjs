@@ -263,8 +263,14 @@ function pageMeasureFn() {
           if (area > 0) scale = Math.sqrt(area);
         }
       }
+      // THE ROLE TRAVELS ONTO THE LEAF because one ruler needs to tell what a
+      // slide SAYS from what it says about itself (#215). `data-role` is the
+      // register's own word, put on the paragraph by build.py; anything with
+      // none -- a chart's drawn label, a figure -- is content by default,
+      // which is the honest reading for both.
       leaves.push({
         sel: describe(el), rect: rectOf(el), fontSizePx: parseFloat(cs.fontSize) * scale,
+        role: el.getAttribute('data-role'),
       });
     }
     for (const el of current.querySelectorAll('.figure')) {
@@ -272,7 +278,7 @@ function pageMeasureFn() {
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const r = paintedRect(el, rectOf(el));
       if (r.width < 2 || r.height < 2) continue;
-      leaves.push({ sel: describe(el), rect: r, fontSizePx: null });
+      leaves.push({ sel: describe(el), rect: r, fontSizePx: null, role: null });
     }
   }
   return { stage, pageNumber, leaves, fragments };
@@ -556,27 +562,32 @@ function rulerPageNumber(m) {
 
 // THE ONE RULER THAT READS THE OPENING BEAT (#215). Every ruler above judges
 // the settled slide; this one judges what the room looks at while the
-// presenter is still talking, and there is exactly one thing to ask of it:
-// did anything paint. A slide with no fragments at all never reaches this,
-// because its zero step and its settled state are the same slide.
+// presenter is still talking. A slide with no fragments at all never reaches
+// it, because its zero step and its settled state are the same slide.
 //
-// IT DOES NOT ASK FOR MORE THAN THAT, ON PURPOSE. A pivot question whose
-// kicker is on the stage and whose question is a fragment is a good slide and
-// a deliberate one -- the presenter asks it out loud and then reveals it.
-// What #207 refuses is the stage the room reads as broken ("sem que o slide
-// apareça vazio antes do primeiro passo, para a tela nunca parecer
-// quebrada"), and blank is what broken looks like. Whether the opening beat
-// fills enough of the stage is a question `occupancy` already answers about
-// the slide as delivered.
+// WHAT IT ASKS IS FOR SOMETHING THE SLIDE SAYS, NOT MERELY FOR INK. The
+// looser reading -- "did anything paint" -- was written first and the render
+// refused it: a pivot question whose kicker holds the top edge and whose
+// question is a fragment paints exactly one line, in mono, at the type floor,
+// in the corner of an otherwise black stage. That is not a slide waiting for
+// its second beat; it is the screen #207 names ("sem que o slide apareça
+// vazio antes do primeiro passo, para a tela nunca parecer quebrada"), and
+// the contact sheet is what said so. Furniture is furniture whether or not it
+// is painted, so the role the register already puts on every slot is the
+// whole of the test: a `meta` line does not count, and everything else does.
+//
+// IT STILL ASKS FOR ONE THING ONLY. How much of the stage the opening beat
+// covers is a question `occupancy` answers about the slide as delivered, and
+// asking it twice at two different thresholds would be two rulers arguing.
 function rulerZeroStep(m) {
   const fixes = [];
   for (const s of m.slides) {
     if (!s.zero || !s.zero.fragments) continue;
-    if (s.zero.leaves.length) continue;
+    if (s.zero.leaves.some((l) => l.role !== 'meta')) continue;
     fixes.push(
       `slide ${s.n + 1}: take \`step\` off one of the ${s.zero.fragments} fragments — `
-      + 'every one of them is hidden before the first advance, so the room reads a blank '
-      + 'stage while you are still talking'
+      + 'before the first advance the stage carries nothing but furniture, and the room '
+      + 'reads that as a slide that failed to load while you are still talking'
     );
   }
   return fixes;

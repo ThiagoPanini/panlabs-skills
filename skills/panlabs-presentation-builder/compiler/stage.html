@@ -762,7 +762,6 @@ body {
                    / var(--tile-cols, 1)))
     scale(calc(0.97 / var(--tile-cols, 1)));
   outline: calc(var(--stage-height) * 0.0015 * var(--tile-cols, 1)) solid var(--hairline);
-  cursor: pointer;
 }
 
 .stage.is-overview .slide.is-focus {
@@ -910,7 +909,20 @@ body {
 
 /* The key on the left, what it does on the right -- the register's own
  * two-column shape, and the reason `<dl>` is the tag: this list is a set of
- * terms and their definitions, and nothing else on the page is. */
+ * terms and their definitions, and nothing else on the page is. There is one
+ * per mode, because the same arrow means two things depending on whether the
+ * overview is open, and a single list would have to lie about one of them. */
+.keys-mode {
+  margin: 0 0 calc(var(--stage-height) * 0.014);
+  font-family: var(--font-mono);
+  font-size: var(--type-floor);
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+}
+
+.keys-mode[data-keys-mode="overview"] { margin-top: calc(var(--stage-height) * 0.028); }
+
 .keys {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -1021,23 +1033,28 @@ body[data-motion="cinematic"] .progress > span { transition: width 280ms ease; }
 </aside>
 <aside class="panel" data-panel="help" hidden>
 <p class="panel-title">atalhos</p>
-<dl class="keys">
-<dt>→ ↓ espaço</dt><dd>avança um fragmento, ou o slide quando não há mais nenhum</dd>
-<dt>← ↑ ⌫</dt><dd>volta um fragmento, ou o slide inteiro</dd>
-<dt>início · fim</dt><dd>primeiro e último slide</dd>
-<dt>o</dt><dd>visão geral em grade — enter salta, esc volta</dd>
-<dt>n</dt><dd>abre e fecha as notas do apresentador</dd>
-<dt>?</dt><dd>esta lista</dd>
-<dt>esc</dt><dd>fecha o que estiver aberto</dd>
-</dl>
+<p class="keys-mode" data-keys-mode="deck">no deck</p>
+<dl class="keys" data-keys="deck"></dl>
+<p class="keys-mode" data-keys-mode="overview">na visão geral</p>
+<dl class="keys" data-keys="overview"></dl>
 </aside>
 <script>
 // THE WHOLE OF PRESENTING, AND NOT ONE BUTTON (#215). Keys move the deck,
 // open the overview, open the notes and open this list; nothing on the
 // projected slide is clickable, because a HUD is furniture the room did not
-// ask for. The prose in the panels above is Portuguese for the same reason
-// compiler/catalog.py's `purpose=` is -- it is read by a person, not printed
-// by the compiler; CLAUDE.md draws that seam and this side of it is prose.
+// ask for.
+//
+// THE CHROME IS PORTUGUESE, AND THAT IS A RULING RATHER THAN AN OVERSIGHT.
+// CLAUDE.md's seam puts every message the COMPILER prints in English -- and
+// `build.py` does exactly that -- while the prose a person reads stays
+// Portuguese, which is the same carve-out compiler/catalog.py's `purpose=`
+// and this skill's own SKILL.md sit in. A help panel is read by whoever is
+// presenting, in the language the deck is written in.
+//
+// AND IT DOES NOT FOLLOW `lang=` YET. A deck written in English gets this
+// panel in Portuguese; #207 puts "internacionalização da interface do HTML
+// além do idioma do deck" out of scope, so the debt is named in SKILL.md
+// rather than paid with a translation table nobody asked for.
 (function () {
   var stage = document.querySelector('.stage');
   var slides = [].slice.call(document.querySelectorAll('.slide'));
@@ -1119,6 +1136,11 @@ body[data-motion="cinematic"] .progress > span { transition: width 280ms ease; }
     for (var i = 0; i < panels.length; i++) panels[i].hidden = true;
   }
 
+  function anyPanelOpen() {
+    for (var i = 0; i < panels.length; i++) if (!panels[i].hidden) return true;
+    return false;
+  }
+
   function togglePanel(name) {
     var wanted = document.querySelector('.panel[data-panel="' + name + '"]');
     if (!wanted) return;
@@ -1164,7 +1186,96 @@ body[data-motion="cinematic"] .progress > span { transition: width 280ms ease; }
     else show(here, step);
   }
 
-  function overviewKey(k) {
+  // ── THE KEY MAP, AND THE HELP PANEL PRINTED FROM IT ────────────────────────
+  // ONE TABLE PER MODE, READ TWICE: the handler runs it and the `?` panel is
+  // printed from it. It used to be a cascade of `else if` beside a hand-written
+  // `<dl>`, and the two had ALREADY drifted inside the commit that wrote them
+  // -- `PageDown`, `PageUp` and `h` were bound and unlisted, and a clicker
+  // sends the first two. `docs/agents/skills.md` predicts exactly that: "uma
+  // lista copiada é uma segunda fonte que ninguém atualiza no mesmo commit que
+  // a primeira, e a que envelhece é sempre a que o agente lê". Here the list a
+  // presenter reads mid-talk is DERIVED from the bindings, so an unlisted key
+  // is not something anybody has to remember to avoid.
+  //
+  // GENERATED AND NOT WRITTEN, unlike `.is-current` on the first slide. The
+  // stage sets that one from the compiler so a page whose script never ran
+  // still shows a slide; this panel is only ever OPENED by a keypress, so a
+  // page with no script has no way to reach it and nothing to lose by it
+  // being empty.
+  var SAYS = {
+    ArrowRight: '→', ArrowLeft: '←', ArrowUp: '↑', ArrowDown: '↓',
+    ' ': 'espaço', Backspace: '⌫', PageDown: 'PageDown', PageUp: 'PageUp',
+    Home: 'início', End: 'fim', Enter: 'enter', Escape: 'esc',
+  };
+
+  var DECK_KEYS = [
+    { keys: ['ArrowRight', 'ArrowDown', ' ', 'PageDown'], run: next,
+      does: 'avança um fragmento, ou o slide quando não há mais nenhum' },
+    { keys: ['ArrowLeft', 'ArrowUp', 'Backspace', 'PageUp'], run: prev,
+      does: 'volta um fragmento, ou o slide inteiro' },
+    { keys: ['Home'], run: function () { show(0, 0); }, does: 'primeiro slide' },
+    { keys: ['End'], run: function () { show(slides.length - 1, 0); }, does: 'último slide' },
+    { keys: ['o'], run: enterOverview, does: 'abre a visão geral em grade' },
+    { keys: ['n'], run: function () { togglePanel('notes'); },
+      does: 'abre e fecha as notas do apresentador' },
+    { keys: ['?', 'h'], run: function () { togglePanel('help'); }, does: 'esta lista' },
+    { keys: ['Escape'], run: closePanels, does: 'fecha o que estiver aberto' },
+  ];
+
+  // `?` IS BOUND IN BOTH MODES, AND IT HAS TO BE. The overview prints a hint
+  // saying so along its own bottom edge, and a hint that names a key nothing
+  // answers is worse than no hint -- the one place a presenter reaches for
+  // help is the place they are lost in.
+  var OVERVIEW_KEYS = [
+    { keys: ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown'],
+      run: null, does: 'move a seleção pela grade' },
+    { keys: ['Home', 'End'], run: null, does: 'primeiro e último slide da grade' },
+    { keys: ['Enter', ' '], run: function () { leaveOverview(focus); },
+      does: 'salta para o slide selecionado' },
+    { keys: ['?', 'h'], run: function () { togglePanel('help'); }, does: 'esta lista' },
+    // Escape closes the panel it opened before it closes the grid: one key
+    // that undoes one thing at a time is the only kind anybody trusts under
+    // pressure.
+    { keys: ['Escape', 'o'], run: function () {
+      if (anyPanelOpen()) closePanels();
+      else leaveOverview();
+    }, does: 'fecha a ajuda, ou volta ao slide de onde você veio' },
+  ];
+
+  // A letter is matched without its case and printed in lower case, so the
+  // table never has to carry `o` and `O` as two bindings to keep the panel
+  // from printing both.
+  function bound(entry, k) {
+    for (var i = 0; i < entry.keys.length; i++) {
+      var want = entry.keys[i];
+      if (want === k) return true;
+      if (want.length === 1 && k.length === 1 && want === k.toLowerCase()) return true;
+    }
+    return false;
+  }
+
+  function printKeys(table, where) {
+    var list = document.querySelector('.keys[data-keys="' + where + '"]');
+    if (!list) return;
+    for (var i = 0; i < table.length; i++) {
+      var dt = document.createElement('dt');
+      var said = [];
+      for (var j = 0; j < table[i].keys.length; j++) {
+        var k = table[i].keys[j];
+        said.push(SAYS[k] || k);
+      }
+      dt.textContent = said.join(' ');
+      var dd = document.createElement('dd');
+      dd.textContent = table[i].does;
+      list.appendChild(dt);
+      list.appendChild(dd);
+    }
+  }
+
+  // The arrows and Home/End in the overview move the SELECTION, which is one
+  // computation over the grid rather than four entries with a body each; the
+  // table above prints them and this answers them.
+  function moveFocus(k) {
     var cols = columns();
     if (k === 'ArrowRight') focus = Math.min(slides.length - 1, focus + 1);
     else if (k === 'ArrowLeft') focus = Math.max(0, focus - 1);
@@ -1172,37 +1283,35 @@ body[data-motion="cinematic"] .progress > span { transition: width 280ms ease; }
     else if (k === 'ArrowUp') focus = Math.max(0, focus - cols);
     else if (k === 'Home') focus = 0;
     else if (k === 'End') focus = slides.length - 1;
-    else if (k === 'Enter' || k === ' ') { leaveOverview(focus); return true; }
-    else if (k === 'Escape' || k === 'o' || k === 'O') { leaveOverview(); return true; }
     else return false;
     paintFocus();
     return true;
   }
 
-  function deckKey(k) {
-    if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown') next();
-    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'Backspace' || k === 'PageUp') prev();
-    else if (k === 'Home') show(0, 0);
-    else if (k === 'End') show(slides.length - 1, 0);
-    else if (k === 'o' || k === 'O') enterOverview();
-    else if (k === 'n' || k === 'N') togglePanel('notes');
-    else if (k === '?' || k === 'h' || k === 'H' || k === 'F1') togglePanel('help');
-    else if (k === 'Escape') closePanels();
-    else return false;
-    return true;
+  function run(table, k) {
+    for (var i = 0; i < table.length; i++) {
+      if (!bound(table[i], k)) continue;
+      if (table[i].run) table[i].run();
+      else if (!moveFocus(k)) return false;
+      return true;
+    }
+    return false;
   }
 
   document.addEventListener('keydown', function (e) {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
-    if (overview ? overviewKey(e.key) : deckKey(e.key)) e.preventDefault();
+    if (run(overview ? OVERVIEW_KEYS : DECK_KEYS, e.key)) e.preventDefault();
   });
 
-  // A tile is clickable and a slide is not: the click listener lives on every
-  // slide, and it does nothing at all unless the overview is open.
-  slides.forEach(function (slide, n) {
-    slide.addEventListener('click', function () { if (overview) leaveOverview(n); });
-  });
+  printKeys(DECK_KEYS, 'deck');
+  printKeys(OVERVIEW_KEYS, 'overview');
 
+  // NOTHING ON THIS PAGE ANSWERS A MOUSE, and that is a decision rather than
+  // an omission. An earlier draft let a click on an overview tile jump to it,
+  // which is what a grid of thumbnails invites -- but #207 asks for a deck
+  // driven "por teclado" with no furniture over the slide, and #215 for no
+  // button HUD, and a page that answers the mouse in one place has to decide
+  // where else it does. Enter already jumps from the grid.
   show(0, 0);
 })();
 </script>

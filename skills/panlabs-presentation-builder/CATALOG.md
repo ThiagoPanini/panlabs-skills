@@ -26,6 +26,8 @@ O cabeçalho é o próprio `<deck>`, e todos os campos dele são obrigatórios: 
 
 `motion` é o perfil de movimento do deck, e vale um destes: `static`, `editorial`, `cinematic`. Ele decide como um slide chega e como um fragmento entra, e mais nada; numa máquina que pediu menos movimento nenhuma animação roda, seja qual for o perfil.
 
+O cabeçalho não acaba aí: o primeiro filho do `<deck>` é um `<direction>` com a direção de arte, e toda `<section>` carrega um `arc=` dizendo a sua função no arco. As duas últimas seções deste documento são sobre isso.
+
 São 18 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
 
 ### `cover-headline` · até 25 palavras
@@ -270,5 +272,42 @@ Um slide carrega no máximo um `<notes>`, sem `class=` e sem atributo — a tag 
 Um slot marcado com o `step` pelado (`<p class="sentence" step>`) só aparece depois que o apresentador avança. A ordem é a ordem em que o padrão lê os slots, nunca um número escrito no atributo — `step="2"` reprova. Dois slots que o registro emparelha (o ícone e o texto de um item) entram no mesmo passo, e marcar um sem marcar o outro reprova. Um item de grupo não é fragmento: uma série é uma prova só, e meia linha do tempo é uma linha do tempo mentindo sobre o próprio eixo.
 
 **O passo zero não pode ser vazio.** Marcar todos os slots deixa o palco em branco até o primeiro avanço, e a sala lê isso como um slide que não carregou; o portão de render reprova, e o conserto é tirar o `step` de um deles.
+
+### A direção de arte
+
+O primeiro filho do `<deck>` é um `<direction>`, e é ali que a direção de arte deste deck fica gravada. Cada escolha é um `<p>` com o nome dela na `class=`, do mesmo jeito que um slot de slide. **Nada disso chega ao palco e nada disso pinta coisa alguma** — o que a direção alimenta é o storyboard, onde a história ainda é barata de corrigir, e as réguas que cobram do deck aquilo que ela prometeu.
+
+| escolha | obrigatória | o que vai nela |
+| --- | --- | --- |
+| `cover` | sim | o padrão de capa em que este deck abre — um dos padrões de capa do catálogo |
+| `signature` | sim | a assinatura geométrica que se repete: o motivo que volta e faz do deck uma peça em vez de uma pilha |
+| `register` | sim | o registro do texto — em que pessoa, em que tom e com que vocabulário os slides falam |
+| `moments` | sim | a escala de momentos que este deck se dá, e é contra ela que a contagem é cobrada |
+| `difference` | sim | em que este deck difere do exemplo canônico da skill, na capa e na assinatura |
+| `content-1` | não | o que a primeira cor de conteúdo significa neste deck, do primeiro slide ao último — sem esta linha, nada pode pintar com ela |
+| `content-2` | não | o mesmo para a segunda cor de conteúdo — o tema empresta duas, e o deck declara as que gasta |
+| `renounced-1` | sim | o primeiro padrão do catálogo de que este deck abre mão — usá-lo reprova a construção |
+| `renounced-2` | sim | o segundo padrão do catálogo de que este deck abre mão — usá-lo reprova a construção |
+| `renounced-3` | sim | o terceiro padrão do catálogo de que este deck abre mão — usá-lo reprova a construção |
+
+A capa sai destes padrões: `cover-headline`, `cover-numbered`.
+
+**Momento é um slide que segura o palco sozinho** — uma figura desenhada à mão, um gráfico, ou uma afirmação de tela cheia. São estes padrões: `chart`, `figure-caption`, `full-bleed-statement` — e um `figure-caption` só conta quando a figura é um `<svg>` desenhado, nunca quando é um `<img>` embutido: uma fotografia não é um desenho.
+
+`moments` diz quantos deles este deck se dá, e a contagem é cobrada contra a escala declarada:
+
+| `moments` | momentos | |
+| --- | --- | --- |
+| `sober` | 1 a 2 | um ou dois momentos — a proposta sóbria, que não pede palco |
+| `standard` | 3 a 5 | de três a cinco — o ritmo padrão, com pico e respiro |
+| `high` | 6 ou mais | seis ou mais, e só com `motion="cinematic"` — o palco assumido, nunca o acidente |
+
+As duas cores de conteúdo são as únicas que o tema empresta além do acento, e a direção diz o que cada uma significa neste deck. Uma figura que pinte com uma cor que a direção não declarou reprova a construção — é assim que a mesma cor marca a mesma coisa do primeiro slide ao último.
+
+### A função no arco
+
+Toda `<section>` carrega um `arc=` além do `pattern=`: o padrão diz que forma o slide tem, a função diz para que ele está ali, e nenhum dos dois implica o outro. São 6 funções, na ordem do arco: `context` (contexto), `tension` (tensão), `thesis` (tese), `evidence` (provas), `plan` (plano), `call` (chamada).
+
+**O deck termina em fecho, e o fecho pede alguma coisa.** O último slide é um `closing-call` com `arc="call"`; um deck que acaba sem pedir nada é um deck de que a sala sai sem saber o que se espera dela.
 
 <!-- catalog:end -->

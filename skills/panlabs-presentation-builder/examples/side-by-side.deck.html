@@ -2,26 +2,41 @@
      an icon list. Build it with `python3 compiler/build.py
      examples/side-by-side.deck.html /tmp/side-by-side.html`. -->
 <deck title="Quatro formas de mostrar evidência"
-      occasion="Demonstração do catálogo, tema base"
+      occasion="Demonstração do catálogo"
       theme="base"
       lang="pt-BR"
-      minutes="4"
+      minutes="6"
       motion="editorial">
 
-  <section pattern="two-columns">
+  <direction>
+    <p class="cover">cover-headline</p>
+    <p class="signature">a hairline vertical entre dois lados, repetida sempre que o slide divide o palco</p>
+    <p class="register">impessoal e comparativo, sempre dois membros por frase</p>
+    <p class="moments">sober</p>
+    <p class="difference">o exemplo canônico abre por um número e assina com a hairline da seção; este abre pela manchete e assina com a hairline entre os lados</p>
+    <p class="renounced-1">chart</p>
+    <p class="renounced-2">table</p>
+    <p class="renounced-3">timeline</p>
+  </direction>
+
+  <section pattern="two-columns" arc="context">
     <p class="title">Dois argumentos <mark>bastam</mark> quando cada um sustenta metade da tese</p>
     <p class="column-a">O portão estático mede antes do primeiro render: vocabulário, orçamento e título, sem abrir o navegador.</p>
     <p class="column-b">O portão de render mede depois:<br/>caixa, piso e ocupação, com uma folha de contato ao lado.</p>
   </section>
 
-  <section pattern="three-columns">
+  <section pattern="full-bleed-statement" arc="tension">
+    <p class="statement">Um lado sozinho não decide nada: o que decide é <strong>a comparação</strong>.</p>
+  </section>
+
+  <section pattern="three-columns" arc="thesis">
     <p class="title">Três provas, a mesma tese</p>
     <p class="column-a">O catálogo declara estrutura e slots, nunca uma medida: altura, largura e posição são sempre assunto do palco, não da fonte.</p>
     <p class="column-b">O compilador valida contra o registro e nada além dele: um padrão que o catálogo não conhece reprova a construção com o próprio conserto.</p>
     <p class="column-c">O render mede o que só um navegador de verdade responde: caixa, piso, ocupação, rede e a fonte que de fato pintou.</p>
   </section>
 
-  <section pattern="comparison">
+  <section pattern="comparison" arc="evidence">
     <p class="title">A v1 media o motor; a v2 mede o deck inteiro</p>
     <p class="label-a">Antes</p>
     <p class="label-b">Agora</p>
@@ -29,7 +44,7 @@
     <p class="body-b">Quatro réguas estáticas e seis de render, todas com prova ao lado.</p>
   </section>
 
-  <section pattern="icon-list">
+  <section pattern="icon-list" arc="plan">
     <p class="title">Cinco ícones, um catálogo que <mark>fecha</mark> por ticket</p>
     <p class="item-1-icon">circle-check</p>
     <p class="item-1-text">Quatro padrões novos, cada um com orçamento.</p>
@@ -41,6 +56,12 @@
     <p class="item-4-text">O vocabulário fecha em três marcações, e a quarta reprova.</p>
     <p class="item-5-icon">layers</p>
     <p class="item-5-text">A licença mora ao lado do sprite, em themes/base/icons.</p>
+  </section>
+
+  <section pattern="closing-call" arc="call">
+    <p class="thesis">Compor é decidir o que fica ao lado do quê, e o catálogo faz essa decisão caber num nome.</p>
+    <p class="call">Escolha o padrão pela relação entre as partes.</p>
+    <p class="meta">CATALOG.md</p>
   </section>
 
 </deck>

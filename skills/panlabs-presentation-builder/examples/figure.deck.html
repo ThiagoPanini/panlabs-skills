@@ -6,13 +6,25 @@
      theme. Build it with `python3 compiler/build.py examples/figure.deck.html
      /tmp/figure.html`. -->
 <deck title="A figura que o catálogo não limita"
-      occasion="Demonstração do catálogo, tema base"
+      occasion="Demonstração do catálogo"
       theme="base"
       lang="pt-BR"
-      minutes="5"
+      minutes="6"
       motion="editorial">
 
-  <section pattern="figure-caption">
+  <direction>
+    <p class="cover">cover-headline</p>
+    <p class="signature">o retângulo de hairline como única moldura, repetido em toda figura desenhada</p>
+    <p class="register">terceira pessoa, frase curta, o verbo dizendo o que a figura faz</p>
+    <p class="moments">sober</p>
+    <p class="difference">o exemplo canônico abre por um número e assina com a hairline da seção; este abre pela manchete e assina com a moldura das figuras</p>
+    <p class="content-2">o que o compilador produz, por oposição ao que o autor escreve</p>
+    <p class="renounced-1">chart</p>
+    <p class="renounced-2">table</p>
+    <p class="renounced-3">timeline</p>
+  </direction>
+
+  <section pattern="figure-caption" arc="context">
     <p class="caption">O ciclo de uma apresentação, desenhado à mão — sem título, a figura fica com o palco inteiro</p>
     <svg viewBox="0 0 1280 530">
       <rect x="90" y="40" width="300" height="130" rx="14" fill="none" stroke="var(--hairline-strong)" stroke-width="3"/>
@@ -38,12 +50,12 @@
     </svg>
   </section>
 
-  <section pattern="thesis-title">
+  <section pattern="thesis-title" arc="thesis">
     <p class="title">Só a figura escapa do que o catálogo determina</p>
     <p class="sentence">O registro trava de que ela é feita, e nunca o que ela mostra.</p>
   </section>
 
-  <section pattern="figure-caption">
+  <section pattern="figure-caption" arc="evidence">
     <p class="title">Duas coisas entram no mesmo slot, e sai um arquivo só</p>
     <p class="caption">Com um título no alto, a figura divide o palco em vez de tomá-lo</p>
     <svg viewBox="0 0 1200 380">
@@ -62,7 +74,7 @@
     </svg>
   </section>
 
-  <section pattern="section-divider">
+  <section pattern="section-divider" arc="evidence">
     <p class="index">02</p>
     <p class="title">A imagem por caminho</p>
   </section>
@@ -73,9 +85,15 @@
        #214 it counted only TEXT, so a picture filling the projector edge to
        edge read as an empty slide and went red. This slide is what would go
        red again the day a figure stops counting as content. -->
-  <section pattern="figure-caption">
+  <section pattern="figure-caption" arc="evidence">
     <p class="caption">Captura sintética de um slide projetado · o compilador a embute em base64, e a página não pede nada à rede</p>
     <img src="capture.png"/>
+  </section>
+
+  <section pattern="closing-call" arc="call">
+    <p class="thesis">O catálogo fecha em dezoito nomes, e a figura é onde ele abre mão de fechar.</p>
+    <p class="call">Desenhe o momento mais forte do deck; deixe o resto ao catálogo.</p>
+    <p class="meta">compiler/figures.py</p>
   </section>
 
 </deck>

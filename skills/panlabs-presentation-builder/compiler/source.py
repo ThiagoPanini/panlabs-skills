@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
-from catalog import BREAK_TAG, DECK_FIELDS, INLINE_TAGS
+from catalog import BREAK_TAG, DECK_FIELDS, DIRECTION_TAG, INLINE_TAGS
 
 
 class Refused(Exception):
@@ -66,6 +66,18 @@ class Deck:
         wrong number on every page.
         """
         return [e for e in self.children if e.tag == "section"]
+
+    @property
+    def direction(self):
+        """The art-direction block, or None when the source has none (#217).
+
+        THE FIRST ONE, NEVER A MERGE OF SEVERAL. A source with two `<direction>`
+        blocks is a source with two art directions, and the vocabulary ruler is
+        what names that -- taking the first here rather than raising keeps this
+        file judging nothing, the same way `sections` counts a stray `<div>` out
+        instead of refusing it.
+        """
+        return next((e for e in self.children if e.tag == DIRECTION_TAG), None)
 
     @property
     def title(self):
@@ -190,6 +202,24 @@ def plain_text(node, _top=True):
             out.append(plain_text(child, _top=False))
     said = "".join(out)
     return said.strip() if _top else said
+
+
+def texts_of(node):
+    """`fields_of` one step further: the words each named child carries.
+
+    THE ART DIRECTION HAS TWO READERS AND ONE RULE (#217). `compiler/audit.py`
+    holds the deck to what the direction declared and `compiler/storyboard.py`
+    publishes it, and both want the WORDS rather than the elements -- so both
+    would otherwise spell the same `plain_text(...).strip()` comprehension, which
+    is how the day a choice stops being named by `class=` breaks one of them and
+    not the other. An unnamed child is dropped: it is a mistake the vocabulary
+    ruler names, and there is no key to file it under here.
+    """
+    return {
+        name: plain_text(el).strip()
+        for name, el in fields_of(node).items()
+        if name
+    }
 
 
 def inline_markup(node, _top=True):

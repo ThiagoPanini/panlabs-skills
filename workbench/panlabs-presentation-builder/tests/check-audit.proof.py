@@ -59,7 +59,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from proof_driver import Proof, cut, read, swap                        # noqa: E402
+from proof_driver import Drifted, Proof, cut, read, swap               # noqa: E402
 
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
@@ -130,12 +130,27 @@ def _run(text, assets=(), theme=None):
         if os.path.exists(out):
             with open(out, encoding="utf-8") as fh:
                 page = fh.read()
-        return done.returncode == 0, (done.stdout + done.stderr).strip(), page
+        # THE STORYBOARD IS READ INSIDE THE TEMP DIRECTORY OR NOT AT ALL (#217).
+        # `build.py` writes it beside the page, and the directory goes away with
+        # this `with`; a caller that wanted to open it afterwards would be asking
+        # for a file the proof has already deleted.
+        board = None
+        beside = os.path.splitext(out)[0] + ".storyboard.md"
+        if os.path.exists(beside):
+            with open(beside, encoding="utf-8") as fh:
+                board = fh.read()
+        return (done.returncode == 0, (done.stdout + done.stderr).strip(),
+                page, board)
 
 
 def build(text, assets=(), theme=None):
-    ok, said, _ = _run(text, assets, theme)
+    ok, said, _, _ = _run(text, assets, theme)
     return ok, said
+
+
+def _storyboard(text, assets=(), theme=None):
+    """The page written beside the deck, for a case that asks what it says."""
+    return _run(text, assets, theme)[3]
 
 
 def block(title, real, cases, width, theme=None):
@@ -213,12 +228,71 @@ def figure_block(title, cases, width):
     ).run(cases)
 
 
+# ── #217's needles: the art direction, and the arc it promises ───────────────
+# THE HEADER'S SECOND HALF, EXACTLY AS THE STATEMENT DECK WRITES IT. It is the
+# smallest direction in the corpus -- eight choices, five of them prose -- and
+# planting into a two-slide deck is what keeps a red about the header a red
+# about the header alone: there is no arc there to also be wrong about.
+DIRECTION = """  <direction>
+    <p class="cover">cover-headline</p>
+    <p class="signature">nenhuma — este deck é curto demais para um motivo voltar</p>
+    <p class="register">primeira pessoa do plural, frase curta, sem jargão de ferramenta</p>
+    <p class="moments">sober</p>
+    <p class="difference">o exemplo canônico abre por um número e assina com a hairline da seção; este abre pela manchete e não assina nada</p>
+    <p class="renounced-1">chart</p>
+    <p class="renounced-2">table</p>
+    <p class="renounced-3">timeline</p>
+  </direction>"""
+
+
+def the_header_last():
+    """The art direction moved from the top of the deck to the bottom of it.
+
+    IT IS THE ONE PLANT THAT CANNOT BE A SUBSTITUTION. Every other case here
+    changes what the header SAYS; this one changes only where it is, and a
+    `swap` has no way to express that -- so the block is cut from the front and
+    put back at the end, which is exactly the mistake an author makes by writing
+    the slides first and the direction afterwards.
+    """
+    if STATEMENT_SOURCE is None:
+        raise Drifted("the fixture is not readable")
+    if DIRECTION + "\n\n" not in STATEMENT_SOURCE:
+        raise Drifted("the statement deck no longer opens on the direction block")
+    return (STATEMENT_SOURCE
+            .replace(DIRECTION + "\n\n", "", 1)
+            .replace("\n</deck>", "\n" + DIRECTION + "\n\n</deck>", 1))
+
+
+# The statement deck's only moment, and the same words carried by a pattern that
+# is not one. #207 counts a moment as a drawn figure, a chart or a full-bleed
+# statement, so a thesis title saying the identical sentence takes the deck to
+# ZERO -- which no scale admits, and which is the floor's whole point.
+STATEMENT_MOMENT = """  <section pattern="full-bleed-statement" arc="tension">
+    <p class="statement">Nenhuma suíte verde substitui a <strong>primeira fileira</strong> lendo o slide projetado.</p>
+  </section>"""
+
+STATEMENT_NO_MOMENT = """  <section pattern="thesis-title" arc="tension">
+    <p class="title">A régua verde não é a plateia</p>
+    <p class="sentence">Nenhuma suíte verde substitui a <strong>primeira fileira</strong> lendo o slide projetado.</p>
+  </section>"""
+
+# The few-words deck's closing, as its source writes it. Planting a SECOND copy
+# of it before the divider is what makes a deck that asks for something and then
+# keeps talking -- the one shape of broken closing that a deck with a perfectly
+# good last slide can still have.
+FEW_WORDS_CLOSING = """  <section pattern="closing-call" arc="call">
+    <p class="thesis">O palco cabe <strong>menos</strong> do que a página.</p>
+    <p class="call">Escreva a frase; corte o resto.</p>
+    <p class="meta">python3 compiler/build.py</p>
+  </section>"""
+
+
 # The whole of the fifth slide of the few-words deck, as its source writes it.
 # The repeated-pattern ruler is the one check that cannot be planted by
 # changing a slide: it needs a SECOND slide of the same pattern next to the
 # first, and duplicating a section that is valid on its own is what makes the
 # repetition the only thing red.
-DIVIDER = """  <section pattern="section-divider">
+DIVIDER = """  <section pattern="section-divider" arc="evidence">
     <p class="index">02</p>
     <p class="title">O que a máquina mede</p>
   </section>"""
@@ -326,7 +400,7 @@ SHARE_UL_MARKED = SHARE_UL.replace(
 # The whole first slide of the chart deck, so a second copy of it can be put
 # next to the first -- the only way to plant a repetition, same as the divider
 # above.
-BARS_SLIDE = """  <section pattern="chart" type="bars-h">
+BARS_SLIDE = """  <section pattern="chart" type="bars-h" arc="evidence">
     <p class="title">O build caiu abaixo de dez minutos em quatro squads</p>
     <p class="unit">minutos por build, mediana</p>
     <p class="source">esteira de CI · jun/2026</p>
@@ -387,7 +461,7 @@ def the_page_is_not_a_template():
 
     planted = STATEMENT_SOURCE.replace("Nenhuma suíte verde",
                                        "Nenhuma {{TITLE}} verde", 1)
-    ok, said, page = _run(planted)
+    ok, said, page, _ = _run(planted)
     kept = bool(page) and "Nenhuma {{TITLE}} verde" in page
     marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
     good = ok and kept
@@ -414,7 +488,7 @@ def the_category_is_the_whole_title():
     planted = FEW_WORDS_SOURCE.replace(
         "Um slide diz uma coisa",
         "A visão geral do time falhou em três semanas", 1)
-    ok, said, page = _run(planted)
+    ok, said, page, _ = _run(planted)
     kept = bool(page) and "falhou em três semanas" in page
     marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
     good = ok and kept
@@ -441,7 +515,7 @@ def the_divider_may_name_the_arc():
     planted = FEW_WORDS_SOURCE.replace(
         "<p class=\"title\">O que a máquina mede</p>",
         "<p class=\"title\">Contexto</p>", 1)
-    ok, said, page = _run(planted)
+    ok, said, page, _ = _run(planted)
     kept = bool(page) and ">Contexto<" in page
     marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
     good = ok and kept
@@ -462,7 +536,7 @@ def the_chart_svg_carries_no_colour():
     the colour into the mark -- the deck would still build, still render, and
     quietly wear `base` in every theme.
     """
-    ok, said, page = _run(CHARTS_SOURCE)
+    ok, said, page, _ = _run(CHARTS_SOURCE)
     plots = PLOT.findall(page or "")
     stained = [p for p in plots if STAIN.search(p)]
     good = ok and len(plots) >= 6 and not stained
@@ -495,7 +569,7 @@ def the_figure_wears_only_the_theme():
     into bytes on the page. A red here is not a broken check, it is a corpus
     that stopped being an example of the thing it demonstrates.
     """
-    ok, said, page = _run(FIGURE_SOURCE, GOOD_ASSETS)
+    ok, said, page, _ = _run(FIGURE_SOURCE, GOOD_ASSETS)
     drawings = DRAWN.findall(page or "")
     stray = [v for d in drawings for v in PAINT.findall(d)
              if v != "none" and not THEME_TOKEN.match(v)]
@@ -538,7 +612,7 @@ def the_notes_never_reach_the_stage():
     profile is checked in the same breath because it travels the same way: a
     field of the header that has to reach the built page to mean anything.
     """
-    ok, said, page = _run(PRESENTING_SOURCE)
+    ok, said, page, _ = _run(PRESENTING_SOURCE)
     page = page or ""
     in_panel = '<div class="note" data-note-for="1"' in page and NOTE_PHRASE in page
     on_stage = any(NOTE_PHRASE in slide for slide in SLIDE.findall(page))
@@ -621,6 +695,40 @@ def the_unfaced_theme_promises_nothing():
           "the same arrow, in the theme that ships no faces")
     if not good:
         print(f"       <- {'the plant changed nothing' if not changed else said}")
+    return 0 if good else 1
+
+
+def the_photograph_is_not_a_moment():
+    """The figure deck holds two moments, and it has three figure slides.
+
+    THE PLANT CANNOT PROVE THIS ONE, WHICH IS WHY IT IS HERE. #207 counts "figura
+    desenhada" as a moment and says nothing about a photograph, so the ruler
+    settles the difference by reading the tag -- and a ruler that stopped reading
+    it would count three where the header declares one or two, and refuse a deck
+    whose art direction is exactly right. That failure has no needle: it is a red
+    that should never happen, and the only way to hold it is to demand the green.
+
+    IT IS ALSO WHERE THE STORYBOARD AND THE RULER ARE HELD TOGETHER. The page
+    beside the deck marks the peaks the ruler counted, from the same list -- so
+    two marks in the storyboard is the second half of "the deck holds two".
+    """
+    ok, said, _, _ = _run(FIGURE_SOURCE, GOOD_ASSETS)
+    board = None
+    figures = (FIGURE_SOURCE or "").count('<section pattern="figure-caption"')
+    if ok:
+        board = _storyboard(FIGURE_SOURCE, GOOD_ASSETS)
+    marked = (board or "").count("· momento")
+    good = ok and figures == 3 and marked == 2
+    marks = f"[{'+' if ok else '-'}{'+' if figures == 3 and marked == 2 else '-'}]"
+    print(f"  {'ok  ' if good else 'FAIL'} {'a picture is not a peak':<23} {marks} "
+          f"{figures} figure slides, {marked} of them counted as moments")
+    if not good:
+        if not ok:
+            print(f"       <- refused: {said}")
+        elif figures != 3:
+            print(f"       <- the fixture has {figures} figure slides, not 3")
+        else:
+            print(f"       <- the storyboard marks {marked} moments, not 2")
     return 0 if good else 1
 
 
@@ -848,8 +956,8 @@ def main():
         (
             "no form at all",
             "a chart that never says what it is drawn as",
-            swap(CHARTS_SOURCE, '<section pattern="chart" type="bars-h">',
-                 '<section pattern="chart">'),
+            swap(CHARTS_SOURCE, '<section pattern="chart" type="bars-h"',
+                 '<section pattern="chart"'),
             "give the <section> a type=",
         ),
         (
@@ -1186,6 +1294,173 @@ def main():
     ], width=24, theme="panlabs")
 
     print()
+    failed += block("the art direction's own dialect (#217)", STATEMENT_SOURCE, [
+        (
+            "no art direction",
+            "a deck whose form nobody chose",
+            swap(STATEMENT_SOURCE, DIRECTION + "\n\n", ""),
+            "add a <direction> as the first child",
+        ),
+        (
+            "a choice gone",
+            "the signature taken out of the header",
+            cut(STATEMENT_SOURCE, r'\s*<p class="signature">.*?</p>', "the signature"),
+            'add the missing <p class="signature">',
+        ),
+        (
+            "a choice nobody declared",
+            "a name the register never heard of, in the header",
+            swap(STATEMENT_SOURCE, 'class="signature"', 'class="palette"'),
+            'drop the class "palette"',
+        ),
+        (
+            "an attribute on the block",
+            "geometry wearing the clothes of a header",
+            swap(STATEMENT_SOURCE, "<direction>", '<direction theme="panlabs">'),
+            "drop theme= from the <direction>",
+        ),
+        (
+            "a cover the catalog has not",
+            "the deck opening on a pattern nobody wrote",
+            swap(STATEMENT_SOURCE, '<p class="cover">cover-headline</p>',
+                 '<p class="cover">mega-cover</p>'),
+            'replace "mega-cover"',
+        ),
+        (
+            "a scale nobody declared",
+            "a fourth scale of moments, which no ruler can hold a count to",
+            swap(STATEMENT_SOURCE, '<p class="moments">sober</p>',
+                 '<p class="moments">calm</p>'),
+            'replace "calm"',
+        ),
+        (
+            "the header written last",
+            "the art direction after the slides it directs",
+            the_header_last,
+            "move the <direction> to the top",
+        ),
+        (
+            "one renunciation twice",
+            "three renunciations that give up two shapes",
+            swap(STATEMENT_SOURCE, '<p class="renounced-2">table</p>',
+                 '<p class="renounced-2">chart</p>'),
+            'renounce something other than "chart"',
+        ),
+        (
+            "renouncing its own cover",
+            "a deck that gave up the pattern it opens on",
+            swap(STATEMENT_SOURCE, '<p class="renounced-1">chart</p>',
+                 '<p class="renounced-1">cover-headline</p>'),
+            'stop renouncing "cover-headline"',
+        ),
+    ], width=26)
+
+    print()
+    failed += block("the function in the arc (#217)", STATEMENT_SOURCE, [
+        (
+            "no function at all",
+            "a slide that never says what it is there for",
+            swap(STATEMENT_SOURCE,
+                 '<section pattern="full-bleed-statement" arc="tension">',
+                 '<section pattern="full-bleed-statement">'),
+            "give the <section> an arc=",
+        ),
+        (
+            "a function nobody declared",
+            "a seventh act, which no arc in the register has",
+            swap(STATEMENT_SOURCE, 'arc="tension"', 'arc="epilogue"'),
+            'replace the arc "epilogue"',
+        ),
+    ], width=26)
+
+    print()
+    failed += block("the scale of moments (#217)", STATEMENT_SOURCE, [
+        (
+            "a deck with no moment",
+            "the one peak rewritten as a pattern that is not one",
+            swap(STATEMENT_SOURCE, STATEMENT_MOMENT, STATEMENT_NO_MOMENT),
+            "no scale admits none",
+        ),
+    ], width=26)
+
+    print()
+    failed += block("a scale the deck outgrew (#217)", CHARTS_SOURCE, [
+        (
+            "sober, with six moments",
+            "the ticket's own case: six charts under the smallest scale",
+            swap(CHARTS_SOURCE, '<p class="moments">high</p>',
+                 '<p class="moments">sober</p>'),
+            "bring the deck to 1 to 2 moments",
+        ),
+        (
+            "high, without the stage",
+            "six peaks on a profile the scale is not lent to",
+            swap(CHARTS_SOURCE, 'motion="cinematic"', 'motion="editorial"'),
+            'write motion="cinematic" on the <deck>',
+        ),
+    ], width=26)
+
+    print()
+    failed += block("the renounced pattern in use (#217)", FEW_WORDS_SOURCE, [
+        (
+            "a shape given up and used",
+            "a renunciation the deck walks back four slides later",
+            swap(FEW_WORDS_SOURCE, '<p class="renounced-3">timeline</p>',
+                 '<p class="renounced-3">pull-quote</p>'),
+            'stop renouncing "pull-quote"',
+        ),
+    ], width=26)
+
+    print()
+    failed += block("the closing that asks (#217)", FEW_WORDS_SOURCE, [
+        (
+            "no closing at all",
+            "a deck that stops instead of closing",
+            cut(FEW_WORDS_SOURCE, r'\s*<section pattern="closing-call".*?</section>',
+                "the closing"),
+            'end the deck on a "closing-call" slide',
+        ),
+        (
+            "a closing that asks nothing",
+            "the last slide doing some other act of the arc",
+            swap(FEW_WORDS_SOURCE, '<section pattern="closing-call" arc="call">',
+                 '<section pattern="closing-call" arc="plan">'),
+            'write arc="call" on the closing',
+        ),
+        (
+            "a closing in the middle",
+            "a deck that asks for something and then keeps talking",
+            swap(FEW_WORDS_SOURCE, DIVIDER, FEW_WORDS_CLOSING + "\n\n" + DIVIDER),
+            "move this closing to the end of the deck",
+        ),
+    ], width=26)
+
+    print()
+    failed += figure_block("the colours the direction lends (#217)", [
+        (
+            "a colour with no meaning",
+            "a figure painting with a colour the header never declared",
+            in_source(cut(FIGURE_SOURCE, r'\s*<p class="content-2">.*?</p>',
+                          "the meaning of --content-2")),
+            "say what --content-2 means in this deck",
+        ),
+        (
+            "the other colour, undeclared",
+            "the drawing repainted in the content colour nobody borrowed",
+            in_source(swap(FIGURE_SOURCE, 'stroke="var(--content-2)"',
+                           'stroke="var(--content-1)"')),
+            "say what --content-1 means in this deck",
+        ),
+        (
+            "a scale the deck is under",
+            "two drawn figures declared as three to five",
+            in_source(swap(FIGURE_SOURCE, '<p class="moments">sober</p>',
+                           '<p class="moments">standard</p>')),
+            "bring the deck to 3 to 5 moments",
+        ),
+    ], width=26)
+
+    print()
     failed += the_theme_may_not_invent_a_token()
 
     print()
@@ -1197,6 +1472,7 @@ def main():
     failed += the_figure_wears_only_the_theme()
     failed += the_notes_never_reach_the_stage()
     failed += the_unfaced_theme_promises_nothing()
+    failed += the_photograph_is_not_a_moment()
     return failed
 
 

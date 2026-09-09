@@ -36,13 +36,17 @@ import charts
 import figures
 import fonts
 import icons
-from catalog import (BREAK_TAG, CATEGORY_TITLES, EVIDENCE_TAGS, ICON,
-                     INLINE_TAGS, NOTES_TAG, PATTERNS, SLOT_TAG, STEP_ATTR,
+from catalog import (ARC_ATTR, ARC_CALL, ARC_FUNCTIONS, BREAK_TAG,
+                     CATEGORY_TITLES, COLOUR_CHOICES, COVER_CHOICE,
+                     DIRECTION_REQUIRED, DIRECTION_TAG, EVIDENCE_TAGS, ICON,
+                     INLINE_TAGS, MOMENT_SCALES, MOMENTS_CHOICE, NOTES_TAG,
+                     PATTERNS, RENOUNCE_CHOICES, SLOT_TAG, STEP_ATTR,
                      TABLE_MAX_ROWS, allow_break_of, budget_of, chart_of,
-                     claims_of, evidence_of, figure_of, form_names, form_of,
-                     group_of, pattern_names, role_of_element, slot_specs,
+                     choice_names, choice_of, claims_of, closings, evidence_of,
+                     figure_of, form_names, form_of, group_of, moment_of,
+                     pattern_names, role_of_element, scale_of, slot_specs,
                      slots_of)
-from source import fields_of, plain_text
+from source import fields_of, plain_text, texts_of
 
 
 @dataclass(frozen=True)
@@ -119,6 +123,26 @@ FIGURE_ASSET = Ruler(
 THEME_REPERTOIRE = Ruler(
     "theme-repertoire",
     "every character the deck prints is one the theme's own faces carry",
+)
+
+MOMENT_SCALE = Ruler(
+    "moment-scale",
+    "the deck holds as many moments as the scale it declared",
+)
+
+COLOUR_SEMANTICS = Ruler(
+    "colour-semantics",
+    "every content colour a slide paints with is one the direction declared",
+)
+
+RENOUNCED_PATTERN = Ruler(
+    "renounced-pattern",
+    "no slide takes a shape the direction gave up",
+)
+
+ARC_CLOSING = Ruler(
+    "arc-closing",
+    "the deck ends on a closing, and the closing asks for something",
 )
 
 
@@ -637,12 +661,31 @@ def _slide(node, n):
     pattern = node.attrs.get("pattern")
     chart = chart_of(pattern) if pattern in PATTERNS else None
 
-    allowed = ("pattern",) + ((chart.attribute,) if chart else ())
+    allowed = ("pattern", ARC_ATTR) + ((chart.attribute,) if chart else ())
     carries = " and ".join(f"{k}=" for k in allowed)
     for key in sorted(k for k in node.attrs if k not in allowed):
         fixes.append(
             f"{at}: drop {key}= from the <section> — a section carries "
             f"{carries} and nothing else"
+        )
+
+    # THE FUNCTION IN THE ARC, READ BEFORE THE PATTERN IS EVEN KNOWN (#217).
+    # The two are independent -- a chart can be the tension or the evidence --
+    # so a slide whose pattern is a stranger still owes an answer here, and the
+    # two early returns below would swallow the question if it were asked after
+    # them. Two fixes for two mistakes is the right count; one fix hiding
+    # another is not.
+    arcs = ", ".join(ARC_FUNCTIONS)
+    arc = node.attrs.get(ARC_ATTR, "").strip()
+    if not arc:
+        fixes.append(
+            f"{at}: give the <section> an {ARC_ATTR}= from the arc: {arcs} — "
+            "the pattern says what the slide looks like and never what it is for"
+        )
+    elif arc not in ARC_FUNCTIONS:
+        fixes.append(
+            f'{at}: replace the {ARC_ATTR} "{arc}" with one the arc declares: '
+            f"{arcs}"
         )
 
     if not pattern:
@@ -791,18 +834,178 @@ def _slide(node, n):
     return fixes
 
 
+# ── the art direction, which is the header's second half (#217) ──────────────
+# IT READS LIKE A SLIDE ON PURPOSE. A choice is a `<p>` with the choice's name
+# in its `class=`, so whoever can write a slot can write the header, and the
+# function below is `_slide` with everything a slide has and a header does not
+# -- a pattern, evidence, notes, fragments -- taken out, rather than a second
+# dialect grown beside the first.
+#
+# A NAME FROM A CLOSED SET IS HELD TO IT; PROSE IS HELD TO BEING THERE. The
+# cover, the scale and the three renunciations name something this register
+# knows, and a stranger among them is a direction pointing at nothing. The
+# signature, the register of the text and the difference from the canonical
+# example are sentences a person wrote, and the only honest thing a compiler can
+# ask of a sentence is that it exists.
+#
+# SIX OF THE TEN CHOICES ARE RECORDED AND NOT MEASURED, WHICH IS NOT THE SAME AS
+# FORGOTTEN. A direction is a record of decisions; four of them happen to leave a
+# mark a machine can find in the slides -- how many peaks, which colours, which
+# shapes were given up, and that the deck ends by asking -- and those four have
+# rulers below. The cover, the signature and the register of the text leave no
+# such mark: a ruler for "the signature really does repeat" would be measuring
+# taste, which is what the contact sheet and a pair of eyes are for.
+#
+# THE DIFFERENCE IS THE ONE THAT IS MERELY EARLY. #207 asks the direction to
+# declare "em que difere do exemplo canônico da skill"; WHICH example is
+# canonical is a decision the front door makes (#218), and holding a deck against
+# an example nobody has named yet would be a ruler measuring a fixture instead of
+# a defect.
+
+def _direction(node):
+    """The art-direction block: every choice the register declares, and no more."""
+    at = f"the <{DIRECTION_TAG}> (line {node.line})"
+    known = ", ".join(choice_names())
+    fixes = []
+
+    for key in sorted(node.attrs):
+        fixes.append(
+            f"{at}: drop {key}= from the <{DIRECTION_TAG}> — the art direction "
+            "is written as choices inside it, never as attributes on it"
+        )
+
+    seen = []
+    for child in node.children:
+        if isinstance(child, str):
+            if child.strip():
+                fixes.append(
+                    f"{at}: wrap the loose text in a choice — the "
+                    f"<{DIRECTION_TAG}> declares {known}"
+                )
+            continue
+        if child.tag != SLOT_TAG:
+            fixes.append(
+                f"{at}: write the choice as <{SLOT_TAG}>, not <{child.tag}> — "
+                "every line of the art direction is a paragraph, the same as a "
+                "slot"
+            )
+            continue
+        for key in sorted(k for k in child.attrs if k != "class"):
+            fixes.append(
+                f"{at}: drop {key}= from the <{SLOT_TAG}> — a choice carries "
+                "class= and nothing else"
+            )
+        classes = child.attrs.get("class", "").split()
+        if not classes:
+            fixes.append(
+                f"{at}: name the <{SLOT_TAG}> with a class — the "
+                f"<{DIRECTION_TAG}> declares {known}"
+            )
+            continue
+        if len(classes) > 1:
+            fixes.append(
+                f"{at}: keep one class on the <{SLOT_TAG}> — a choice has one "
+                f'name, and "{" ".join(classes)}" is {len(classes)}'
+            )
+        for name in classes:
+            if choice_of(name):
+                seen.append(name)
+            else:
+                fixes.append(
+                    f'{at}: drop the class "{name}" — the <{DIRECTION_TAG}> '
+                    f"declares {known}"
+                )
+        fixes.extend(_emphasis(child, at, classes[0], allow_break=False))
+
+    said = texts_of(node)
+    for name in DIRECTION_REQUIRED:
+        if name not in seen:
+            fixes.append(
+                f'{at}: add the missing <{SLOT_TAG} class="{name}"> — '
+                f"{choice_of(name).purpose}"
+            )
+        elif not said.get(name):
+            fixes.append(
+                f'{at}: write something in the <{SLOT_TAG} class="{name}"> — '
+                "a choice left blank is a choice nobody made"
+            )
+    for name in sorted(set(s for s in seen if seen.count(s) > 1)):
+        fixes.append(
+            f'{at}: keep one <{SLOT_TAG} class="{name}"> — the '
+            f"<{DIRECTION_TAG}> declares the choice once"
+        )
+
+    # A NAME DRAWN FROM A CLOSED SET, HELD TO IT. `Choice.options` is empty for
+    # the three prose choices, so this loop costs them nothing and a choice
+    # added later never has to opt out.
+    for name in sorted(set(seen)):
+        choice = choice_of(name)
+        value = said.get(name, "")
+        if not choice or not choice.options or not value:
+            continue
+        if value not in choice.options:
+            fixes.append(
+                f'{at}: replace "{value}" in the <{SLOT_TAG} class="{name}"> '
+                "with one of: " + ", ".join(choice.options)
+            )
+
+    # AND THE TWO WAYS THE DIRECTION CAN CONTRADICT ITSELF. Three renunciations
+    # that name the same pattern are one renunciation written three times, and a
+    # deck that renounces the cover it declared has given up the slide it opens
+    # on -- both build a deck nobody could have meant, and neither is visible to
+    # any ruler reading the SLIDES.
+    given_up = [said.get(n, "") for n in RENOUNCE_CHOICES]
+    for name in sorted({p for p in given_up if p and given_up.count(p) > 1}):
+        fixes.append(
+            f'{at}: renounce something other than "{name}" in one of '
+            + ", ".join(RENOUNCE_CHOICES)
+            + " — the three are three, and the same name written twice gives up "
+            "one shape and calls it two"
+        )
+    cover = said.get(COVER_CHOICE, "")
+    if cover and cover in given_up:
+        fixes.append(
+            f'{at}: stop renouncing "{cover}" — it is the cover this direction '
+            "declared, and a deck cannot open on a pattern it gave up"
+        )
+    return fixes
+
+
 def _vocabulary(deck, theme):
     fixes = []
     n = 0
-    for node in deck.children:
+    header = False
+    for index, node in enumerate(deck.children):
+        if node.tag == DIRECTION_TAG:
+            if header:
+                fixes.append(
+                    f"line {node.line}: keep one <{DIRECTION_TAG}> — a deck has "
+                    "one art direction, and a second one is a second deck"
+                )
+                continue
+            header = True
+            if index:
+                fixes.append(
+                    f"line {node.line}: move the <{DIRECTION_TAG}> to the top of "
+                    "the <deck> — it is the header's second half, and a header "
+                    "written after the slides is a header nobody read"
+                )
+            fixes.extend(_direction(node))
+            continue
         if node.tag != "section":
             fixes.append(
-                f"line {node.line}: drop the <{node.tag}> — a deck holds "
-                "<section> and nothing else"
+                f"line {node.line}: drop the <{node.tag}> — a deck holds one "
+                f"<{DIRECTION_TAG}> and its <section>s, and nothing else"
             )
             continue
         n += 1
         fixes.extend(_slide(node, n))
+    if not header:
+        fixes.append(
+            f"add a <{DIRECTION_TAG}> as the first child of the <deck>, carrying "
+            + ", ".join(DIRECTION_REQUIRED)
+            + " — a deck with no art direction is a deck whose form nobody chose"
+        )
     return fixes
 
 
@@ -1215,6 +1418,212 @@ def _theme_repertoire(deck, theme):
     return fixes
 
 
+# ── the direction, read back against the slides (#217) ───────────────────────
+# THE FOUR BELOW ARE THE ONLY RULERS HERE THAT READ TWO PLACES AT ONCE. Every
+# other one weighs a slide against the CATALOG, which is the same for every deck;
+# these weigh a slide against a promise THIS deck made about itself in its own
+# header -- how many peaks it would hold, which colours mean something, which
+# shapes it gave up, and that it would end by asking for something.
+#
+# ALL FOUR GO QUIET WITHOUT A DIRECTION. `_vocabulary` has already said the
+# header is missing, and four more reds about promises nobody made would bury
+# the one fix that produces them all. Same rule the doctrine rulers keep for a
+# pattern the catalog never heard of.
+
+
+def _direction_said(deck):
+    """What the deck's own art direction declared, by choice name.
+
+    None -- not an empty dict -- when there is no direction to read: the four
+    rulers below have to tell "the header is missing" (say nothing, the
+    vocabulary ruler has it) from "the header is there and this choice is
+    blank" (which is that ruler's business too, but not silently).
+    """
+    node = deck.direction
+    return texts_of(node) if node is not None else None
+
+
+def _is_moment(node):
+    """Whether this slide is one of the deck's moments (#217).
+
+    A DRAWING IS A MOMENT AND A PHOTOGRAPH IS NOT, which is the one half of
+    #207's definition the register cannot settle on its own: "figura desenhada"
+    is a fact about what this slide holds, not about the pattern it uses.
+    Everything else -- a chart, a full-bleed statement -- is settled by
+    `Pattern.moment` and needs no reading at all.
+    """
+    pattern = node.attrs.get("pattern", "")
+    if not moment_of(pattern):
+        return False
+    figure = figure_of(pattern)
+    if not figure:
+        return True
+    return any(el.tag == figure.drawn for el in node.elements())
+
+
+def moments_of(deck):
+    """Which slides, by number, are the deck's moments.
+
+    PUBLIC BECAUSE THE STORYBOARD MARKS WHAT THIS RULER COUNTS.
+    `compiler/storyboard.py` prints a peak beside the slide that is one, and the
+    ruler below holds the count against the declared scale -- the two disagreeing
+    about how many a deck holds is the exact two-ended contract this skill
+    refuses everywhere else, so there is one answer and both ask for it.
+    """
+    return [n for n, node in enumerate(deck.sections, start=1) if _is_moment(node)]
+
+
+def _moment_scale(deck, theme):
+    said = _direction_said(deck)
+    if said is None:
+        return []
+    scale = scale_of(said.get(MOMENTS_CHOICE, ""))
+    if scale is None:
+        return []
+    span = (f"{scale.minimum} to {scale.maximum}" if scale.maximum is not None
+            else f"{scale.minimum} or more")
+
+    peaks = moments_of(deck)
+    count = len(peaks)
+    fixes = []
+    if count < scale.minimum or (scale.maximum is not None and count > scale.maximum):
+        where = ("slides " + ", ".join(str(n) for n in peaks) if count
+                 else "no slide is one")
+        # THE SCALE THAT WOULD FIT, WHEN THERE IS ONE. Both halves of this fix
+        # are real -- cut the peaks, or admit the deck is the size it is -- and
+        # naming the second one costs a lookup. There is no scale for zero, and
+        # that is the register's answer rather than a gap: a deck with no peak
+        # has nothing to be sober about.
+        fits = next(
+            (s.name for s in MOMENT_SCALES
+             if s.minimum <= count and (s.maximum is None or count <= s.maximum)),
+            None,
+        )
+        instead = (f'declare "{fits}"' if fits
+                   else "give the deck a moment — no scale admits none")
+        fixes.append(
+            f"bring the deck to {span} moments, or {instead} in "
+            f'<{SLOT_TAG} class="{MOMENTS_CHOICE}"> — the direction says '
+            f'"{scale.name}" ({span}) and the deck holds {count} ({where}); a '
+            "moment is a drawn figure, a chart or a full-bleed statement"
+        )
+    if scale.motion and deck.header.get("motion", "").strip() != scale.motion:
+        fixes.append(
+            f'write motion="{scale.motion}" on the <deck>, or declare a smaller '
+            f'scale in <{SLOT_TAG} class="{MOMENTS_CHOICE}"> — a deck with that '
+            f"many peaks has assumed the stage, and only the {scale.motion} "
+            "profile carries them"
+        )
+    return fixes
+
+
+def _colour_semantics(deck, theme):
+    said = _direction_said(deck)
+    if said is None:
+        return []
+    # THE TOKEN COMES FROM THE REGISTER, NOT FROM THE CLASS NAME. `Choice.token`
+    # is the one place the two are tied together, so a renamed token is a change
+    # in one file rather than a string this ruler pastes "--" in front of.
+    lent = {choice_of(n).token: choice_of(n) for n in COLOUR_CHOICES}
+
+    # ONE RED PER COLOUR, NAMING THE FIRST SLIDE THAT SPENDS IT. The fix is a
+    # single line in the header whatever the count, and a figure that paints
+    # eight strokes in the same undeclared colour is one mistake, not eight.
+    fixes = []
+    told = set()
+    for n, node in enumerate(deck.sections, start=1):
+        for figure, el in _figures_of_slide(node):
+            if el.tag != figure.drawn:
+                continue
+            for tag, key, value in figures.paints(el, figure):
+                choice = lent.get(figures.token(value.strip()))
+                if choice is None or said.get(choice.name) or choice.token in told:
+                    continue
+                told.add(choice.token)
+                fixes.append(
+                    f'{_at(n, node)}: say what {choice.token} means in this deck, '
+                    f'with a <{SLOT_TAG} class="{choice.name}"> in the '
+                    f"<{DIRECTION_TAG}>, or repaint the {key} of the <{tag}> — "
+                    "the theme lends two content colours and the direction is "
+                    "where each one is given its meaning, once, for the whole deck"
+                )
+    return fixes
+
+
+def _renounced_pattern(deck, theme):
+    said = _direction_said(deck)
+    if said is None:
+        return []
+    given_up = {}
+    for name in RENOUNCE_CHOICES:
+        pattern = said.get(name, "")
+        if pattern in PATTERNS:
+            given_up.setdefault(pattern, name)
+
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        pattern = node.attrs.get("pattern", "")
+        if pattern in given_up:
+            fixes.append(
+                f'{_at(n, node)}: give this slide another pattern, or stop '
+                f'renouncing "{pattern}" in <{SLOT_TAG} '
+                f'class="{given_up[pattern]}"> — a renunciation the deck walks '
+                "back is a renunciation that decided nothing"
+            )
+    return fixes
+
+
+def _arc_closing(deck, theme):
+    """#207's mandatory closing, and the one slide whose function is fixed.
+
+    A DECK THAT STOPS IS NOT A DECK THAT CLOSED. Every other slide is free to
+    take any function of the arc; the last one is the ask, and a deck that runs
+    out of slides instead of arriving at one leaves the room without knowing what
+    is expected of it -- which is #207's own user story for the closing.
+
+    AND A CLOSING IN THE MIDDLE IS THE SAME DEFECT SEEN FROM THE OTHER SIDE. A
+    deck that asks for something and then keeps talking has not closed either --
+    it has buried its ask. The ruler names it as a third fix rather than a fourth
+    ruler, because all three are the same sentence about the same slide.
+    """
+    slides = deck.sections
+    if not slides:
+        return []
+    ends = closings()
+    named = " or ".join(f'"{c}"' for c in ends)
+    total = len(slides)
+    last = slides[-1]
+
+    fixes = []
+    for n, node in enumerate(slides[:-1], start=1):
+        if node.attrs.get("pattern", "") in ends:
+            fixes.append(
+                f"{_at(n, node)}: move this closing to the end of the deck, or "
+                f"give it another pattern — it asks the room for something and "
+                f"then {total - n} more slide(s) keep talking"
+            )
+    if last.attrs.get("pattern", "") not in ends:
+        return fixes + [
+            f"{_at(total, last)}: end the deck on a {named} slide — a deck that "
+            "stops without coming back to its thesis and asking for something "
+            "leaves the room not knowing what is expected of it"
+        ]
+    arc = last.attrs.get(ARC_ATTR, "").strip()
+    if arc != ARC_CALL:
+        # THE SLIDE THAT SAYS NOTHING AND THE SLIDE THAT SAYS THE WRONG THING GET
+        # THE SAME FIX, and the tail is what keeps the message from reading
+        # broken in the first case. The vocabulary ruler names a missing `arc=`
+        # too, and it names it in general; this one names the value the LAST
+        # slide in particular has to carry, which is a second fact and not a
+        # second copy.
+        saying = f'"{arc}"' if arc else "nothing"
+        fixes.append(
+            f'{_at(total, last)}: write {ARC_ATTR}="{ARC_CALL}" on the closing — '
+            f"the last slide of a deck is the ask, and this one says {saying}"
+        )
+    return fixes
+
+
 # APPEND AT THE END. The order is the order the report prints, and the report
 # is read top to bottom by whoever is fixing a deck: the dialect first,
 # because a source that does not parse into slides has nothing for the
@@ -1239,6 +1648,10 @@ RULERS = (
     (FIGURE_PAINT, _figure_paint),
     (FIGURE_ASSET, _figure_asset),
     (THEME_REPERTOIRE, _theme_repertoire),
+    (MOMENT_SCALE, _moment_scale),
+    (COLOUR_SEMANTICS, _colour_semantics),
+    (RENOUNCED_PATTERN, _renounced_pattern),
+    (ARC_CLOSING, _arc_closing),
 )
 
 

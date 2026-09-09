@@ -36,10 +36,11 @@ import charts
 import figures
 import icons
 from catalog import (BREAK_TAG, CATEGORY_TITLES, EVIDENCE_TAGS, ICON,
-                     INLINE_TAGS, PATTERNS, SLOT_TAG, TABLE_MAX_ROWS,
-                     allow_break_of, budget_of, chart_of, claims_of,
-                     evidence_of, figure_of, form_names, form_of, group_of,
-                     pattern_names, role_of_element, slot_specs, slots_of)
+                     INLINE_TAGS, NOTES_TAG, PATTERNS, SLOT_TAG, STEP_ATTR,
+                     TABLE_MAX_ROWS, allow_break_of, budget_of, chart_of,
+                     claims_of, evidence_of, figure_of, form_names, form_of,
+                     group_of, pattern_names, role_of_element, slot_specs,
+                     slots_of)
 from source import fields_of, plain_text
 
 
@@ -203,6 +204,18 @@ def _emphasis(node, at, slot, allow_break):
 
 
 def _slot(el, at, pattern, seen):
+    """One slot: its name, the bare `step` that may make it a fragment, and
+    the emphasis under it.
+
+    THE ONE ATTRIBUTE BESIDES `class=` IS BARE, AND THAT IS THE WHOLE OF IT
+    (#215). `step` says the slot arrives on a later beat; it says nothing
+    about WHICH beat, because the order a fragment is revealed in is the
+    order the pattern reads its slots -- a number written here would be a
+    second ordering, disagreeing with the first the day somebody reorders the
+    register. A valued `step=` is refused rather than ignored: silently
+    dropping the number an author wrote is how a deck stops matching its own
+    source.
+    """
     fixes = []
     if el.tag != SLOT_TAG:
         return [
@@ -210,10 +223,16 @@ def _slot(el, at, pattern, seen):
             "text slot in this dialect is a paragraph"
         ]
 
-    for key in sorted(k for k in el.attrs if k != "class"):
+    for key in sorted(k for k in el.attrs if k not in ("class", STEP_ATTR)):
         fixes.append(
             f"{at}: drop {key}= from the <{SLOT_TAG}> — a slot carries "
-            "class= and nothing else"
+            f"class= and, at most, the bare `{STEP_ATTR}`"
+        )
+    if el.attrs.get(STEP_ATTR, "").strip():
+        fixes.append(
+            f"{at}: write `{STEP_ATTR}` bare, with no value — a fragment is "
+            "revealed in the order the pattern reads its slots, never in an "
+            "order typed into the attribute"
         )
 
     classes = el.attrs.get("class", "").split()
@@ -571,6 +590,34 @@ def _figure(node, at, figure):
     return _drawing(node, at, figure, root=True)
 
 
+# ── the speaker notes (#215) ─────────────────────────────────────────────────
+# THE ONE THING IN A SLIDE THAT IS NOT ON THE STAGE. Everything above judges
+# text the room reads; a note is read by one person off a panel, so the two
+# rules that shape a slot -- the word budget and the pattern's own permission
+# to force a line -- have nothing to say about it. What is left is the same
+# discipline every other element here keeps: no attributes, no tag outside
+# the closed emphasis set, and nothing written that says nothing.
+
+def _notes(el, at):
+    fixes = []
+    for key in sorted(el.attrs):
+        fixes.append(
+            f"{at}: drop {key}= from the <{NOTES_TAG}> — it carries no "
+            "attribute of its own"
+        )
+    # `allow_break` IS TRUE HERE WHATEVER THE PATTERN SAYS, and that is not
+    # an exception to #211's rule -- it is the rule reaching its own edge. A
+    # forced line on the stage is composition, which is why the pattern owns
+    # it; a note has no composition to own, and a break in one is punctuation.
+    fixes.extend(_emphasis(el, at, NOTES_TAG, allow_break=True))
+    if not plain_text(el).strip():
+        fixes.append(
+            f"{at}: write something in the <{NOTES_TAG}>, or take the tag out "
+            "— an empty note is furniture pretending the detail was kept"
+        )
+    return fixes
+
+
 def _slide(node, n):
     fixes = []
     at = _at(n, node)
@@ -638,12 +685,27 @@ def _slide(node, n):
     # slide has none" underneath it is the ruler describing the same mistake
     # twice, which is the shape audit.py refuses everywhere else it counts.
     evidence_tried = False
+    notes_seen = False
     for child in node.children:
         if isinstance(child, str):
             if child.strip():
                 fixes.append(
                     f"{at}: wrap the loose text in a slot — " + _slot_list(pattern)
                 )
+            continue
+
+        # THE SAME "A SECOND ONE IS NEVER A SECOND CHANCE" AS THE EVIDENCE
+        # BELOW (#212's own lesson, one shape over): `build.py` takes the
+        # first `<notes>` it finds and would drop the rest without a word.
+        if child.tag == NOTES_TAG:
+            if notes_seen:
+                fixes.append(
+                    f"{at}: keep one <{NOTES_TAG}> — a slide has one set of "
+                    "speaker notes, and a second one is a note nobody reads"
+                )
+                continue
+            notes_seen = True
+            fixes.extend(_notes(child, at))
             continue
 
         if child.tag in EVIDENCE_TAGS:
@@ -755,9 +817,14 @@ def _word_budget(deck):
         # AN ICON IS READ, NEVER SAID. Its slot's text is a Lucide name --
         # furniture the compiler consumes, not a word the room hears -- so it
         # is left out of the same total a cover's meta line is spent from.
+        #
+        # AND A NOTE IS SAID, NEVER READ (#215). The budget counts what the
+        # room reads off the stage; #207's own rule is that what does not fit
+        # goes to the notes and nothing is lost, so a budget that also counted
+        # the notes would price the fix at the same rate as the defect.
         spent = sum(
             _words(plain_text(el)) for el in node.elements()
-            if role_of_element(pattern, el) != ICON
+            if el.tag != NOTES_TAG and role_of_element(pattern, el) != ICON
         )
         if spent > ceiling:
             fixes.append(
@@ -852,10 +919,20 @@ def _icon_paired(deck):
     # is declared once per icon slot in catalog.py (#211's "um ícone por
     # item"); a pattern with no paired slots costs this ruler nothing, so a
     # future pattern never has to opt out.
+    #
+    # AND "TOGETHER" IS ALSO A MOMENT, NOT ONLY A PRESENCE (#215). A pair
+    # where one half carries `step` and the other does not is a pair written
+    # in full and painted in halves: the text arrives with a hole where its
+    # icon goes, or the icon floats beside nothing. That is the same defect
+    # this ruler's headline already names, read at the beat rather than at
+    # the build -- so it goes red here rather than in a second ruler saying
+    # the same sentence about the same two slots.
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         pattern = node.attrs.get("pattern", "")
-        written = {el.attrs.get("class", "").strip() for el in node.elements()}
+        written = {}
+        for el in node.elements():
+            written.setdefault(el.attrs.get("class", "").strip(), el)
         for slot in slot_specs(pattern):
             if not slot.pairs_with:
                 continue
@@ -866,6 +943,19 @@ def _icon_paired(deck):
                     f'{_at(n, node)}: add the missing <p class="{missing}"> — '
                     f'"{slot.name}" and "{slot.pairs_with}" travel together, '
                     "never one without the other"
+                )
+                continue
+            if not here:
+                continue
+            stepped = STEP_ATTR in written[slot.name].attrs
+            pair_stepped = STEP_ATTR in written[slot.pairs_with].attrs
+            if stepped != pair_stepped:
+                late = slot.pairs_with if stepped else slot.name
+                fixes.append(
+                    f'{_at(n, node)}: mark <p class="{late}"> with `{STEP_ATTR}` '
+                    f'too, or take it off <p class="{slot.name if stepped else slot.pairs_with}"> '
+                    f'— "{slot.name}" and "{slot.pairs_with}" arrive on the same '
+                    "beat or on none"
                 )
     return fixes
 

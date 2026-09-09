@@ -43,11 +43,29 @@ import re
 from dataclasses import dataclass
 
 
-# The five things a deck's header has to say about itself. `theme` is here
-# because a deck knows which identity it was written for; the build command
-# can still override it, which is what lets the same deck be rebuilt in
-# `base` to prove the patterns hold without a brand behind them.
-DECK_FIELDS = ("title", "occasion", "theme", "lang", "minutes")
+# What a deck's header has to say about itself, and every field is required.
+# `theme` is here because a deck knows which identity it was written for; the
+# build command can still override it, which is what lets the same deck be
+# rebuilt in `base` to prove the patterns hold without a brand behind them.
+#
+# `motion` JOINED THEM IN #215, AND IT IS REQUIRED LIKE THE REST. It is the
+# first piece of the art direction #207 puts in this header, and the spec's
+# own reason for putting any of it there is that "as escolhas de forma saírem
+# de mim e não do acaso" -- a default would be exactly the accident it names.
+DECK_FIELDS = ("title", "occasion", "theme", "lang", "minutes", "motion")
+
+# THE THREE MOTION PROFILES, and the whole of what a deck may pick between.
+# They are the spec's own three (#207: estático, editorial, cinemático), and
+# they decide two things and nothing else: how a slide arrives, and how a
+# fragment enters. Neither is ever written per deck -- the profile is a name
+# the header says and `compiler/stage.html` answers, the same seam every other
+# piece of composition in this skill sits on.
+#
+# A MACHINE THAT ASKED FOR LESS MOTION GETS NONE, WHICHEVER IS PICKED. The
+# stage's own `prefers-reduced-motion` block turns every animation and every
+# transition off, so the profile decides what a deck looks like on a machine
+# that never said otherwise -- it is not a way around the preference.
+MOTION_PROFILES = ("static", "editorial", "cinematic")
 
 # THE INLINE VOCABULARY CLOSES HERE (#211). Two tags always available -- bold
 # and an accent-coloured highlight -- plus one that is not a matter of taste:
@@ -64,6 +82,27 @@ BREAK_TAG = "br"
 # geometry wearing the clothes of prose, and geometry does not cross this
 # seam.
 SLOT_TAG = "p"
+
+# WHAT DOES NOT FIT ON THE STAGE, WRITTEN WHERE IT DOES (#215). The doctrine
+# #207 sets is "um argumento por slide; o que não cabe vai para as notas, e
+# nada se perde" -- and a dialect with nowhere to put the rest is a dialect
+# that makes losing it the easy path. A slide carries at most one `<notes>`,
+# bare like a group's container, because the tag alone says what it is; it
+# never reaches the stage, only the panel the presenter opens with a key, so
+# nothing here is spent from the slide's own word budget.
+NOTES_TAG = "notes"
+
+# THE BARE ATTRIBUTE THAT MAKES A SLOT A FRAGMENT (#215). A slide reveals in
+# beats when the argument has beats: the slot marked with it is hidden until
+# the presenter advances, and the order is the order the PATTERN reads its
+# slots, never a number written here. Same shape as `Group.flag` one level up
+# -- the register spells the word once and every reader asks it.
+#
+# THE ZERO STEP IS WHAT THIS CANNOT SAY ON ITS OWN. Mark every slot and the
+# stage is blank until the first advance, which the room reads as a slide that
+# failed to load; `gate/render.cjs`'s zero-step ruler is what refuses that,
+# because whether anything painted is a question only a browser answers.
+STEP_ATTR = "step"
 
 
 # ── what a slot is for ───────────────────────────────────────────────────────
@@ -895,13 +934,20 @@ def reference():
     """The whole register, as Markdown, exactly as CATALOG.md publishes it."""
     breakable = [p.name for p in PATTERNS.values() if p.allow_break]
     out = [
-        "O cabeçalho é o próprio `<deck>`, e os cinco campos são obrigatórios: "
+        "O cabeçalho é o próprio `<deck>`, e todos os campos dele são obrigatórios: "
         + ", ".join(f"`{f}`" for f in DECK_FIELDS)
-        + f". Um slot é um `<{SLOT_TAG}>` com o nome do slot na `class=` e nada mais. "
+        + f". Um slot é um `<{SLOT_TAG}>` com o nome do slot na `class=` — e, no "
+        f"máximo, o `{STEP_ATTR}` pelado que faz dele um fragmento. "
         "O vocabulário de ênfase inline fecha em três marcações: "
         + " e ".join(f"`<{t}>`" for t in INLINE_TAGS)
         + f", sempre disponíveis, e `<{BREAK_TAG}/>` (quebra forçada), disponível só "
         "nos padrões que o dizem.",
+        "",
+        "`motion` é o perfil de movimento do deck, e vale um destes: "
+        + ", ".join(f"`{m}`" for m in MOTION_PROFILES)
+        + ". Ele decide como um slide chega e como um fragmento entra, e mais nada; "
+        "numa máquina que pediu menos movimento nenhuma animação roda, seja qual "
+        "for o perfil.",
         "",
         f"São {len(PATTERNS)} padrões, na ordem do arco. O orçamento é do slide "
         "inteiro, mobília inclusive, e nenhum slide passa de "
@@ -1023,6 +1069,30 @@ def reference():
         f"`<{BREAK_TAG}/>` só é aceito, vazio e sem atributo, dentro da prosa destes "
         "padrões — nos demais a construção recusa: "
         + ", ".join(f"`{n}`" for n in breakable) + ".",
+        "",
+        "### Notas do apresentador",
+        "",
+        f"Um slide carrega no máximo um `<{NOTES_TAG}>`, sem `class=` e sem atributo "
+        f"— a tag já diz o que é. O que vai nele é prosa, com as mesmas marcações de "
+        f"ênfase e com `<{BREAK_TAG}/>` sempre disponível, e **não conta no orçamento "
+        "de palavras**: a nota é lida por uma pessoa num painel, não pela sala num "
+        "telão. Nada dela chega ao palco. Um `<"
+        + NOTES_TAG + ">` vazio reprova — ou escreva a nota, ou tire a tag.",
+        "",
+        "### Fragmentos",
+        "",
+        f"Um slot marcado com o `{STEP_ATTR}` pelado (`<{SLOT_TAG} class=\"sentence\" "
+        f"{STEP_ATTR}>`) só aparece depois que o apresentador avança. A ordem é a "
+        "ordem em que o padrão lê os slots, nunca um número escrito no atributo — "
+        f"`{STEP_ATTR}=\"2\"` reprova. Dois slots que o registro emparelha (o ícone e "
+        "o texto de um item) entram no mesmo passo, e marcar um sem marcar o outro "
+        "reprova. Um item de grupo não é fragmento: uma série é uma prova só, e meia "
+        "linha do tempo é uma linha do tempo mentindo sobre o próprio eixo.",
+        "",
+        "**O passo zero não pode ser vazio.** Marcar todos os slots deixa o palco em "
+        "branco até o primeiro avanço, e a sala lê isso como um slide que não "
+        "carregou; o portão de render reprova, e o conserto é tirar o "
+        f"`{STEP_ATTR}` de um deles.",
     ]
     return "\n".join(out)
 

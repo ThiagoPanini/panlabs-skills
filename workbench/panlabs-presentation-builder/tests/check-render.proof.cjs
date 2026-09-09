@@ -60,6 +60,15 @@ let CHART_HTML = null;
 let FIGURE_PATH = null;
 let FIGURE_HTML = null;
 
+// And a FOURTH, for the same reason a fourth time (#215): the zero-step ruler
+// only ever looks at a slide that carries fragments, so a deck with none is a
+// page this ruler is green about without having measured anything. The
+// presenting deck's own green control is the assertion that matters here --
+// it opens three of its five slides on a partial stage and passes, which is
+// what makes the red beside it mean something.
+let FRAGMENT_PATH = null;
+let FRAGMENT_HTML = null;
+
 function _real() {
   return REAL_HTML;
 }
@@ -213,6 +222,22 @@ function plantShrunkViewBox() {
   return CHART_HTML.split(m[0]).join(wide);
 }
 
+// --------------------------------------------------------------------------
+// 8 - zero-step (#215)
+// --------------------------------------------------------------------------
+// EVERY SLOT A FRAGMENT, WHICH IS THE ONE WAY TO EMPTY A STAGE WITHOUT
+// EMPTYING A SLIDE. The built page keeps all its text, every ruler that reads
+// the settled slide stays green, and the room still spends the opening beat
+// looking at nothing -- which is exactly why this defect needs a browser to
+// see and a ruler of its own to name. A duplicated `data-fragment` is
+// harmless: HTML keeps the first attribute of a name, so a slot that already
+// carried one simply lands on beat zero with the rest.
+function plantEveryStep() {
+  const planted = FRAGMENT_HTML.replace(/<p class="/g, '<p data-fragment="0" class="');
+  if (planted === FRAGMENT_HTML) throw new Drifted('no <p class="…"> found to turn into a fragment');
+  return planted;
+}
+
 // The asserted phrase is always the FIX and never the diagnosis, same rule
 // proof_driver.py/check-audit.proof.py already spend: "under the 40% floor"
 // is a diagnosis and leaves the reader to guess what to do; "give the slide
@@ -313,6 +338,12 @@ async function theFigureCountsAsContent() {
   return good ? 0 : 1;
 }
 
+// The presenting deck's own case, against the presenting deck's own control.
+const FRAGMENT_CASES = [
+  ['zero-step', 'marks every slot on every slide as a fragment',
+    plantEveryStep, 'take `step` off one of the'],
+];
+
 async function main(argv) {
   const idx = argv.indexOf('--corpus');
   if (idx === -1 || !argv[idx + 1]) {
@@ -386,13 +417,29 @@ async function main(argv) {
   FIGURE_PATH = path.join(dir, drawnFig);
   FIGURE_HTML = fs.readFileSync(FIGURE_PATH, 'utf8');
 
+  // And a fourth time: the zero-step plant needs a page that already reveals
+  // in beats, so that its green control is a measurement and not a tautology.
+  const staged = (f) => fs.readFileSync(path.join(dir, f), 'utf8').includes('data-fragment=');
+  const fragmented = files.find(staged);
+  if (!fragmented) {
+    return new Proof({ title: 'render.proof' }).refuse(
+      `build a source with a fragment into --corpus ${dir} — the zero-step `
+      + 'ruler only looks at a slide that reveals in beats, and no built page '
+      + 'there carries a data-fragment for it to look at'
+    );
+  }
+  FRAGMENT_PATH = path.join(dir, fragmented);
+  FRAGMENT_HTML = fs.readFileSync(FRAGMENT_PATH, 'utf8');
+
   let GREEN;
   let CHART_GREEN;
   let FIGURE_GREEN;
+  let FRAGMENT_GREEN;
   try {
     GREEN = await _measureWithRetry(REAL_PATH);
     CHART_GREEN = await _measureWithRetry(CHART_PATH);
     FIGURE_GREEN = await _measureWithRetry(FIGURE_PATH);
+    FRAGMENT_GREEN = await _measureWithRetry(FRAGMENT_PATH);
   } catch (e) {
     return new Proof({ title: 'render.proof' }).refuse(`could not measure the real corpus: ${e.message}`);
   }
@@ -448,17 +495,34 @@ async function main(argv) {
     },
   });
 
+  const FRAGMENT_PROOF = new Proof({
+    title: 'render.proof · over the presenting deck',
+    label: (ruler) => ruler,
+    invoke: async (ruler, html) => {
+      const measured = await _measurePlanted(html, FRAGMENT_PATH);
+      const fails = gate.BY_NAME[ruler](measured);
+      return [fails.length === 0, summarize(fails) || '(no message)'];
+    },
+    planted: (html) => html !== FRAGMENT_HTML,
+    control: async (ruler) => {
+      const fails = gate.BY_NAME[ruler](FRAGMENT_GREEN);
+      return [fails.length === 0, summarize(fails)];
+    },
+  });
+
   let bad = await PROOF.run(CASES);
   console.log();
   bad += await CHART_PROOF.run(CHART_CASES);
   console.log();
   bad += await FIGURE_PROOF.run(FIGURE_CASES);
   console.log();
+  bad += await FRAGMENT_PROOF.run(FRAGMENT_CASES);
+  console.log();
   console.log('and the two that demand green:  [green]');
   bad += await theFigureIsMeasuredWhereItPaints();
   bad += await theFigureCountsAsContent();
 
-  const all = CASES.concat(CHART_CASES, FIGURE_CASES);
+  const all = CASES.concat(CHART_CASES, FIGURE_CASES, FRAGMENT_CASES);
   const covered = new Set(all.map((c) => c[0]));
   const uncovered = gate.RULERS.map((r) => r.name).filter((n) => !covered.has(n));
   console.log();

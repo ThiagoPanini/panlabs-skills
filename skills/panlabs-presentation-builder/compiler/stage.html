@@ -33,6 +33,12 @@
  */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* The panels and the notes blocks are opened and closed by the `hidden`
+ * attribute, and every one of them also carries a `display` of its own --
+ * without this the attribute would lose the cascade to its own rule and a
+ * closed panel would sit open over the deck. */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; }
 
 body {
@@ -84,16 +90,22 @@ body {
  * vocabulary that keeps one tag per ticket is one nobody holds in their head
  * while writing a deck.
  *
+ * THE SPEAKER'S NOTE READS THE SAME TWO (#215). It is the one text in this
+ * dialect that is not on the stage, and it takes the same emphasis a slot
+ * does -- so the pair of selectors below is what keeps a bold in a note from
+ * being a bold nobody defined, rather than a second copy of the rule further
+ * down the sheet.
+ *
  * NEITHER GOES PAST WEIGHT 600. The identity this skill is heading for tops
  * out there, so a bolder bold is a promise no custom font can keep -- capping
  * `strong` at the same ceiling now is what keeps the day panlabs lands from
  * being the day every existing deck's emphasis gets quietly thinner. */
-.slide strong { font-weight: 600; }
+.slide strong, .note strong { font-weight: 600; }
 
 /* The accent as a marker under the words, not a fill behind them -- a filled
  * highlight is a block, and this theme's identity is hairlines instead of
  * blocks. `<mark>`'s own UA default (a solid background) is undone first. */
-.slide mark {
+.slide mark, .note mark {
   background: none;
   color: inherit;
   text-decoration: underline;
@@ -695,6 +707,98 @@ body {
 
 .slide[data-pattern="icon-list"] [data-role="body"] { max-width: 100%; }
 
+/* ── a fragment (#215) ───────────────────────────────────────────────────────
+ * A slot the source marked with the register's bare `step` arrives on a later
+ * beat, and it is hidden with `visibility` rather than with `display`. Two
+ * reasons, and both are load-bearing.
+ *
+ * THE STAGE MUST NOT MOVE WHEN A BEAT LANDS. A fragment taken out of flow
+ * lets every line already on the stage jump the moment the next one arrives,
+ * and a room reads that as a mistake rather than as a reveal. `visibility`
+ * gives up the paint and keeps the box, so the composition each pattern was
+ * built around is the composition the first beat already stands in.
+ *
+ * AND THE GATE HAS TO BE ABLE TO SEE THE ZERO STEP. gate/render.cjs skips a
+ * leaf that is `display: none` or `visibility: hidden` and counts every other
+ * one, so a slide whose every slot is a fragment measures as EMPTY before the
+ * first advance -- which is precisely the defect its zero-step ruler refuses.
+ * Hiding with `opacity: 0` alone would leave the text painted as far as that
+ * ruler can tell, and a blank stage would pass it.
+ */
+.slide [data-fragment] { visibility: hidden; opacity: 0; }
+
+.slide [data-fragment].is-revealed { visibility: visible; opacity: 1; }
+
+/* ── the overview (#215) ─────────────────────────────────────────────────────
+ * Every slide at once, tiled over the stage, so the presenter can jump to any
+ * of them mid-conversation. The tiles ARE the slides, scaled down -- a
+ * thumbnail drawn a second way would be a second renderer to keep in step
+ * with the first.
+ *
+ * `is-current` GOES ON ALL OF THEM, and that is what makes this cheap. Every
+ * rule above that decides whether a slide paints, and how -- the four grid
+ * patterns included -- keys on that one class; marking them all reuses the
+ * whole cascade instead of restating it a tile at a time. `is-focus`, not
+ * `is-current`, is what says which tile the arrows are on.
+ *
+ * THE GRID IS SQUARE-ISH BY CONSTRUCTION. The script picks
+ * `cols = ceil(sqrt(n))`, which is what makes `rows <= cols` -- and that in
+ * turn is what lets a tile scaled to a fraction of the stage's WIDTH also fit
+ * its height, with no second calculation for the vertical. The 3% each tile
+ * gives back is the gutter between them.
+ *
+ * AND `--tile-offset` IS WHAT KEEPS THE LEFTOVER ROWS FROM ALL FALLING AT THE
+ * BOTTOM. `rows <= cols` is exactly what leaves empty rows when the two
+ * differ: five slides tile as three columns by two rows, and without the
+ * half-row of offset the grid sits in the top two thirds of the stage with a
+ * third of it dark under it -- the same anchorless composition the render
+ * gate refuses on a slide.
+ */
+.stage.is-overview .slide {
+  transform-origin: 0 0;
+  transform:
+    translate(calc((var(--tile-col, 0) * 100% + 1.5%) / var(--tile-cols, 1)),
+              calc(((var(--tile-row, 0) + var(--tile-offset, 0)) * 100% + 1.5%)
+                   / var(--tile-cols, 1)))
+    scale(calc(0.97 / var(--tile-cols, 1)));
+  outline: calc(var(--stage-height) * 0.0015 * var(--tile-cols, 1)) solid var(--hairline);
+  cursor: pointer;
+}
+
+.stage.is-overview .slide.is-focus {
+  outline: calc(var(--stage-height) * 0.005 * var(--tile-cols, 1)) solid var(--accent);
+}
+
+/* A TILE SHOWS THE SLIDE THE ROOM ENDS UP SEEING, never the beat it opens on:
+ * a grid of half-revealed thumbnails is a deck lying about itself to the one
+ * person using the grid to find something in it. */
+.stage.is-overview .slide [data-fragment] {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+}
+
+/* Neither counts a slide here: the page number would name one of nine, and
+ * the progress bar measures a walk nobody is taking. */
+.stage.is-overview .page-number,
+.stage.is-overview .progress { display: none; }
+
+.overview-hint { display: none; }
+
+.stage.is-overview .overview-hint {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--stage-height) * 0.018);
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--type-floor);
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
 /* ── the page number ────────────────────────────────────────────────────────
  * One element, outside every slide, in the same corner of the stage from the
  * first slide to the last -- which is the only way it never competes with
@@ -713,7 +817,190 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* A machine that was told to move less is told once, here. */
+/* ── the progress bar (#215) ─────────────────────────────────────────────────
+ * A hairline on the stage's own bottom edge, as wide as the deck is far
+ * along. It is meant to be found and not noticed: the ink is the muted one
+ * and never the accent, because a deck spends its accent on what it MEANS,
+ * and how far along it is means nothing.
+ */
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--stage-height) * 0.0035);
+  background: var(--hairline-faint);
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  width: calc(var(--progress, 0) * 100%);
+  background: var(--ink-muted);
+}
+
+/* ── the two panels, and the reason there is no third thing on screen (#215) ──
+ * Speaker notes and the list of shortcuts, each opened and closed by one key,
+ * each a SIBLING of the stage rather than a layer inside it -- which is what
+ * keeps a note one stylesheet mistake away from nothing rather than one
+ * stylesheet mistake away from the projector.
+ *
+ * THERE IS NOT ONE BUTTON ON THIS PAGE, and that is #207's own "sem HUD de
+ * botões" kept by construction instead of by restraint: every lever the stage
+ * has is a key, so the projected slide has nothing on it but the deck. The
+ * separation is a hairline and the ground is the surface, the same way every
+ * other edge in this theme is drawn.
+ */
+.panel {
+  position: fixed;
+  z-index: 2;
+  background: var(--surface);
+  border: calc(var(--stage-height) * 0.002) solid var(--hairline-strong);
+  border-radius: var(--radius);
+  padding: calc(var(--stage-height) * 0.030) calc(var(--stage-height) * 0.036);
+  font-family: var(--font-body);
+  color: var(--ink);
+
+  /* WHERE THE STAGE STARTS, FOR SOMETHING POSITIONED AGAINST THE WINDOW. The
+   * stage is letterboxed inside the window, so a panel pinned to the window's
+   * own edge floats in the surround on a tall screen and lands over the deck
+   * on a 16:9 one -- two different pages from one rule. These two put the
+   * window's edge and the stage's edge back in the same place. */
+  --stage-inset-x: calc((100vw - var(--stage-width)) / 2);
+  --stage-inset-y: calc((100vh - var(--stage-height)) / 2);
+}
+
+/* The notes sit on the stage's bottom band, where they cover the least of a
+ * slide the presenter is still reading from -- and high enough to leave the
+ * page number showing, because a panel that hides where you are is a panel
+ * you close to find out. */
+.panel[data-panel="notes"] {
+  left: calc(var(--stage-inset-x) + var(--stage-height) * 0.05);
+  right: calc(var(--stage-inset-x) + var(--stage-height) * 0.05);
+  bottom: calc(var(--stage-inset-y) + var(--stage-height) * 0.09);
+  max-height: calc(var(--stage-height) * 0.42);
+  overflow-y: auto;
+}
+
+.panel[data-panel="help"] {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.panel-title {
+  margin: 0 0 calc(var(--stage-height) * 0.022);
+  font-family: var(--font-mono);
+  font-size: var(--type-floor);
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+}
+
+.note, .note-empty {
+  margin: 0;
+  font-size: var(--type-body);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.note-empty { color: var(--ink-muted); }
+
+/* The key on the left, what it does on the right -- the register's own
+ * two-column shape, and the reason `<dl>` is the tag: this list is a set of
+ * terms and their definitions, and nothing else on the page is. */
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: calc(var(--stage-height) * 0.014) calc(var(--stage-height) * 0.034);
+  margin: 0;
+  font-size: var(--type-floor);
+  line-height: 1.3;
+}
+
+.keys dt {
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.keys dd {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+/* ── the three motion profiles (#215) ────────────────────────────────────────
+ * `motion=` in the header picks one, and it decides exactly two things: how a
+ * slide arrives, and how a fragment enters. `static` is the absence of both,
+ * because a sober proposal should not have to opt OUT of stage effects; the
+ * other two differ in how long they take and how far the content travels,
+ * never in what they do. Nothing here is ever written per deck -- the header
+ * says a name and this sheet answers it, the same seam every other piece of
+ * composition in this skill sits on.
+ *
+ * A SLIDE ARRIVES BY ANIMATION AND NOT BY TRANSITION, because it arrives by
+ * going from `display: none` to `display: flex`, and no transition has ever
+ * crossed that. Adding the class restarts the animation, which is exactly the
+ * event worth animating.
+ *
+ * AND NEVER IN THE OVERVIEW: `transform` there is what tiles the slides, and
+ * an entry animation writing the same property would fight it and win at the
+ * wrong moment.
+ */
+@keyframes slide-enters-editorial {
+  from { opacity: 0; transform: translateY(1.2%); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes slide-enters-cinematic {
+  from { opacity: 0; transform: translateY(2.6%) scale(0.988); }
+  to   { opacity: 1; transform: none; }
+}
+
+body[data-motion="editorial"] .stage:not(.is-overview) .slide.is-current {
+  animation: slide-enters-editorial 280ms ease both;
+}
+
+body[data-motion="cinematic"] .stage:not(.is-overview) .slide.is-current {
+  animation: slide-enters-cinematic 620ms cubic-bezier(0.16, 0.84, 0.36, 1) both;
+}
+
+/* A FRAGMENT FADES WHERE IT ALREADY STANDS. `visibility` is not an animatable
+ * property, so it is switched at the FAR end of the duration when hiding and
+ * at the near end when revealing -- which is the whole of why the text fades
+ * out over the same time it fades in, instead of vanishing before the fade
+ * has started. */
+body[data-motion="editorial"] .slide [data-fragment] {
+  transition: opacity 220ms ease, visibility 0s linear 220ms;
+}
+
+body[data-motion="editorial"] .slide [data-fragment].is-revealed {
+  transition: opacity 220ms ease, visibility 0s;
+}
+
+body[data-motion="cinematic"] .slide [data-fragment] {
+  transform: translateY(0.9%);
+  transition: opacity 420ms ease,
+              transform 420ms cubic-bezier(0.16, 0.84, 0.36, 1),
+              visibility 0s linear 420ms;
+}
+
+body[data-motion="cinematic"] .slide [data-fragment].is-revealed {
+  transform: none;
+  transition: opacity 420ms ease,
+              transform 420ms cubic-bezier(0.16, 0.84, 0.36, 1),
+              visibility 0s;
+}
+
+body[data-motion="editorial"] .progress > span,
+body[data-motion="cinematic"] .progress > span { transition: width 280ms ease; }
+
+/* A machine that was told to move less is told once, here -- and it outranks
+ * every profile above, whichever one the deck picked. The three are what a
+ * deck looks like on a machine that never said otherwise; none of them is a
+ * way around a machine that did. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -724,34 +1011,199 @@ body {
 <main class="stage">
 {{SLIDES}}
 <footer class="page-number"><span data-page-current>1</span>&#8202;/&#8202;<span data-page-total>{{PAGE_TOTAL}}</span></footer>
+<div class="progress"><span></span></div>
+<p class="overview-hint">enter salta · esc volta · ? mostra os atalhos</p>
 </main>
+<aside class="panel" data-panel="notes" hidden>
+<p class="panel-title">notas do apresentador</p>
+{{NOTES}}
+<p class="note-empty" data-note-empty hidden>Este slide não tem notas.</p>
+</aside>
+<aside class="panel" data-panel="help" hidden>
+<p class="panel-title">atalhos</p>
+<dl class="keys">
+<dt>→ ↓ espaço</dt><dd>avança um fragmento, ou o slide quando não há mais nenhum</dd>
+<dt>← ↑ ⌫</dt><dd>volta um fragmento, ou o slide inteiro</dd>
+<dt>início · fim</dt><dd>primeiro e último slide</dd>
+<dt>o</dt><dd>visão geral em grade — enter salta, esc volta</dd>
+<dt>n</dt><dd>abre e fecha as notas do apresentador</dd>
+<dt>?</dt><dd>esta lista</dd>
+<dt>esc</dt><dd>fecha o que estiver aberto</dd>
+</dl>
+</aside>
 <script>
-// Arrows, and nothing else yet. The overview, the notes and the fragments
-// arrive with the ticket that owns them; a half-built shortcut is worse than
-// a missing one, because it teaches a lever that does not work.
+// THE WHOLE OF PRESENTING, AND NOT ONE BUTTON (#215). Keys move the deck,
+// open the overview, open the notes and open this list; nothing on the
+// projected slide is clickable, because a HUD is furniture the room did not
+// ask for. The prose in the panels above is Portuguese for the same reason
+// compiler/catalog.py's `purpose=` is -- it is read by a person, not printed
+// by the compiler; CLAUDE.md draws that seam and this side of it is prose.
 (function () {
+  var stage = document.querySelector('.stage');
   var slides = [].slice.call(document.querySelectorAll('.slide'));
-  if (!slides.length) return;
-  var here = 0;
+  if (!stage || !slides.length) return;
+
   var readout = document.querySelector('[data-page-current]');
   var total = document.querySelector('[data-page-total]');
+  var panels = [].slice.call(document.querySelectorAll('.panel'));
+  var notes = [].slice.call(document.querySelectorAll('[data-note-for]'));
+  var noNote = document.querySelector('[data-note-empty]');
   if (total) total.textContent = String(slides.length);
 
-  function show(n) {
+  // One list of fragments per slide, and how many beats each slide has. The
+  // beat a fragment belongs to is the number the COMPILER wrote on it, never
+  // its position in this list: two slots the register pairs share one number,
+  // and counting the elements would pull them apart.
+  var fragments = slides.map(function (slide) {
+    return [].slice.call(slide.querySelectorAll('[data-fragment]'));
+  });
+  var beats = fragments.map(function (list) {
+    var top = -1;
+    for (var i = 0; i < list.length; i++) {
+      top = Math.max(top, Number(list[i].getAttribute('data-fragment')));
+    }
+    return top + 1;
+  });
+
+  var here = 0;
+  var step = 0;
+  var overview = false;
+  var focus = 0;
+
+  // A slide behind the current one is shown whole and one ahead is shown at
+  // its own zero step -- which is what makes walking backwards land on the
+  // slide the room actually saw, rather than on the first beat of it.
+  function paintFragments() {
+    for (var i = 0; i < slides.length; i++) {
+      var upto = i < here ? Infinity : (i === here ? step : 0);
+      for (var j = 0; j < fragments[i].length; j++) {
+        var el = fragments[i][j];
+        el.classList.toggle('is-revealed', Number(el.getAttribute('data-fragment')) < upto);
+      }
+    }
+  }
+
+  function paintNotes() {
+    var any = false;
+    for (var i = 0; i < notes.length; i++) {
+      var mine = Number(notes[i].getAttribute('data-note-for')) === here + 1;
+      notes[i].hidden = !mine;
+      if (mine) any = true;
+    }
+    if (noNote) noNote.hidden = any;
+  }
+
+  function show(n, atStep) {
     here = Math.max(0, Math.min(slides.length - 1, n));
+    step = Math.max(0, Math.min(beats[here], atStep || 0));
     for (var i = 0; i < slides.length; i++) {
       slides[i].classList.toggle('is-current', i === here);
     }
+    paintFragments();
+    paintNotes();
     if (readout) readout.textContent = String(here + 1);
+    stage.style.setProperty('--progress', String((here + 1) / slides.length));
+  }
+
+  function next() {
+    if (step < beats[here]) show(here, step + 1);
+    else if (here < slides.length - 1) show(here + 1, 0);
+  }
+
+  function prev() {
+    if (step > 0) show(here, step - 1);
+    else if (here > 0) show(here - 1, beats[here - 1]);
+  }
+
+  function closePanels() {
+    for (var i = 0; i < panels.length; i++) panels[i].hidden = true;
+  }
+
+  function togglePanel(name) {
+    var wanted = document.querySelector('.panel[data-panel="' + name + '"]');
+    if (!wanted) return;
+    var wasOpen = !wanted.hidden;
+    closePanels();
+    wanted.hidden = wasOpen;
+  }
+
+  function paintFocus() {
+    for (var i = 0; i < slides.length; i++) {
+      slides[i].classList.toggle('is-focus', i === focus);
+    }
+  }
+
+  function columns() {
+    return Math.max(1, Math.ceil(Math.sqrt(slides.length)));
+  }
+
+  function enterOverview() {
+    var cols = columns();
+    var rows = Math.ceil(slides.length / cols);
+    stage.style.setProperty('--tile-cols', String(cols));
+    stage.style.setProperty('--tile-offset', String((cols - rows) / 2));
+    for (var i = 0; i < slides.length; i++) {
+      slides[i].style.setProperty('--tile-col', String(i % cols));
+      slides[i].style.setProperty('--tile-row', String(Math.floor(i / cols)));
+      slides[i].classList.add('is-current');
+    }
+    closePanels();
+    overview = true;
+    focus = here;
+    stage.classList.add('is-overview');
+    paintFocus();
+  }
+
+  // `jumpTo` undefined means "leave it where it was", which is what makes esc
+  // a cancel and enter a jump -- including the beat the presenter was on.
+  function leaveOverview(jumpTo) {
+    overview = false;
+    stage.classList.remove('is-overview');
+    for (var i = 0; i < slides.length; i++) slides[i].classList.remove('is-focus');
+    if (typeof jumpTo === 'number') show(jumpTo, 0);
+    else show(here, step);
+  }
+
+  function overviewKey(k) {
+    var cols = columns();
+    if (k === 'ArrowRight') focus = Math.min(slides.length - 1, focus + 1);
+    else if (k === 'ArrowLeft') focus = Math.max(0, focus - 1);
+    else if (k === 'ArrowDown') focus = Math.min(slides.length - 1, focus + cols);
+    else if (k === 'ArrowUp') focus = Math.max(0, focus - cols);
+    else if (k === 'Home') focus = 0;
+    else if (k === 'End') focus = slides.length - 1;
+    else if (k === 'Enter' || k === ' ') { leaveOverview(focus); return true; }
+    else if (k === 'Escape' || k === 'o' || k === 'O') { leaveOverview(); return true; }
+    else return false;
+    paintFocus();
+    return true;
+  }
+
+  function deckKey(k) {
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'PageDown') next();
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'Backspace' || k === 'PageUp') prev();
+    else if (k === 'Home') show(0, 0);
+    else if (k === 'End') show(slides.length - 1, 0);
+    else if (k === 'o' || k === 'O') enterOverview();
+    else if (k === 'n' || k === 'N') togglePanel('notes');
+    else if (k === '?' || k === 'h' || k === 'H' || k === 'F1') togglePanel('help');
+    else if (k === 'Escape') closePanels();
+    else return false;
+    return true;
   }
 
   document.addEventListener('keydown', function (e) {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.key === 'ArrowRight') { show(here + 1); e.preventDefault(); }
-    else if (e.key === 'ArrowLeft') { show(here - 1); e.preventDefault(); }
+    if (overview ? overviewKey(e.key) : deckKey(e.key)) e.preventDefault();
   });
 
-  show(0);
+  // A tile is clickable and a slide is not: the click listener lives on every
+  // slide, and it does nothing at all unless the overview is open.
+  slides.forEach(function (slide, n) {
+    slide.addEventListener('click', function () { if (overview) leaveOverview(n); });
+  });
+
+  show(0, 0);
 })();
 </script>
 </body>

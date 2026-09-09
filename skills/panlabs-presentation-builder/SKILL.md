@@ -9,11 +9,11 @@ description: Gera uma apresentação HTML de arquivo único, offline, em slides 
 
 A fonte de um deck é um arquivo em **HTML restrito**: um cabeçalho com os metadados, uma `<section>` por slide, um padrão do catálogo nomeado em cada seção, e um slot de texto por conteúdo. Não existe nela onde escrever uma medida, uma cor, uma classe inventada ou um `style=` — o compilador recusa, e a recusa nomeia o próprio conserto.
 
-O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inline, o script viaja inline, e não há uma única referência externa na página. Ele **pagina**: um slide por vez num palco 16:9 centrado na janela, setas para avançar e voltar, número de página fixo no mesmo canto.
+O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inline, o script viaja inline, e não há uma única referência externa na página. Ele **pagina**: um slide por vez num palco 16:9 centrado na janela, setas para avançar e voltar, número de página fixo no mesmo canto, visão geral em grade, notas do apresentador e a lista de atalhos — tudo por tecla, e **nenhum botão sobre o slide**.
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e agora a figura sob medida, que fecha a lista. Faltam as notas do apresentador, a visão geral, o tema `panlabs` e a jornada de três turnos, que chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e agora a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Faltam o tema `panlabs` e a jornada de três turnos, que chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## O dialeto
 
@@ -22,16 +22,18 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
       occasion="Retrospectiva de engenharia"
       theme="base"
       lang="pt-BR"
-      minutes="1">
+      minutes="1"
+      motion="static">
 
   <section pattern="full-bleed-statement">
     <p class="statement">Nenhuma suíte verde substitui a <strong>primeira fileira</strong> lendo o slide projetado.</p>
+    <notes>Diga que a suíte da v1 estava verde na véspera da apresentação que não funcionou.</notes>
   </section>
 
 </deck>
 ```
 
-**O cabeçalho é o próprio `<deck>`**, e os cinco campos são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`. Faltou um, o compilador recusa dizendo qual.
+**O cabeçalho é o próprio `<deck>`**, e todos os campos dele são obrigatórios: `title`, `occasion`, `theme`, `lang`, `minutes`, `motion`. Faltou um, o compilador recusa dizendo qual. `motion` é o perfil de movimento — `static`, `editorial` ou `cinematic` — e é a primeira peça da direção de arte a morar no cabeçalho.
 
 **Uma `<section>` é um slide**, e o `pattern=` dela é um nome do catálogo. **Um slot é um `<p>` com o nome do slot na `class=`** — e nada mais: um segundo atributo é geometria vestida de prosa, e geometria não atravessa esta costura.
 
@@ -43,9 +45,13 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
 
 **A figura é o único slot que o catálogo não limita.** A `<section pattern="figure-caption">` leva a legenda no `caption`, o título-tese opcional no `title`, e a figura numa tag só dela: um `<svg>` que o próprio modelo desenha, ou um `<img src="…"/>` apontando para um arquivo que o compilador embute em base64. Sem título, a figura fica com o palco inteiro; com ele, divide. **Nenhuma cor é escrita no desenho** — `fill` e `stroke` só aceitam `none` ou um `var(--token)` do tema, e um hexadecimal reprova; o vocabulário de elementos e atributos é fechado, e é ele que recusa `<script>`, `<use>`, `href=` e `style=` sem precisar de uma regra por ameaça. Uma imagem que não existe, que passa do teto de dois megabytes ou cujos bytes não são do formato que a extensão promete reprova a construção — é assim que «retrato vazio proibido» vira régua de máquina.
 
+**As notas do apresentador são um `<notes>` dentro do slide**, no máximo um por seção, sem `class=` e sem atributo nenhum. O que vai nele é prosa com as mesmas marcações de ênfase, mais `<br/>` sempre disponível, e **não conta no orçamento de palavras**: é exatamente onde mora o que não coube no slide, e nada dele chega ao palco — a nota viaja para um painel que só quem apresenta abre. Um `<notes>` vazio reprova: ou escreva a nota, ou tire a tag.
+
+**Um slot marcado com o `step` pelado vira um fragmento** — `<p class="sentence" step>` — e só aparece depois que quem apresenta avança. A ordem é a ordem em que o padrão lê os slots, nunca um número escrito no atributo; `step="2"` reprova. Um par que o registro emparelha, o ícone e o texto de um item, entra na mesma batida, e marcar um sem o outro reprova. Item de grupo não é fragmento: uma série é uma prova só, e meia linha do tempo mente sobre o próprio eixo. **Marcar todos os slots reprova no portão de render**, porque o palco fica em branco até o primeiro avanço e a sala lê isso como um slide que não carregou.
+
 **O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot, quantas palavras o slide inteiro pode gastar e, quando houver, o grupo que carrega. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
 
-[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico; [`examples/figure.deck.html`](examples/figure.deck.html) traz um ciclo desenhado à mão, uma figura dividindo o palco com um título e uma imagem embutida por caminho.
+[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível; [`examples/few-words.deck.html`](examples/few-words.deck.html) é um deck de sete slides, um por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) é um deck de quatro slides, um por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico; [`examples/figure.deck.html`](examples/figure.deck.html) traz um ciclo desenhado à mão, uma figura dividindo o palco com um título e uma imagem embutida por caminho; [`examples/presenting.deck.html`](examples/presenting.deck.html) é o deck do próprio palco, com notas em todo slide, fragmentos em três deles e o perfil cinemático no cabeçalho.
 
 ## Construir
 
@@ -57,6 +63,24 @@ python3 compiler/build.py /tmp/proposta.deck.html /tmp/proposta.html --theme bas
 `--theme` sobrescreve o tema que o cabeçalho declara — é o que permite reconstruir o mesmo deck em `base` para provar que o padrão se sustenta sem marca nenhuma atrás dele.
 
 **Tudo o que o comando tem a dizer sai na saída padrão**, e o código de saída é o veredito: `0` o arquivo foi escrito, `1` não foi. A saída é determinística — não há relógio dentro dela, então duas construções da mesma fonte não diferem em um byte.
+
+## Apresentar
+
+O arquivo construído se apresenta sozinho, **por teclado e só por teclado**: não existe barra de botões, e o que a plateia vê no telão é o deck e mais nada. Diga isto a quem for apresentar, porque o único jeito de descobrir os atalhos dentro do próprio arquivo é a tecla de ajuda.
+
+| tecla | |
+|---|---|
+| `→` `↓` `espaço` `PageDown` | avança um fragmento, ou o slide quando não há mais nenhum |
+| `←` `↑` `⌫` `PageUp` | volta um fragmento, ou o slide inteiro — e um slide para trás volta revelado |
+| `Home` `End` | primeiro e último slide |
+| `o` | visão geral em grade; `enter` ou um clique saltam para o slide, `esc` volta ao que estava |
+| `n` | abre e fecha o painel de notas do slide corrente |
+| `?` (ou `h`) | a lista de atalhos |
+| `esc` | fecha o que estiver aberto |
+
+Uma barra de progresso fica na borda de baixo do palco, na tinta secundária e nunca no acento: quão longe o deck está não é o que ele significa.
+
+**O perfil de movimento decide duas coisas e mais nada**: como um slide chega e como um fragmento entra. `static` não anima nem uma nem outra — é o perfil de uma proposta sóbria, que não deveria precisar pedir para não ter efeito de palco. `editorial` faz o slide subir um fio e aparecer em 280 ms; `cinematic` gasta 620 ms, com uma escala mínima junto. **Numa máquina que declarou preferir menos movimento, nenhuma animação roda, seja qual for o perfil** — a preferência do sistema vence os três.
 
 ## O laudo
 
@@ -88,7 +112,9 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
 
 ## O portão de render
 
-Toda construção bem-sucedida também é levada a um Chromium real: o comando escreve o arquivo, imprime o laudo estático acima e, em seguida, entrega a página pronta para [`gate/render.cjs`](gate/render.cjs), que devolve uma **folha de contato em PNG** com todos os slides lado a lado e um segundo laudo, das seis réguas que só um navegador de verdade sabe responder — a fonte declarada no tema de fato pintou, ou caiu para a substituta sem avisar; o texto cabe no palco, ou vaza por cima da própria borda; o slide ocupa pelo menos 40% da altura do palco; nenhuma requisição de rede foi observada; e o número de página fica no mesmo lugar do primeiro ao último slide.
+Toda construção bem-sucedida também é levada a um Chromium real: o comando escreve o arquivo, imprime o laudo estático acima e, em seguida, entrega a página pronta para [`gate/render.cjs`](gate/render.cjs), que devolve uma **folha de contato em PNG** com todos os slides lado a lado e um segundo laudo, das sete réguas que só um navegador de verdade sabe responder — a fonte declarada no tema de fato pintou, ou caiu para a substituta sem avisar; o texto cabe no palco, ou vaza por cima da própria borda; o slide ocupa pelo menos 40% da altura do palco; nenhuma requisição de rede foi observada; o número de página fica no mesmo lugar do primeiro ao último slide; e um slide que revela em batidas mostra alguma coisa antes da primeira delas.
+
+**Cada slide é medido duas vezes, e as duas leituras respondem perguntas diferentes.** No **passo zero**, antes de qualquer revelação, a única pergunta é se alguma coisa pintou — é o que a sala olha enquanto quem apresenta ainda está falando. **Assentado**, com todos os fragmentos no lugar, é o slide que o deck de fato entrega, e é o que as outras seis réguas leem: medir ocupação ou estouro contra um slide que ainda não chegou seria recusar a própria revelação, chamando um argumento de duas batidas de palco vazio.
 
 ```
 ── render · "A régua e a plateia" · 1 slide · 1600×900
@@ -98,8 +124,9 @@ Toda construção bem-sucedida também é levada a um Chromium real: o comando e
    ✓ network-zero · the deck makes no request the network has to answer
    ✓ platform-font · the face that painted is the one the theme declares
    ✓ page-number · the page number sits in the same place on every slide
+   ✓ zero-step · a slide with fragments says something before the first advance
    contact sheet · /tmp/exemplo.contact-sheet.png
-   6 rulers, green
+   7 rulers, green
 ```
 
 **Sem Chromium na máquina, o portão degrada para um `SKIP` nomeado, e a construção não falha** — o código de saída de `build.py` fala só do laudo estático (`0` o arquivo foi escrito, `1` não foi); um defeito de render, ou a ausência de Chromium para medi-lo, nunca reabre essa promessa, porque só existe algo para renderizar depois que o arquivo já está no disco. [`gate/cdp.cjs`](gate/cdp.cjs) é a única dependência: um cliente CDP sem npm, sobre o WebSocket e o fetch que o próprio Node já tem, contra qualquer Chromium que `npx playwright install chromium` ou `npx puppeteer browsers install chrome` tenha deixado no cache da máquina.
@@ -137,7 +164,7 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | precisar de um token, ou do tamanho de alguma coisa | [`themes/base/tokens.css`](themes/base/tokens.css) |
 | quiser saber por que o compilador recusou | [`compiler/audit.py`](compiler/audit.py) |
 | for medir a página construída num navegador de verdade | [`gate/cdp.cjs`](gate/cdp.cjs) |
-| quiser a folha de contato ou o laudo das seis réguas de render | [`gate/render.cjs`](gate/render.cjs) |
+| quiser a folha de contato ou o laudo das sete réguas de render | [`gate/render.cjs`](gate/render.cjs) |
 | for escolher um padrão para um slide, com slots, papéis e orçamento | [`CATALOG.md`](CATALOG.md) |
 | quiser ver os sete padrões de poucas palavras numa fonte só | [`examples/few-words.deck.html`](examples/few-words.deck.html) |
 | quiser ver os quatro padrões que carregam uma série numa fonte só | [`examples/evidence.deck.html`](examples/evidence.deck.html) |
@@ -147,5 +174,7 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser saber como um gráfico é desenhado, ou por que um rótulo não coube | [`compiler/charts.py`](compiler/charts.py) |
 | for desenhar uma figura sob medida, ou embutir uma imagem por caminho | [`examples/figure.deck.html`](examples/figure.deck.html) |
 | quiser saber por que uma figura foi recusada, ou o que é embutido dela | [`compiler/figures.py`](compiler/figures.py) |
+| for escrever notas do apresentador, ou revelar um slide em batidas | [`examples/presenting.deck.html`](examples/presenting.deck.html) |
+| quiser saber que teclas o deck construído entende, ou o que cada perfil de movimento faz | [`compiler/stage.html`](compiler/stage.html) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

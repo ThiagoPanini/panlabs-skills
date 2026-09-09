@@ -179,7 +179,7 @@ for base in "$HOME/.claude/skills/$NAME" "$HOME/.agents/skills/$NAME"; do
   # writing it now is what stops a later ticket from loosening the rule under
   # pressure.
   if PYTHONDONTWRITEBYTECODE=1 python3 "$base/compiler/build.py" \
-       "$base/examples/statement.deck.html" "$out" >/dev/null 2>&1; then
+       "$base/examples/proposal.deck.html" "$out" >/dev/null 2>&1; then
     if sed -e 's/url(["'"'"']\{0,1\}\(data:\|#\)[^)]*)//g' \
            -e 's/\(src\|href\)="\(data:\|#\)[^"]*"//g' "$out" 2>/dev/null \
          | grep -qiE 'https?://|src=|href=|@import|url\('; then

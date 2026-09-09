@@ -40,7 +40,7 @@ const CHECK = path.join(HERE, 'check-fonts.cjs');
 const SKILL = path.resolve(HERE, '..', '..', '..', 'skills', 'panlabs-presentation-builder');
 const THEME = path.join(SKILL, 'themes', 'panlabs');
 const MANIFEST = path.join(THEME, 'fonts', 'faces.json');
-const EXAMPLE = 'few-words.deck.html';
+const EXAMPLE = 'proposal.deck.html';
 const INTER = 'Inter-subset.woff2';
 
 const REAL = fs.readFileSync(MANIFEST, 'utf8');
@@ -175,8 +175,8 @@ async function main() {
       () => root((dir) => {
         const file = path.join(dir, 'examples', EXAMPLE);
         const said = fs.readFileSync(file, 'utf8');
-        if (!said.includes('corte o resto')) throw new Drifted('the example moved on');
-        fs.writeFileSync(file, said.replace('corte o resto', 'corte o resto \u2713'));
+        if (!said.includes('sem culpa')) throw new Drifted('the example moved on');
+        fs.writeFileSync(file, said.replace('sem culpa', 'sem culpa \u2713'));
       }),
       'rewrite "\u2713" (U+2713) out of examples/',
     ],

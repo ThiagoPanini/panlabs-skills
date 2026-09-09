@@ -72,7 +72,11 @@
 #                                      through the DOCUMENTED command, into a
 #                                      temp directory. Everything a later
 #                                      layer measures is the bytes this one
-#                                      wrote.
+#                                      wrote -- and, since #219, that the two
+#                                      sources between them draw every pattern
+#                                      and every chart form the register
+#                                      declares, which is the one promise the
+#                                      tree makes about its own corpus.
 #   2  THE RENDER GATE                 `gate/render.cjs`'s own checks prove
 #                                      they measure (plant, red, message,
 #                                      green, same standard as layer 0's),
@@ -201,6 +205,24 @@
 # clause and buys the one thing splicing them into the middle would have taken
 # away -- an append that collides as text when two sessions write here at once,
 # instead of merging green into an order nobody chose.
+#
+# ⚠️ #219 COLLAPSED THE CORPUS FROM SEVEN DECKS TO TWO, and every layer above
+# still reads it by DISCOVERY rather than by name -- layer 1 walks
+# `examples/*.deck.html`, layer 4 walks that list crossed with `themes/*/`, and
+# `check-render.proof.cjs` picks its fixtures by what a built page CARRIES (a
+# statement, a chart, an `<img class="figure">`, a `data-fragment=`). That is
+# why the collapse touched no loop here. The two that are left are
+# `canonical.deck.html`, in `panlabs`, holding every group, every chart form and
+# both halves of the figure; and `proposal.deck.html`, in `base`, holding the
+# patterns made of words, the notes, the fragments and the one drawn figure
+# whose colours a header can still be held to.
+#
+# ⚠️ THE CONTACT SHEETS ARE NOT IN THIS REPOSITORY, AND THE COMMAND THAT MAKES
+# THEM IS. `tools/render-examples.sh` beside this file rebuilds both decks,
+# both storyboards and both sheets into `../renders/`, which `.gitignore` keeps
+# out of the tree for the reason #62 measured: a committed render nobody
+# compares is not evidence, it just ages. What proves the corpus renders is
+# layer 2, running.
 set -uo pipefail
 
 # A RULER LEAVES NO TRACE ON ITS SUBJECT. Layer 1 runs the skill's OWN
@@ -285,6 +307,24 @@ build_corpus() {
 }
 step "every source in examples/ builds through the documented command"  build_corpus
 
+# AND THE CORPUS IS THE WHOLE CATALOG, OR SAYS WHAT IT LEAVES OUT (#219). That
+# ticket's own acceptance -- "entre os dois, todo padrão e todo tipo de gráfico
+# aparece ao menos uma vez" -- was, until it landed, a sentence in `SKILL.md`,
+# a sentence in `CATALOG.md` and a fact in nobody's check. It is the shape of
+# claim that rots without a sound: somebody shortens a deck, the sparkline goes
+# with it, every step above stays green, and the two documents keep promising a
+# model a catalog it can no longer see.
+#
+# THE PROOF FIRST, layer 0's rule inside this layer: an emptier corpus is the
+# easiest thing in this suite to be green about, so the check has to know how to
+# be red before its green means anything. It sits at the END of layer 1 because
+# what it measures is the corpus itself, which is what this layer is about.
+step "the corpus check proves it measures" \
+  python3 "$HERE/check-corpus.proof.py"
+
+step "the corpus draws every pattern and every chart form the register declares" \
+  python3 "$HERE/check-corpus.py"
+
 echo
 echo "════ layer 2 · the render gate ════"
 # THE PROOF FIRST, layer 0's own rule one floor up: a render ruler only ever
@@ -365,66 +405,75 @@ step "the check on the theme's faces proves it measures" \
 step "every face's manifest describes the bytes beside it" \
   node "$HERE/check-fonts.cjs"
 
-# AND THE DECK THAT PROVES A PATTERN IS NOT A THEME. #216's own acceptance
-# asks for the deck of few words to compile in EVERY theme: `base`
-# is the one that proves the patterns hold with no brand behind them, and
-# `panlabs` is the one that proves the theme is a sheet of overrides rather
-# than a second engine. Layer 1 already built every example in the theme its
-# own header declares; this is the one build that crosses.
+# AND THE DECK THAT PROVES A PATTERN IS NOT A THEME. #216's own acceptance asks
+# for a deck to compile in EVERY theme: `base` is the one that proves the
+# patterns hold with no brand behind them, and `panlabs` is the one that proves
+# the theme is a sheet of overrides rather than a second engine.
+#
+# ⚠️ IT CROSSES BOTH DIMENSIONS SINCE #219, AND THE REASON IS THAT THE CORPUS
+# BECAME TWO. Layer 1 builds each example in the theme its own header declares,
+# so with one example this step had exactly one crossing build to make and made
+# it. With `canonical` in `panlabs` and `proposal` in `base` the interesting
+# builds are BOTH crossings -- the charts, the tables and the drawn figure with
+# no brand behind them, and the eleven word patterns wearing the house faces --
+# and neither is reachable from a loop that walks only one axis. Walking both is
+# two builds this layer repeats from layer 1 and two it is the only place to
+# make; a loop that tried to skip the repeats would have to know which theme
+# each header declares, which is a second copy of a fact the source already
+# carries.
 #
 # ⚠️ THE RENDER GATE IS CALLED AGAIN, EXPLICITLY, AND THAT IS THE POINT.
 # `build.py`'s own call is best-effort and never touches its exit code (#209),
 # so a `panlabs` build whose declared face silently failed to load would print
 # a red `platform-font` and still leave this step green -- and layer 2's
 # `render_corpus` cannot cover it, because it runs over the corpus BEFORE
-# these two files exist. This is the only place a render verdict is asserted
-# for a theme no example's header declares.
+# these files exist. This is the only place a render verdict is asserted for a
+# deck wearing a theme its own header does not declare.
 #
 # ⚠️ AND THE CONTACT SHEET IS ASSERTED RATHER THAN ANNOUNCED. #216 asks for the
-# two sheets side by side; saying so without looking would be the shape of
-# green this whole suite exists to refuse. Without Chromium the gate SKIPs, no
-# PNG is written, and the step says THAT instead of claiming a picture nobody
-# took.
+# sheets side by side; saying so without looking would be the shape of green
+# this whole suite exists to refuse. Without Chromium the gate SKIPs, no PNG is
+# written, and the step says THAT instead of claiming a picture nobody took.
 build_across_themes() {
-  local src="$SKILL/examples/few-words.deck.html"
-  if [ ! -e "$src" ]; then
-    echo "   ✗ examples/few-words.deck.html is not there — the deck #216 asks to"
-    echo "     see in every theme has nothing to build from"
-    return 1
-  fi
-  local n=0 bad=0 sheets=0 theme out
-  # The themes are DISCOVERED, the same way `scripts/check-skills.sh` discovers
-  # skills: a list written here is a list the theme after next is missing from.
-  for theme in "$SKILL"/themes/*/; do
-    [ -d "$theme" ] || continue
-    theme="$(basename "$theme")"
-    n=$((n + 1))
-    out="$OUTPUT_DIR/few-words.$theme.html"
-    if python3 "$SKILL/compiler/build.py" "$src" "$out" --theme "$theme" \
-       && node "$SKILL/gate/render.cjs" "$out" --out "$OUTPUT_DIR"; then
-      [ -e "$OUTPUT_DIR/few-words.$theme.contact-sheet.png" ] && sheets=$((sheets + 1))
-    else
-      bad=$((bad + 1))
-    fi
+  local n=0 bad=0 sheets=0 src name theme out
+  # BOTH LISTS ARE DISCOVERED, the same way `scripts/check-skills.sh` discovers
+  # skills: a list written here is a list the theme -- or the example -- after
+  # next is missing from.
+  for src in "$SKILL"/examples/*.deck.html; do
+    [ -e "$src" ] || break
+    name="$(basename "$src" .deck.html)"
+    for theme in "$SKILL"/themes/*/; do
+      [ -d "$theme" ] || continue
+      theme="$(basename "$theme")"
+      n=$((n + 1))
+      out="$OUTPUT_DIR/$name.$theme.html"
+      if python3 "$SKILL/compiler/build.py" "$src" "$out" --theme "$theme" \
+         && node "$SKILL/gate/render.cjs" "$out" --out "$OUTPUT_DIR"; then
+        [ -e "$OUTPUT_DIR/$name.$theme.contact-sheet.png" ] && sheets=$((sheets + 1))
+      else
+        bad=$((bad + 1))
+      fi
+    done
   done
   if [ "$n" -eq 0 ]; then
-    echo "   ✗ themes/ has no theme — there is nothing for a deck to wear"
+    echo "   ✗ there is no example, or no theme — nothing here has a deck to"
+    echo "     build or an identity to wear"
     return 1
   fi
   if [ "$bad" -ne 0 ]; then
-    echo "   ✗ $bad of $n theme(s) refused the same source, or rendered it red —"
-    echo "     a pattern that only holds under one identity is a pattern the"
-    echo "     theme is propping up"
+    echo "   ✗ $bad of $n pairing(s) refused the source, or rendered it red — a"
+    echo "     pattern that only holds under one identity is a pattern the theme"
+    echo "     is propping up"
     return 1
   fi
   if [ "$sheets" -eq "$n" ]; then
-    echo "   ✓ the few-words deck built and rendered in $n themes, $sheets contact sheets beside it"
+    echo "   ✓ every example built and rendered in every theme, $n pairings, $sheets contact sheets beside them"
   else
-    echo "   ✓ the few-words deck built in $n themes; $sheets of $n contact sheets —"
+    echo "   ✓ every example built in every theme, $n pairings; $sheets of $n contact sheets —"
     echo "     the render gate SKIPped for want of a Chromium, so there is nothing to look at"
   fi
 }
-step "the same deck compiles in every theme"  build_across_themes
+step "every example compiles in every theme"  build_across_themes
 
 echo
 echo "════ layer 5 · the storyboard ════"

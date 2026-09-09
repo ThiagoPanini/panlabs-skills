@@ -49,19 +49,19 @@ from proof_driver import Proof, cut, read, swap                        # noqa: E
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
 CHECK = os.path.join(HERE, "check-storyboard.py")
-STATEMENT = os.path.join(SKILL, "examples", "statement.deck.html")
+PROPOSAL = os.path.join(SKILL, "examples", "proposal.deck.html")
 GENERATOR = os.path.join(SKILL, "compiler", "storyboard.py")
 
-STATEMENT_SOURCE = read(STATEMENT)
+PROPOSAL_SOURCE = read(PROPOSAL)
 GENERATOR_SOURCE = read(GENERATOR)
 
-# The one line of the statement deck that reaches the storyboard as a message,
+# The one line of the proposal deck that reaches the storyboard as a message,
 # and the same line with the return pressed in the middle of it.
-SLOT = ('    <p class="statement">Nenhuma suíte verde substitui a '
-        "<strong>primeira fileira</strong> lendo o slide projetado.</p>")
-WRAPPED = ('    <p class="statement">Nenhuma suíte verde substitui a\n'
-           "      <strong>primeira fileira</strong>\n"
-           "      lendo o slide projetado.</p>")
+SLOT = ('    <p class="title">A hora reservada troca <strong>um dia inteiro</strong> '
+        "por sessenta minutos</p>")
+WRAPPED = ('    <p class="title">A hora reservada troca\n'
+           "      <strong>um dia inteiro</strong>\n"
+           "      por sessenta minutos</p>")
 
 # The tail of `render()`, and the same tail with a clock in it. A storyboard
 # that changes between two builds of one source is the defect #217 names by
@@ -97,14 +97,14 @@ REAL_BOARD = None
 
 
 def _real_board():
-    """The storyboard of the statement deck, built once and kept as text."""
+    """The storyboard of the proposal deck, built once and kept as text."""
     global REAL_BOARD
     if REAL_BOARD is None:
         with tempfile.TemporaryDirectory(prefix="panlabs-storyboard-proof-") as tmp:
-            where, why = _build(STATEMENT, tmp)
+            where, why = _build(PROPOSAL, tmp)
             REAL_BOARD = read(where) if where else ""
             if not REAL_BOARD:
-                print(f"REFUSED · the statement deck would not build: {why}")
+                print(f"REFUSED · the proposal deck would not build: {why}")
     return REAL_BOARD
 
 
@@ -115,7 +115,7 @@ def _pair(board_text):
         with open(planted, "w", encoding="utf-8") as fh:
             fh.write(board_text)
         done = subprocess.run(
-            [sys.executable, CHECK, STATEMENT, planted],
+            [sys.executable, CHECK, PROPOSAL, planted],
             capture_output=True, text=True, env=_env(), cwd=SKILL,
         )
         return done.returncode == 0, (done.stdout + done.stderr).strip()
@@ -192,12 +192,12 @@ def the_wrapped_slot_still_matches():
     held the printed message against the raw source would refuse the deck for
     where its author pressed return, which is a red about a keystroke.
     """
-    if STATEMENT_SOURCE is None or SLOT not in STATEMENT_SOURCE:
-        print(f"  FAIL {'setup':<24} the statement deck no longer carries the "
+    if PROPOSAL_SOURCE is None or SLOT not in PROPOSAL_SOURCE:
+        print(f"  FAIL {'setup':<24} the proposal deck no longer carries the "
               "slot this case wraps")
         return 1
 
-    planted = STATEMENT_SOURCE.replace(SLOT, WRAPPED, 1)
+    planted = PROPOSAL_SOURCE.replace(SLOT, WRAPPED, 1)
     with tempfile.TemporaryDirectory(prefix="panlabs-storyboard-wrap-") as tmp:
         source = os.path.join(tmp, "wrapped.deck.html")
         with open(source, "w", encoding="utf-8") as fh:
@@ -225,7 +225,7 @@ def main():
     board = _real_board()
     if not board:
         return Proof("the storyboard check", lambda k: k, None, None, None).refuse(
-            "build examples/statement.deck.html first — with no real storyboard "
+            "build examples/proposal.deck.html first — with no real storyboard "
             "there is nothing to plant into and no control to be green"
         )
 
@@ -239,25 +239,25 @@ def main():
         (
             "the wrong pattern",
             "a row naming a shape its slide does not take",
-            swap(board, "`closing-call`", "`pull-quote`"),
-            "slide 2 is a closing-call and its row says",
+            swap(board, "`closing-call`", "`section-divider`"),
+            "slide 11 is a closing-call and its row says",
         ),
         (
             "the wrong function",
             "a row naming an act the slide never declared",
-            swap(board, "| 2 | chamada |", "| 2 | plano |"),
-            'slide 2 declares arc="call" and its row says "plano"',
+            swap(board, "| 11 | chamada |", "| 11 | plano |"),
+            'slide 11 declares arc="call" and its row says "plano"',
         ),
         (
             "the rows renumbered",
             "a story told in an order the deck is not in",
-            swap(board, "| 2 | chamada |", "| 3 | chamada |"),
-            "row 2 of the storyboard is numbered 3",
+            swap(board, "| 11 | chamada |", "| 12 | chamada |"),
+            "row 11 of the storyboard is numbered 12",
         ),
         (
             "words the deck never says",
             "a message invented for a slide that says something else",
-            swap(board, "Abra o próximo deck no projetor antes de mandá-lo.",
+            swap(board, "Aprovem a terça de manhã, a partir da próxima semana.",
                  "Aprove o orçamento do trimestre."),
             "and no slide of the source does",
         ),

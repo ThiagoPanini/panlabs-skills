@@ -1,0 +1,235 @@
+<!-- THE CANONICAL EXAMPLE (#219). Every deck this skill builds declares, in its
+     own <direction>, how it DIFFERS from this one -- so this is the file that
+     sentence points at: it opens on a number, and it signs with the hairline
+     lying along the bottom of the stage, under the last line of every slide
+     that closes a stretch. A deck that opens the same way and signs the same
+     way has not made a choice; it has copied one.
+
+     It wears `panlabs`, and between it and `proposal.deck.html` every one of
+     the eighteen patterns appears at least once. This one carries the seven
+     that hold NUMBERS -- the numbered cover, the big number, the inline
+     metrics, the timeline, the table, the chart and the figure -- plus the
+     divider, the thesis title, the full-bleed statement and the closing. All
+     six chart forms are here, and both halves of the figure slot: one drawn by
+     hand in SVG, one imported from a file beside this source.
+
+     THE TEXT AND EVERY NUMBER IN IT ARE INVENTED. There is no Estaleiro, no
+     nine teams and no panel any of these figures were read off; the deck is
+     shaped the way a year-in-review is shaped, and it reports nothing that
+     happened. Not one colour is written into the drawing either: every fill
+     and stroke names a token, which is what lets the same figure change
+     identity with the theme.
+
+     Build it with `python3 compiler/build.py examples/canonical.deck.html
+     /tmp/canonical.html`, and add `--theme base` to see the same eleven
+     patterns with no brand behind them. -->
+<deck title="O primeiro ano do Estaleiro"
+      occasion="Fechamento do ano, para a diretoria de engenharia"
+      theme="panlabs"
+      lang="pt-BR"
+      minutes="18"
+      motion="cinematic">
+
+  <direction>
+    <p class="cover">cover-numbered</p>
+    <p class="signature">a hairline deitada na base do palco, sob a última linha de todo slide que fecha um trecho</p>
+    <p class="register">terceira pessoa, verbo no passado, um número por frase</p>
+    <p class="moments">high</p>
+    <p class="difference">nenhuma: este é o exemplo canônico da skill, e é dele que a diferença de todo outro deck é medida — abre pela capa numerada e assina com a hairline deitada</p>
+    <p class="content-1">a medida de que o slide fala — a barra, o ponto e a linha de cada série, e o trecho que a figura marca</p>
+    <p class="content-2">o resto da série, que está ali só para dar escala à medida marcada, e a área sob a linha</p>
+    <p class="renounced-1">pull-quote</p>
+    <p class="renounced-2">comparison</p>
+    <p class="renounced-3">three-columns</p>
+  </direction>
+
+  <section pattern="cover-numbered" arc="context">
+    <p class="number">9</p>
+    <p class="title">Nove equipes entregam pelo Estaleiro</p>
+    <p class="meta">Fechamento de 2026 · engenharia de plataforma</p>
+    <notes>Abra pelo número e deixe a sala fazer a conta: eram duas equipes em fevereiro.<br/>Todo número deste deck é <strong>inventado</strong> — ele existe para mostrar a forma de um resultado, não para relatar um.</notes>
+  </section>
+
+  <section pattern="figure-caption" arc="context">
+    <p class="caption">O painel do Estaleiro, aqui como captura sintética · a imagem entra por caminho e viaja embutida na própria página</p>
+    <img src="capture.png"/>
+  </section>
+
+  <section pattern="full-bleed-statement" arc="tension">
+    <p class="statement">Entregar deixou de ser <strong>a parte imprevisível</strong> da semana de qualquer equipe.</p>
+    <notes>Este é o pivô do deck: até aqui a sala viu o que existe, e daqui em diante vê quanto custava não existir.</notes>
+  </section>
+
+  <section pattern="thesis-title" arc="thesis">
+    <p class="title">O Estaleiro devolveu um dia por semana a cada equipe</p>
+    <p class="sentence">Tudo o que vem depois deste slide é a conta desse dia.</p>
+    <notes>A tese vem <strong>antes</strong> dos números, e não depois: um número sem tese é um número que cada um lê como quiser.</notes>
+  </section>
+
+  <section pattern="section-divider" arc="evidence">
+    <p class="index">02</p>
+    <p class="title">O que os números dizem</p>
+  </section>
+
+  <section pattern="chart" type="bars-h" arc="evidence">
+    <p class="title">Cinco equipes cortaram a espera pela metade</p>
+    <p class="unit">horas entre o merge e a produção, mediana</p>
+    <p class="source">painel do Estaleiro · dez/2026</p>
+    <ul>
+      <li><p class="label">Cartografia</p><p class="value">3</p></li>
+      <li><p class="label">Correnteza</p><p class="value">5</p></li>
+      <li><p class="label">Bússola</p><p class="value">4</p></li>
+      <li mark><p class="label">Âncora</p><p class="value">9</p></li>
+      <li><p class="label">Farol</p><p class="value">2</p></li>
+    </ul>
+    <notes>A Âncora está marcada porque é a que ainda não caiu: é dela que o plano do próximo ano trata.</notes>
+  </section>
+
+  <section pattern="chart" type="bars-v" arc="evidence">
+    <p class="title">O reprocesso caiu de doze para três por mês</p>
+    <p class="unit">entregas refeitas no mês</p>
+    <p class="source">painel do Estaleiro · dez/2026</p>
+    <ul>
+      <li><p class="label">Jan</p><p class="value">12</p></li>
+      <li><p class="label">Mar</p><p class="value">9</p></li>
+      <li><p class="label">Mai</p><p class="value">7</p></li>
+      <li><p class="label">Jul</p><p class="value">6</p></li>
+      <li><p class="label">Set</p><p class="value">4</p></li>
+      <li mark><p class="label">Nov</p><p class="value">3</p></li>
+    </ul>
+  </section>
+
+  <section pattern="big-number" arc="evidence">
+    <p class="number">31%</p>
+    <p class="caption">do tempo de uma entrega era espera por ambiente</p>
+    <p class="meta">medido em fevereiro de 2026, antes do Estaleiro</p>
+  </section>
+
+  <section pattern="chart" type="line" arc="evidence">
+    <p class="title">A fila por ambiente encolheu em todo trimestre</p>
+    <p class="unit">pedidos na fila, média do trimestre</p>
+    <p class="source">fila do Estaleiro · 2026</p>
+    <ul>
+      <li><p class="label">1º tri</p><p class="value">48</p></li>
+      <li><p class="label">2º tri</p><p class="value">31</p></li>
+      <li><p class="label">3º tri</p><p class="value">19</p></li>
+      <li mark><p class="label">4º tri</p><p class="value">8</p></li>
+    </ul>
+  </section>
+
+  <section pattern="chart" type="area" arc="evidence">
+    <p class="title">O acumulado passou de mil entregas em outubro</p>
+    <p class="unit">entregas acumuladas no ano</p>
+    <p class="source">painel do Estaleiro · dez/2026</p>
+    <ul>
+      <li><p class="label">Fev</p><p class="value">90</p></li>
+      <li><p class="label">Abr</p><p class="value">260</p></li>
+      <li><p class="label">Jun</p><p class="value">470</p></li>
+      <li><p class="label">Ago</p><p class="value">730</p></li>
+      <li><p class="label">Out</p><p class="value">1020</p></li>
+      <li><p class="label">Dez</p><p class="value">1310</p></li>
+    </ul>
+  </section>
+
+  <section pattern="inline-metrics" arc="evidence">
+    <p class="claim">O ano fechou melhor em três frentes</p>
+    <ul>
+      <li><p class="value">9</p><p class="label">equipes</p></li>
+      <li><p class="value">1310</p><p class="label">entregas</p></li>
+      <li><p class="value">3,4×</p><p class="label">frequência</p></li>
+    </ul>
+  </section>
+
+  <section pattern="chart" type="sparkline" arc="evidence">
+    <p class="title">A espera caiu em dez meses seguidos</p>
+    <p class="unit">minutos de espera por ambiente, mediana</p>
+    <p class="source">telemetria do Estaleiro · 2026</p>
+    <ul>
+      <li><p class="label">Mar</p><p class="value">74</p></li>
+      <li><p class="label">Abr</p><p class="value">66</p></li>
+      <li><p class="label">Mai</p><p class="value">61</p></li>
+      <li><p class="label">Jun</p><p class="value">52</p></li>
+      <li><p class="label">Jul</p><p class="value">45</p></li>
+      <li><p class="label">Ago</p><p class="value">38</p></li>
+      <li><p class="label">Set</p><p class="value">30</p></li>
+      <li><p class="label">Out</p><p class="value">24</p></li>
+      <li><p class="label">Nov</p><p class="value">19</p></li>
+      <li><p class="label">Dez</p><p class="value">15</p></li>
+    </ul>
+  </section>
+
+  <section pattern="table" arc="evidence">
+    <p class="claim">Quatro equipes mediram o mesmo ganho, cada uma do seu jeito</p>
+    <table>
+      <thead><tr><th>Equipe</th><th>Antes</th><th>Depois</th></tr></thead>
+      <tbody>
+        <tr><td>Cartografia</td><td>9 h</td><td>3 h</td></tr>
+        <tr><td>Correnteza</td><td>14 h</td><td>5 h</td></tr>
+        <tr><td>Âncora</td><td>21 h</td><td>9 h</td></tr>
+        <tr><td>Farol</td><td>6 h</td><td>2 h</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section pattern="section-divider" arc="plan">
+    <p class="index">03</p>
+    <p class="title">O que vem depois</p>
+  </section>
+
+  <section pattern="chart" type="share" arc="plan">
+    <p class="title">Metade do próximo ano vai para o que já existe</p>
+    <p class="unit">100% são o esforço planejado para 2027</p>
+    <p class="source">planejamento do Estaleiro · dez/2026</p>
+    <ul>
+      <li><p class="label">Manutenção</p><p class="value">50</p></li>
+      <li><p class="label">Novas equipes</p><p class="value">30</p></li>
+      <li><p class="label">Plataforma</p><p class="value">20</p></li>
+    </ul>
+  </section>
+
+  <section pattern="figure-caption" arc="plan">
+    <p class="title">O caminho de uma entrega cabe em quatro paradas</p>
+    <p class="caption">O trajeto que o Estaleiro automatizou, e o trecho de espera que ele cortou</p>
+    <svg viewBox="0 0 1200 400">
+      <rect x="14" y="46" width="242" height="152" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <rect x="336" y="46" width="242" height="152" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <rect x="658" y="46" width="242" height="152" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <rect x="964" y="46" width="222" height="152" rx="16" fill="none" stroke="var(--accent)" stroke-width="4"/>
+
+      <text x="135" y="122" font-size="42" text-anchor="middle" dominant-baseline="central">Pedido</text>
+      <text x="457" y="122" font-size="42" text-anchor="middle" dominant-baseline="central">Ambiente</text>
+      <text x="779" y="122" font-size="42" text-anchor="middle" dominant-baseline="central">Revisão</text>
+      <text x="1075" y="122" font-size="42" text-anchor="middle" dominant-baseline="central">Produção</text>
+
+      <line x1="256" y1="122" x2="316" y2="122" stroke="var(--accent)" stroke-width="4"/>
+      <polygon points="316,111 336,122 316,133" fill="var(--accent)"/>
+      <line x1="578" y1="122" x2="638" y2="122" stroke="var(--accent)" stroke-width="4"/>
+      <polygon points="638,111 658,122 638,133" fill="var(--accent)"/>
+      <line x1="900" y1="122" x2="944" y2="122" stroke="var(--accent)" stroke-width="4"/>
+      <polygon points="944,111 964,122 944,133" fill="var(--accent)"/>
+
+      <polyline points="14,246 14,294 578,294 578,246" fill="none" stroke="var(--content-1)" stroke-width="4"/>
+      <circle cx="296" cy="294" r="10" fill="var(--content-1)"/>
+      <text x="296" y="352" font-size="36" text-anchor="middle" dominant-baseline="central" fill="var(--content-1)">a espera que caiu</text>
+    </svg>
+    <notes>Este é o único desenho do deck, e ele existe porque o catálogo não tem um padrão de fluxo — é exatamente o momento em que a figura vale mais do que um padrão.</notes>
+  </section>
+
+  <section pattern="timeline" arc="plan">
+    <p class="claim">O Estaleiro chega à casa inteira até setembro</p>
+    <ol>
+      <li><p class="label">Piloto</p><p class="date">Fev/26</p></li>
+      <li><p class="label">Cinco equipes</p><p class="date">Jun/26</p></li>
+      <li now><p class="label">Nove equipes</p><p class="date">Dez/26</p></li>
+      <li><p class="label">Toda a casa</p><p class="date">Set/27</p></li>
+    </ol>
+  </section>
+
+  <section pattern="closing-call" arc="call">
+    <p class="thesis">Um dia por semana, devolvido a nove equipes, é a conta deste ano.</p>
+    <p class="call">Aprovem as quatro contratações que levam o Estaleiro à casa inteira.</p>
+    <p class="meta">A decisão cabe nesta reunião</p>
+    <notes>Feche voltando à tese e peça a decisão <strong>na sala</strong>: o número que abriu o deck é o mesmo que fecha o pedido.</notes>
+  </section>
+
+</deck>

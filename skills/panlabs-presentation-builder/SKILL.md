@@ -13,7 +13,7 @@ O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inl
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Os **dois temas** existem: `base`, sem marca, e `panlabs`, com as fontes e as cores da documentação da casa. A **direção de arte** mora no cabeçalho, cada slide declara a **função dele no arco**, o **storyboard** sai ao lado do deck a cada construção, e a **jornada de três turnos** abaixo é o caminho inteiro. Faltam os exemplos por tema e o benchmark, que chegam pelos dois últimos tickets da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Os **dois temas** existem: `base`, sem marca, e `panlabs`, com as fontes e as cores da documentação da casa. A **direção de arte** mora no cabeçalho, cada slide declara a **função dele no arco**, o **storyboard** sai ao lado do deck a cada construção, e a **jornada de três turnos** abaixo é o caminho inteiro. Os **dois exemplos** existem, um por tema, e entre eles cobrem o catálogo inteiro. Falta o benchmark, que chega pelo último ticket da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## A jornada, em três turnos
 
@@ -148,12 +148,12 @@ A fonte gravada é o que faz este turno existir depois que a sessão acabou: rec
 
 **O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot, quantas palavras o slide inteiro pode gastar e, quando houver, o grupo que carrega. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
 
-[`examples/statement.deck.html`](examples/statement.deck.html) é a fonte acima, inteira e construível — e é o menor deck que a doutrina admite, porque um deck fecha; [`examples/few-words.deck.html`](examples/few-words.deck.html) tem um slide por padrão de poucas palavras; [`examples/evidence.deck.html`](examples/evidence.deck.html) tem um slide por padrão que carrega uma série; [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) cobre colunas, comparação e lista com ícones; [`examples/charts.deck.html`](examples/charts.deck.html) tem um slide por forma de gráfico; [`examples/figure.deck.html`](examples/figure.deck.html) traz um ciclo desenhado à mão, uma figura dividindo o palco com um título e uma imagem embutida por caminho; [`examples/presenting.deck.html`](examples/presenting.deck.html) é o deck do próprio palco, com notas em todo slide, fragmentos em três deles e o perfil cinemático no cabeçalho.
+**A árvore carrega dois exemplos, e entre os dois todo padrão do catálogo aparece pelo menos uma vez.** [`examples/canonical.deck.html`](examples/canonical.deck.html) é o **exemplo canônico**: um resultado com dados no tema `panlabs`, com as seis formas de gráfico, as duas metades da figura, a tabela, a linha do tempo e as métricas — e é contra a capa e a assinatura **dele** que a `difference` de todo outro deck é escrita. [`examples/proposal.deck.html`](examples/proposal.deck.html) é a contraparte sem marca: uma proposta no tema `base`, com os padrões feitos de palavra — colunas, comparação, citação, pergunta-pivô, lista com ícones —, mais as notas do apresentador e os fragmentos. Os dois são sintéticos: não existe o Estaleiro, não existe a oficina, e nenhum número deles foi medido em lugar nenhum.
 
 ## Construir
 
 ```bash
-python3 compiler/build.py examples/statement.deck.html /tmp/exemplo.html
+python3 compiler/build.py examples/proposal.deck.html /tmp/exemplo.html
 python3 compiler/build.py /tmp/proposta.deck.html /tmp/proposta.html --theme base
 ```
 
@@ -284,22 +284,22 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 
 | leia quando | |
 |---|---|
-| for escrever ou corrigir uma fonte | [`examples/statement.deck.html`](examples/statement.deck.html) |
+| for escrever ou corrigir uma fonte | [`examples/proposal.deck.html`](examples/proposal.deck.html) |
 | quiser saber que padrões existem e que slots cada um tem | [`compiler/catalog.py`](compiler/catalog.py) |
 | precisar de um token, ou do tamanho de alguma coisa | [`themes/base/tokens.css`](themes/base/tokens.css) |
 | quiser saber por que o compilador recusou | [`compiler/audit.py`](compiler/audit.py) |
 | for medir a página construída num navegador de verdade | [`gate/cdp.cjs`](gate/cdp.cjs) |
 | quiser a folha de contato ou o laudo das sete réguas de render | [`gate/render.cjs`](gate/render.cjs) |
 | for escolher um padrão para um slide, com slots, papéis e orçamento | [`CATALOG.md`](CATALOG.md) |
-| quiser ver os sete padrões de poucas palavras numa fonte só | [`examples/few-words.deck.html`](examples/few-words.deck.html) |
-| quiser ver os quatro padrões que carregam uma série numa fonte só | [`examples/evidence.deck.html`](examples/evidence.deck.html) |
-| quiser ver colunas, comparação e lista com ícones numa fonte só | [`examples/side-by-side.deck.html`](examples/side-by-side.deck.html) |
+| quiser saber em que a capa e a assinatura do seu deck têm de diferir | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
+| quiser ver o número gigante, as métricas, a linha do tempo e a tabela numa fonte só | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
+| quiser ver colunas, comparação, citação e lista com ícones numa fonte só | [`examples/proposal.deck.html`](examples/proposal.deck.html) |
 | for escolher um ícone, ou conferir a licença do conjunto | [`themes/base/icons/`](themes/base/icons/) |
-| for escolher a forma de um gráfico, ou ver as seis numa fonte só | [`examples/charts.deck.html`](examples/charts.deck.html) |
+| for escolher a forma de um gráfico, ou ver as seis numa fonte só | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
 | quiser saber como um gráfico é desenhado, ou por que um rótulo não coube | [`compiler/charts.py`](compiler/charts.py) |
-| for desenhar uma figura sob medida, ou embutir uma imagem por caminho | [`examples/figure.deck.html`](examples/figure.deck.html) |
+| for desenhar uma figura sob medida, ou embutir uma imagem por caminho | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
 | quiser saber por que uma figura foi recusada, ou o que é embutido dela | [`compiler/figures.py`](compiler/figures.py) |
-| for escrever notas do apresentador, ou revelar um slide em batidas | [`examples/presenting.deck.html`](examples/presenting.deck.html) |
+| for escrever notas do apresentador, ou revelar um slide em batidas | [`examples/proposal.deck.html`](examples/proposal.deck.html) |
 | quiser saber que teclas o deck construído entende, ou o que cada perfil de movimento faz | [`compiler/stage.html`](compiler/stage.html) |
 | quiser o valor de um token da identidade da casa, e de onde ele veio | [`themes/panlabs/tokens.css`](themes/panlabs/tokens.css) |
 | quiser saber que caracteres o tema `panlabs` sabe pintar, ou refazer o corte das fontes | [`themes/panlabs/fonts/README.md`](themes/panlabs/fonts/README.md) |

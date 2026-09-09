@@ -10,12 +10,17 @@
  * A THEME IS A SHEET OF TOKENS. Every name below is what a theme may
  * override, and the list is closed on purpose: a theme that could invent a
  * token would be a theme the patterns had to learn about one by one. What
- * `base` sets here in neutral values, `panlabs` will set in the identity of
- * the documentation -- same names, different values, no new names.
+ * `base` sets here in neutral values, `themes/panlabs/tokens.css` sets in the
+ * identity of the documentation -- same names, different values, no new
+ * names. That last clause is a RULE and not a habit: `build.py` loads this
+ * sheet under every theme and refuses one that declares a name this file does
+ * not (#216), so adding a token here is what makes it available to anybody.
  *
  * NOTHING HERE REACHES THE NETWORK. `base` paints with the faces the machine
- * already has; a theme that ships its own faces embeds them as `data:` URIs
- * beside this file. Either way the built deck opens with the cable pulled.
+ * already has; a theme that ships its own faces carries them beside a
+ * `fonts/faces.json` manifest, and `compiler/fonts.py` writes them into the
+ * page as `data:` URIs. Either way the built deck opens with the cable
+ * pulled.
  */
 
 :root {

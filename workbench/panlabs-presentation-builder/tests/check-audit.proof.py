@@ -51,6 +51,7 @@ either: a ruler that modified its subject would be measuring itself.
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -98,7 +99,7 @@ CAPTURE_NAME = os.path.basename(CAPTURE)
 CAPTURE_BYTES = _read_bytes(CAPTURE)
 
 
-def _run(text, assets=()):
+def _run(text, assets=(), theme=None):
     """Run THE DOCUMENTED COMMAND over a source; return verdict, words, page.
 
     Not `import build` -- the thing being proved is the command a human and an
@@ -119,9 +120,11 @@ def _run(text, assets=()):
         for name, payload in assets:
             with open(os.path.join(tmp, name), "wb") as fh:
                 fh.write(payload)
+        argv = [sys.executable, BUILD, src, out]
+        if theme:
+            argv += ["--theme", theme]
         done = subprocess.run(
-            [sys.executable, BUILD, src, out],
-            capture_output=True, text=True, env=env, cwd=SKILL,
+            argv, capture_output=True, text=True, env=env, cwd=SKILL,
         )
         page = None
         if os.path.exists(out):
@@ -130,12 +133,12 @@ def _run(text, assets=()):
         return done.returncode == 0, (done.stdout + done.stderr).strip(), page
 
 
-def build(text, assets=()):
-    ok, said, _ = _run(text, assets)
+def build(text, assets=(), theme=None):
+    ok, said, _ = _run(text, assets, theme)
     return ok, said
 
 
-def block(title, real, cases, width):
+def block(title, real, cases, width, theme=None):
     """One fixture's worth of cases, sharing one green control.
 
     THE CONTROL IS BUILT ONCE PER BLOCK, not once per case, and the reason is
@@ -145,23 +148,29 @@ def block(title, real, cases, width):
     `check-render.proof.cjs` states the same rule in its own header. What the
     assertion needs is that the unplanted source is green, and one run answers
     that for every case that shares the source.
+
+    `theme=` BUILDS THE WHOLE BLOCK IN A THEME THE SOURCE DOES NOT DECLARE
+    (#216). `theme-repertoire` is the first ruler whose verdict depends on
+    which identity the deck is wearing -- `base` paints with the machine's own
+    faces and promises no repertoire, `panlabs` ships two cut faces and
+    promises 159 characters -- so a block that could only build in the header's
+    own theme could not reach it at all.
     """
     settled = []
 
     def control(_key):
         if not settled:
-            settled.append(build(real))
+            settled.append(build(real, theme=theme))
         return settled[0]
 
-    proof = Proof(
+    return Proof(
         title=title,
         label=lambda key: key,
-        invoke=lambda key, payload: build(payload),
+        invoke=lambda key, payload: build(payload, theme=theme),
         planted=lambda payload: payload != real,
         control=control,
         width=width,
-    )
-    return proof.run(cases)
+    ).run(cases)
 
 
 # ── the figure deck, whose payload is a source AND the files beside it (#214) ──
@@ -550,6 +559,71 @@ def the_notes_never_reach_the_stage():
     return 0 if good else 1
 
 
+def the_theme_may_not_invent_a_token():
+    """A theme declaring a name `base` never did, and the build refuses it.
+
+    #207 asks that creating a theme cost "uma folha de tokens ... com toda a
+    estrutura herdada de `base`", and the refusal is what makes that true
+    rather than customary: a token only one theme sets is a token no pattern
+    paints with, and the sheet that set it would be green forever while its
+    one colour went nowhere. It is not an audit ruler -- there is no deck to
+    read -- so it plants a THEME rather than a source, into a copy of the
+    tree, and runs the documented command against the copy.
+    """
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    with tempfile.TemporaryDirectory(prefix="panlabs-theme-token-") as tmp:
+        shutil.copytree(os.path.join(SKILL, "compiler"), os.path.join(tmp, "compiler"))
+        shutil.copytree(os.path.join(SKILL, "themes", "base"),
+                        os.path.join(tmp, "themes", "base"))
+        os.makedirs(os.path.join(tmp, "themes", "stranger"))
+        with open(os.path.join(tmp, "themes", "stranger", "tokens.css"), "w",
+                  encoding="utf-8") as fh:
+            fh.write(":root {\n  --accent: #123456;\n  --brand-blue: #1D6ABC;\n}\n")
+        src = os.path.join(tmp, "planted.deck.html")
+        with open(src, "w", encoding="utf-8") as fh:
+            fh.write(STATEMENT_SOURCE)
+        done = subprocess.run(
+            [sys.executable, os.path.join(tmp, "compiler", "build.py"), src,
+             os.path.join(tmp, "out.html"), "--theme", "stranger"],
+            capture_output=True, text=True, env=env, cwd=tmp,
+        )
+        said = (done.stdout + done.stderr).strip()
+
+    red = done.returncode != 0
+    says = "declare --brand-blue in themes/base/tokens.css" in said
+    good = red and says
+    marks = f"[{'+' if red else '-'}{'+' if says else '-'}]"
+    print("a theme is a sheet of overrides (#216):  [red message]")
+    print(f"  {'ok  ' if good else 'FAIL'} {'a token base lacks':<24} {marks} "
+          "a theme declaring a name no other theme could paint with")
+    if good:
+        print(f"       red: {said}")
+    else:
+        print(f"       <- {said or 'said nothing at all'}")
+    return 0 if good else 1
+
+
+def the_unfaced_theme_promises_nothing():
+    """The same arrow, built in `base`, and the build is green.
+
+    `theme-repertoire` charges a repertoire the theme DECLARED, and `base`
+    declares none: it paints with `system-ui` and its neighbours, whose
+    coverage is a fact about the machine the deck is opened on. A ruler that
+    fired here would be refusing a deck for a promise nobody made -- which is
+    the way a check is wrong by firing rather than by staying quiet.
+    """
+    planted = FEW_WORDS_SOURCE.replace("corte o resto", "corte o resto →", 1)
+    changed = planted != FEW_WORDS_SOURCE
+    ok, said = build(planted, theme="base")
+    good = ok and changed
+    marks = f"[{'+' if changed else '-'}{'+' if ok else '-'}]"
+    print(f"  {'ok  ' if good else 'FAIL'} {'base charges nothing':<22} {marks} "
+          "the same arrow, in the theme that ships no faces")
+    if not good:
+        print(f"       <- {'the plant changed nothing' if not changed else said}")
+    return 0 if good else 1
+
+
 def main():
     missing = [
         os.path.relpath(path, SKILL)
@@ -683,10 +757,16 @@ def main():
             swap(STATEMENT_SOURCE, 'title="A régua e a plateia"', "title"),
             "give the <deck> a title=",
         ),
+        # THE NEEDLE MOVED WHEN THE SECOND THEME LANDED (#216). This case used
+        # to name `panlabs`, which was the obvious stranger while `base` was
+        # the only theme on disk and is now one of the two real ones. It names
+        # `corporate` instead, which #207 puts out of scope by name -- a theme
+        # that is deliberately absent is the one kind of stranger that stays a
+        # stranger.
         (
             "theme not carried",
             "a theme the skill does not have on disk",
-            swap(STATEMENT_SOURCE, 'theme="base"', 'theme="panlabs"'),
+            swap(STATEMENT_SOURCE, 'theme="base"', 'theme="corporate"'),
             "build with a theme this skill carries",
         ),
     ], width=22)
@@ -1080,6 +1160,35 @@ def main():
     ], width=24)
 
     print()
+    failed += block("the theme-repertoire ruler (#216)", FEW_WORDS_SOURCE, [
+        (
+            "a character no face has",
+            "an arrow the docs' Inter was cut without",
+            swap(FEW_WORDS_SOURCE, "corte o resto", "corte o resto →"),
+            'rewrite "→" (U+2192)',
+        ),
+        (
+            "a tick nobody carries",
+            "a check mark neither face ever had",
+            swap(FEW_WORDS_SOURCE, "Catálogo v2", "Catálogo v2 ✓"),
+            'rewrite "✓" (U+2713)',
+        ),
+    ], width=24, theme="panlabs")
+
+    print()
+    failed += block("a note is painted too (#216)", PRESENTING_SOURCE, [
+        (
+            "a character in a note",
+            "a glyph in the panel only the presenter opens",
+            swap(PRESENTING_SOURCE, "<notes>", "<notes>⌫ "),
+            'rewrite "⌫" (U+232B)',
+        ),
+    ], width=24, theme="panlabs")
+
+    print()
+    failed += the_theme_may_not_invent_a_token()
+
+    print()
     print("and the ones that demand green:  [built kept]")
     failed += the_page_is_not_a_template()
     failed += the_category_is_the_whole_title()
@@ -1087,6 +1196,7 @@ def main():
     failed += the_chart_svg_carries_no_colour()
     failed += the_figure_wears_only_the_theme()
     failed += the_notes_never_reach_the_stage()
+    failed += the_unfaced_theme_promises_nothing()
     return failed
 
 

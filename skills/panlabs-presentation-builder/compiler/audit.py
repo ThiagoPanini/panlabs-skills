@@ -34,6 +34,7 @@ from decimal import Decimal
 
 import charts
 import figures
+import fonts
 import icons
 from catalog import (BREAK_TAG, CATEGORY_TITLES, EVIDENCE_TAGS, ICON,
                      INLINE_TAGS, NOTES_TAG, PATTERNS, SLOT_TAG, STEP_ATTR,
@@ -113,6 +114,11 @@ FIGURE_PAINT = Ruler(
 FIGURE_ASSET = Ruler(
     "figure-asset",
     "every image a figure points at is there, and fits under the ceiling",
+)
+
+THEME_REPERTOIRE = Ruler(
+    "theme-repertoire",
+    "every character the deck prints is one the theme's own faces carry",
 )
 
 
@@ -785,7 +791,7 @@ def _slide(node, n):
     return fixes
 
 
-def _vocabulary(deck):
+def _vocabulary(deck, theme):
     fixes = []
     n = 0
     for node in deck.children:
@@ -807,7 +813,7 @@ def _vocabulary(deck):
 # vocabulary ruler has already named that, and a second red about a stranger
 # pattern is noise on top of the fix.
 
-def _word_budget(deck):
+def _word_budget(deck, theme):
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         pattern = node.attrs.get("pattern", "")
@@ -835,7 +841,7 @@ def _word_budget(deck):
     return fixes
 
 
-def _category_title(deck):
+def _category_title(deck, theme):
     # THE CLAIM SLOTS AND NOTHING ELSE. A section divider's title carries the
     # role NAME, not CLAIM, because naming the next section "Contexto" is the
     # divider doing its job -- and "contexto" is both a refused title and the
@@ -859,7 +865,7 @@ def _category_title(deck):
     return fixes
 
 
-def _repeated_pattern(deck):
+def _repeated_pattern(deck, theme):
     # WHAT REPEATS IS THE SHAPE, AND FOR A CHART THE SHAPE IS THE FORM (#213).
     # A bar chart followed by a line is not a slide that failed to advance --
     # the room sees a different picture, which is the whole of what this ruler
@@ -893,7 +899,7 @@ def _repeated_pattern(deck):
     return fixes
 
 
-def _icon_known(deck):
+def _icon_known(deck, theme):
     # A NAME THE VENDORED SET DOES NOT CARRY IS STATIC, same as every other
     # doctrine ruler here: the source already says the name, and no render is
     # needed to know it is not one of the 1764 `themes/base/icons/` ships.
@@ -914,7 +920,7 @@ def _icon_known(deck):
     return fixes
 
 
-def _icon_paired(deck):
+def _icon_paired(deck, theme):
     # THE REGISTER NAMES THE PAIR, THIS RULER ONLY READS IT. `Slot.pairs_with`
     # is declared once per icon slot in catalog.py (#211's "um ícone por
     # item"); a pattern with no paired slots costs this ruler nothing, so a
@@ -999,7 +1005,7 @@ NEGATIVE = ("-", "−")
 DATED = re.compile(r"(19|20)\d{2}")
 
 
-def _chart_data(deck):
+def _chart_data(deck, theme):
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         chart, form, points = _chart_of_slide(node)
@@ -1056,7 +1062,7 @@ def _chart_data(deck):
     return fixes
 
 
-def _chart_source(deck):
+def _chart_source(deck, theme):
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         _, _, points = _chart_of_slide(node)
@@ -1075,7 +1081,7 @@ def _chart_source(deck):
     return fixes
 
 
-def _chart_fit(deck):
+def _chart_fit(deck, theme):
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         _, form, points = _chart_of_slide(node)
@@ -1124,7 +1130,7 @@ def _figures_of_slide(node):
             yield figure, el
 
 
-def _figure_paint(deck):
+def _figure_paint(deck, theme):
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         for figure, el in _figures_of_slide(node):
@@ -1145,7 +1151,7 @@ def _figure_paint(deck):
     return fixes
 
 
-def _figure_asset(deck):
+def _figure_asset(deck, theme):
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         for figure, el in _figures_of_slide(node):
@@ -1158,10 +1164,68 @@ def _figure_asset(deck):
     return fixes
 
 
+def _theme_repertoire(deck, theme):
+    """Every character on the stage, held against what the theme can paint.
+
+    A THEME THAT SHIPS NO FACES MAKES NO PROMISE, and this ruler stays quiet
+    for it. `base` paints with `system-ui` and its neighbours -- what those
+    cover is a fact about the machine the deck is opened on, not about the
+    theme, and charging a repertoire nobody declared would be inventing the
+    subject. `fonts.repertoire()` answers None for exactly that case.
+
+    WHY IT IS A RULER AT ALL. A subsetter drops in silence whatever the source
+    face did not have (#91 measured this: of 150 characters asked for, one
+    face delivered 149 and another 144), so an author who writes `→` in a
+    theme whose faces stop at `↑ ↓` gets the system's fallback glyph -- a
+    different face, mid-sentence, with no error anywhere and no network to
+    blame. The refusal names the character and its code point, because a
+    dash-like thing that is the wrong dash-like thing is invisible in a diff.
+
+    AN ICON SLOT IS NOT READ. Its text is a Lucide name the compiler consumes
+    into a `<symbol>`; nothing of it reaches the stage. Every other slot does,
+    the notes included -- a note is painted in the theme's own faces the
+    moment the presenter opens the panel, and a tofu there is a tofu the room
+    never sees and the presenter always does.
+    """
+    covers = fonts.repertoire(theme)
+    if not covers:
+        return []
+    have = set(covers)
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        pattern = node.attrs.get("pattern", "")
+        for el in node.elements():
+            if role_of_element(pattern, el) == ICON:
+                continue
+            missing = sorted(
+                {c for c in plain_text(el) if c not in have and not c.isspace()},
+                key=ord,
+            )
+            if not missing:
+                continue
+            where = el.attrs.get("class", "").strip()
+            said = f'slot "{where}"' if where else f"<{el.tag}>"
+            spelled = ", ".join(f'"{c}" (U+{ord(c):04X})' for c in missing)
+            fixes.append(
+                f"{_at(n, node)}, {said}: rewrite {spelled} with a character the "
+                f'theme "{theme}" carries — its faces are cut to a repertoire, '
+                "and what is outside it paints in whatever face the machine "
+                "falls back to"
+            )
+    return fixes
+
+
 # APPEND AT THE END. The order is the order the report prints, and the report
 # is read top to bottom by whoever is fixing a deck: the dialect first,
 # because a source that does not parse into slides has nothing for the
 # doctrine to measure, then the ones that judge what the slides say.
+#
+# EVERY RULER IS CALLED WITH THE DECK AND THE THEME, and most of them do not
+# read the second (#216). One registry with one signature is what lets a new
+# ruler that DOES need the theme be appended rather than plumbed: the
+# alternative -- a second registry, or a ruler wrapped in a closure at the
+# call site -- puts the report's order in two places, which is where an
+# append-only list stops being one.
 RULERS = (
     (VOCABULARY, _vocabulary),
     (WORD_BUDGET, _word_budget),
@@ -1174,12 +1238,13 @@ RULERS = (
     (CHART_FIT, _chart_fit),
     (FIGURE_PAINT, _figure_paint),
     (FIGURE_ASSET, _figure_asset),
+    (THEME_REPERTOIRE, _theme_repertoire),
 )
 
 
-def audit(deck):
-    """Every ruler over one deck, in a stable order."""
-    return [Verdict(ruler, measure(deck)) for ruler, measure in RULERS]
+def audit(deck, theme):
+    """Every ruler over one deck in one theme, in a stable order."""
+    return [Verdict(ruler, measure(deck, theme)) for ruler, measure in RULERS]
 
 
 def report(deck, theme, verdicts):

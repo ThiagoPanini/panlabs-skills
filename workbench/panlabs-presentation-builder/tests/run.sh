@@ -123,6 +123,27 @@
 #                                       the only layer about a SECOND file: a
 #                                       storyboard is worth measuring only
 #                                       once there is a deck beside it.
+#   6  THE FRONT DOOR                   `SKILL.md` is the only file the runtime
+#                                       reads to decide whether the skill
+#                                       applies, the only file every ticket
+#                                       edits, and until #218 the only file in
+#                                       the v2 nothing verified. This layer
+#                                       holds the JOURNEY -- three turns, the
+#                                       calibration before the build, the
+#                                       storyboard before the pixels, every
+#                                       documented path resolving, every
+#                                       documented write landing outside the
+#                                       tree, and every fact the register
+#                                       declares reaching the document the
+#                                       model reads -- and the INSTALLATION,
+#                                       which is the only part of this skill
+#                                       whose failure lands on a machine
+#                                       instead of in a file. It is last
+#                                       because it is the only layer whose
+#                                       subject is a DOCUMENT rather than the
+#                                       compiler: a front door describing a
+#                                       journey nothing underneath it can run
+#                                       is a green about prose.
 #
 # ⚠️ SPEC #207 PUTS THE REGISTER/REFERENCE EQUALITY AT THE FRONT DOOR ("a porta
 # de entrada cobra igualdade entre registro e referência publicada"), which is
@@ -154,6 +175,32 @@
 # second place the same rule is spent. What it measures -- frontmatter,
 # internal references, weight -- is not what this suite measures, which is
 # whether the compiler still holds.
+#
+# ⚠️ #218 ANSWERS THE REGISTER/REFERENCE NOTE ABOVE, AND THE ANSWER IS NO. That
+# note invited the front door to absorb layer 3's `catalog.py --check` when it
+# arrived; it arrived, and the two turned out to be different rules. `--check`
+# asks whether the document equals the GENERATOR's output; `register-published`
+# in layer 6 asks whether `reference()` still emits every fact the REGISTER
+# holds. A generator that quietly stopped printing a budget regenerates a
+# document agreeing with it perfectly -- layer 3 green, the model reading a
+# pattern with no ceiling, and only layer 6 red. Deleting either leaves one of
+# those two questions unasked; the v1 carried both, one floor apart, for exactly
+# this reason.
+#
+# ⚠️ AND #218 SAID "camada cinco", THE WAY #209 SAID "camada quatro" ABOVE, AND
+# GETS THE SAME ANSWER. Both numbers were written into the spec's tickets before
+# the queue ran, and five is the storyboard's, taken by #217 one ticket earlier.
+# The front door lands as 6, the next free slot, because the rule above is
+# APPEND AT THE END and not "renumber the neighbours so a ticket written last
+# month reads right". A reader grepping #218 for "camada cinco" finds this note
+# instead of a layer that changed under them.
+#
+# ⚠️ AND THESE TWO NOTES SIT AT THE TAIL RATHER THAN BESIDE WHAT THEY ANSWER,
+# which is the same rule one paragraph up applied to itself: this block is a
+# registry too. Each opens by naming the note it replies to, which costs a
+# clause and buys the one thing splicing them into the middle would have taken
+# away -- an append that collides as text when two sessions write here at once,
+# instead of merging green into an order nobody chose.
 set -uo pipefail
 
 # A RULER LEAVES NO TRACE ON ITS SUBJECT. Layer 1 runs the skill's OWN
@@ -406,9 +453,61 @@ step "every storyboard describes the deck beside it, and is the same page twice"
   python3 "$HERE/check-storyboard.py"
 
 echo
+echo "════ layer 6 · the front door ════"
+# THE ONE LAYER WHOSE SUBJECT IS A DOCUMENT. Everything above measures the
+# compiler: what it refuses, what it writes, what it writes beside what it
+# wrote. `SKILL.md` is the only file the runtime reads to decide whether the
+# skill applies at all, and the only file every ticket edits -- and until #218
+# nothing in the v2 verified it. The parallel-workflow doctrine says so after
+# measuring two branches that both rewrote a `SKILL.md` and merged green
+# without either author reading the result.
+#
+# IT COMES LAST BECAUSE A FRONT DOOR DESCRIBING A JOURNEY NOTHING UNDERNEATH IT
+# CAN RUN IS A GREEN ABOUT PROSE. Six layers above answer whether the compiler
+# holds; this one answers whether the document that sends a model to it still
+# says the true thing.
+#
+# ⚠️ WHAT IS MEASURED HERE IS POSITION AND THE REGISTER, AND ONE PHRASE. A
+# checker grepping for sentences goes red on the first rewording and teaches
+# everybody to edit around it, so what the journey families read is where a
+# turn sits, which turn runs `build.py`, which turn first names the storyboard,
+# and what names `compiler/catalog.py` holds -- the prose around all of that
+# stays a human's to write, which is the half of `docs/agents/skills.md` no
+# gate can judge.
+#
+# THE ONE PHRASE IS `**Fecha quando**`, AND IT IS NAMED HERE RATHER THAN
+# GLOSSED OVER. "When does this turn end" has no position to be read out of and
+# no register to be looked up in; it is a promise the document makes in words,
+# so the check reads the words. Renaming it costs one constant at the top of
+# `check-journey.py` -- which is the price of the only rule in that file that
+# could not be bought any other way.
+step "the journey check proves it measures" \
+  python3 "$HERE/check-journey.proof.py"
+
+step "the front door still conducts the three turns" \
+  python3 "$HERE/check-journey.py"
+
+# THE INSTALLER IS THE OTHER HALF OF THE FRONT DOOR, and the only part of this
+# skill whose failure lands on a MACHINE instead of in a file: a link into
+# `.claude/worktrees/` works today and dangles tomorrow, because the session
+# that owned the worktree was deleted, and nothing announces it. The skill just
+# stops being in the harness.
+#
+# ⚠️ IT IS HERMETIC, AND IT HAS TO BE. `HOME` is a scratch directory and the
+# tree installed is a COPY, so the machine's real `~/.claude/skills/` is never
+# read and never written. With parallel sessions the doctrine here, a check
+# that repointed the live skill homes would hand every other session a
+# different skill for as long as it ran.
+step "the install check proves it measures" \
+  python3 "$HERE/check-install.proof.py"
+
+step "the skill installs at both paths, and runs from both" \
+  python3 "$HERE/check-install.py"
+
+echo
 if [ "$failed" -ne 0 ]; then
   echo "SUITE RED — ${#REDS[@]} step(s):"
   for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, and every storyboard still describes the deck beside it."
+echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, every storyboard still describes the deck beside it, and the front door still conducts the three turns and installs where the house looks."

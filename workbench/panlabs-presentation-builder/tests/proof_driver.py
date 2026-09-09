@@ -169,3 +169,26 @@ class Proof:
         print(f"{self.title}:  [planted red message green]")
         print(f"  FAIL {'setup':<{self.width}} {why}")
         return 1
+
+    def coverage(self, families, cases):
+        """A family nobody plants against is a family nobody has seen fail.
+
+        Returns the number of unplanted families, to be added to the failures.
+
+        WHY THIS MOVED IN HERE (#218). Every proof beside this file grew its own
+        copy of the same eight lines, each one re-deciding the wording of the
+        same verdict -- which is the exact drift this module was extracted to
+        stop, practised one floor above the engine that refuses it. #218 was
+        about to make it a fifth copy, so the block came in here instead. The
+        copies that predate this call are not rewritten by it: whoever next
+        edits one of those proofs deletes their copy and calls this, which is a
+        line to remove rather than a rule to rediscover.
+        """
+        unplanted = [n for n, _ in families if not any(c[0] == n for c in cases)]
+        if unplanted:
+            print(f"  FAIL {'coverage':<{self.width}} no defect planted for: "
+                  f"{', '.join(unplanted)} -- add a case, or drop the family")
+        else:
+            print(f"  ok   {'coverage':<{self.width}} {len(cases)} planted "
+                  f"defects over all {len(families)} families")
+        return len(unplanted)

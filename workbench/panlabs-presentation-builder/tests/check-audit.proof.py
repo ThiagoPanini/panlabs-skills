@@ -65,6 +65,12 @@ FEW_WORDS = os.path.join(SKILL, "examples", "few-words.deck.html")
 EVIDENCE = os.path.join(SKILL, "examples", "evidence.deck.html")
 SIDE_BY_SIDE = os.path.join(SKILL, "examples", "side-by-side.deck.html")
 CHARTS = os.path.join(SKILL, "examples", "charts.deck.html")
+FIGURE = os.path.join(SKILL, "examples", "figure.deck.html")
+
+# THE ONE FIXTURE THAT IS NOT TEXT. Every other example is entirely readable as
+# a string; the figure deck points at a picture, and half of what #214 asks be
+# refused is a fact about that FILE rather than about the deck naming it.
+CAPTURE = os.path.join(SKILL, "examples", "capture.png")
 
 
 STATEMENT_SOURCE = read(STATEMENT)
@@ -72,14 +78,32 @@ FEW_WORDS_SOURCE = read(FEW_WORDS)
 EVIDENCE_SOURCE = read(EVIDENCE)
 SIDE_BY_SIDE_SOURCE = read(SIDE_BY_SIDE)
 CHARTS_SOURCE = read(CHARTS)
+FIGURE_SOURCE = read(FIGURE)
 
 
-def _run(text):
+def _read_bytes(path):
+    try:
+        with open(path, "rb") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+CAPTURE_NAME = os.path.basename(CAPTURE)
+CAPTURE_BYTES = _read_bytes(CAPTURE)
+
+
+def _run(text, assets=()):
     """Run THE DOCUMENTED COMMAND over a source; return verdict, words, page.
 
     Not `import build` -- the thing being proved is the command a human and an
     agent are told to run. A proof that reached past it into the library would
     be green about a compiler nobody invokes.
+
+    A DECK THAT POINTS AT A FILE TRAVELS WITH IT (#214). The compiler resolves
+    an `<img src=…>` against the directory the SOURCE was read from, so a
+    planted copy in a temp directory needs the picture written beside it --
+    which is exactly the shape a real caller's own project has.
     """
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     with tempfile.TemporaryDirectory(prefix="panlabs-audit-proof-") as tmp:
@@ -87,6 +111,9 @@ def _run(text):
         out = os.path.join(tmp, "out.html")
         with open(src, "w", encoding="utf-8") as fh:
             fh.write(text)
+        for name, payload in assets:
+            with open(os.path.join(tmp, name), "wb") as fh:
+                fh.write(payload)
         done = subprocess.run(
             [sys.executable, BUILD, src, out],
             capture_output=True, text=True, env=env, cwd=SKILL,
@@ -98,8 +125,8 @@ def _run(text):
         return done.returncode == 0, (done.stdout + done.stderr).strip(), page
 
 
-def build(text):
-    ok, said, _ = _run(text)
+def build(text, assets=()):
+    ok, said, _ = _run(text, assets)
     return ok, said
 
 
@@ -130,6 +157,46 @@ def block(title, real, cases, width):
         width=width,
     )
     return proof.run(cases)
+
+
+# ── the figure deck, whose payload is a source AND the files beside it (#214) ──
+# THE PLANT IS NOT ALWAYS IN THE TEXT. Two of the cases below leave the deck
+# untouched and change the BYTES of the picture it points at -- a file over the
+# ceiling, a file that is not the format its own name promised -- and a
+# `planted` assertion comparing only the source would report "the plant changed
+# nothing" for exactly the two defects that live on disk. Carrying both halves
+# as one payload is what keeps all four of ADR 0001's assertions real.
+
+GOOD_ASSETS = ((CAPTURE_NAME, CAPTURE_BYTES),)
+REAL_FIGURE = (FIGURE_SOURCE, GOOD_ASSETS)
+
+
+def in_source(plant):
+    """A plant that changes the deck's words and leaves the files alone."""
+    return lambda: (plant(), GOOD_ASSETS)
+
+
+def in_file(payload):
+    """A plant that leaves the deck's words alone and changes the file itself."""
+    return lambda: (FIGURE_SOURCE, ((CAPTURE_NAME, payload),))
+
+
+def figure_block(title, cases, width):
+    settled = []
+
+    def control(_key):
+        if not settled:
+            settled.append(build(*REAL_FIGURE))
+        return settled[0]
+
+    return Proof(
+        title=title,
+        label=lambda key: key,
+        invoke=lambda key, payload: build(payload[0], payload[1]),
+        planted=lambda payload: payload != REAL_FIGURE,
+        control=control,
+        width=width,
+    ).run(cases)
 
 
 # The whole of the fifth slide of the few-words deck, as its source writes it.
@@ -251,6 +318,28 @@ BARS_SLIDE = """  <section pattern="chart" type="bars-h">
     <p class="source">esteira de CI · jun/2026</p>
 """ + BARS_UL + "\n  </section>"
 
+# #214'S OWN NEEDLES, all from the figure deck. The junction dot of the second
+# drawing is the one shape a whole element can be swapped for without touching
+# anything the other cases plant into, so the three cases that need to REPLACE
+# an element share it.
+DOT = '<circle cx="600" cy="170" r="9" fill="var(--accent)"/>'
+ARROWHEAD = '<polygon points="764,96 780,105 764,114" fill="var(--accent)"/>'
+FIRST_BOX = ('<rect x="90" y="40" width="300" height="130" rx="14" fill="none" '
+             'stroke="var(--hairline-strong)" stroke-width="3"/>')
+CYCLE_BOX = 'viewBox="0 0 1280 530"'
+CAPTURE_SRC = 'src="capture.png"'
+
+# One byte over the ceiling `Figure.max_bytes` declares in compiler/catalog.py,
+# and it opens with a real PNG signature so that SIZE is the only thing wrong
+# with it. If that ceiling ever moves, this case stops planting a defect and
+# fails as "stayed GREEN" -- the proof catching its own rot, which is the
+# outcome worth having over a plant that silently measures nothing.
+OVER_CEILING = b"\x89PNG\r\n\x1a\n" + b"\0" * (2 * 1024 * 1024 + 1)
+
+# A real GIF, under a name that promises a PNG: every other check passes and
+# the browser decodes nothing, which is the blank rectangle by another road.
+WRONG_FORMAT = b"GIF89a" + b"\0" * 64
+
 # What a colour looks like, in any of the four notations a hand reaches for.
 # `fill=` and `stroke=` are here because a chart that painted itself would not
 # need a hexadecimal to break the rule -- `fill="currentColor"` would do it.
@@ -364,6 +453,46 @@ def the_chart_svg_carries_no_colour():
     return 0 if good else 1
 
 
+DRAWN = re.compile(r'<svg class="figure".*?</svg>', re.S)
+IMPORTED = re.compile(r'<img class="figure"[^>]*>')
+PAINT = re.compile(r'\b(?:fill|stroke)="([^"]*)"')
+THEME_TOKEN = re.compile(r"^var\(--[a-z0-9-]+\)$")
+
+
+def the_figure_wears_only_the_theme():
+    """A built figure carries tokens and no colour, and the picture is inline.
+
+    #214 ASKS FOR BOTH BY NAME -- "pintado só com as variáveis do tema" and
+    "imagem por caminho é embutida" -- and the cases above prove the compiler
+    knows how to refuse the opposite. This is the other half: that the deck
+    this skill actually SHIPS is painted that way and really did turn its path
+    into bytes on the page. A red here is not a broken check, it is a corpus
+    that stopped being an example of the thing it demonstrates.
+    """
+    ok, said, page = _run(FIGURE_SOURCE, GOOD_ASSETS)
+    drawings = DRAWN.findall(page or "")
+    stray = [v for d in drawings for v in PAINT.findall(d)
+             if v != "none" and not THEME_TOKEN.match(v)]
+    pictures = IMPORTED.findall(page or "")
+    inline = bool(pictures) and all('src="data:image/png;base64,' in p for p in pictures)
+    kept = len(drawings) == 2 and not stray and inline and CAPTURE_SRC not in (page or "")
+
+    good = ok and kept
+    marks = f"[{'+' if ok else '-'}{'+' if kept else '-'}]"
+    print(f"  {'ok  ' if good else 'FAIL'} {'figure wears tokens':<22} {marks} "
+          f"{len(drawings)} drawings in tokens, {len(pictures)} picture inline")
+    if not good:
+        if not ok:
+            print(f"       <- refused: {said}")
+        elif stray:
+            print(f"       <- a colour reached the drawing: {stray[0]}")
+        elif not inline:
+            print("       <- the <img> did not become a data: URI")
+        else:
+            print(f"       <- expected 2 drawings on the page, found {len(drawings)}")
+    return 0 if good else 1
+
+
 def main():
     missing = [
         os.path.relpath(path, SKILL)
@@ -373,6 +502,8 @@ def main():
             (EVIDENCE, EVIDENCE_SOURCE),
             (SIDE_BY_SIDE, SIDE_BY_SIDE_SOURCE),
             (CHARTS, CHARTS_SOURCE),
+            (FIGURE, FIGURE_SOURCE),
+            (CAPTURE, CAPTURE_BYTES),
         )
         if text is None
     ]
@@ -688,11 +819,134 @@ def main():
     ], width=24)
 
     print()
-    print("and the four that demand green:  [built kept]")
+    failed += figure_block("the figure's paint (#214)", [
+        (
+            "a hex in a fill",
+            "the accent written as the hexadecimal it happens to be today",
+            in_source(swap(FIGURE_SOURCE, ARROWHEAD,
+                           ARROWHEAD.replace('fill="var(--accent)"', 'fill="#c8c8c8"'))),
+            "repaint the fill of the <polygon>",
+        ),
+        (
+            "a colour by its name",
+            "a stroke painted in a word no theme can move",
+            in_source(swap(FIGURE_SOURCE, FIRST_BOX,
+                           FIRST_BOX.replace('stroke="var(--hairline-strong)"',
+                                             'stroke="white"'))),
+            "repaint the stroke of the <rect>",
+        ),
+        (
+            "a token nobody declares",
+            "a variable that looks like a token and is not one",
+            in_source(swap(FIGURE_SOURCE, DOT,
+                           DOT.replace('fill="var(--accent)"', 'fill="var(--brand-blue)"'))),
+            "repaint the fill of the <circle>",
+        ),
+    ], width=24)
+
+    print()
+    failed += figure_block("the figure's closed vocabulary (#214)", [
+        (
+            "a script in the drawing",
+            "the one element that would make a slide run code",
+            in_source(swap(FIGURE_SOURCE, DOT, '<script>fetch("https://x")</script>')),
+            "drop the <script>",
+        ),
+        (
+            "a picture off the network",
+            "an <image> fetching a file the deck does not carry",
+            in_source(swap(FIGURE_SOURCE, DOT,
+                           '<image href="https://example.com/logo.png" x="0" y="0" '
+                           'width="10" height="10"/>')),
+            "drop the <image>",
+        ),
+        (
+            "a link on a shape",
+            "the reference wearing an attribute instead of a tag",
+            in_source(swap(FIGURE_SOURCE, DOT,
+                           DOT.replace("/>", ' href="https://example.com/x"/>'))),
+            "drop href= from the <circle>",
+        ),
+        (
+            "smuggled geometry",
+            "a colour typed past the paint ruler, inside a style=",
+            in_source(swap(FIGURE_SOURCE, FIRST_BOX,
+                           FIRST_BOX.replace("/>", ' style="fill:red"/>'))),
+            "drop style= from the <rect>",
+        ),
+        (
+            "no viewBox",
+            "a drawing with no size of its own",
+            in_source(swap(FIGURE_SOURCE, CYCLE_BOX, "")),
+            "give the <svg> a viewBox=",
+        ),
+    ], width=24)
+
+    print()
+    failed += figure_block("the figure's own file (#214)", [
+        (
+            "an attribute nobody declared",
+            "an alt= the compiler writes itself, typed by hand",
+            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC,
+                           CAPTURE_SRC + ' alt="uma captura"')),
+            "drop alt= from the <img>",
+        ),
+        (
+            "an image written open",
+            "the <img> unclosed, swallowing the slide after it",
+            in_source(swap(FIGURE_SOURCE, f"<img {CAPTURE_SRC}/>",
+                           f"<img {CAPTURE_SRC}>")),
+            "self-close the <img/>",
+        ),
+        (
+            "two figures on one slide",
+            "a drawing put next to the picture, both claiming the slot",
+            in_source(swap(FIGURE_SOURCE, f"<img {CAPTURE_SRC}/>",
+                           '<svg viewBox="0 0 10 10"><rect x="1" y="1" '
+                           'width="8" height="8" fill="var(--ink)"/></svg>\n    '
+                           f"<img {CAPTURE_SRC}/>")),
+            "keep one figure",
+        ),
+        (
+            "a path that finds nothing",
+            "the src= pointing where no file is",
+            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC, 'src="ausente.png"')),
+            "put the image at",
+        ),
+        (
+            "a URL instead of a path",
+            "a picture the page would have to fetch",
+            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC,
+                           'src="https://example.com/capture.png"')),
+            "write src= as a path to a file on disk",
+        ),
+        (
+            "a format nobody embeds",
+            "an extension outside the five the compiler carries",
+            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC, 'src="capture.tiff"')),
+            'save "capture.tiff" as one of',
+        ),
+        (
+            "over the byte ceiling",
+            "one byte more than a figure is allowed to weigh",
+            in_file(OVER_CEILING),
+            'shrink "capture.png" to under 2.0 MB',
+        ),
+        (
+            "bytes the name lied about",
+            "a GIF saved under a name promising a PNG",
+            in_file(WRONG_FORMAT),
+            'save "capture.png" as a real .png',
+        ),
+    ], width=24)
+
+    print()
+    print("and the five that demand green:  [built kept]")
     failed += the_page_is_not_a_template()
     failed += the_category_is_the_whole_title()
     failed += the_divider_may_name_the_arc()
     failed += the_chart_svg_carries_no_colour()
+    failed += the_figure_wears_only_the_theme()
     return failed
 
 

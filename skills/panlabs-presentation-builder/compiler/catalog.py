@@ -2,7 +2,9 @@
 """The catalog: every name the dialect knows, in the one place that knows it.
 
     python3 compiler/catalog.py            # the reference, on stdout
-    python3 compiler/catalog.py --check    # CATALOG.md still says what this says
+    python3 compiler/catalog.py --check    # CATALOG.md still says what this says,
+                                           # and the theme still declares every
+                                           # token a figure may paint with
     python3 compiler/catalog.py --write    # make it say so
 
 THE CATALOG IS THE SOURCE, NOT A DESCRIPTION OF ONE. The compiler validates
@@ -37,6 +39,7 @@ are English; the prose that explains a pattern to its author is not.
 
 import argparse
 import os
+import re
 from dataclasses import dataclass
 
 
@@ -188,6 +191,141 @@ class Chart:
 
 
 @dataclass(frozen=True)
+class ImageType:
+    """One format an imported figure may be, and how to know the bytes are it.
+
+    THE SIGNATURE SITS BESIDE THE EXTENSION BECAUSE A NAME IS NOT A FACT. A
+    JPEG saved as `.png` embeds under a media type no browser will decode, and
+    what reaches the stage is the blank rectangle #207 calls a "retrato vazio"
+    -- the one defect this pattern exists to make impossible. The extension
+    picks the type; the first bytes confirm it, and disagreeing is a red.
+    """
+
+    extension: str
+    media: str            # the media type the data: URI declares
+    signature: tuple      # (offset, bytes) pairs, all of which have to match
+
+
+@dataclass(frozen=True)
+class Figure:
+    """The one slot the catalog bounds and never composes.
+
+    EVERY OTHER PATTERN IN THIS FILE SAYS WHAT GOES IN IT -- a claim, a metric,
+    a series of numbers -- and #207 asks for exactly one place where it does
+    not: "uma figura desenhada sob medida quando o catálogo não tem o que o
+    slide pede, um ciclo, um organograma, um fluxo". What the register can
+    still fix is the VOCABULARY the drawing is built from, which is why the
+    freedom below is bounded on three sides and open in the middle.
+
+    TWO THINGS, AND THE TAG SAYS WHICH. A drawing is an `<svg>` the model wrote
+    itself; an image is an `<img>` pointing at a file on disk, which the
+    compiler embeds. Neither carries a `class=`, for the same reason a group's
+    `<ul>` does not: the tag alone already says what it is.
+
+    NOT ONE COLOUR IS WRITTEN INTO A DRAWING. `paint` names the attributes that
+    carry one and `tokens` names what they may say, so a figure changes
+    identity with the deck instead of wearing `base` in every theme -- the same
+    promise `compiler/charts.py` keeps by emitting class names, arrived at from
+    the other side because a hand-drawn figure has no classes the stage could
+    have agreed to in advance.
+
+    THE CLOSED TAG SET IS WHAT REFUSES A SCRIPT AND AN EXTERNAL REFERENCE, and
+    it refuses them the same way it refuses everything else the dialect never
+    declared. `<script>`, `<image>`, `<use>`, `<foreignObject>` and an
+    `href=`/`style=`/`on…=` anywhere are all outside `tags` and `attrs`, so
+    none of them needs a rule of its own -- a vocabulary with a hole per threat
+    is a vocabulary that grows a hole per threat nobody thought of.
+    """
+
+    drawn: str            # the tag a hand-drawn figure is written as
+    imported: str         # the tag an image by path is written as
+    path: str             # the attribute naming the file: an `<img>`'s only one
+    box: str              # the attribute a drawing cannot omit: its viewBox
+    caption: str          # the slot whose words become the figure's accessible name
+    words: tuple          # the elements of a drawing that carry words
+    tags: tuple           # the elements a drawing may be built from
+    attrs: tuple          # the attributes any of them may carry, canonically spelled
+    paint: tuple          # which of those attributes carry a colour
+    tokens: tuple         # the theme tokens a colour may name
+    unpainted: str        # the one colour that is not a token
+    types: tuple          # the ImageType(s) an imported figure may be
+    max_bytes: int        # the ceiling one imported file may weigh
+    purpose: str          # Portuguese: the line the reference publishes about it
+
+
+# THE ELEMENTS A DRAWING IS BUILT FROM. Enough for the three figures #207 names
+# by name -- a cycle, an org chart, a flow -- and nothing that reaches outside
+# the page. An arrowhead is a `<polygon>` here rather than a `<marker>`,
+# deliberately: a marker is attached through `marker-end="url(#id)"`, and the
+# moment a paint value may say `url(…)` the rule that every colour is a token
+# stops being answerable by reading the value.
+FIGURE_TAGS = ("g", "path", "rect", "circle", "ellipse", "line", "polyline",
+               "polygon", "text", "tspan")
+
+# THE ATTRIBUTES, IN THE SPELLING SVG WANTS. `viewBox` is the only one whose
+# case matters, and it matters twice: `html.parser` hands every attribute back
+# lowercased, so the compiler looks a name up case-folded and writes it back
+# from this tuple. Nothing that names a face or a weight is here -- the stage
+# sets those for every figure at once (compiler/stage.html), which is one less
+# thing an author can get wrong and one less value to hold to a token.
+FIGURE_ATTRS = (
+    "viewBox",
+    "d", "points",
+    "x", "y", "width", "height", "rx", "ry",
+    "cx", "cy", "r",
+    "x1", "y1", "x2", "y2",
+    "dx", "dy",
+    "transform",
+    "fill", "stroke",
+    "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-dasharray",
+    "opacity", "fill-opacity", "stroke-opacity",
+    "font-size", "text-anchor", "dominant-baseline",
+)
+
+# THE COLOURS A FIGURE MAY WEAR, and they are the theme's own names rather than
+# a list this file invented: `--check` refuses a name `themes/base/tokens.css`
+# does not declare, so the day a token is renamed is the day this tuple is red
+# instead of the day a figure silently paints nothing.
+FIGURE_TOKENS = ("--surface", "--ink", "--ink-muted", "--accent",
+                 "--content-1", "--content-2",
+                 "--hairline-faint", "--hairline", "--hairline-strong")
+
+# TWO MEGABYTES, PER FILE. Base64 costs a third on top, so a figure at the
+# ceiling is under three megabytes of text in a deck that still opens from a
+# mail attachment -- and a picture that needs more than this to fill a 16:9
+# projector is a picture nobody resized for one. The ceiling is per file and
+# not per deck on purpose: a deck's own weight is something its author can see,
+# and one image quietly costing forty is not.
+FIGURE_MAX_BYTES = 2 * 1024 * 1024
+
+# The bare name `FIGURE` is already the ROLE a big number carries, and the two
+# are unrelated: one says how a `<p>` is set, this one says what may be drawn.
+FIGURE_SPEC = Figure(
+    drawn="svg",
+    imported="img",
+    path="src",
+    box="viewBox",
+    caption="caption",
+    words=("text", "tspan"),
+    tags=FIGURE_TAGS,
+    attrs=FIGURE_ATTRS,
+    paint=("fill", "stroke"),
+    tokens=FIGURE_TOKENS,
+    unpainted="none",
+    types=(
+        ImageType(".png", "image/png", ((0, b"\x89PNG\r\n\x1a\n"),)),
+        ImageType(".jpg", "image/jpeg", ((0, b"\xff\xd8\xff"),)),
+        ImageType(".jpeg", "image/jpeg", ((0, b"\xff\xd8\xff"),)),
+        ImageType(".gif", "image/gif", ((0, b"GIF8"),)),
+        ImageType(".webp", "image/webp", ((0, b"RIFF"), (8, b"WEBP"))),
+    ),
+    max_bytes=FIGURE_MAX_BYTES,
+    purpose="um `<svg>` que você mesmo desenha, ou um `<img>` apontando para um "
+            "arquivo que o compilador embute",
+)
+
+
+@dataclass(frozen=True)
 class Pattern:
     """One entry of the catalog."""
 
@@ -200,6 +338,7 @@ class Pattern:
     table: bool = False      # this pattern's evidence is a real <table>, not a group
     allow_break: bool = False  # may a slot force a line with BREAK_TAG (#211)
     chart: Chart = None      # the group is drawn, not printed -- see Chart (#213)
+    figure: Figure = None    # the slot the catalog does not limit -- see Figure (#214)
 
 
 # THE ORDER IS THE ARC, not the alphabet: a deck opens with a cover, turns on
@@ -410,6 +549,34 @@ PATTERNS = {
                 ),
             ),
         ),
+        # THE SLOT THE CATALOG DOES NOT LIMIT (#214). Every pattern above says
+        # what goes in it; this one says only what the figure may be BUILT
+        # from, because the moment the catalog has nothing for a slide -- a
+        # cycle, an org chart, a flow -- is exactly the moment #207 refuses to
+        # sacrifice ("para o momento mais forte do deck não ser sacrificado ao
+        # catálogo").
+        #
+        # THE TITLE IS OPTIONAL AND THE CAPTION IS NOT, and that is the whole of
+        # "a figura pode ocupar o slide inteiro ou dividir o palco com um
+        # título-tese": written, the claim takes the top of the stage and the
+        # figure takes what is left; unwritten, the figure takes all of it. The
+        # caption stays required either way, because a figure nobody names is a
+        # picture the room has to guess at -- and it is what the compiler hands
+        # a screen reader as the drawing's accessible name.
+        Pattern(
+            name="figure-caption",
+            slots=(
+                Slot("title", CLAIM, "a tese que a figura prova — sem ela, a "
+                                     "figura fica com o palco inteiro"),
+                Slot("caption", META, "o que a figura mostra, e de onde ela "
+                                      "veio — é também o texto alternativo"),
+            ),
+            required=("caption",),
+            budget=48,
+            purpose="Uma figura desenhada sob medida, ou uma imagem embutida por "
+                    "caminho, com a legenda embaixo",
+            figure=FIGURE_SPEC,
+        ),
         Pattern(
             name="full-bleed-statement",
             slots=(
@@ -589,6 +756,63 @@ def chart_of(name):
     return p.chart if p else None
 
 
+def figure_of(name):
+    """The pattern's figure declaration, or None for a pattern that carries none."""
+    p = PATTERNS.get(name)
+    return p.figure if p else None
+
+
+@dataclass(frozen=True)
+class Evidence:
+    """What a pattern shows besides its own words, and the tag it is written as.
+
+    THREE SHAPES, ONE QUESTION -- AND IT IS THE NAMING QUESTION, NOT THE
+    DISPATCH. A group, a table and a figure are each a thing the author writes
+    as a tag of its own rather than as a named `<p>`, so the audit and the
+    compiler both had to ask, per pattern, "which tag is this pattern's
+    evidence, and what do I call it in a message". That is what this record
+    answers once. Each shape still needs its OWN handler in each file -- the
+    register cannot hold one without importing the audit that would import it
+    back -- so the `if figure … elif group …` cascades survive on purpose;
+    what does not survive is a second, hand-kept list of tags beside the one
+    the register already has. `kind` is the word every message uses, so a red
+    says "figure" where a figure is what is missing.
+    """
+
+    kind: str      # "group", "table" or "figure"
+    tags: tuple    # the tag(s) the author may write it as
+
+
+def evidence_of(name):
+    """The evidence this pattern carries, or None when its words are all of it."""
+    p = PATTERNS.get(name)
+    if not p:
+        return None
+    if p.figure:
+        return Evidence("figure", (p.figure.drawn, p.figure.imported))
+    if p.table:
+        return Evidence("table", ("table",))
+    if p.group:
+        return Evidence("group", (p.group.container,))
+    return None
+
+
+# EVERY TAG ANY PATTERN WRITES ITS EVIDENCE AS, computed from the register and
+# never listed by hand. It is what lets a reader of a slide say "this `<svg>` is
+# somebody's evidence, and it is in the wrong pattern" instead of "this is a tag
+# I have never heard of" -- the first names the fix, the second is a shrug.
+def _evidence_tags():
+    tags = set()
+    for name in PATTERNS:
+        found = evidence_of(name)
+        if found:
+            tags.update(found.tags)
+    return tuple(sorted(tags))
+
+
+EVIDENCE_TAGS = _evidence_tags()
+
+
 def form_names(name):
     """Every form this pattern's chart may be drawn in, in the reference's order."""
     chart = chart_of(name)
@@ -637,8 +861,34 @@ def allow_break_of(name):
 BEGIN = "<!-- catalog:begin -->"
 END = "<!-- catalog:end -->"
 
-DOCUMENT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "CATALOG.md")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DOCUMENT = os.path.join(ROOT, "CATALOG.md")
+
+# THE SHEET THIS REGISTER IS HELD AGAINST. `FIGURE_TOKENS` is a list of names
+# the THEME owns, and a register that named one the theme does not declare
+# would pass every check in this file while painting a figure with nothing.
+TOKENS = os.path.join(ROOT, "themes", "base", "tokens.css")
+
+TOKEN_DECLARED = re.compile(r"^\s*(--[A-Za-z0-9-]+)\s*:", re.M)
+
+
+def megabytes(n):
+    """A weight, in the units a REFUSAL names it in: English, decimal point.
+
+    Public because `compiler/figures.py` refuses an oversized image against the
+    same ceiling this file publishes, and a second copy of "how do we write a
+    megabyte" is how a refusal ends up naming a number the catalog never
+    printed. CLAUDE.md's seam runs straight through it -- a message the program
+    prints is English, the prose explaining a pattern is not -- so the
+    Portuguese reference localises the result with `_pt` rather than this
+    returning a comma into an English sentence.
+    """
+    return f"{n / (1024 * 1024):.1f} MB"
+
+
+def _pt(said):
+    """A number, with the decimal mark the reference's Portuguese prose uses."""
+    return said.replace(".", ",")
 
 
 def reference():
@@ -715,6 +965,41 @@ def reference():
                 "",
             ]
 
+        if p.figure:
+            f = p.figure
+            out += [
+                f"A figura não é um slot de texto, e não leva `class=`: ou é um "
+                f"`<{f.drawn}>` que você desenha, ou é um `<{f.imported}>` "
+                f"apontando para um arquivo — a tag já diz qual dos dois.",
+                "",
+                f"Um `<{f.drawn}>` precisa do `{f.box}` e é montado só com estes "
+                "elementos — "
+                + ", ".join(f"`<{t}>`" for t in f.tags)
+                + " — que só aceitam estes atributos: "
+                + ", ".join(f"`{a}`" for a in f.attrs)
+                + ". Qualquer outra tag ou atributo recusa, `<script>`, `<use>`, "
+                "`href=` e `style=` inclusive.",
+                "",
+                "Toda cor vem do tema: "
+                + " e ".join(f"`{a}`" for a in f.paint)
+                + f" só aceitam `{f.unpainted}` ou `var(--token)`, e os tokens são "
+                + ", ".join(f"`{t}`" for t in f.tokens)
+                + ". Um hexadecimal, um `rgb()`, um nome de cor ou um `url()` "
+                "recusam — é o que faz a mesma figura trocar de identidade junto "
+                "com o deck.",
+                "",
+                f"Um `<{f.imported}>` carrega só `{f.path}=`, um caminho de "
+                "arquivo — relativo à fonte do deck, ou absoluto — e nunca uma "
+                "URL. O compilador embute o arquivo "
+                "em base64: "
+                + ", ".join(f"`{t.extension}`" for t in f.types)
+                + f", até {_pt(megabytes(f.max_bytes))} cada. Caminho que não existe, "
+                "arquivo acima do teto e bytes que não são do formato que a "
+                "extensão promete recusam a construção — um retrato vazio nunca "
+                "chega ao palco.",
+                "",
+            ]
+
         if p.table:
             out += [
                 f"Um `<table>` sem `class=`, com um `<thead>` de um `<tr>` de `<th>` "
@@ -749,8 +1034,8 @@ def _block(text):
     return text.split(BEGIN, 1)[1].split(END, 1)[0].strip("\n")
 
 
-def _document(path):
-    """The document's text, and why it could not be read. One of the two is None."""
+def _read(path):
+    """A file's text, and why it could not be read. One of the two is None."""
     try:
         with open(path, encoding="utf-8") as fh:
             return fh.read(), None
@@ -780,7 +1065,27 @@ def check(path):
               "slide whatever its pattern")
         return False
 
-    text, why = _document(path)
+    # AND THE SECOND HALF OF THE REGISTER'S OWN HOUSEKEEPING (#214). Every
+    # other name in this file is one the file itself owns; `FIGURE_TOKENS` is a
+    # list of names the THEME owns, and a register naming one the theme dropped
+    # would pass every check here while a figure painted with it paints
+    # nothing at all -- the failure has no red anywhere and no pixel either.
+    sheet, why = _read(TOKENS)
+    if why:
+        print("REFUSED · put themes/base/tokens.css back — "
+              f"{why}; it declares the tokens a figure may paint with, and this "
+              "register cannot be held to a sheet that is not there")
+        return False
+    declared = set(TOKEN_DECLARED.findall(sheet))
+    stray = [t for t in FIGURE_TOKENS if t not in declared]
+    if stray:
+        print(f"REFUSED · take {stray[0]} out of FIGURE_TOKENS in "
+              "compiler/catalog.py, or declare it in themes/base/tokens.css — a "
+              "figure painted with a token no theme declares paints nothing, and "
+              "nothing is exactly what the room would see")
+        return False
+
+    text, why = _read(path)
     if why:
         print(f"REFUSED · put {where} back and run `python3 compiler/catalog.py "
               f"--write` — {why}")
@@ -804,13 +1109,14 @@ def check(path):
 
     print(f"   ✓ {where} publishes the register: {len(PATTERNS)} patterns, "
           f"{sum(len(p.slots) for p in PATTERNS.values())} slots, "
-          f"{len(CATEGORY_TITLES)} refused titles")
+          f"{len(CATEGORY_TITLES)} refused titles, "
+          f"{len(FIGURE_TOKENS)} paint tokens the theme declares")
     return True
 
 
 def write(path):
     """Put the register back into the document, between the markers."""
-    text, why = _document(path)
+    text, why = _read(path)
     if why:
         print(f"REFUSED · write {path} by hand first, with {BEGIN} and {END} in "
               f"it — {why}")

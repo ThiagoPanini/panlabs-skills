@@ -50,6 +50,16 @@ let REAL_HTML = null;
 let CHART_PATH = null;
 let CHART_HTML = null;
 
+// And a THIRD, for the same reason again (#214). A figure is the one thing on
+// a stage that is content without being text, and until #214 no ruler here
+// could see one: `pageMeasureFn` collected leaves by looking for a text node,
+// so a picture filling the projector edge to edge weighed exactly nothing.
+// Both cases below plant into the figure deck, and both were GREEN before that
+// change -- the first because the overflowing element carried no words, the
+// second because the box CSS gave it is not the box it paints in.
+let FIGURE_PATH = null;
+let FIGURE_HTML = null;
+
 function _real() {
   return REAL_HTML;
 }
@@ -167,6 +177,23 @@ function plantMovingPageNumber() {
 }
 
 // --------------------------------------------------------------------------
+// 8 - box-overflow, over an element with no words in it (#214)
+// --------------------------------------------------------------------------
+// A PICTURE BLEEDING OFF THE STAGE, AND NOT ONE CHARACTER INVOLVED. Every
+// other overflow this gate has ever caught was text running past an edge; an
+// <img> can do it carrying no text at all, and before figures became leaves
+// the ruler had nothing to compare against the stage and said so in green.
+function plantOversizePicture() {
+  if (!FIGURE_HTML.includes('<img class="figure"')) {
+    throw new Drifted('no <img class="figure"> on the figure deck to grow');
+  }
+  if (!FIGURE_HTML.includes('</style>')) throw new Drifted('no </style> to plant an override before');
+  const rule = '.slide[data-pattern="figure-caption"] img.figure'
+    + '{width:3000px !important;height:1200px !important;flex:none !important}';
+  return FIGURE_HTML.replace('</style>', `${rule}</style>`);
+}
+
+// --------------------------------------------------------------------------
 // 7 - type-floor, through a viewBox (#213)
 // --------------------------------------------------------------------------
 // THE ONE DEFECT getComputedStyle CANNOT SEE. A chart's text lives inside a
@@ -216,6 +243,75 @@ const CHART_CASES = [
   ['type-floor', "doubles the chart's viewBox, halving every label it draws",
     plantShrunkViewBox, 'raise'],
 ];
+
+// And the figure deck's own.
+const FIGURE_CASES = [
+  ['box-overflow', 'blows the picture up until it bleeds off the stage',
+    plantOversizePicture, 'shorten img.figure'],
+];
+
+// --------------------------------------------------------------------------
+// AND ONE THAT DEMANDS GREEN, because a check can also be wrong by firing --
+// the same standard check-audit.proof.py holds itself to at the bottom of its
+// own file.
+//
+// A FIGURE IS LETTERBOXED INSIDE THE BOX CSS GAVE IT, and both halves of the
+// slot are: an <img> under `object-fit: contain` and an <svg> under the
+// default `preserveAspectRatio`. So a box hanging far off the stage can still
+// paint every pixel of its picture ON it, centred and small -- and a ruler
+// reading the ELEMENT's rect would refuse that slide for an overflow the room
+// never sees. Two thousand pixels of box, a hundred of height, and the
+// picture lands in the middle of the stage: box-overflow has to stay green.
+async function theFigureIsMeasuredWhereItPaints() {
+  const rule = '.slide[data-pattern="figure-caption"] img.figure'
+    + '{width:2000px !important;height:100px !important;flex:none !important}';
+  let good = false;
+  let why = '';
+  try {
+    if (!FIGURE_HTML.includes('</style>')) throw new Drifted('no </style> to plant an override before');
+    const planted = FIGURE_HTML.replace('</style>', `${rule}</style>`);
+    if (planted === FIGURE_HTML) throw new Drifted('the plant changed nothing');
+    const measured = await _measurePlanted(planted, FIGURE_PATH);
+    const fails = gate.BY_NAME['box-overflow'](measured);
+    good = fails.length === 0;
+    if (!good) why = fails[0];
+  } catch (e) {
+    why = e.message;
+  }
+  console.log(`  ${good ? 'ok  ' : 'FAIL'} box-overflow             [${good ? '+' : '-'}] `
+    + 'a picture whose BOX hangs off the stage and whose paint does not');
+  if (!good) console.log(`       <- ${why}`);
+  return good ? 0 : 1;
+}
+
+// THE SECOND GREEN, AND IT IS THE ONE #214 ACTUALLY BOUGHT. Occupancy asks how
+// much of the stage the content covers, and until figures were leaves it
+// counted only TEXT -- so a slide holding nothing but a picture and its caption
+// measured a couple of percent and went red for being "empty". Stripping the
+// caption leaves a slide that is ONLY a figure, which is the shape that used
+// to be impossible to ship: it has to be green now, and it is the case that
+// would go red again the day a figure stops counting as content.
+const CAPTION = /<p class="caption"[^>]*>[\s\S]*?<\/p>/;
+
+async function theFigureCountsAsContent() {
+  let good = false;
+  let why = '';
+  try {
+    if (!CAPTION.test(FIGURE_HTML)) throw new Drifted('no <p class="caption"> to strip');
+    const planted = FIGURE_HTML.replace(CAPTION, '');
+    if (planted === FIGURE_HTML) throw new Drifted('the plant changed nothing');
+    const measured = await _measurePlanted(planted, FIGURE_PATH);
+    const fails = gate.BY_NAME['occupancy'](measured);
+    good = fails.length === 0;
+    if (!good) why = fails[0];
+  } catch (e) {
+    why = e.message;
+  }
+  console.log(`  ${good ? 'ok  ' : 'FAIL'} occupancy                [${good ? '+' : '-'}] `
+    + 'a slide holding a figure and not one word of its own');
+  if (!good) console.log(`       <- ${why}`);
+  return good ? 0 : 1;
+}
 
 async function main(argv) {
   const idx = argv.indexOf('--corpus');
@@ -276,11 +372,27 @@ async function main(argv) {
   CHART_PATH = path.join(dir, charted);
   CHART_HTML = fs.readFileSync(CHART_PATH, 'utf8');
 
+  // And the same rule a third time: the two figure cases need a page that
+  // carries an imported figure, and the alphabet does not decide which one.
+  const pictured = (f) => fs.readFileSync(path.join(dir, f), 'utf8').includes('<img class="figure"');
+  const drawnFig = files.find(pictured);
+  if (!drawnFig) {
+    return new Proof({ title: 'render.proof' }).refuse(
+      `build a source with a figure slide carrying an <img> into --corpus ${dir} — `
+      + 'both figure plants need a page with an <img class="figure"> on it to '
+      + 'resize, and no built page there has one'
+    );
+  }
+  FIGURE_PATH = path.join(dir, drawnFig);
+  FIGURE_HTML = fs.readFileSync(FIGURE_PATH, 'utf8');
+
   let GREEN;
   let CHART_GREEN;
+  let FIGURE_GREEN;
   try {
     GREEN = await _measureWithRetry(REAL_PATH);
     CHART_GREEN = await _measureWithRetry(CHART_PATH);
+    FIGURE_GREEN = await _measureWithRetry(FIGURE_PATH);
   } catch (e) {
     return new Proof({ title: 'render.proof' }).refuse(`could not measure the real corpus: ${e.message}`);
   }
@@ -321,11 +433,32 @@ async function main(argv) {
     },
   });
 
+  const FIGURE_PROOF = new Proof({
+    title: 'render.proof · over the figure deck',
+    label: (ruler) => ruler,
+    invoke: async (ruler, html) => {
+      const measured = await _measurePlanted(html, FIGURE_PATH);
+      const fails = gate.BY_NAME[ruler](measured);
+      return [fails.length === 0, summarize(fails) || '(no message)'];
+    },
+    planted: (html) => html !== FIGURE_HTML,
+    control: async (ruler) => {
+      const fails = gate.BY_NAME[ruler](FIGURE_GREEN);
+      return [fails.length === 0, summarize(fails)];
+    },
+  });
+
   let bad = await PROOF.run(CASES);
   console.log();
   bad += await CHART_PROOF.run(CHART_CASES);
+  console.log();
+  bad += await FIGURE_PROOF.run(FIGURE_CASES);
+  console.log();
+  console.log('and the two that demand green:  [green]');
+  bad += await theFigureIsMeasuredWhereItPaints();
+  bad += await theFigureCountsAsContent();
 
-  const all = CASES.concat(CHART_CASES);
+  const all = CASES.concat(CHART_CASES, FIGURE_CASES);
   const covered = new Set(all.map((c) => c[0]));
   const uncovered = gate.RULERS.map((r) => r.name).filter((n) => !covered.has(n));
   console.log();

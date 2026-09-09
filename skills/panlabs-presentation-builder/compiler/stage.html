@@ -496,6 +496,60 @@ body {
 .slide[data-pattern="chart"] .plot .slice-2 { fill: var(--accent); }
 .slide[data-pattern="chart"] .plot .slice-3 { fill: var(--content-2); }
 
+/* ── pattern · figure-caption (#214) ─────────────────────────────────────────
+ * The one pattern whose CONTENT the catalog does not compose, so the stage
+ * composes around it instead: the claim on the top edge when it is written,
+ * the caption over a hairline on the bottom one, and the figure taking every
+ * pixel between them.
+ *
+ * `flex: 1` IS THE WHOLE OF "a figura pode ocupar o slide inteiro ou dividir o
+ * palco com um título-tese". With no title written the figure simply grows
+ * into the space the title would have taken -- no selector has to ask which of
+ * the two compositions this slide is, and neither does the compiler.
+ *
+ * THE CAPTION IS AUTHORED SECOND AND READ LAST, the same one line of `order`
+ * the chart's dated source spends: the register orders the slots the way they
+ * are WRITTEN, and a legend belongs under the thing it names.
+ */
+.slide[data-pattern="figure-caption"] .title {
+  font-size: var(--type-title);
+  max-width: 94%;
+}
+
+.slide[data-pattern="figure-caption"] .caption {
+  order: 1;
+  max-width: 100%;
+  padding-top: calc(var(--stage-height) * 0.024);
+  border-top: calc(var(--stage-height) * 0.0015) solid var(--hairline);
+}
+
+/* THE PAINT IS SET ON THE ROOT AND INHERITED, NOT SELECTED PER ELEMENT, and
+ * that is the difference between a default and an override. `fill` inherits,
+ * and a presentation attribute on a child beats a value inherited from its
+ * parent -- so a shape that says `fill="var(--accent)"` gets the accent while
+ * a shape that says nothing gets the ink. A rule naming `.figure *` instead
+ * would win over every author's own attribute, and the freedom this slot
+ * exists to give would be a freedom the stage quietly took back.
+ *
+ * The face is the body's, and it is NOT the author's to set (no `font-family`
+ * in the register's attributes): a figure is a diagram, and one deck's
+ * diagrams reading in three faces is the "pilha" #207 refuses.
+ */
+.slide[data-pattern="figure-caption"] .figure {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  margin: calc(var(--stage-height) * 0.035) 0;
+  fill: var(--ink);
+  font-family: var(--font-body);
+  /* An imported picture is letterboxed inside its box exactly the way a
+   * drawing with a viewBox already is. Neither is ever stretched to fill the
+   * stage: a figure distorted to fit is a figure lying about a shape. */
+  object-fit: contain;
+}
+
 /* ── pattern · pull-quote ───────────────────────────────────────────────────
  * The quote in the air with the accent running down its side -- the one mark
  * that says "these are not our words" without spending a colour on it -- and

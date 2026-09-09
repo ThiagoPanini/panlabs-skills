@@ -148,7 +148,7 @@ A fonte gravada é o que faz este turno existir depois que a sessão acabou: rec
 
 **O catálogo está em [`CATALOG.md`](CATALOG.md)**, e é lá que se escolhe um padrão: cada um traz os slots que aceita, quais deles são obrigatórios, o papel de cada slot, quantas palavras o slide inteiro pode gastar e, quando houver, o grupo que carrega. Aquele documento é **gerado** de [`compiler/catalog.py`](compiler/catalog.py), que é o registro que o compilador de fato consulta — `python3 compiler/catalog.py --check` reprova quando os dois discordam, e `--write` põe o registro de volta lá.
 
-**A árvore carrega dois exemplos, e entre os dois todo padrão do catálogo aparece pelo menos uma vez.** [`examples/canonical.deck.html`](examples/canonical.deck.html) é o **exemplo canônico**: um resultado com dados no tema `panlabs`, com as seis formas de gráfico, as duas metades da figura, a tabela, a linha do tempo e as métricas — e é contra a capa e a assinatura **dele** que a `difference` de todo outro deck é escrita. [`examples/proposal.deck.html`](examples/proposal.deck.html) é a contraparte sem marca: uma proposta no tema `base`, com os padrões feitos de palavra — colunas, comparação, citação, pergunta-pivô, lista com ícones —, mais as notas do apresentador e os fragmentos. Os dois são sintéticos: não existe o Estaleiro, não existe a oficina, e nenhum número deles foi medido em lugar nenhum.
+**A árvore carrega dois exemplos, e entre os dois todo padrão do catálogo aparece pelo menos uma vez.** [`examples/canonical.deck.html`](examples/canonical.deck.html) é o **exemplo canônico**: um resultado com dados no tema `panlabs`, com as seis formas de gráfico, as duas metades da figura, a tabela, a linha do tempo e as métricas — e é contra a capa e a assinatura **dele** que a `difference` de todo outro deck é escrita. [`examples/proposal.deck.html`](examples/proposal.deck.html) é a contraparte sem marca: uma proposta no tema `base`, com os padrões feitos de palavra — colunas, comparação, citação, pergunta-pivô, lista com ícones —, mais as notas do apresentador, os fragmentos e uma figura desenhada. É nele que a **cor de conteúdo significa o que o cabeçalho diz**: um gráfico gasta as duas cores emprestadas sem ninguém digitar nenhuma, então um deck de gráficos só pode declarar o que o palco faz com elas; este renuncia ao gráfico e gasta as duas à mão, uma vez cada, nas duas coisas de que a proposta inteira trata. Os dois são sintéticos: não existe o Estaleiro, não existe a oficina, e nenhum número deles foi medido em lugar nenhum.
 
 ## Construir
 
@@ -291,9 +291,8 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | for medir a página construída num navegador de verdade | [`gate/cdp.cjs`](gate/cdp.cjs) |
 | quiser a folha de contato ou o laudo das sete réguas de render | [`gate/render.cjs`](gate/render.cjs) |
 | for escolher um padrão para um slide, com slots, papéis e orçamento | [`CATALOG.md`](CATALOG.md) |
-| quiser saber em que a capa e a assinatura do seu deck têm de diferir | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
-| quiser ver o número gigante, as métricas, a linha do tempo e a tabela numa fonte só | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
-| quiser ver colunas, comparação, citação e lista com ícones numa fonte só | [`examples/proposal.deck.html`](examples/proposal.deck.html) |
+| quiser ver os quatro padrões que carregam uma série numa fonte só | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
+| quiser ver colunas, comparação e lista com ícones numa fonte só | [`examples/proposal.deck.html`](examples/proposal.deck.html) |
 | for escolher um ícone, ou conferir a licença do conjunto | [`themes/base/icons/`](themes/base/icons/) |
 | for escolher a forma de um gráfico, ou ver as seis numa fonte só | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
 | quiser saber como um gráfico é desenhado, ou por que um rótulo não coube | [`compiler/charts.py`](compiler/charts.py) |
@@ -306,5 +305,6 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | for embutir as fontes de um tema novo, ou entender o `@font-face` que sai | [`compiler/fonts.py`](compiler/fonts.py) |
 | quiser saber o que sai no storyboard, ou de onde vem a mensagem de um slide | [`compiler/storyboard.py`](compiler/storyboard.py) |
 | for propor um storyboard, escolher o arco, ou decidir o que fica de fora do deck | [`NARRATIVE.md`](NARRATIVE.md) |
+| quiser saber de que capa e de que assinatura o seu deck é obrigado a diferir | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

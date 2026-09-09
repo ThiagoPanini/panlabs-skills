@@ -141,6 +141,24 @@ def build(text, assets=(), theme=None):
     return ok, said
 
 
+# ONE BUILD PER (SOURCE, FILES, THEME), HOWEVER MANY BLOCKS STAND ON IT (#219).
+# A block's green control is the build of the UNPLANTED ground, and two blocks
+# standing on the same deck cannot disagree about it. That was free while the
+# tree carried seven decks and almost every block had one to itself; with the
+# corpus down to two, sixteen blocks were paying sixteen builds -- and, through
+# `build.py`'s own call to the render gate, sixteen Chromium launches -- to
+# re-derive two answers. `check-render.proof.cjs` keeps the same cache one floor
+# over, for the same reason and since the same ticket.
+_CONTROLS = {}
+
+
+def control_for(real, assets, theme):
+    key = (real, assets, theme)
+    if key not in _CONTROLS:
+        _CONTROLS[key] = build(real, assets, theme=theme)
+    return _CONTROLS[key]
+
+
 def block(title, real, cases, width, theme=None, assets=()):
     """One fixture's worth of cases, sharing one green control.
 
@@ -169,12 +187,8 @@ def block(title, real, cases, width, theme=None, assets=()):
     planted. `figure_block` below stays separate, because its own cases plant
     into the BYTES.
     """
-    settled = []
-
     def control(_key):
-        if not settled:
-            settled.append(build(real, assets, theme=theme))
-        return settled[0]
+        return control_for(real, assets, theme)
 
     return Proof(
         title=title,
@@ -186,7 +200,7 @@ def block(title, real, cases, width, theme=None, assets=()):
     ).run(cases)
 
 
-# ── the figure deck, whose payload is a source AND the files beside it (#214) ──
+# ── the deck whose payload is a source AND the files beside it (#214) ────────
 # THE PLANT IS NOT ALWAYS IN THE TEXT. Two of the cases below leave the deck
 # untouched and change the BYTES of the picture it points at -- a file over the
 # ceiling, a file that is not the format its own name promised -- and a
@@ -209,12 +223,8 @@ def in_file(payload):
 
 
 def figure_block(title, cases, width):
-    settled = []
-
     def control(_key):
-        if not settled:
-            settled.append(build(*REAL_FIGURE))
-        return settled[0]
+        return control_for(REAL_FIGURE[0], REAL_FIGURE[1], None)
 
     return Proof(
         title=title,
@@ -723,10 +733,23 @@ def the_unfaced_theme_promises_nothing():
     return 0 if good else 1
 
 
-# The two figure slides of the canonical deck, in the order the storyboard
-# numbers them: the imported picture first, the drawing later.
-PICTURE_ROW = "| 2 |"
-DRAWING_ROW = "| 16 |"
+SECTION = re.compile(r"<section\b.*?</section>", re.S)
+
+
+def figure_slides(text):
+    """(slide number, whether it is DRAWN) for every figure slide of a source.
+
+    READ OFF THE SOURCE, NEVER WRITTEN HERE. Which slide of the canonical deck
+    holds the picture and which holds the drawing is the deck's business, and a
+    pair of numbers typed into this file is a pair somebody eventually edits to
+    match a deck they just changed -- which is the case passing by being taught
+    the answer.
+    """
+    rows = []
+    for n, chunk in enumerate(SECTION.findall(text or ""), start=1):
+        if 'pattern="figure-caption"' in chunk:
+            rows.append((n, "<svg" in chunk))
+    return rows
 
 
 def the_photograph_is_not_a_moment():
@@ -746,25 +769,30 @@ def the_photograph_is_not_a_moment():
     with the two the wrong way round.
     """
     ok, said, _, board = _run(CANONICAL_SOURCE, GOOD_ASSETS)
-    figures = (CANONICAL_SOURCE or "").count('<section pattern="figure-caption"')
+    figures = figure_slides(CANONICAL_SOURCE)
     rows = {r.split("|")[1].strip(): r for r in (board or "").splitlines()
             if r.startswith("| ")}
-    picture = rows.get(PICTURE_ROW.strip("| "), "")
-    drawing = rows.get(DRAWING_ROW.strip("| "), "")
-    told = ("figure-caption" in picture and "figure-caption" in drawing
-            and "· momento" not in picture and "· momento" in drawing)
-    good = ok and figures == 2 and told
-    marks = f"[{'+' if ok else '-'}{'+' if figures == 2 and told else '-'}]"
+    both = len(figures) >= 2 and any(d for _, d in figures) and any(
+        not d for _, d in figures)
+    told = both and all(
+        "figure-caption" in rows.get(str(n), "")
+        and ("· momento" in rows.get(str(n), "")) is drawn
+        for n, drawn in figures
+    )
+    good = ok and told
+    marks = f"[{'+' if ok else '-'}{'+' if told else '-'}]"
     print(f"  {'ok  ' if good else 'FAIL'} {'a picture is not a peak':<23} {marks} "
-          f"{figures} figure slides, and only the drawn one counts as a moment")
+          f"{len(figures)} figure slides, and only the drawn one counts as a moment")
     if not good:
         if not ok:
             print(f"       <- refused: {said}")
-        elif figures != 2:
-            print(f"       <- the fixture has {figures} figure slides, not 2")
+        elif not both:
+            print(f"       <- the fixture needs one DRAWN figure slide and one "
+                  f"imported; it has {figures}")
         else:
-            print(f"       <- the storyboard says {picture.strip()!r} and "
-                  f"{drawing.strip()!r}")
+            for n, drawn in figures:
+                print(f"       <- slide {n} is {'drawn' if drawn else 'imported'} "
+                      f"and its row is {rows.get(str(n), '(missing)').strip()!r}")
     return 0 if good else 1
 
 
@@ -815,6 +843,11 @@ def main():
     ], width=22)
 
     print()
+    # ONE BLOCK, BECAUSE THE TWO GROUNDS BECAME ONE (#219). These cases used to
+    # be split -- a budget planted into a two-slide deck, a category title and a
+    # repeated divider into a deck long enough to have both -- and "over a deck"
+    # was what told the reader which ground each stood on. Both stand on the
+    # proposal deck now, so the second title distinguished nothing.
     failed += block("the doctrine rulers", PROPOSAL_SOURCE, [
         (
             "budget over",
@@ -824,10 +857,6 @@ def main():
                  THIRTY_WORDS),
             "cut the slide to 12 words",
         ),
-    ], width=22)
-
-    print()
-    failed += block("the doctrine rulers, over a deck", PROPOSAL_SOURCE, [
         (
             "category title",
             "the biggest type on the stage naming a folder",

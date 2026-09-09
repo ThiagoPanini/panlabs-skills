@@ -866,11 +866,33 @@ def _slide(node, n):
 # such mark: a ruler for "the signature really does repeat" would be measuring
 # taste, which is what the contact sheet and a pair of eyes are for.
 #
-# THE DIFFERENCE IS THE ONE THAT IS MERELY EARLY. #207 asks the direction to
-# declare "em que difere do exemplo canônico da skill"; WHICH example is
-# canonical is a decision the front door makes (#218), and holding a deck against
-# an example nobody has named yet would be a ruler measuring a fixture instead of
-# a defect.
+# THE DIFFERENCE WAS THE ONE THAT WAS MERELY EARLY, AND IT IS NO LONGER EARLY.
+# #207 asks the direction to declare "em que difere do exemplo canônico da
+# skill", and until #219 there was no canonical example to differ FROM: holding a
+# deck against a fixture nobody had named would have been a ruler measuring the
+# corpus instead of a defect. #219 named it -- `examples/canonical.deck.html`,
+# and `SKILL.md` and `CATALOG.md` both say so -- so the precondition this note
+# was waiting on is met, and what is missing now is the ruler rather than its
+# subject.
+#
+# IT IS STILL NOT WRITTEN HERE, AND THE REASON IS SCOPE AND NOT DOUBT. #219's own
+# acceptance is about the corpus (coverage, synthetic text, weight, one command
+# that regenerates); enforcing #207's story 46 ("obrigada a diferir do exemplo
+# canônico em capa e assinatura") is a ruler with its own plant and its own
+# entry in the reference, and landing it inside a movimento-de-terra would put
+# two decisions under one squash. It has a ticket of its own:
+# https://github.com/ThiagoPanini/panlabs-skills/issues/233 -- and this note is
+# the one place a reader of `_direction` finds out that the gap is known, which
+# is the difference between a deferral and an omission.
+#
+# WHAT THE RULER CAN AND CANNOT ASK, for whoever writes it: `cover` is drawn
+# from a closed set and compares exactly; `signature` is a sentence, and the
+# only honest comparison is against the canonical's own words, which catches the
+# deck that COPIED the example and not the one that reworded it. That is the
+# real failure mode -- #207 asks for this so decks stop converging on the
+# composition the example demonstrates -- and it is why the canonical's own
+# `difference` line names its cover and its signature instead of saying it has
+# none.
 
 def _direction(node):
     """The art-direction block: every choice the register declares, and no more."""

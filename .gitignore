@@ -53,10 +53,11 @@ __pycache__/
 # `SKILL.md` promete que duas construções da mesma fonte não diferem em um byte.
 #
 # ⚠️ O #219 CONSIDEROU VERSIONAR AS FOLHAS DE CONTATO E NÃO VERSIONOU, pela
-# medição que está escrita quinze linhas acima: no #62, quatro de quatro
-# artefatos renderizados e commitados divergiam do que o gerador produzia, e
-# nenhuma régua comparava os dois. Render versionado que ninguém compara não é
-# evidência. O que o ticket pede — "derivado se regenera: um comando refaz os
-# dois HTMLs e as folhas de contato" — é o comando, e ele existe; o que prova
-# que o corpus renderiza é a camada 2 da suíte, rodando.
+# medição do #62 que este mesmo arquivo já registra na entrada da
+# `panlabs-aws-diagrams`: quatro de quatro artefatos renderizados e commitados
+# divergiam do que o gerador produzia, e nenhuma régua comparava os dois. Render
+# versionado que ninguém compara não é evidência. O que o ticket pede —
+# "derivado se regenera: um comando refaz os dois HTMLs e as folhas de contato"
+# — é o comando, e ele existe; o que prova que o corpus renderiza é a camada 2
+# da suíte, rodando.
 workbench/panlabs-presentation-builder/renders/

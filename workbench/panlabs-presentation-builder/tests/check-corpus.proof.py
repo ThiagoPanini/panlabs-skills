@@ -99,6 +99,29 @@ def _empty(examples):
         os.remove(os.path.join(examples, name))
 
 
+def _gone(examples):
+    """The directory itself taken away, which is the check's other refusal.
+
+    An empty `examples/` and no `examples/` at all are different failures with
+    the same consequence, and the check answers them in different branches. A
+    branch with no needle is a branch nobody has seen run.
+    """
+    shutil.rmtree(examples)
+
+
+def _unparseable(examples):
+    """A source that is not a deck, which is the check's third refusal.
+
+    `used()` PARSES, so a file the parser refuses is a real state it has to
+    answer for: reporting "0 of 18 patterns" over a corpus that simply would not
+    open is the same green-about-nothing an empty directory buys, wearing a
+    number.
+    """
+    with open(os.path.join(examples, "broken.deck.html"), "w",
+              encoding="utf-8") as fh:
+        fh.write("<p>uma fonte sem deck nenhum dentro dela</p>\n")
+
+
 def _only_prose(examples):
     """The pattern named in a comment instead of taken by a slide.
 
@@ -141,6 +164,18 @@ CASES = [
         _empty,
         "add a slide in",
     ),
+    (
+        "no examples/ at all",
+        "the directory itself gone, which is the check's other refusal",
+        _gone,
+        "put the examples back at",
+    ),
+    (
+        "a source that is not a deck",
+        "a file the parser refuses, answered with a number instead of a red",
+        _unparseable,
+        "fix the source before asking what the corpus covers",
+    ),
 ]
 
 
@@ -175,6 +210,14 @@ def main():
 
 
 def _digest(examples):
+    """Every byte of a corpus, or None when there is no corpus to read.
+
+    None IS A REAL ANSWER AND NOT AN ERROR PATH: one case takes the directory
+    away, and "the plant changed nothing" is exactly the wrong thing to say
+    about it.
+    """
+    if not os.path.isdir(examples):
+        return None
     out = []
     for name in sorted(os.listdir(examples)):
         with open(os.path.join(examples, name), "rb") as fh:

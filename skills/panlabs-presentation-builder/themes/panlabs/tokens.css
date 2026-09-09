@@ -1,0 +1,155 @@
+/* THE IDENTITY OF THE DOCUMENTATION, ON A STAGE.
+ *
+ * `panlabs` is a SHEET OF OVERRIDES over `base`, and nothing else. Every name
+ * below is a name `themes/base/tokens.css` already declares; the compiler
+ * refuses a theme that invents one, because a theme that could invent a token
+ * would be a theme every pattern had to learn about one by one. The stage,
+ * the patterns, the type scale and the motion profiles all still come from
+ * `base` -- what changes here is which colours, which faces and which corner
+ * radius those structures wear.
+ *
+ * IT IS A SNAPSHOT, AND THE SNAPSHOT IS RESOLVED, NOT COPIED. The source of
+ * truth for this identity is `src/css/tokens.css` in the `panlabs-docs`
+ * repository, where half these values are DERIVED -- `oklch(from …)`,
+ * `rgb(from … / N%)`, `calc()` -- and only resolve inside a CSS engine. A
+ * deck has no CSS engine at compile time and no `panlabs-docs` beside it, so
+ * what lands here is the resolved literal.
+ *
+ * WHICH MEANS THIS FILE CAN DRIFT FROM THE DOCS WITHOUT ANYTHING GOING RED,
+ * and that is exactly what
+ * `workbench/panlabs-presentation-builder/tests/check-theme.py` exists to
+ * refuse: it re-resolves the docs' own file and compares, token by token,
+ * naming both values when they disagree. It does NOT sync -- #207 puts
+ * automatic synchronisation out of scope, because when the documentation
+ * moves, whether the decks move with it is a decision and not a consequence.
+ * With no `panlabs-docs` beside the repository it degrades to a named SKIP.
+ *
+ * ONLY THE DARK APPEARANCE IS HERE. The documentation is born dark and
+ * offers light as a toggle; a projected deck has one appearance and nothing
+ * to toggle it with, so shipping a light block would be shipping a selector
+ * nobody sets. The docs' light values stay one command away --
+ * `python3 check-theme.py --print --mode light` resolves them -- and that is
+ * the whole of the debt.
+ */
+
+:root {
+  /* ---- surface and ink -------------------------------------------------
+   * The near-black of every page of the documentation, and the cool-white it
+   * writes titles in.
+   *
+   * `--ink` IS THE DOCS' HEADING INK, NOT ITS PROSE INK, and the reason is
+   * what a slide is: there is no 720px column of paragraphs on a stage, and
+   * every line on one is a claim someone reads from the back row. The docs
+   * spend three inks -- strong `#F4F6FA` for headings, body `#CFD1D5` for
+   * prose, muted `#A0A2A6` for what is secondary -- and the deck's vocabulary
+   * has room for two. The prose step is the one with no seat here: it is the
+   * one that only exists where there are paragraphs.
+   *
+   * docs: --pd-surface-page · --pd-text-strong · --pd-text-muted
+   */
+  --surface: #141414;
+  --ink: #F4F6FA;
+  --ink-muted: #A0A2A6;
+
+  /* ---- the accent, locked for the dark -----------------------------------
+   * One accent, and it is the brand: `#BC461D`, a burnt terracotta. The docs
+   * never paint the brand raw -- only its HUE ANGLE survives, and lightness
+   * is locked per appearance: `oklch(from var(--pd-brand) max(l, 0.72) c h)`
+   * on the dark, `min(l, 0.50)` on the light. Resolved, the dark lock is the
+   * salmon below; it is the value a deck wears, because a deck is dark.
+   *
+   * docs: --pd-accent = --pd-brand-on-dark
+   */
+  --accent: #F77C55;
+
+  /* ---- the two content colours ------------------------------------------
+   * The theme lends a deck two colours beyond the accent, and the deck's art
+   * direction decides what each one MEANS. Both are borrowed from the docs'
+   * state ramp, `oklch(80% 0.14 <hue>)` on the dark: the blue of `note`
+   * (hue 266) and the green of `tip` (hue 150).
+   *
+   * THE OTHER TWO STOPS OF THAT RAMP WERE NOT ELIGIBLE. `warning` (hue 62)
+   * and `danger` (hue 27) are both warm, and the accent already owns warm at
+   * hue 38 -- a deck that marked one thing in terracotta and another in
+   * amber would be asking the room to read a legend nobody printed. Cool is
+   * the only direction with room left in it, and there are exactly two cool
+   * stops.
+   *
+   * `--content-1` IS OUTSIDE sRGB AT THAT LIGHTNESS AND IS CARRIED CLIPPED.
+   * `oklch(80% 0.14 266)` asks for more blue than the gamut has; the literal
+   * below is the per-channel clip, which is what the identity report that
+   * produced this snapshot published. A browser resolving the docs' own
+   * declaration reduces chroma instead of clipping and lands a hair off
+   * (`#9EBCFF`) -- the same colour to the eye, and a difference only worth
+   * writing down so nobody re-derives it and thinks the snapshot is wrong.
+   *
+   * docs: --pd-state-info · --pd-state-success
+   */
+  --content-1: #93BBFF;
+  --content-2: #75D78D;
+
+  /* ---- the three hairlines ----------------------------------------------
+   * The documentation separates surfaces with a line and never with a fill:
+   * card, callout, frame, code block, navbar, footer are all one 1px rule at
+   * 7%, 12% or 20% of the heading ink. It is the single most recognisable
+   * thing about the identity after the accent, and the deck inherits the
+   * three alphas exactly.
+   *
+   * docs: --pd-border-subtle / -default / -strong, all
+   *       `rgb(from var(--pd-text-strong) r g b / N%)`
+   */
+  --hairline-faint: rgb(244 246 250 / 0.07);
+  --hairline: rgb(244 246 250 / 0.12);
+  --hairline-strong: rgb(244 246 250 / 0.20);
+
+  /* ---- radius ------------------------------------------------------------
+   * 16px, which is what `base` already carries. It is declared anyway rather
+   * than left to inheritance: this file is a SNAPSHOT of the docs, and a
+   * token missing from it is a token the drift check cannot weigh. Agreement
+   * with `base` today is a coincidence, not a rule.
+   *
+   * docs: --pd-radius
+   */
+  --radius: 16px;
+
+  /* ---- fonts -------------------------------------------------------------
+   * Inter for everything and Paper Mono for metadata -- the docs set headings
+   * to the body family on purpose (`--pd-font-heading: var(--pd-font-body)`),
+   * so the deck's display and body steps name the same face.
+   *
+   * THE FIRST FAMILY IS THE NAME THE BINARY CARRIES, not the name the docs
+   * write. `themes/panlabs/fonts/` embeds the docs' own two files, cut to a
+   * repertoire; their `name` ID 1 reads `Inter Variable` and `Paper Mono`,
+   * and `CSS.getPlatformFontsForNode` -- which is what the render gate's
+   * `platform-font` ruler reads to know whether the declared face is the one
+   * that painted -- answers with that internal name and not with the CSS
+   * one. Writing `'Inter'` here would leave the ruler comparing two strings
+   * that can never match, on a page where nothing is actually wrong. The
+   * fallbacks after it are the docs' own, unchanged.
+   *
+   * The `@font-face` rules are NOT in this file: `compiler/fonts.py` builds
+   * them from `fonts/faces.json`, so the bytes live beside their licence
+   * instead of inside a stylesheet nobody can read.
+   *
+   * docs: --pd-font-heading · --pd-font-body · --pd-font-mono
+   */
+  --font-display: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Paper Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* ---- the alternates ----------------------------------------------------
+   * THIS IS WHY THE TEXT DOES NOT LOOK LIKE DEFAULT INTER. The docs turn on
+   * four character variants -- open 4, 6 and 9, and the single-storey `a` --
+   * on the root element, and every face on the page inherits them. They are
+   * a property and not a token, so they do not enlarge the closed list of
+   * names a theme may set; they are simply the rest of what "Inter, the way
+   * this house draws it" means.
+   *
+   * The subset in `fonts/` keeps the four features for exactly this line:
+   * cut out of the binary, the declaration below would still parse, still
+   * cascade, and do nothing at all.
+   *
+   * docs: html { font-feature-settings: 'cv02','cv03','cv04','cv11' }
+   */
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}

@@ -13,7 +13,7 @@ O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inl
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e agora a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Faltam o tema `panlabs` e a jornada de três turnos, que chegam pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e ela está sendo construída em fila.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e agora a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Os **dois temas** existem: `base`, sem marca, e `panlabs`, com as fontes e as cores da documentação da casa. Falta a jornada de três turnos, que chega pelos tickets seguintes da spec. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
 ## O dialeto
 
@@ -60,7 +60,7 @@ python3 compiler/build.py examples/statement.deck.html /tmp/exemplo.html
 python3 compiler/build.py /tmp/proposta.deck.html /tmp/proposta.html --theme base
 ```
 
-`--theme` sobrescreve o tema que o cabeçalho declara — é o que permite reconstruir o mesmo deck em `base` para provar que o padrão se sustenta sem marca nenhuma atrás dele.
+`--theme` sobrescreve o tema que o cabeçalho declara — é o que permite reconstruir o mesmo deck em `base` para provar que o padrão se sustenta sem marca nenhuma atrás dele, ou em `panlabs` para vê-lo com a identidade da casa. Os dois temas são estes; um nome que não seja um deles é recusado com a lista do que existe.
 
 **Tudo o que o comando tem a dizer sai na saída padrão**, e o código de saída é o veredito: `0` o arquivo foi escrito, `1` não foi. A saída é determinística — não há relógio dentro dela, então duas construções da mesma fonte não diferem em um byte.
 
@@ -101,10 +101,11 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
    ✓ chart-fit · every label a chart draws fits the room its form gives it
    ✓ figure-paint · every colour a drawn figure wears is a token of the theme
    ✓ figure-asset · every image a figure points at is there, and fits under the ceiling
-   11 rulers, green
+   ✓ theme-repertoire · every character the deck prints is one the theme's own faces carry
+   12 rulers, green
 ```
 
-**Uma régua lê o dialeto e dez leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, a mesma forma em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, um item de lista com o ícone e sem o texto ou vice-versa, um valor de gráfico que não é número ou uma proporção que não soma cem, um gráfico cuja fonte não diz de quando é o dado, um rótulo maior do que o espaço que a forma dá a ele, uma cor escrita dentro de uma figura em vez de um token do tema, e uma imagem que não resolve, passa do teto de bytes ou não é do formato que o próprio nome promete. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=`, conferir um nome contra um registro, somar uma coluna de números e perguntar ao disco se um arquivo está lá não precisa de navegador.
+**Uma régua lê o dialeto e onze leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, a mesma forma em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, um item de lista com o ícone e sem o texto ou vice-versa, um valor de gráfico que não é número ou uma proporção que não soma cem, um gráfico cuja fonte não diz de quando é o dado, um rótulo maior do que o espaço que a forma dá a ele, uma cor escrita dentro de uma figura em vez de um token do tema, uma imagem que não resolve, passa do teto de bytes ou não é do formato que o próprio nome promete, e um caractere que as fontes do tema não carregam. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=`, conferir um nome contra um registro, somar uma coluna de números e perguntar ao disco se um arquivo está lá não precisa de navegador.
 
 **A forma do gráfico conta como forma.** Dois slides seguidos de `pattern="chart"` passam quando o `type=` difere — barra depois de linha não é um slide que deixou de avançar —, e reprovam quando é o mesmo.
 
@@ -141,11 +142,15 @@ node gate/render.cjs /tmp/exemplo.html --out /tmp
 
 ## O tema
 
-Um tema é uma **folha de tokens**, e a lista de nomes é fechada: superfície, tinta, tinta secundária, acento, duas cores de conteúdo, três hairlines, raio, três fontes, e a escala tipográfica. [`themes/base/tokens.css`](themes/base/tokens.css) é o único lugar onde eles são declarados.
+Um tema é uma **folha de tokens**, e a lista de nomes é fechada: superfície, tinta, tinta secundária, acento, duas cores de conteúdo, três hairlines, raio, três fontes, e a escala tipográfica. [`themes/base/tokens.css`](themes/base/tokens.css) é o único lugar onde eles são declarados — **um tema que inventa um nome é recusado na construção**, porque um token que só um tema escreve é um token com que nenhum padrão pinta.
 
 **Toda medida tipográfica é uma porcentagem da altura do palco** — display 11%, título 7%, frase de apoio 4,2%, corpo 2,8%, e um piso de 2,2% abaixo do qual nenhum texto desce. Um deck é projetado numa resolução que ninguém informa de antemão; tamanho em pixel é tamanho certo num projetor só.
 
-`base` é duas coisas ao mesmo tempo, de propósito: é a estrutura que todo tema herda — palco, padrões, escala — e é um tema completo e sem marca. Um deck construído nele prova que o padrão se sustenta sozinho.
+`base` é duas coisas ao mesmo tempo, de propósito: é a estrutura que todo tema herda — palco, padrões, escala — e é um tema completo e sem marca. Um deck construído nele prova que o padrão se sustenta sozinho. **`base` entra debaixo de todo tema**, seja qual for o `--theme`; o outro é uma folha de sobrescritas por cima.
+
+**[`themes/panlabs/`](themes/panlabs/) é a identidade da casa**, a mesma da documentação em `panlabs-docs`: fundo `#141414`, texto branco-frio, um acento terracota, hairlines a 7, 12 e 20% de tinta como única separação, raio 16, Inter para tudo com os alternates da docs ligados, Paper Mono para metadado, e duas cores de conteúdo emprestadas do azul e do verde da docs. Os valores ali são **literais resolvidos** de um arquivo que os escreve em `oklch(from …)`, então eles podem envelhecer sem ninguém notar; o verificador que compara os dois mora no workspace irmão e não sincroniza sozinho.
+
+**As duas fontes viajam dentro do deck**, em subconjunto, embutidas em base64 — [`themes/panlabs/fonts/`](themes/panlabs/fonts/) tem os dois `.woff2`, a licença OFL ao lado e o manifesto que diz quais caracteres eles carregam. **É esse repertório que a régua `theme-repertoire` cobra**: uma seta que a Inter da docs não trouxe pintaria no substituto do sistema, sem aviso, e a construção reprova antes disso nomeando o caractere.
 
 ## Instalar
 
@@ -178,5 +183,8 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser saber por que uma figura foi recusada, ou o que é embutido dela | [`compiler/figures.py`](compiler/figures.py) |
 | for escrever notas do apresentador, ou revelar um slide em batidas | [`examples/presenting.deck.html`](examples/presenting.deck.html) |
 | quiser saber que teclas o deck construído entende, ou o que cada perfil de movimento faz | [`compiler/stage.html`](compiler/stage.html) |
+| quiser o valor de um token da identidade da casa, e de onde ele veio | [`themes/panlabs/tokens.css`](themes/panlabs/tokens.css) |
+| quiser saber que caracteres o tema `panlabs` sabe pintar, ou refazer o corte das fontes | [`themes/panlabs/fonts/README.md`](themes/panlabs/fonts/README.md) |
+| for embutir as fontes de um tema novo, ou entender o `@font-face` que sai | [`compiler/fonts.py`](compiler/fonts.py) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

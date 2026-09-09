@@ -40,6 +40,7 @@ sys.path.insert(0, HERE)
 
 import charts                                                   # noqa: E402
 import figures                                                  # noqa: E402
+import fonts                                                    # noqa: E402
 import icons                                                    # noqa: E402
 from audit import audit, report                                # noqa: E402
 from catalog import (DECK_FIELDS, EVIDENCE_TAGS, ICON, MOTION_PROFILES,  # noqa: E402
@@ -48,7 +49,11 @@ from catalog import (DECK_FIELDS, EVIDENCE_TAGS, ICON, MOTION_PROFILES,  # noqa:
 from source import (Refused, fields_of, inline_markup,         # noqa: E402
                     plain_text, read)
 
-THEMES = os.path.join(ROOT, "themes")
+# THE THEME EVERY OTHER THEME IS A SHEET OF OVERRIDES OVER. `base` is not one
+# theme among several: it is the structure -- stage, patterns, type scale,
+# motion -- plus a complete unbranded set of values, and it is loaded under
+# every build whatever `--theme` says.
+BASE_THEME = "base"
 SKELETON = os.path.join(HERE, "stage.html")
 MARKER = re.compile(r"\{\{[A-Z_]+\}\}")
 
@@ -102,20 +107,76 @@ def check_header(deck):
 
 # ── the theme ────────────────────────────────────────────────────────────────
 
-def theme_css(name):
-    directory = os.path.join(THEMES, name)
+# Whatever is in a theme directory but not written by a human: a comment can
+# say `--pd-radius: 16px` while quoting the sheet a snapshot came from, and a
+# scan that counted it would have the theme declaring a token it never sets.
+COMMENT = re.compile(r"/\*.*?\*/", re.S)
+DECLARED = re.compile(r"(--[A-Za-z0-9_-]+)\s*:")
+
+
+def sheets_of(name):
+    """One theme's own stylesheets, concatenated, in a stable order."""
+    directory = fonts.directory(name)
     sheets = []
     if os.path.isdir(directory):
         sheets = sorted(f for f in os.listdir(directory) if f.endswith(".css"))
     if not sheets:
         have = sorted(
-            d for d in os.listdir(THEMES) if os.path.isdir(os.path.join(THEMES, d))
+            d for d in os.listdir(fonts.THEMES)
+            if os.path.isdir(fonts.directory(d))
         )
         refuse(f'build with a theme this skill carries: {", ".join(have)} — "{name}" is not one')
     return "\n".join(
         open(os.path.join(directory, s), encoding="utf-8").read().rstrip()
         for s in sheets
     )
+
+
+def tokens_declared(css):
+    """Every custom property a sheet SETS, comments excluded."""
+    return set(DECLARED.findall(COMMENT.sub("", css)))
+
+
+def theme_css(name):
+    """The whole sheet a deck is painted with: `base`, the theme, its faces.
+
+    `BASE_THEME` GOES FIRST AND ALWAYS, AND THAT IS WHAT MAKES A THEME CHEAP.
+    Every other theme is a sheet of OVERRIDES -- #207's "criar um tema custe
+    uma folha de tokens, um par de fontes e motivos opcionais, com toda a
+    estrutura herdada de `base`". The stage, the patterns, the type scale and
+    the motion profiles are declared once, in `base`, and a theme that had to
+    restate them to change a colour would be a theme that drifts from the
+    engine the first time a pattern grows a rule.
+
+    AND A THEME MAY NOT INVENT A TOKEN. `themes/base/tokens.css` says the list
+    of names is closed on purpose: a theme that could add one would be a theme
+    every pattern had to learn about one by one, and a name only one theme
+    sets is a name the other themes paint nothing with. The refusal names each
+    stranger, because the fix is either to spell an existing token or to add
+    the new one to `base` -- where every theme can see it.
+
+    The faces come last and are not a sheet on disk: `fonts.py` builds them
+    out of the theme's own manifest, so the bytes live beside their licence
+    rather than inside a stylesheet nobody can read.
+    """
+    base = sheets_of(BASE_THEME)
+    if name == BASE_THEME:
+        sheet = ""
+    else:
+        sheet = sheets_of(name)
+        strangers = sorted(tokens_declared(sheet) - tokens_declared(base))
+        if strangers:
+            refuse(*[
+                f'declare {token} in themes/{BASE_THEME}/tokens.css or drop it from '
+                f"themes/{name}/ — a theme overrides the token vocabulary, it does "
+                "not extend it, and no pattern paints with a name only one theme sets"
+                for token in strangers
+            ])
+    try:
+        faces = fonts.faces(fonts.directory(name))
+    except fonts.Missing as e:
+        refuse(str(e))
+    return "\n".join(part for part in (faces, base, sheet) if part)
 
 
 # ── the slides ───────────────────────────────────────────────────────────────
@@ -437,7 +498,7 @@ def main(argv=None):
     theme = args.theme or deck.theme
     css = theme_css(theme)
 
-    verdicts = audit(deck)
+    verdicts = audit(deck, theme)
     print(report(deck, theme, verdicts))
     if any(not v.ok for v in verdicts):
         raise SystemExit(1)

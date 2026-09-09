@@ -1,0 +1,18 @@
+{
+  "faces": [
+    {
+      "family": "Inter Variable",
+      "file": "Inter-subset.woff2",
+      "weight": "100 600",
+      "style": "normal"
+    },
+    {
+      "family": "Paper Mono",
+      "file": "PaperMono-subset.woff2",
+      "weight": "100 600",
+      "style": "normal"
+    }
+  ],
+  "repertoire": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~£§©ª«®°±¶·º»¼½¾ÀÁÂÃÇÉÊÍÑÓÔÕ×ÚÜàáâãçéêíñóôõ÷úü–—‘’“”†‡•…‰‹›⁄€™↑↓−",
+  "stageOnly": "\u200a←→⌫"
+}

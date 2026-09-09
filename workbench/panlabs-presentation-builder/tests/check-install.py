@@ -212,13 +212,19 @@ def check_refuses_orphan(root=None, **_):
                            "in tools/install.sh: write nothing and exit "
                            "non-zero, because the link it would write instead "
                            "is the one that dangles with nothing saying so")
+        if not r.stdout.strip():
+            return False, (f"the installer exited {r.returncode} without "
+                           f"saying anything -- a refusal nobody can read is "
+                           f"indistinguishable from a broken installer, and "
+                           f"this family would call both of them a refusal. "
+                           f"Print why, then exit")
         wrote = [str(p) for p in links(home) if p.is_symlink() or p.exists()]
         if wrote:
             return False, (f"the installer refused but still wrote "
                            f"{', '.join(wrote)} -- move the refusal above the "
                            f"first write")
-    return True, ("a worktree with no reachable main checkout is refused, with "
-                  "nothing written")
+    return True, ("a worktree with no reachable main checkout is refused, out "
+                  "loud, with nothing written")
 
 
 def _repo(cwd, *args):
@@ -274,10 +280,20 @@ def check_detects_real_worktree(root=None, **_):
         if landed == {want}:
             return True, ("a worktree outside .claude/worktrees/ is still "
                           "recognised, and the links went to the main checkout")
-        if not landed:
-            return True, ("a worktree outside .claude/worktrees/ is refused "
-                          "outright, with nothing written")
         said = out.stdout.strip().splitlines()
+        if not landed:
+            # REFUSING OUTRIGHT IS AN ACCEPTABLE ANSWER, AND SAYING NOTHING IS
+            # NOT. An installer that simply crashes also writes no link, and
+            # without this branch this family would read the crash as the
+            # judgement it is supposed to be measuring.
+            if not said:
+                return False, (f"nothing was written and nothing was said -- "
+                               f"the installer exited {out.returncode} in "
+                               f"silence, which is what a broken installer "
+                               f"looks like too. Refuse out loud, or point at "
+                               f"the main checkout")
+            return True, ("a worktree outside .claude/worktrees/ is refused "
+                          "outright, out loud, with nothing written")
         return False, (f"installed from a real worktree at {wt} and the links "
                        f"went to {', '.join(sorted(landed))} instead of {want} "
                        f"-- ask git what the tree is (`--git-dir` against "

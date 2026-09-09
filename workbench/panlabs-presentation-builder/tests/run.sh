@@ -152,15 +152,6 @@
 # a file nobody has written -- and #218 is free to absorb it when the front
 # door arrives, which is one step to delete, not a rule to rediscover.
 #
-# ⚠️ #218 ARRIVED AND DID NOT ABSORB IT, BECAUSE THE TWO ARE DIFFERENT RULES.
-# `catalog.py --check` in layer 3 asks whether the document equals the
-# GENERATOR's output; `register-published` in layer 6 asks whether `reference()`
-# still emits every fact the REGISTER holds. A generator that quietly stopped
-# printing a budget regenerates a document that agrees with it perfectly --
-# layer 3 green, the model reading a pattern with no ceiling, and only layer 6
-# red. Deleting either would leave one of those two questions unasked. The v1
-# carried both for exactly this reason, one floor apart.
-#
 # ⚠️ THE TICKET THAT ADDED LAYER 2 (#209) SAID "camada quatro" IN ITS OWN
 # ACCEPTANCE CRITERIA. Read literally that would leave layers 2 and 3 empty
 # on purpose, for tickets that had not landed yet -- but #209 is #208's very
@@ -170,14 +161,6 @@
 # render gate lands as 2, the next free slot, and this note is the reason a
 # reader grepping the ticket for "camada quatro" does not go looking for a
 # layer that was never going to exist.
-#
-# ⚠️ AND #218 SAID "camada cinco" IN ITS OWN ACCEPTANCE CRITERIA, for the same
-# reason and with the same answer. Both numbers were written into the spec's
-# tickets before the queue ran, and five is the storyboard's, taken by #217 one
-# ticket earlier. The front door lands as 6, the next free slot, because the
-# rule above is APPEND AT THE END and not "renumber the neighbours so a ticket
-# written last month reads right". A reader grepping #218 for "camada cinco"
-# finds this note instead of a layer that changed under them.
 #
 # ⚠️ THIS FILE IS A REGISTRY, AND REGISTRIES HERE ARE APPEND-ONLY
 # (CLAUDE.md § Registro é append-only). The render gate, the doctrine rulers
@@ -192,6 +175,32 @@
 # second place the same rule is spent. What it measures -- frontmatter,
 # internal references, weight -- is not what this suite measures, which is
 # whether the compiler still holds.
+#
+# ⚠️ #218 ANSWERS THE REGISTER/REFERENCE NOTE ABOVE, AND THE ANSWER IS NO. That
+# note invited the front door to absorb layer 3's `catalog.py --check` when it
+# arrived; it arrived, and the two turned out to be different rules. `--check`
+# asks whether the document equals the GENERATOR's output; `register-published`
+# in layer 6 asks whether `reference()` still emits every fact the REGISTER
+# holds. A generator that quietly stopped printing a budget regenerates a
+# document agreeing with it perfectly -- layer 3 green, the model reading a
+# pattern with no ceiling, and only layer 6 red. Deleting either leaves one of
+# those two questions unasked; the v1 carried both, one floor apart, for exactly
+# this reason.
+#
+# ⚠️ AND #218 SAID "camada cinco", THE WAY #209 SAID "camada quatro" ABOVE, AND
+# GETS THE SAME ANSWER. Both numbers were written into the spec's tickets before
+# the queue ran, and five is the storyboard's, taken by #217 one ticket earlier.
+# The front door lands as 6, the next free slot, because the rule above is
+# APPEND AT THE END and not "renumber the neighbours so a ticket written last
+# month reads right". A reader grepping #218 for "camada cinco" finds this note
+# instead of a layer that changed under them.
+#
+# ⚠️ AND THESE TWO NOTES SIT AT THE TAIL RATHER THAN BESIDE WHAT THEY ANSWER,
+# which is the same rule one paragraph up applied to itself: this block is a
+# registry too. Each opens by naming the note it replies to, which costs a
+# clause and buys the one thing splicing them into the middle would have taken
+# away -- an append that collides as text when two sessions write here at once,
+# instead of merging green into an order nobody chose.
 set -uo pipefail
 
 # A RULER LEAVES NO TRACE ON ITS SUBJECT. Layer 1 runs the skill's OWN
@@ -458,12 +467,20 @@ echo "════ layer 6 · the front door ════"
 # holds; this one answers whether the document that sends a model to it still
 # says the true thing.
 #
-# ⚠️ WHAT IS MEASURED HERE IS POSITION AND THE REGISTER, NEVER A SENTENCE. A
-# checker grepping for phrases goes red on the first rewording and teaches
-# everybody to edit around it. What the journey families read is where a turn
-# sits, which turn runs `build.py`, which turn first names the storyboard, and
-# what names `compiler/catalog.py` holds -- so the prose stays a human's to
-# write, which is the half of `docs/agents/skills.md` no gate can judge.
+# ⚠️ WHAT IS MEASURED HERE IS POSITION AND THE REGISTER, AND ONE PHRASE. A
+# checker grepping for sentences goes red on the first rewording and teaches
+# everybody to edit around it, so what the journey families read is where a
+# turn sits, which turn runs `build.py`, which turn first names the storyboard,
+# and what names `compiler/catalog.py` holds -- the prose around all of that
+# stays a human's to write, which is the half of `docs/agents/skills.md` no
+# gate can judge.
+#
+# THE ONE PHRASE IS `**Fecha quando**`, AND IT IS NAMED HERE RATHER THAN
+# GLOSSED OVER. "When does this turn end" has no position to be read out of and
+# no register to be looked up in; it is a promise the document makes in words,
+# so the check reads the words. Renaming it costs one constant at the top of
+# `check-journey.py` -- which is the price of the only rule in that file that
+# could not be bought any other way.
 step "the journey check proves it measures" \
   python3 "$HERE/check-journey.proof.py"
 

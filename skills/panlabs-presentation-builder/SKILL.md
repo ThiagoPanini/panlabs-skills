@@ -1,6 +1,6 @@
 ---
 name: panlabs-presentation-builder
-description: Gera uma apresentação HTML de arquivo único, offline, em slides 16:9 paginados — o modelo escreve a fonte num dialeto restrito de HTML, e o compilador desenha o palco, embute o tema e recusa o que está fora do vocabulário. Use ao pedir uma apresentação, um deck ou slides; ao transformar um texto, uma proposta, uma ata ou um relatório em apresentação; ao encurtar, revisar ou corrigir uma apresentação já gerada; e ao retomar uma fonte escrita numa sessão anterior.
+description: Gera uma apresentação HTML de arquivo único, offline, em slides 16:9 paginados, numa jornada de três turnos — uma rodada de calibragem com o storyboard proposto antes de existir um slide, o deck construído com a folha de contato, e o ajuste. O modelo escreve a fonte num dialeto restrito de HTML, e o compilador desenha o palco, embute o tema e recusa o que está fora do vocabulário. Use ao pedir uma apresentação, um deck ou slides; ao transformar um texto, uma proposta, uma ata ou um relatório em apresentação; ao encurtar, revisar ou corrigir uma apresentação já gerada; e ao retomar uma fonte escrita numa sessão anterior.
 ---
 
 # panlabs-presentation-builder
@@ -23,9 +23,18 @@ Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os com
 
 ### Turno 1 · A calibragem, o storyboard e a direção de arte, numa mensagem só
 
+**Primeiro reconheça a entrada**, porque uma delas não é deste turno:
+
+| o que chegou | o que fazer |
+|---|---|
+| um pedido em prosa, um texto, uma proposta, uma ata, um relatório | este turno |
+| um `.deck.html` de uma sessão anterior | **vá direto ao turno 3** — a fonte já carrega o cabeçalho, a direção de arte e o storyboard inteiros, e perguntar de novo o que está escrito nela é o pior jeito de retomar um deck |
+
 Leia o pedido e todo o material que veio junto. Depois devolva **uma mensagem só**, com as quatro partes abaixo nesta ordem — e **nenhum arquivo**: neste turno nada é construído, e essa é a regra inteira.
 
 **A rodada.** Perguntas numeradas, uma linha cada, **cada uma já com a sua recomendação**, e diga que **«vai» aceita todas de uma vez** — porque a maior parte delas não importa a quem pediu. A rodada é **adaptativa**: pergunte só o que o pedido e o material não determinam, de modo que material rico produza rodada **curta**, não longa. E **um fato que você consegue descobrir lendo o que já está na sua frente nunca vira pergunta**: perguntar o que já foi dito é o jeito mais rápido de uma calibragem virar formulário.
+
+**Uma rodada, e só uma.** O que você não perguntou agora vira uma suposição que você **declara** junto do storyboard — nunca uma segunda rodada. Duas rodadas antes do primeiro slide é exatamente a espera que faz alguém desistir da skill e abrir o PowerPoint.
 
 O que a rodada decide é o cabeçalho inteiro de uma fonte:
 
@@ -40,9 +49,10 @@ O que a rodada decide é o cabeçalho inteiro de uma fonte:
 | `moments` | quantos picos o deck se dá | `standard` |
 | `cover` | por onde o deck abre | a capa que o material sustenta: pelo número quando há um, pela manchete quando não |
 | `signature` | o motivo geométrico que volta e faz do deck uma peça | um traço tirado do tema, repetido na mesma altura em todo slide |
-| `register` | em que pessoa e com que vocabulário os slides falam | o registro em que o próprio pedido está escrito |
+| `register` | em que pessoa, em que tom e com que vocabulário os slides falam | o registro e o tom em que o próprio pedido está escrito |
 | `difference` | em que este deck difere do exemplo canônico da skill | diga onde, na capa e na assinatura |
 | `renounced-1` `renounced-2` `renounced-3` | de que três padrões este deck abre mão | os três que o material não sustenta |
+| `content-1` `content-2` | o que cada cor de conteúdo significa neste deck, se ele gastar alguma | as duas coisas que o deck compara do começo ao fim — e nenhuma das duas, num deck que se pinta só com tinta e acento |
 
 E mais duas perguntas que não moram no cabeçalho e mudam tudo o que vem depois dele: **quem está na sala e o que essa gente já sabe**, que é o que separa contexto de insulto; e **o que não pode faltar e o que não pode entrar**, que é a única parte da rodada cuja resposta vira um slide diretamente.
 
@@ -72,7 +82,9 @@ Entregue três coisas, e as três:
 - **a folha de contato**, que é o deck inteiro numa imagem — é o que se olha antes de entregar, e é exatamente o que a máquina não sabe julgar;
 - **a lista do que ficou fora do deck**. O que não coube num slide foi para as `<notes>` daquele slide; o que não coube no deck vai nesta lista, para quem pediu decidir se volta.
 
-**Fecha quando** o laudo está verde e as três coisas estão na mão de quem pediu.
+**Sem Chromium na máquina não há folha de contato**, e o portão de render diz isso por um `SKIP` nomeado. Entregue as outras duas e **avise que ninguém olhou o deck** — a folha existe porque laudo verde não é a mesma coisa que página certa, e entregar sem ela em silêncio é entregar dizendo que alguém conferiu.
+
+**Fecha quando** o laudo está verde e o que existe está na mão de quem pediu.
 
 ### Turno 3 · O ajuste
 
@@ -272,7 +284,6 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 
 | leia quando | |
 |---|---|
-| for propor um storyboard, escolher o arco, ou decidir o que fica de fora | [`NARRATIVE.md`](NARRATIVE.md) |
 | for escrever ou corrigir uma fonte | [`examples/statement.deck.html`](examples/statement.deck.html) |
 | quiser saber que padrões existem e que slots cada um tem | [`compiler/catalog.py`](compiler/catalog.py) |
 | precisar de um token, ou do tamanho de alguma coisa | [`themes/base/tokens.css`](themes/base/tokens.css) |
@@ -294,5 +305,6 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser saber que caracteres o tema `panlabs` sabe pintar, ou refazer o corte das fontes | [`themes/panlabs/fonts/README.md`](themes/panlabs/fonts/README.md) |
 | for embutir as fontes de um tema novo, ou entender o `@font-face` que sai | [`compiler/fonts.py`](compiler/fonts.py) |
 | quiser saber o que sai no storyboard, ou de onde vem a mensagem de um slide | [`compiler/storyboard.py`](compiler/storyboard.py) |
+| for propor um storyboard, escolher o arco, ou decidir o que fica de fora do deck | [`NARRATIVE.md`](NARRATIVE.md) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

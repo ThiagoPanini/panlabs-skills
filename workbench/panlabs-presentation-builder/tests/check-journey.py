@@ -118,6 +118,14 @@ PATHISH = re.compile(r"~?/?[\w.<>*~-]+(?:/[\w.<>*~-]+)+")
 # and a turn that never answers it ends whenever the reader feels like it.
 CLOSES = "**Fecha quando**"
 
+# NOT A PATH, AND NEVER WAS ONE. `_writes()` returns destinations, and the
+# skill's only `--write` has no destination to return -- it regenerates a
+# document in the tree by name. Carrying it as a named constant, compared for
+# equality, is what keeps `check_writes_outside` from asking "does this path
+# start with a parenthesis", which is a question about punctuation standing in
+# for a question about kind.
+REGENERATES = "(--write regenerates a document in the tree)"
+
 
 # --------------------------------------------------------------------------
 # reading -- one pass, because two passes disagreeing about where a fence
@@ -173,16 +181,45 @@ def heads(md):
     return found
 
 
-def turns(md):
-    """The `###` headings, each with the `##` it sits under."""
+def sections(md):
+    """Every `##`, with the `###` that sit under it before the next one."""
     found = heads(md)
     out = []
-    for h in found:
-        if h["level"] != 3:
+    for k, h in enumerate(found):
+        if h["level"] != 2:
             continue
-        parent = next((p["title"] for p in reversed(found)
-                       if p["level"] == 2 and p["i"] < h["i"]), None)
-        out.append(dict(title=h["title"], parent=parent, body=h["body"]))
+        kids = []
+        for p in found[k + 1:]:
+            if p["level"] == 2:
+                break
+            kids.append(p)
+        out.append(dict(title=h["title"], kids=kids))
+    return out
+
+
+def turns(md):
+    """The `###` of every section that documents a journey.
+
+    A SECTION IS A JOURNEY'S WHEN SOMETHING UNDER IT SAYS WHEN IT CLOSES, and
+    the alternative is worse in a way that only shows up later: counting every
+    `###` in the document makes an unrelated subsection anywhere in the file --
+    under the theme, under the gate -- read as a fourth turn, and hands its
+    author a fix ("fold the extra ones back in") aimed at a heading that was
+    never a turn.
+
+    A TURN THAT LOST ITS OWN LINE IS STILL A TURN. What identifies the SECTION
+    is that something in it closes; every `###` inside is then counted, so the
+    count stays right and family 1 can still name the missing line as the fix
+    rather than reporting two turns where there are three.
+    """
+    out = []
+    for s in sections(md):
+        kids = [k for k in s["kids"] if k["level"] == 3]
+        if not any(CLOSES in k["body"] for k in kids):
+            continue
+        for k in kids:
+            out.append(dict(title=k["title"], parent=s["title"],
+                            body=k["body"]))
     return out
 
 
@@ -223,15 +260,22 @@ def check_three_turns(skill_md=None, **_):
 # 2 - the round comes first, and it decides the whole header
 # --------------------------------------------------------------------------
 def _header_names():
-    """Every name a source's header holds, straight out of the register.
+    """Every name a source's header can hold, straight out of the register.
 
-    The `<deck>` fields and the art direction's required choices are exactly
-    what has to be decided BEFORE a single slide can be written -- which is
-    what makes them the round's subject rather than a list somebody chose. A
-    tenth choice tomorrow is one more thing turn 1 has to name, with no edit
-    here.
+    The `<deck>` fields and EVERY art-direction choice are what has to be
+    decided before a single slide can be written -- which is what makes them
+    the round's subject rather than a list somebody chose. A tenth choice
+    tomorrow is one more thing turn 1 has to name, with no edit here.
+
+    EVERY CHOICE, NOT ONLY `DIRECTION_REQUIRED`, AND THE TWO COLOURS ARE WHY.
+    The theme lends up to two content colours and a deck that paints in ink and
+    accent alone declares neither, so the register marks them optional -- and a
+    document that never names them is a document whose round never offers them.
+    #207 asks for the proposed art direction to carry "cores de conteúdo" by
+    name, and every deck that reads the colour by itself from the first slide to
+    the last starts with someone being asked what it means.
     """
-    return tuple(catalog.DECK_FIELDS) + tuple(catalog.DIRECTION_REQUIRED)
+    return tuple(catalog.DECK_FIELDS) + tuple(catalog.choice_names())
 
 
 def check_calibration_first(skill_md=None, **_):
@@ -244,9 +288,11 @@ def check_calibration_first(skill_md=None, **_):
     undecided = [f for f in _header_names() if f"`{f}`" not in body]
     if undecided:
         return False, (f"turn 1 \"{ts[0]['title']}\" never decides "
-                       f"{', '.join(undecided)} -- a source cannot be written "
-                       f"without them. Name each one in the round, and say "
-                       f"what the recommendation defaults to")
+                       f"{', '.join(undecided)} -- the header of a source "
+                       f"settles them before a slide exists, so a round that "
+                       f"never raises one leaves it to the accident of "
+                       f"whoever writes the source. Name each in the round, "
+                       f"and say what the recommendation defaults to")
 
     builds = [i for i, t in enumerate(ts)
               if any(BUILDER in c for c in commands(t["body"]))]
@@ -307,8 +353,29 @@ def _scan(md):
     return sorted(set(escapes)), sorted(set(dangling))
 
 
+def _nothing_to_measure(md, what):
+    """The red a family owes when the document documents no command at all.
+
+    BOTH COMMAND FAMILIES ARE VACUOUSLY GREEN WITHOUT IT. Strip every fence and
+    every inline command from the front door and `commands()` returns nothing,
+    so "no path dangles" and "no write lands inside" are both true about a
+    document that names no command to be wrong about. It is the same assertion
+    the proofs beside this file make with their `coverage` line: a check that
+    measured nothing has to say so rather than report the green.
+    """
+    if commands(md):
+        return None
+    return (False, f"the front door documents no command at all, so {what} "
+                   f"measured nothing -- a green here would be about a document "
+                   f"with nothing to be wrong about. Restore the build command")
+
+
 def check_paths_exist(skill_md=None, **_):
-    escapes, dangling = _scan(_front(skill_md))
+    md = _front(skill_md)
+    empty = _nothing_to_measure(md, "the paths a command names")
+    if empty:
+        return empty
+    escapes, dangling = _scan(md)
     if escapes:
         return False, (f"command(s) reaching outside the skill: "
                        f"{', '.join(escapes)} -- whoever installs the skill "
@@ -320,8 +387,8 @@ def check_paths_exist(skill_md=None, **_):
                        f"{', '.join(dangling)} -- fix the spelling, or add "
                        f"the file. A rename moves the bytes and rewrites no "
                        f"line of any document")
-    return True, ("every path the documented commands name resolves inside "
-                  "the skill and exists")
+    return True, (f"every path the {len(commands(md))} documented commands "
+                  f"name resolves inside the skill and exists")
 
 
 # --------------------------------------------------------------------------
@@ -356,15 +423,19 @@ def _writes(cmd):
         if paths:
             out.append(paths[-1])             # the destination is the last one
     if "--write" in words:
-        out.append("(--write regenerates a document in the tree)")
+        out.append(REGENERATES)
     return out
 
 
 def check_writes_outside(skill_md=None, **_):
+    md = _front(skill_md)
+    empty = _nothing_to_measure(md, "where a command writes")
+    if empty:
+        return empty
     inside = []
-    for cmd in commands(_front(skill_md)):
+    for cmd in commands(md):
         for t in _writes(cmd):
-            if t.startswith("("):             # `--write`, already spelled out
+            if t == REGENERATES:               # not a path, and never was one
                 inside.append(t)
             elif t.startswith(SCRATCH_PREFIX):
                 continue

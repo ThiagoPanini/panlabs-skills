@@ -181,6 +181,24 @@ def _installer_with(replacement, needle, why):
     return root
 
 
+def plant_silent_refusal():
+    """An installer that writes nothing and says nothing, which is what a
+    BROKEN one looks like as well as a refusing one.
+
+    THE HOLE THIS CLOSES. Both worktree families read "no link was written" as
+    the judgement they exist to measure, and an installer that crashed on line
+    one leaves exactly that state. Without this plant the two of them are green
+    for a `tools/install.sh` that does nothing at all, which is the widest
+    vacuity in this file: the whole subject of the family is the installer's own
+    reasoning, and a silent non-zero exit carries none.
+    """
+    root = _seq() / "tree"
+    shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns("__pycache__"))
+    (root / "tools/install.sh").write_text("#!/usr/bin/env bash\nexit 3\n",
+                                           encoding="utf-8")
+    return dict(root=root, home=HOME)
+
+
 def plant_shape_test_removed():
     """Only the path substring is left to recognise a worktree.
 
@@ -222,8 +240,12 @@ CASES = [
      "faces", plant_faces_gone, "came through the link"),
     ("refuses-orphan", "the worktree refusal removed from the installer",
      plant_guard_removed, "restore the refusal"),
+    ("refuses-orphan", "an installer that exits non-zero in silence",
+     plant_silent_refusal, "print why, then exit"),
     ("detects-real-worktree", "only the path substring left to spot a worktree",
      plant_shape_test_removed, "ask git what the tree is"),
+    ("detects-real-worktree", "an installer that writes nothing and says "
+     "nothing", plant_silent_refusal, "refuse out loud"),
 ]
 
 
@@ -257,21 +279,7 @@ def main():
         return PROOF.refuse(
             f"the installer refused a clean scratch HOME, so nothing can be "
             f"planted against it: {said[-1] if said else _r.stderr.strip()}")
-    failed = PROOF.run(CASES)
-
-    # A family nobody plants against is a family nobody has ever seen fail.
-    # Worded and shaped exactly like the proofs that came before this one: a
-    # fourth phrasing of the same verdict is the drift `proof_driver` was
-    # extracted to stop, one floor up.
-    unplanted = [n for n, _ in check.FAMILIES
-                 if not any(c[0] == n for c in CASES)]
-    if unplanted:
-        print(f"  FAIL coverage              no defect planted for: "
-              f"{', '.join(unplanted)} -- add a case, or drop the family")
-    else:
-        print(f"  ok   coverage              {len(CASES)} planted defects over "
-              f"all {len(check.FAMILIES)} families")
-    return failed + len(unplanted)
+    return PROOF.run(CASES) + PROOF.coverage(check.FAMILIES, CASES)
 
 
 if __name__ == "__main__":

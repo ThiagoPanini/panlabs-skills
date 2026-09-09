@@ -24,6 +24,7 @@ real worktree.
 """
 import importlib.util
 import pathlib
+import re
 import sys
 
 # Nothing this suite runs may leave bytecode in the tree it measures.
@@ -241,6 +242,39 @@ def plant_path_above_the_root():
     return dict(skill_md=_front() + fence("python3 ../../tools/elsewhere.py"))
 
 
+def plant_no_commands_at_all():
+    """Every command leaves the document, and the two command families are
+    asked whether they are green about nothing.
+
+    THE HOLE THIS CLOSES. `paths-exist` asks whether a documented path resolves
+    and `writes-outside` asks where a documented write lands; strip the last
+    command and both questions have no subject, so both answered TRUE about a
+    front door that names no command to be wrong about. It is the same shape as
+    a suite finding an empty corpus, and the same answer: a check that measured
+    nothing says so.
+    """
+    md = _front()
+    if not check.commands(md):
+        raise Drifted("the document already documents no command -- there is "
+                      "nothing to strip")
+    out, fenced = [], False
+    for line in md.split("\n"):
+        if re.match(r"\s*```", line):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        out.append(re.sub(r"`(?:python3?|bash|sh|node|\./)[^`\n]*`",
+                          "«um comando»", line))
+    planted = "\n".join(out)
+    if check.commands(planted):
+        raise Drifted(f"stripping fences and inline spans still leaves "
+                      f"{len(check.commands(planted))} command(s) -- the plant "
+                      f"no longer plants; re-anchor it on how the document "
+                      f"writes a command now")
+    return dict(skill_md=planted)
+
+
 def plant_dangling_in_a_table_row():
     """An inline span in the pointer table, not a fence.
 
@@ -366,9 +400,9 @@ CASES = [
     ("three-turns", "a turn that never says when it closes",
      plant_turn_never_closes, "add a **fecha quando** line"),
     ("calibration-first", "the round cut out of turn 1", plant_round_removed,
-     "name each one in the round"),
+     "name each in the round"),
     ("calibration-first", "one name of the header left undecided",
-     plant_one_choice_undecided, "name each one in the round"),
+     plant_one_choice_undecided, "name each in the round"),
     ("calibration-first", "no turn builds anything", plant_no_build_at_all,
      "put the build in a turn after the round"),
     ("calibration-first", "the build moved in front of the round",
@@ -383,6 +417,10 @@ CASES = [
      plant_path_above_the_root, "write the path from the skill root"),
     ("paths-exist", "a table row naming a path that does not exist",
      plant_dangling_in_a_table_row, "fix the spelling"),
+    ("paths-exist", "every command stripped, so there is no path to resolve",
+     plant_no_commands_at_all, "restore the build command"),
+    ("writes-outside", "every command stripped, so there is no write to place",
+     plant_no_commands_at_all, "restore the build command"),
     ("writes-outside", "the build writing over the example it ships",
      plant_build_into_the_tree, "send it to /tmp/"),
     ("writes-outside", "the contact sheet landing in the tree",
@@ -417,21 +455,7 @@ def main():
     if FRONT is None:
         return PROOF.refuse(f"{check.FRONT} is not there -- every case below "
                             f"mutates it, and there is nothing to mutate")
-    failed = PROOF.run(CASES)
-
-    # A family nobody plants against is a family nobody has ever seen fail.
-    # Worded and shaped exactly like the proofs that came before this one: a
-    # fourth phrasing of the same verdict is the drift `proof_driver` was
-    # extracted to stop, one floor up.
-    unplanted = [n for n, _ in check.FAMILIES
-                 if not any(c[0] == n for c in CASES)]
-    if unplanted:
-        print(f"  FAIL coverage            no defect planted for: "
-              f"{', '.join(unplanted)} -- add a case, or drop the family")
-    else:
-        print(f"  ok   coverage            {len(CASES)} planted defects over "
-              f"all {len(check.FAMILIES)} families")
-    return failed + len(unplanted)
+    return PROOF.run(CASES) + PROOF.coverage(check.FAMILIES, CASES)
 
 
 if __name__ == "__main__":

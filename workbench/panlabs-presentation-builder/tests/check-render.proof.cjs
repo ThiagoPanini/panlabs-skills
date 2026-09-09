@@ -489,9 +489,27 @@ async function theStagePresents() {
     steps.push(['`n` opens the notes of the slide it jumped to',
       s.open.join() === 'notes' && s.note.join() === '2']);
 
-    s = await press('ArrowRight');
+    // THE ARROW HAS TO ACTUALLY MOVE THE DECK, and until #220 it did not have
+    // to. This step asserted the notes still read `2` after ONE press -- which
+    // was true because the only fragmented deck in the corpus revealed a beat
+    // on its second slide, so the press was swallowed and the deck never left
+    // the slide the notes were already on. A step named "the notes follow the
+    // deck" was green over a deck that had not moved.
+    //
+    // #220 put a third deck in the corpus, the alphabet handed this case one
+    // with no fragment on slide 2, and the assertion went red for the right
+    // reason. So the arrow is pressed until the deck MOVES -- however many
+    // beats the picked page happens to hide on the way -- and only then are the
+    // notes and the progress bar held to where it landed. That is corpus-
+    // independent, and it is the thing the step's own name promises.
+    let moved = null;
+    for (let i = 0; i < 8 && moved === null; i += 1) {
+      const after = await press('ArrowRight');
+      if (after.note.join() !== '2') moved = after;
+    }
     steps.push(['the notes follow the deck, and the progress bar with them',
-      s.note.join() === '2' && s.progress === String(2 / s.slides)]);
+      moved !== null && moved.note.join() === '3'
+        && moved.progress === String(3 / moved.slides)]);
   } catch (e) {
     why = e.message;
   } finally {

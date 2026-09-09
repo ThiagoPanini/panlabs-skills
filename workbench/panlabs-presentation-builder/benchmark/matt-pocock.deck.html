@@ -1,0 +1,265 @@
+<!-- THE BENCHMARK (#220), AND THE ONE DECK IN THIS REPOSITORY WHOSE NUMBERS ARE
+     REAL. `examples/canonical.deck.html` and `examples/proposal.deck.html` open
+     by saying every figure in them is invented; this one opens by saying the
+     opposite. Every value drawn here is traced in `DATA.md` beside this file to
+     a primary source with a date -- the anatomy `overpower` measured on
+     2026-07-30, the skills installed on this machine counted on 2026-09-09, and
+     this repository's own issues read the same day.
+
+     IT LIVES IN THE WORKBENCH AND NOT IN THE SKILL, which is story 55 of #207:
+     the proof of acceptance is not something to install alongside the skill.
+     `examples/` teaches the dialect and stays small; this is the deck a person
+     stood up and presented.
+
+     THE ART DIRECTION DIFFERS FROM THE CANONICAL ON PURPOSE, and the two places
+     it differs are the two the header names: the canonical opens on a NUMBER
+     and signs with a hairline lying along the base of the stage; this one opens
+     on a HEADLINE and signs with the numbered divider coming back three times.
+
+     Build it with `python3 compiler/build.py
+     ../../workbench/panlabs-presentation-builder/benchmark/matt-pocock.deck.html
+     <somewhere outside the skill>/matt-pocock.html`, from the skill root -- or
+     let `tools/render-examples.sh` do it, which is what rebuilds the contact
+     sheet nobody versions. -->
+<deck title="O framework do Matt Pocock"
+      occasion="Encontro de engenharia, para quem nunca ouviu falar dele"
+      theme="panlabs"
+      lang="pt-BR"
+      minutes="20"
+      motion="editorial">
+
+  <direction>
+    <p class="cover">cover-headline</p>
+    <p class="signature">o divisor numerado que volta três vezes — o mesmo par de número e nome abrindo cada trecho, e nenhum trecho começando de outro jeito</p>
+    <p class="register">segunda pessoa, presente do indicativo, e todo comando escrito exatamente como se digita</p>
+    <p class="moments">standard</p>
+    <p class="difference">o exemplo canônico abre por um número e assina com a hairline deitada na base do palco; este abre pela manchete e assina com o divisor numerado que volta três vezes</p>
+    <p class="content-1">a medida antes de alguém apontar uma parte dela — a linha que sobe, e a primeira fatia de uma proporção</p>
+    <p class="content-2">o que dá escala ao ponto marcado — o resto das barras, a área sob a linha, a última fatia — e, na figura, as duas entradas laterais que não passam pelo caminho principal</p>
+    <p class="renounced-1">cover-numbered</p>
+    <p class="renounced-2">big-number</p>
+    <p class="renounced-3">full-bleed-statement</p>
+  </direction>
+
+  <section pattern="cover-headline" arc="context">
+    <p class="kicker">Desenvolvimento com IA</p>
+    <p class="title">Vinte e cinco skills mudam quem decide e quem apura</p>
+    <p class="subtitle">Medido antes de recomendado</p>
+    <p class="meta">Encontro de engenharia · set/2026</p>
+    <notes>Comece dizendo que ninguém precisa instalar nada agora, e que <strong>todo número deste deck tem fonte e data</strong> — inclusive os que contrariam a recomendação do fim.<br/>As vinte e cinco skills já estão na máquina de quem usa o <mark>overpower</mark>; o que falta é saber para que serve cada uma.</notes>
+  </section>
+
+  <section pattern="pivot-question" arc="tension">
+    <p class="kicker">A pergunta</p>
+    <p class="question">O agente escreve o código. Quem decide o quê?</p>
+    <notes>Deixe a pergunta no ar por alguns segundos. Ela é a única deste deck que a plateia responde sozinha, e quase sempre responde errado: a resposta intuitiva é «eu decido tudo», e o que acontece na prática é que o agente decide tudo o que ninguém perguntou.</notes>
+  </section>
+
+  <section pattern="comparison" arc="tension">
+    <p class="title">Um agente sem método erra depressa e com confiança</p>
+    <p class="label-a">Sem método</p>
+    <p class="body-a">Você descreve o que quer. O agente supõe o resto, escreve mil linhas e acerta a metade. A conversa some quando a sessão fecha.</p>
+    <p class="label-b">Com o framework</p>
+    <p class="body-b">Uma rodada de perguntas fecha a fronteira antes do primeiro arquivo. A decisão fica na issue, e a issue sobrevive à sessão.</p>
+    <notes>«Fronteira» é o vocabulário da própria skill: o conjunto de decisões cujos pré-requisitos já estão resolvidos, e que por isso podem ser perguntadas <strong>agora</strong>, todas de uma vez.<br/>A metade que o agente acerta é a metade mais barata. A cara é a que ele supôs.</notes>
+  </section>
+
+  <section pattern="thesis-title" arc="thesis">
+    <p class="title">O humano decide, o agente apura, e a issue lembra</p>
+    <p class="sentence" step>Os vinte minutos seguintes mostram como essas três frases viram comandos.</p>
+    <notes>Esta é a única frase que a plateia precisa levar embora. Repita-a no fecho, com as mesmas palavras.</notes>
+  </section>
+
+  <section pattern="section-divider" arc="context">
+    <p class="index">01</p>
+    <p class="title">O modelo</p>
+  </section>
+
+  <section pattern="three-columns" arc="context">
+    <p class="title">Três regras sustentam o conjunto inteiro</p>
+    <p class="column-a">Uma skill por tarefa. Cada uma é um arquivo de instruções que você chama por barra e nome.</p>
+    <p class="column-b">O humano decide, o agente apura. Buscar o fato é trabalho do agente; a decisão é sempre sua.</p>
+    <p class="column-c">A issue é a memória. O que a sessão decidiu fica escrito onde a próxima sessão vai ler.</p>
+    <notes>A terceira regra é a que mais custa a entrar: a issue não é burocracia de rastreamento, é <strong>o único lugar onde a decisão sobrevive ao contexto</strong> que a produziu.<br/>Quatorze das vinte e cinco skills instaladas trazem <mark>disable-model-invocation: true</mark> — elas só disparam quando uma pessoa as chama, e nunca porque o modelo achou que era hora.</notes>
+  </section>
+
+  <section pattern="pull-quote" arc="context">
+    <p class="quote">Finding <strong>facts</strong> is your job, never the user's. The <strong>decisions</strong> are the user's.</p>
+    <p class="attribution">Matt Pocock, no SKILL.md da skill grilling</p>
+    <notes>A citação está em inglês porque as skills são inglesas, e traduzi-la atribuiria ao autor uma frase que ele não escreveu.<br/>Ela é a linha que separa este framework de um assistente: perguntar ao humano um fato que o agente conseguiria descobrir sozinho é considerado <strong>defeito</strong>, não cuidado.</notes>
+  </section>
+
+  <section pattern="chart" type="bars-h" arc="evidence">
+    <p class="title">O fluxo principal cabe em 327 linhas de instrução</p>
+    <p class="unit">linhas do SKILL.md de cada comando</p>
+    <p class="source">as skills instaladas nesta máquina · 09/set/2026</p>
+    <ul>
+      <li mark><p class="label">/grill-with-docs</p><p class="value">7</p></li>
+      <li><p class="label">/to-spec</p><p class="value">75</p></li>
+      <li><p class="label">/to-tickets</p><p class="value">105</p></li>
+      <li><p class="label">/implement</p><p class="value">15</p></li>
+      <li><p class="label">/tdd</p><p class="value">38</p></li>
+      <li><p class="label">/code-review</p><p class="value">87</p></li>
+    </ul>
+    <notes>A marca está no menor de propósito: <strong>sete linhas</strong>, e é o comando que faz mais diferença no resultado. Ele não faz o trabalho — ele delega para a skill <mark>grilling</mark>, que é a primitiva.<br/>As vinte e cinco skills somam 1.594 linhas de SKILL.md, em 74 arquivos e 199,4 KiB. É menos texto do que muitos arquivos de código deste repositório.</notes>
+  </section>
+
+  <section pattern="icon-list" arc="plan">
+    <p class="title">O setup roda uma vez e escreve quatro coisas no repositório</p>
+    <p class="item-1-icon">tags</p>
+    <p class="item-1-text">os cinco rótulos de triagem, e o que cada um significa</p>
+    <p class="item-2-icon">file-text</p>
+    <p class="item-2-text">como as issues são criadas e lidas neste repositório</p>
+    <p class="item-3-icon">book-open</p>
+    <p class="item-3-text">onde mora o vocabulário do domínio</p>
+    <p class="item-4-icon">square-terminal</p>
+    <p class="item-4-text">o bloco que aponta tudo isso no CLAUDE.md</p>
+    <notes>O setup <strong>não instala skill nenhuma</strong> — as skills já estão na máquina. Ele só escreve os quatro documentos que dizem a este repositório onde ficam o tracker, os rótulos e o domínio.<br/>Por isso ele roda uma vez por repositório e nunca de novo: o que ele escreve é para uma pessoa editar depois.</notes>
+  </section>
+
+  <section pattern="section-divider" arc="evidence">
+    <p class="index">02</p>
+    <p class="title">O pipeline</p>
+  </section>
+
+  <section pattern="figure-caption" arc="evidence">
+    <p class="title">Cinco comandos levam uma ideia até o merge</p>
+    <p class="caption">O fluxo canônico, lido do roteador ask-matt e do workflow deste repositório · set/2026</p>
+    <svg viewBox="0 0 1200 456">
+      <rect x="0" y="8" width="470" height="72" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <text x="235" y="44" font-size="30" text-anchor="middle" dominant-baseline="central">/setup-matt-pocock-skills</text>
+      <text x="500" y="44" font-size="26" text-anchor="start" dominant-baseline="central" fill="var(--ink-muted)">uma vez por repositório</text>
+      <line x1="160" y1="80" x2="160" y2="132" stroke="var(--accent)" stroke-width="4"/>
+      <polygon points="149,132 160,152 171,132" fill="var(--accent)"/>
+
+      <rect x="0" y="152" width="320" height="88" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <rect x="360" y="152" width="200" height="88" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <rect x="600" y="152" width="250" height="88" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <rect x="890" y="152" width="310" height="88" rx="16" fill="none" stroke="var(--accent)" stroke-width="4"/>
+
+      <text x="160" y="196" font-size="32" text-anchor="middle" dominant-baseline="central">/grill-with-docs</text>
+      <text x="460" y="196" font-size="32" text-anchor="middle" dominant-baseline="central">/to-spec</text>
+      <text x="725" y="196" font-size="32" text-anchor="middle" dominant-baseline="central">/to-tickets</text>
+      <text x="1045" y="196" font-size="32" text-anchor="middle" dominant-baseline="central">/implement</text>
+
+      <line x1="320" y1="196" x2="344" y2="196" stroke="var(--accent)" stroke-width="4"/>
+      <polygon points="344,185 360,196 344,207" fill="var(--accent)"/>
+      <line x1="560" y1="196" x2="584" y2="196" stroke="var(--accent)" stroke-width="4"/>
+      <polygon points="584,185 600,196 584,207" fill="var(--accent)"/>
+      <line x1="850" y1="196" x2="874" y2="196" stroke="var(--accent)" stroke-width="4"/>
+      <polygon points="874,185 890,196 874,207" fill="var(--accent)"/>
+
+      <line x1="1045" y1="240" x2="1045" y2="292" stroke="var(--accent)" stroke-width="4"/>
+      <text x="1030" y="266" font-size="22" text-anchor="end" dominant-baseline="central" fill="var(--ink-muted)">por dentro</text>
+      <rect x="890" y="292" width="310" height="66" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <text x="1045" y="325" font-size="28" text-anchor="middle" dominant-baseline="central">/tdd</text>
+      <line x1="1045" y1="358" x2="1045" y2="378" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <rect x="890" y="378" width="310" height="66" rx="16" fill="none" stroke="var(--hairline-strong)" stroke-width="4"/>
+      <text x="1045" y="411" font-size="28" text-anchor="middle" dominant-baseline="central">/code-review</text>
+
+      <rect x="0" y="300" width="300" height="66" rx="16" fill="none" stroke="var(--hairline)" stroke-width="4"/>
+      <rect x="340" y="300" width="340" height="66" rx="16" fill="none" stroke="var(--hairline)" stroke-width="4"/>
+      <text x="150" y="333" font-size="28" text-anchor="middle" dominant-baseline="central">/triage</text>
+      <text x="510" y="333" font-size="28" text-anchor="middle" dominant-baseline="central">/diagnosing-bugs</text>
+      <polyline points="150,300 150,270 860,270 860,220 874,220" fill="none" stroke="var(--content-2)" stroke-width="4"/>
+      <line x1="510" y1="300" x2="510" y2="270" stroke="var(--content-2)" stroke-width="4"/>
+      <polygon points="874,209 890,220 874,231" fill="var(--content-2)"/>
+    </svg>
+    <notes>Percorra o desenho da esquerda para a direita e pare em <strong>/implement</strong>: é o único que roda mais de uma vez, um ticket por sessão, com a janela limpa entre elas.<br/>As duas caixas de baixo à esquerda são as entradas laterais: <mark>/triage</mark> para a issue que você não escreveu, e <mark>/diagnosing-bugs</mark>, que se recusa a teorizar antes de existir um teste vermelho.</notes>
+  </section>
+
+  <section pattern="table" arc="evidence">
+    <p class="claim">Cada etapa deixou um artefato nesta própria spec</p>
+    <table>
+      <thead><tr><th>Comando</th><th>O que produziu aqui</th></tr></thead>
+      <tbody>
+        <tr><td>/grill-me</td><td>seis laudos e um handoff</td></tr>
+        <tr><td>/to-spec</td><td>a spec #207, com 58 stories</td></tr>
+        <tr><td>/to-tickets</td><td>13 tickets, em fila serial</td></tr>
+        <tr><td>/implement</td><td>12 PRs, um por ticket</td></tr>
+        <tr><td>/code-review</td><td>dois eixos em cada PR</td></tr>
+      </tbody>
+    </table>
+    <notes>Esta tabela é sobre <strong>este deck</strong>: a spec que produziu a skill que desenhou estes slides passou pelas cinco etapas, nesta ordem, nos últimos três dias.<br/>«Fila serial» é uma decisão desta spec e não do framework: os treze tickets se tocavam demais para rodar em paralelo.</notes>
+  </section>
+
+  <section pattern="chart" type="area" arc="evidence">
+    <p class="title">Doze dos treze tickets fecharam em três dias</p>
+    <p class="unit">tickets da spec #207 fechados, em acumulado</p>
+    <p class="source">issues deste repositório · 09/set/2026</p>
+    <ul>
+      <li><p class="label">07/set</p><p class="value">5</p></li>
+      <li><p class="label">08/set</p><p class="value">6</p></li>
+      <li mark><p class="label">09/set</p><p class="value">12</p></li>
+    </ul>
+    <notes>O degrau do dia 8 é honesto: um ticket só, o do gerador de gráficos, que era o mais pesado da fila.<br/>E o décimo terceiro ticket é <strong>este</strong> — o que pede que você diga, slide a slide, se apresentaria sem retoque.</notes>
+  </section>
+
+  <section pattern="inline-metrics" arc="evidence">
+    <p class="claim">A spec inteira coube em três dias e treze tickets</p>
+    <ul>
+      <li><p class="value">58</p><p class="label">user stories</p></li>
+      <li><p class="value">13</p><p class="label">tickets</p></li>
+      <li><p class="value">12</p><p class="label">PRs na main</p></li>
+    </ul>
+    <notes>As 58 stories não foram escritas por uma pessoa numa sentada: elas saíram de uma conversa de grilling, e o <mark>/to-spec</mark> foi instruído a sintetizar sem entrevistar de novo.</notes>
+  </section>
+
+  <section pattern="section-divider" arc="evidence">
+    <p class="index">03</p>
+    <p class="title">O conjunto, medido</p>
+  </section>
+
+  <section pattern="chart" type="share" arc="evidence">
+    <p class="title">O autor não publica quase metade do que escreve</p>
+    <p class="unit">100% são as 41 skills do repositório de origem</p>
+    <p class="source">mattpocock/skills em 2ab9580 · medido em 30/jul/2026</p>
+    <ul>
+      <li><p class="label">engineering</p><p class="value">42</p></li>
+      <li><p class="label">productivity</p><p class="value">12</p></li>
+      <li><p class="label">não publicadas</p><p class="value">46</p></li>
+    </ul>
+    <notes>A fronteira é literal: o manifesto do plugin traz um array de <strong>vinte e dois caminhos explícitos</strong>, e o que está fora dele não é publicado.<br/>As quatro categorias de fora são <mark>in-progress</mark>, <mark>deprecated</mark>, <mark>misc</mark> e <mark>personal</mark>. Um conjunto que se recusa a publicar o que ainda não está pronto é um conjunto que dá para confiar.</notes>
+  </section>
+
+  <section pattern="two-columns" arc="context">
+    <p class="title">O resto do conjunto entra quando o fluxo principal não basta</p>
+    <p class="column-a">Antes de decidir: /research busca em fonte primária, /prototype escreve código descartável, /wayfinder mapeia o esforço grande demais para uma spec.</p>
+    <p class="column-b">No meio do caminho: /triage recebe a issue que você não escreveu, /diagnosing-bugs exige um teste vermelho antes de qualquer teoria.</p>
+    <notes>O <strong>/wayfinder</strong> é o mais fácil de subestimar: ele não constrói nada, produz decisões, e a regra dele é resolver <mark>um ticket por sessão</mark> e nunca dois.<br/>Se sobrar tempo, cite também /handoff, que é como um contexto atravessa de uma sessão para outra sem virar resumo.</notes>
+  </section>
+
+  <section pattern="chart" type="bars-h" arc="evidence">
+    <p class="title">Uma skill do Matt Pocock pesa dez vezes menos</p>
+    <p class="unit">KiB por skill · o número no rótulo é quantas skills o conjunto traz</p>
+    <p class="source">anatomia dos frameworks, overpower · 30/jul/2026</p>
+    <ul>
+      <li><p class="label">gsd-core · 71</p><p class="value">69,2</p></li>
+      <li><p class="label">BMAD · 50</p><p class="value">33,6</p></li>
+      <li><p class="label">superpowers · 14</p><p class="value">24,5</p></li>
+      <li><p class="label">OpenSpec · 13</p><p class="value">8,3</p></li>
+      <li mark><p class="label">Matt Pocock · 41</p><p class="value">6,7</p></li>
+    </ul>
+    <notes>Duas ausências, e as duas são deliberadas: <mark>anthropics/skills</mark> ficou de fora porque não declara licença nenhuma, e <mark>spec-kit</mark> porque é uma ferramenta Python que gera os arquivos de skill, e não uma árvore deles.<br/>Peso pequeno importa por um motivo prático: o que entra na janela de contexto sai de algum outro lugar. Uma skill de 6,7 KiB cabe ao lado do seu código.</notes>
+  </section>
+
+  <section pattern="timeline" arc="plan">
+    <p class="claim">A jornada cabe em uma janela de contexto por ticket</p>
+    <ol>
+      <li><p class="label">Grilling em rodadas</p><p class="date">sessão 1</p></li>
+      <li><p class="label">A spec, numa issue</p><p class="date">sessão 1</p></li>
+      <li><p class="label">Os tickets, com arestas</p><p class="date">sessão 1</p></li>
+      <li now><p class="label">Um ticket por sessão</p><p class="date">sessões 2 a N</p></li>
+      <li><p class="label">Merge no verde</p><p class="date">fim de cada uma</p></li>
+    </ol>
+    <notes>As três primeiras moram na <strong>mesma janela</strong>, e isso é uma regra do framework, não um acidente: a spec sai melhor quando quem a escreve ainda lembra do grilling inteiro.<br/>Da quarta em diante, uma janela limpa por ticket. É por isso que a issue precisa carregar tudo o que a sessão anterior decidiu.</notes>
+  </section>
+
+  <section pattern="closing-call" arc="call">
+    <p class="thesis">O humano decide, o agente apura, e a issue lembra.</p>
+    <p class="call" step>Escolham aqui um repositório, e eu rodo o setup nele agora.</p>
+    <p class="meta">Continuamos no canal de engenharia</p>
+    <notes>Feche com as mesmas palavras do slide da tese, e peça a decisão <strong>na sala</strong>: um repositório, escolhido por quem está aqui, com o setup rodando enquanto todo mundo olha.<br/>Se ninguém escolher, o pedido vira «me mandem o nome de um até sexta» — mas peça o de agora primeiro.</notes>
+  </section>
+
+</deck>

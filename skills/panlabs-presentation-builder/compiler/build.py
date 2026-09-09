@@ -234,27 +234,36 @@ def slide_markup(slide, index, base):
     group = group_of(pattern)
     figure = figure_of(pattern)
     form = ""
-    if figure and container is not None:
-        described = figures.described_by(slide, figure)
-        if container.tag == figure.drawn:
-            body.append(figures.drawing(container, figure, described))
-        else:
-            resolved = figures.resolve(
-                figures.attribute(container, figure.path), base, figure)
-            if resolved.fix:
-                # THE SECOND LOCK, same one `inline_markup` keeps. The
-                # `figure-asset` ruler already refused this source, so reaching
-                # here means a check stopped being enforced -- and half a deck
-                # with a picture nobody could read is worse than no deck.
-                raise Refused(resolved.fix)
-            body.append(figures.image(figure, resolved, described))
-    elif chart and container is not None:
-        form = slide.attrs.get(chart.attribute, "").strip()
-        body.append(charts.draw(form, charts.series(container, group)))
-    elif group and container is not None:
-        body.append(group_markup(container, group))
-    elif is_table(pattern) and container is not None:
-        body.append(table_markup(container))
+    if container is not None:
+        if figure:
+            # THE CAPTION IS THE FIGURE'S ACCESSIBLE NAME, and the register
+            # says which slot that is (`Figure.caption`). A drawing has no
+            # words a screen reader could read in order and a picture has
+            # none at all, while the slide already carries a line saying what
+            # it shows -- asking the author for a second one, in a second
+            # attribute, would be asking them to keep two copies in step.
+            said = written.get(figure.caption)
+            described = plain_text(said).strip() if said is not None else ""
+            if container.tag == figure.drawn:
+                body.append(figures.drawing(container, figure, described))
+            else:
+                resolved = figures.resolve(
+                    figures.attribute(container, figure.path), base, figure)
+                if resolved.fix:
+                    # THE SECOND LOCK, same one `inline_markup` keeps. The
+                    # `figure-asset` ruler already refused this source, so
+                    # reaching here means a check stopped being enforced --
+                    # and half a deck with a picture nobody can read is worse
+                    # than no deck.
+                    raise Refused(resolved.fix)
+                body.append(figures.image(figure, resolved, described))
+        elif chart:
+            form = slide.attrs.get(chart.attribute, "").strip()
+            body.append(charts.draw(form, charts.series(container, group)))
+        elif group:
+            body.append(group_markup(container, group))
+        elif is_table(pattern):
+            body.append(table_markup(container))
 
     current = " is-current" if index == 0 else ""
     drawn = f' data-chart="{html.escape(form, quote=True)}"' if form else ""

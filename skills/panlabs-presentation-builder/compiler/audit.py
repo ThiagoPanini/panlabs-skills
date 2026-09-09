@@ -9,10 +9,14 @@ ONE RULER READS THE DIALECT AND THE REST READ THE DOCTRINE. The first refuses
 a source the compiler cannot build; every other one builds fine and would ship
 a deck that fails in the room -- a slide with a paragraph on it, a title that
 names a folder instead of making a point, the same shape twice in a row, a
-chart whose shares do not add up. All of them are STATIC because the source
-already answers them: counting words, reading a title, comparing two
-`pattern=` attributes and adding up a column of numbers needs no browser, and
-a defect that can be named before a byte is written should be.
+chart whose shares do not add up. All of them are STATIC in the sense that
+matters here -- none needs a BROWSER: counting words, reading a title,
+comparing two `pattern=` attributes, adding up a column of numbers and asking
+the disk whether a file is there and how much it weighs are all answerable
+before a byte of the page exists, and a defect that can be named that early
+should be. `figure-asset` (#214) is the one that reaches past the source to
+the disk, because where a picture is and what is inside it is not something
+the deck's own text can answer.
 
 EVERY RED NAMES ITS OWN FIX, IN THE IMPERATIVE. "unknown class" is a
 diagnosis and leaves the reader to guess; "drop the class …" is the repair.
@@ -550,12 +554,14 @@ def _figure(node, at, figure):
         fixes = [
             f"{at}: drop {key}= from the <{figure.imported}> — an image carries "
             f"{figure.path}= and nothing else"
-            for key in sorted(k for k in node.attrs if k != figure.path)
+            for key in sorted(k for k in node.attrs if k.lower() != figure.path)
         ]
         # AN UNCLOSED <img> EATS THE REST OF THE SLIDE. `html.parser` knows no
-        # void elements, so `<img src=…>` written open swallows the caption
-        # that follows it into itself -- and the red the reader would otherwise
-        # get is "add the missing caption", about a caption they can see.
+        # void elements, so `<img src=…>` written open swallows whatever
+        # follows it on the slide into itself. The caption it ate is then
+        # "missing", and that red fires too -- about a line the author can see
+        # in front of them. This one does not replace it; it stands beside it
+        # and names the cause, which is the only way that pair is legible.
         if node.children:
             fixes.append(
                 f"{at}: self-close the <{figure.imported}/> — written open it "
@@ -1012,9 +1018,13 @@ def _chart_fit(deck):
 def _figures_of_slide(node):
     """The (figure, element) pairs on one slide, or nothing for every other one.
 
-    A slide that carries no figure pattern, or whose figure the vocabulary
-    ruler has already named, yields nothing -- one red per defect, and a
-    second one from down here would be noise stacked on the fix.
+    A slide whose pattern carries no figure yields nothing at all, which is
+    what keeps the two rulers below silent about the seventeen patterns they
+    have no business reading. Everything a figure pattern DOES carry is
+    yielded, the second figure on an already-red slide included: a colour
+    written into a drawing is a defect whether or not the slide also has two
+    drawings, and a ruler that went quiet because a neighbour fired would hide
+    it until the neighbour was fixed.
     """
     figure = figure_of(node.attrs.get("pattern", ""))
     if not figure:

@@ -278,9 +278,37 @@ async function theFigureIsMeasuredWhereItPaints() {
   } catch (e) {
     why = e.message;
   }
-  console.log('and the one that demands green:  [green]');
   console.log(`  ${good ? 'ok  ' : 'FAIL'} box-overflow             [${good ? '+' : '-'}] `
     + 'a picture whose BOX hangs off the stage and whose paint does not');
+  if (!good) console.log(`       <- ${why}`);
+  return good ? 0 : 1;
+}
+
+// THE SECOND GREEN, AND IT IS THE ONE #214 ACTUALLY BOUGHT. Occupancy asks how
+// much of the stage the content covers, and until figures were leaves it
+// counted only TEXT -- so a slide holding nothing but a picture and its caption
+// measured a couple of percent and went red for being "empty". Stripping the
+// caption leaves a slide that is ONLY a figure, which is the shape that used
+// to be impossible to ship: it has to be green now, and it is the case that
+// would go red again the day a figure stops counting as content.
+const CAPTION = /<p class="caption"[^>]*>[\s\S]*?<\/p>/;
+
+async function theFigureCountsAsContent() {
+  let good = false;
+  let why = '';
+  try {
+    if (!CAPTION.test(FIGURE_HTML)) throw new Drifted('no <p class="caption"> to strip');
+    const planted = FIGURE_HTML.replace(CAPTION, '');
+    if (planted === FIGURE_HTML) throw new Drifted('the plant changed nothing');
+    const measured = await _measurePlanted(planted, FIGURE_PATH);
+    const fails = gate.BY_NAME['occupancy'](measured);
+    good = fails.length === 0;
+    if (!good) why = fails[0];
+  } catch (e) {
+    why = e.message;
+  }
+  console.log(`  ${good ? 'ok  ' : 'FAIL'} occupancy                [${good ? '+' : '-'}] `
+    + 'a slide holding a figure and not one word of its own');
   if (!good) console.log(`       <- ${why}`);
   return good ? 0 : 1;
 }
@@ -426,7 +454,9 @@ async function main(argv) {
   console.log();
   bad += await FIGURE_PROOF.run(FIGURE_CASES);
   console.log();
+  console.log('and the two that demand green:  [green]');
   bad += await theFigureIsMeasuredWhereItPaints();
+  bad += await theFigureCountsAsContent();
 
   const all = CASES.concat(CHART_CASES, FIGURE_CASES);
   const covered = new Set(all.map((c) => c[0]));

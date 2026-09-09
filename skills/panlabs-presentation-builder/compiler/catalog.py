@@ -2,7 +2,9 @@
 """The catalog: every name the dialect knows, in the one place that knows it.
 
     python3 compiler/catalog.py            # the reference, on stdout
-    python3 compiler/catalog.py --check    # CATALOG.md still says what this says
+    python3 compiler/catalog.py --check    # CATALOG.md still says what this says,
+                                           # and the theme still declares every
+                                           # token a figure may paint with
     python3 compiler/catalog.py --write    # make it say so
 
 THE CATALOG IS THE SOURCE, NOT A DESCRIPTION OF ONE. The compiler validates
@@ -764,13 +766,17 @@ def figure_of(name):
 class Evidence:
     """What a pattern shows besides its own words, and the tag it is written as.
 
-    THREE SHAPES, ONE QUESTION. A group, a table and a figure are each a thing
-    the author writes as a tag of its own rather than as a named `<p>`, and
-    both the audit and the compiler had grown the same `if group … elif table
-    …` chain to tell them apart. Asking the register once is what keeps a
-    fourth shape from having to be added in three files -- and `kind` is the
-    word every message about it uses, so a red says "figure" where a figure is
-    what is missing.
+    THREE SHAPES, ONE QUESTION -- AND IT IS THE NAMING QUESTION, NOT THE
+    DISPATCH. A group, a table and a figure are each a thing the author writes
+    as a tag of its own rather than as a named `<p>`, so the audit and the
+    compiler both had to ask, per pattern, "which tag is this pattern's
+    evidence, and what do I call it in a message". That is what this record
+    answers once. Each shape still needs its OWN handler in each file -- the
+    register cannot hold one without importing the audit that would import it
+    back -- so the `if figure … elif group …` cascades survive on purpose;
+    what does not survive is a second, hand-kept list of tags beside the one
+    the register already has. `kind` is the word every message uses, so a red
+    says "figure" where a figure is what is missing.
     """
 
     kind: str      # "group", "table" or "figure"
@@ -795,10 +801,16 @@ def evidence_of(name):
 # never listed by hand. It is what lets a reader of a slide say "this `<svg>` is
 # somebody's evidence, and it is in the wrong pattern" instead of "this is a tag
 # I have never heard of" -- the first names the fix, the second is a shrug.
-EVIDENCE_TAGS = tuple(sorted({
-    tag for name in PATTERNS
-    for tag in (evidence_of(name).tags if evidence_of(name) else ())
-}))
+def _evidence_tags():
+    tags = set()
+    for name in PATTERNS:
+        found = evidence_of(name)
+        if found:
+            tags.update(found.tags)
+    return tuple(sorted(tags))
+
+
+EVIDENCE_TAGS = _evidence_tags()
 
 
 def form_names(name):
@@ -861,14 +873,22 @@ TOKEN_DECLARED = re.compile(r"^\s*(--[A-Za-z0-9-]+)\s*:", re.M)
 
 
 def megabytes(n):
-    """A weight, in the units and the decimal mark this skill writes them in.
+    """A weight, in the units a REFUSAL names it in: English, decimal point.
 
-    Public because `compiler/figures.py` refuses an oversized image in the same
-    words the reference publishes the ceiling in, and a second copy of "how do
-    we write a megabyte" is how a refusal ends up naming a number the catalog
-    never printed.
+    Public because `compiler/figures.py` refuses an oversized image against the
+    same ceiling this file publishes, and a second copy of "how do we write a
+    megabyte" is how a refusal ends up naming a number the catalog never
+    printed. CLAUDE.md's seam runs straight through it -- a message the program
+    prints is English, the prose explaining a pattern is not -- so the
+    Portuguese reference localises the result with `_pt` rather than this
+    returning a comma into an English sentence.
     """
-    return f"{n / (1024 * 1024):.1f}".replace(".", ",") + " MB"
+    return f"{n / (1024 * 1024):.1f} MB"
+
+
+def _pt(said):
+    """A number, with the decimal mark the reference's Portuguese prose uses."""
+    return said.replace(".", ",")
 
 
 def reference():
@@ -968,11 +988,12 @@ def reference():
                 "recusam — é o que faz a mesma figura trocar de identidade junto "
                 "com o deck.",
                 "",
-                f"Um `<{f.imported}>` carrega só `{f.path}=`, um caminho relativo "
-                "à fonte do deck e nunca uma URL. O compilador embute o arquivo "
+                f"Um `<{f.imported}>` carrega só `{f.path}=`, um caminho de "
+                "arquivo — relativo à fonte do deck, ou absoluto — e nunca uma "
+                "URL. O compilador embute o arquivo "
                 "em base64: "
                 + ", ".join(f"`{t.extension}`" for t in f.types)
-                + f", até {megabytes(f.max_bytes)} cada. Caminho que não existe, "
+                + f", até {_pt(megabytes(f.max_bytes))} cada. Caminho que não existe, "
                 "arquivo acima do teto e bytes que não são do formato que a "
                 "extensão promete recusam a construção — um retrato vazio nunca "
                 "chega ao palco.",

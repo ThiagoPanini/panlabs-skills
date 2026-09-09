@@ -107,6 +107,21 @@ function fontTokensFn() {
   };
 }
 
+// EVERY PICTURE DECODED BEFORE ANYTHING IS MEASURED. `paintedRect` asks an
+// <img> for its `naturalWidth` to know where inside its box the picture
+// actually lands, and an image that has not decoded yet reports 0 -- which
+// would send the ruler back to the CSS box, silently, exactly the
+// over-measurement the painted rect exists to prevent. A defect that depends
+// on decode timing is a defect that is red on one machine and green on the
+// next, which is worse than either. Every image on a built deck is a `data:`
+// URI with no network between it and the page, so awaiting them all costs a
+// tick and removes the race rather than betting against it.
+function decodeImagesFn() {
+  return Promise.all(
+    [].slice.call(document.images).map((img) => img.decode().catch(() => null))
+  ).then(() => document.images.length);
+}
+
 // Caller-driven, reload-free navigation: toggle `.is-current` exactly the
 // way the page's own inline script does, without depending on that script's
 // closed-over state -- this gate is measuring the page from OUTSIDE it.
@@ -157,6 +172,11 @@ function pageMeasureFn() {
       w = el.viewBox.baseVal.width;
       h = el.viewBox.baseVal.height;
     }
+    // The box is the honest answer for anything with no intrinsic size of its
+    // own to letterbox inside it. It is NOT the answer for an image that
+    // simply has not decoded -- measureFile awaits every decode before this
+    // ever runs, so reaching here with an <img> means the picture has no
+    // intrinsic size at all, and the box is all there is to measure.
     if (!(w > 0 && h > 0) || r.width <= 0 || r.height <= 0) return r;
     const scale = Math.min(r.width / w, r.height / h);
     const pw = w * scale;
@@ -292,6 +312,7 @@ async function measureFile(filePath) {
   const requests = [];
   await b.gotoWatched(fileUrl, (url) => requests.push(url));
 
+  await b.evaluate(evalCall(decodeImagesFn));
   const title = await b.evaluate('() => document.title');
   const fontTokens = await b.evaluate(evalCall(fontTokensFn));
   const total = await b.evaluate("() => document.querySelectorAll('.slide').length");

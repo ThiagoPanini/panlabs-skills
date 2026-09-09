@@ -37,7 +37,7 @@ import re
 from dataclasses import dataclass
 
 from catalog import megabytes
-from source import Refused, plain_text, squeeze
+from source import Refused, squeeze
 
 # A URI, and not a path. Two characters at least before the colon, so a
 # Windows drive letter is never read as a scheme -- and every one of the forms
@@ -127,8 +127,12 @@ def resolve(said, base, figure):
     """Where the file a `src=` names is, or the one thing to do about it.
 
     `base` is the directory the deck's SOURCE was read from, which is the only
-    honest anchor: the author writes a path beside the file they are writing,
-    not beside whatever directory the build happened to be run from.
+    honest anchor for a RELATIVE path: the author writes it beside the file
+    they are writing, not beside whatever directory the build happened to be
+    run from. An absolute path is answered as written -- #207's own story is
+    "embutir imagens minhas por caminho", and a logo living in somebody's home
+    directory is a path they really have. What is refused is neither of those:
+    a URI, which is a picture the page would have to fetch.
     """
     src = (said or "").strip()
     exts = ", ".join(k.extension for k in figure.types)
@@ -180,8 +184,8 @@ def resolve(said, base, figure):
     if not _signed(head, kind):
         return Resolved(fix=(
             f'save "{src}" as a real {kind.extension} — its first bytes are not '
-            f"a {kind.media}'s, and a picture the browser cannot decode paints "
-            "the blank rectangle this pattern exists to make impossible"
+            f"those of a {kind.media}, and a picture the browser cannot decode "
+            "paints the blank rectangle this pattern exists to make impossible"
         ))
 
     return Resolved(path=path, media=kind.media)
@@ -209,19 +213,6 @@ def _attributes(node, figure):
         f' {name}="{html.escape(said[name.lower()], quote=True)}"'
         for name in figure.attrs if name.lower() in said
     )
-
-
-def described_by(slide, figure):
-    """The words the register says name this figure, read off the slide itself.
-
-    THE REGISTER NAMES THE SLOT (`Figure.caption`) and this reads it, so the
-    accessible name of a drawing and the line printed under it are the same
-    sentence rather than two the author has to keep in step.
-    """
-    for el in slide.elements():
-        if el.attrs.get("class", "").strip() == figure.caption:
-            return plain_text(el).strip()
-    return ""
 
 
 def _node(node, figure):

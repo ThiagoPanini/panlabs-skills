@@ -44,8 +44,12 @@
 # words in it, and every ruler here found leaves by looking for a text node --
 # so a picture filling the projector edge to edge weighed nothing, and an
 # image-only slide came back RED on occupancy for being "empty". Figures are
-# leaves now, measured where they PAINT rather than where their box is, and
-# two cases in the render proof plant against both halves of that. The other
+# leaves now, measured where they PAINT rather than where their box is. The
+# render proof holds that from both sides: one PLANT that goes red (a picture
+# grown until it bleeds off the stage, carrying not one character, which the
+# old gate called green), and two cases that demand GREEN -- because the change
+# turned two false reds into passes, and a plant cannot prove a red that should
+# no longer happen. The other
 # four families the v1 measured (legibility contrast, surface inversion,
 # line-count outliers, stacking order) have no v2 equivalent: the current
 # engine doesn't yet have the constructs they were measuring (a card grid, a

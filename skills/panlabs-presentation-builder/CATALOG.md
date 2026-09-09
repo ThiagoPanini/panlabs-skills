@@ -158,7 +158,7 @@ Um `<svg>` precisa do `viewBox` e é montado só com estes elementos — `<g>`, 
 
 Toda cor vem do tema: `fill` e `stroke` só aceitam `none` ou `var(--token)`, e os tokens são `--surface`, `--ink`, `--ink-muted`, `--accent`, `--content-1`, `--content-2`, `--hairline-faint`, `--hairline`, `--hairline-strong`. Um hexadecimal, um `rgb()`, um nome de cor ou um `url()` recusam — é o que faz a mesma figura trocar de identidade junto com o deck.
 
-Um `<img>` carrega só `src=`, um caminho relativo à fonte do deck e nunca uma URL. O compilador embute o arquivo em base64: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, até 2,0 MB cada. Caminho que não existe, arquivo acima do teto e bytes que não são do formato que a extensão promete recusam a construção — um retrato vazio nunca chega ao palco.
+Um `<img>` carrega só `src=`, um caminho de arquivo — relativo à fonte do deck, ou absoluto — e nunca uma URL. O compilador embute o arquivo em base64: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, até 2,0 MB cada. Caminho que não existe, arquivo acima do teto e bytes que não são do formato que a extensão promete recusam a construção — um retrato vazio nunca chega ao palco.
 
 ### `full-bleed-statement` · até 12 palavras
 

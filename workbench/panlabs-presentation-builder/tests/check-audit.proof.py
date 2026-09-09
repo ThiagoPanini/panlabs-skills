@@ -885,6 +885,29 @@ def main():
     print()
     failed += figure_block("the figure's own file (#214)", [
         (
+            "an attribute nobody declared",
+            "an alt= the compiler writes itself, typed by hand",
+            in_source(swap(FIGURE_SOURCE, CAPTURE_SRC,
+                           CAPTURE_SRC + ' alt="uma captura"')),
+            "drop alt= from the <img>",
+        ),
+        (
+            "an image written open",
+            "the <img> unclosed, swallowing the slide after it",
+            in_source(swap(FIGURE_SOURCE, f"<img {CAPTURE_SRC}/>",
+                           f"<img {CAPTURE_SRC}>")),
+            "self-close the <img/>",
+        ),
+        (
+            "two figures on one slide",
+            "a drawing put next to the picture, both claiming the slot",
+            in_source(swap(FIGURE_SOURCE, f"<img {CAPTURE_SRC}/>",
+                           '<svg viewBox="0 0 10 10"><rect x="1" y="1" '
+                           'width="8" height="8" fill="var(--ink)"/></svg>\n    '
+                           f"<img {CAPTURE_SRC}/>")),
+            "keep one figure",
+        ),
+        (
             "a path that finds nothing",
             "the src= pointing where no file is",
             in_source(swap(FIGURE_SOURCE, CAPTURE_SRC, 'src="ausente.png"')),
@@ -907,7 +930,7 @@ def main():
             "over the byte ceiling",
             "one byte more than a figure is allowed to weigh",
             in_file(OVER_CEILING),
-            'shrink "capture.png" to under 2,0 MB',
+            'shrink "capture.png" to under 2.0 MB',
         ),
         (
             "bytes the name lied about",

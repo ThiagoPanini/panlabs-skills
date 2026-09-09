@@ -223,6 +223,17 @@
 # out of the tree for the reason #62 measured: a committed render nobody
 # compares is not evidence, it just ages. What proves the corpus renders is
 # layer 2, running.
+#
+# ⚠️ #220 TOOK THE CORPUS BACK TO THREE, AND THE THIRD IS NOT UNDER
+# `examples/`. The note above is still true about the tree -- `examples/` holds
+# two decks and only two -- but the corpus this suite eats is now those two plus
+# `../benchmark/matt-pocock.deck.html`, which #207's Testing Decisions always
+# counted ("os dois exemplos da árvore ... e o benchmark do workspace irmão")
+# and no layer had ever built. It joins at the END of layer 1, in the same
+# `$OUTPUT_DIR`, so layer 2 picks it up by the same discovery that finds the
+# other two. The layers that still walk `examples/` on purpose are 3 (the
+# register's coverage is a promise the TREE makes), 4 (a benchmark in the wrong
+# theme is not an identity anybody ships) and 5.
 set -uo pipefail
 
 # A RULER LEAVES NO TRACE ON ITS SUBJECT. Layer 1 runs the skill's OWN
@@ -324,6 +335,57 @@ step "the corpus check proves it measures" \
 
 step "the corpus draws every pattern and every chart form the register declares" \
   python3 "$HERE/check-corpus.py"
+
+# AND THE CORPUS IS NOT ONLY WHAT `examples/` HOLDS (#220). #207's Testing
+# Decisions name three sources for it -- "os dois exemplos da árvore ... e o
+# benchmark do workspace irmão" -- and the benchmark is the only one of the
+# three whose NUMBERS ARE REAL: `../benchmark/matt-pocock.deck.html`, built from
+# `BRIEF.md` beside it, every value traced in `DATA.md` to a primary source with
+# a date. It lives out here rather than in `examples/` because story 55 asks for
+# exactly that: the proof of acceptance is not something to install alongside
+# the skill.
+#
+# IT LANDS IN THE SAME `$OUTPUT_DIR`, and that is the whole reason this step is
+# a step instead of a `render-examples.sh` run: layer 2's `render_corpus` walks
+# `$OUTPUT_DIR/*.html` by discovery, so a benchmark built here is a benchmark
+# the render gate asserts on, with no second loop to keep in step.
+#
+# ⚠️ IT IS THE ONE DECK IN THE CORPUS THAT CAN GO RED FOR A REASON OUTSIDE THIS
+# TREE. Its four charts are numbers somebody measured on a day; when they are
+# re-measured the source lines change with them, and the deck stops matching
+# `DATA.md` without a ruler anywhere noticing. What this step holds is the half
+# a machine CAN hold -- that it still builds and still renders -- and `DATA.md`
+# is where the other half is written down for a person.
+build_benchmark() {
+  local n=0 bad=0 src name
+  # DISCOVERED, NOT NAMED, the same way `build_corpus` above discovers
+  # `examples/` -- and by the same suffix, which is what lets `benchmark/` hold
+  # `BRIEF.md` and `DATA.md` beside the source without either being handed to
+  # the compiler. A deck named here would be a deck `tools/render-examples.sh`
+  # rebuilt and this suite never measured.
+  for src in "$HERE"/../benchmark/*.deck.html; do
+    [ -e "$src" ] || continue
+    name="$(basename "$src" .deck.html)"
+    if python3 "$SKILL/compiler/build.py" "$src" "$OUTPUT_DIR/$name.html"; then
+      n=$((n + 1))
+    else
+      bad=$((bad + 1))
+    fi
+  done
+  if [ "$((n + bad))" -eq 0 ]; then
+    echo "   ✗ benchmark/ has no source to build — #220's acceptance deck is the"
+    echo "     only corpus member whose numbers are real, and a corpus without"
+    echo "     it is green about two synthetic decks and nothing else"
+    return 1
+  fi
+  if [ "$bad" -ne 0 ]; then
+    echo "   ✗ $bad of $((n + bad)) benchmark source(s) refused — fix what the"
+    echo "     compiler named above; no later layer will measure a partial corpus"
+    return 1
+  fi
+  echo "   ✓ $n benchmark source(s) built into the same temp directory as the examples"
+}
+step "the benchmark builds through the documented command"  build_benchmark
 
 echo
 echo "════ layer 2 · the render gate ════"

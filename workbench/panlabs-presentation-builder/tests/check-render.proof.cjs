@@ -489,9 +489,35 @@ async function theStagePresents() {
     steps.push(['`n` opens the notes of the slide it jumped to',
       s.open.join() === 'notes' && s.note.join() === '2']);
 
-    s = await press('ArrowRight');
+    // THE ARROW HAS TO ACTUALLY MOVE THE DECK, and until #220 it did not have
+    // to. This step asserted the notes still read `2` after ONE press -- which
+    // was true because the only fragmented deck in the corpus revealed a beat
+    // on its second slide, so the press was swallowed and the deck never left
+    // the slide the notes were already on. A step named "the notes follow the
+    // deck" was green over a deck that had not moved.
+    //
+    // #220 put a third deck in the corpus, the alphabet handed this case one
+    // with no fragment on slide 2, and the assertion went red for the right
+    // reason. So the arrow is pressed until THE PROGRESS BAR moves -- however
+    // many beats the picked page hides on the way -- and only then is the note
+    // panel held to it: the slide the notes name has to be the slide the
+    // progress bar points at. No slide number is written here, so the step no
+    // longer cares which deck the pick handed it or where its beats fall.
+    //
+    // WHAT IT STILL ASSUMES is that the slide it lands on CARRIES notes, since
+    // a slide without them leaves the panel empty and nothing to follow. Every
+    // deck in this corpus does, because "what does not fit goes to the notes"
+    // is the doctrine `NARRATIVE.md` states; a corpus that stopped honouring it
+    // would go red here, which is the right place to hear about it.
+    const ADVANCES = 8;   // more beats than any one slide in the corpus hides
+    let moved = null;
+    for (let i = 0; i < ADVANCES && moved === null; i += 1) {
+      const after = await press('ArrowRight');
+      if (after.progress !== s.progress) moved = after;
+    }
+    const landedOn = moved && String(Math.round(Number(moved.progress) * moved.slides));
     steps.push(['the notes follow the deck, and the progress bar with them',
-      s.note.join() === '2' && s.progress === String(2 / s.slides)]);
+      moved !== null && landedOn !== '2' && moved.note.join() === landedOn]);
   } catch (e) {
     why = e.message;
   } finally {

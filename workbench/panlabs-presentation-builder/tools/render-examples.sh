@@ -25,6 +25,14 @@
 # holds the document to it; a tool that dropped a megabyte of PNG into
 # `examples/` would make that promise false from the maintainer's side.
 #
+# ⚠️ SINCE #220 IT ALSO BUILDS THE BENCHMARK, and the name of this file is now
+# one deck short of the truth. `../benchmark/matt-pocock.deck.html` is the third
+# corpus member #207's Testing Decisions always counted, and the ONLY one whose
+# numbers are real -- which makes its contact sheet the one somebody actually
+# has a reason to open, since it is the picture #220's acceptance is argued
+# from. Renaming the tool would break every path written into the tickets that
+# already ran; the line above is the cheaper honesty.
+#
 # Without a Chromium on the machine the render gate degrades to a named SKIP,
 # exactly as it does everywhere else here: the `.html` and the `.storyboard.md`
 # still land, and the contact sheets do not. The count at the end says which
@@ -57,8 +65,12 @@ esac
 built=0
 sheets=0
 bad=0
-for src in "$SKILL"/examples/*.deck.html; do
-  [ -e "$src" ] || break
+# THE TWO EXAMPLES FIRST, THEN THE BENCHMARK, AND BOTH BY DISCOVERY. `*.deck.html`
+# is what picks either one, so a deck added to either directory is a deck this
+# tool rebuilds without being told -- and the suffix is what keeps `BRIEF.md` and
+# `DATA.md` out of it, which is why `benchmark/` can hold prose beside a source.
+for src in "$SKILL"/examples/*.deck.html "$HERE"/../benchmark/*.deck.html; do
+  [ -e "$src" ] || continue
   name="$(basename "$src" .deck.html)"
   if python3 "$SKILL/compiler/build.py" "$src" "$OUTPUT_DIR/$name.html"; then
     built=$((built + 1))
@@ -70,7 +82,7 @@ done
 
 echo
 if [ "$((built + bad))" -eq 0 ]; then
-  echo "examples/ has no source to build — there is nothing derived to regenerate"
+  echo "neither examples/ nor benchmark/ has a source to build — there is nothing derived to regenerate"
   exit 1
 fi
 if [ "$bad" -ne 0 ]; then

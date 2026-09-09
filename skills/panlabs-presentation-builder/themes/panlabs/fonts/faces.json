@@ -2,12 +2,14 @@
   "faces": [
     {
       "family": "Inter Variable",
+      "source": "Inter",
       "file": "Inter-subset.woff2",
       "weight": "100 600",
       "style": "normal"
     },
     {
       "family": "Paper Mono",
+      "source": "Paper Mono",
       "file": "PaperMono-subset.woff2",
       "weight": "100 600",
       "style": "normal"

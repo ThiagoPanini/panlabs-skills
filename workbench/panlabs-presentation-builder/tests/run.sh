@@ -305,31 +305,65 @@ step "every face's manifest describes the bytes beside it" \
   node "$HERE/check-fonts.cjs"
 
 # AND THE DECK THAT PROVES A PATTERN IS NOT A THEME. #216's own acceptance
-# asks for the seven-slide deck of few words to compile in BOTH themes: `base`
+# asks for the seven-slide deck of few words to compile in EVERY theme: `base`
 # is the one that proves the patterns hold with no brand behind them, and
 # `panlabs` is the one that proves the theme is a sheet of overrides rather
 # than a second engine. Layer 1 already built every example in the theme its
 # own header declares; this is the one build that crosses.
+#
+# ⚠️ THE RENDER GATE IS CALLED AGAIN, EXPLICITLY, AND THAT IS THE POINT.
+# `build.py`'s own call is best-effort and never touches its exit code (#209),
+# so a `panlabs` build whose declared face silently failed to load would print
+# a red `platform-font` and still leave this step green -- and layer 2's
+# `render_corpus` cannot cover it, because it runs over the corpus BEFORE
+# these two files exist. This is the only place a render verdict is asserted
+# for a theme no example's header declares.
+#
+# ⚠️ AND THE CONTACT SHEET IS ASSERTED RATHER THAN ANNOUNCED. #216 asks for the
+# two sheets side by side; saying so without looking would be the shape of
+# green this whole suite exists to refuse. Without Chromium the gate SKIPs, no
+# PNG is written, and the step says THAT instead of claiming a picture nobody
+# took.
 build_across_themes() {
   local src="$SKILL/examples/few-words.deck.html"
   if [ ! -e "$src" ]; then
     echo "   ✗ examples/few-words.deck.html is not there — the deck #216 asks to"
-    echo "     see in both themes has nothing to build from"
+    echo "     see in every theme has nothing to build from"
     return 1
   fi
-  local bad=0 theme
-  for theme in base panlabs; do
-    python3 "$SKILL/compiler/build.py" "$src" "$OUTPUT_DIR/few-words.$theme.html" \
-      --theme "$theme" || bad=$((bad + 1))
+  local n=0 bad=0 sheets=0 theme out
+  # The themes are DISCOVERED, the same way `scripts/check-skills.sh` discovers
+  # skills: a list written here is a list the theme after next is missing from.
+  for theme in "$SKILL"/themes/*/; do
+    [ -d "$theme" ] || continue
+    theme="$(basename "$theme")"
+    n=$((n + 1))
+    out="$OUTPUT_DIR/few-words.$theme.html"
+    if python3 "$SKILL/compiler/build.py" "$src" "$out" --theme "$theme" \
+       && node "$SKILL/gate/render.cjs" "$out" --out "$OUTPUT_DIR"; then
+      [ -e "$OUTPUT_DIR/few-words.$theme.contact-sheet.png" ] && sheets=$((sheets + 1))
+    else
+      bad=$((bad + 1))
+    fi
   done
-  if [ "$bad" -ne 0 ]; then
-    echo "   ✗ $bad of 2 themes refused the same source — a pattern that only"
-    echo "     holds under one identity is a pattern the theme is propping up"
+  if [ "$n" -eq 0 ]; then
+    echo "   ✗ themes/ has no theme — there is nothing for a deck to wear"
     return 1
   fi
-  echo "   ✓ the seven-slide deck built in both themes, contact sheets beside it"
+  if [ "$bad" -ne 0 ]; then
+    echo "   ✗ $bad of $n theme(s) refused the same source, or rendered it red —"
+    echo "     a pattern that only holds under one identity is a pattern the"
+    echo "     theme is propping up"
+    return 1
+  fi
+  if [ "$sheets" -eq "$n" ]; then
+    echo "   ✓ the seven-slide deck built and rendered in $n themes, $sheets contact sheets beside it"
+  else
+    echo "   ✓ the seven-slide deck built in $n themes; $sheets of $n contact sheets —"
+    echo "     the render gate SKIPped for want of a Chromium, so there is nothing to look at"
+  fi
 }
-step "the same deck compiles in base and in panlabs"  build_across_themes
+step "the same deck compiles in every theme"  build_across_themes
 
 echo
 if [ "$failed" -ne 0 ]; then

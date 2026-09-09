@@ -128,17 +128,24 @@ function split(buf) {
       length = read.value;
       at = read.at;
     }
-    entries.push({ tag, origLength, length });
+    entries.push({ tag, origLength, length, transformed: !nullTransform });
   }
   return { at, entries, stream: zlib.brotliDecompressSync(buf.subarray(at)) };
 }
 
+// A TRANSFORMED TABLE COMES BACK AS `undefined`, NOT AS WRONG BYTES. What sits
+// in the stream for `glyf` and `loca` is the WOFF2 re-encoding of them, and
+// this reader does not undo it; slicing `origLength` out of a `length`-sized
+// region would hand the caller the table plus a bite of the next one, which
+// parses as something and is never right. Nothing here needs a transformed
+// table -- `cmap` and `name` are never transformed -- so the honest answer for
+// one is nothing at all.
 function woff2Tables(buf) {
   const { entries, stream } = split(buf);
   const out = {};
   let offset = 0;
   for (const e of entries) {
-    out[e.tag] = stream.subarray(offset, offset + e.origLength);
+    if (!e.transformed) out[e.tag] = stream.subarray(offset, offset + e.origLength);
     offset += e.length;
   }
   return out;
@@ -212,6 +219,10 @@ function format4(cmap, at) {
   return out;
 }
 
+// Neither shipped face exposes a format 12 subtable -- both are format 4 --
+// so nothing in the corpus reaches this. It is here because a re-cut from a
+// face with anything above the basic plane WOULD produce one, and a reader
+// that only knew format 4 would refuse it with a fix naming the wrong repair.
 function format12(cmap, at) {
   const groups = cmap.readUInt32BE(at + 12);
   const out = new Set();
@@ -220,8 +231,10 @@ function format12(cmap, at) {
     const start = cmap.readUInt32BE(gi);
     const end = cmap.readUInt32BE(gi + 4);
     const glyph = cmap.readUInt32BE(gi + 8);
-    if (glyph === 0 && start === 0) continue;
-    for (let c = start; c <= end; c++) out.add(c);
+    // A group maps `start..end` onto `glyph..glyph + (end - start)`, one for
+    // one, so the only character in it that lands on .notdef is the one whose
+    // computed id is 0 -- never the whole group.
+    for (let c = start; c <= end; c++) if (glyph + (c - start) !== 0) out.add(c);
   }
   return out;
 }
@@ -229,10 +242,16 @@ function format12(cmap, at) {
 // ---------------------------------------------------------------------
 // name: the records this check reads, decoded.
 
-function names(name) {
+// EVERY RECORD, NOT THE FIRST ONE PER ID. Records are sorted by platform, so
+// keeping the first would read a Macintosh string wherever a face carries one
+// -- and a Reserved Font Name declared only in the Windows records would go
+// unseen, which is the one thing in this file that must not be able to hide.
+// `records()` returns them all; `familyOf` picks Windows for the family name,
+// because Windows is what Chromium answers with.
+function records(name) {
   const count = name.readUInt16BE(2);
   const strings = name.readUInt16BE(4);
-  const out = {};
+  const out = [];
   for (let i = 0; i < count; i++) {
     const at = 6 + i * 12;
     const platform = name.readUInt16BE(at);
@@ -242,13 +261,28 @@ function names(name) {
     const bytes = name.subarray(strings + offset, strings + offset + length);
     // Windows and Unicode records are UTF-16BE; Node decodes UTF-16LE, so the
     // bytes are swapped first. Macintosh Roman is close enough to latin1 for
-    // the four fields this check reads, all of which are ASCII in practice.
+    // the fields this check reads, all of which are ASCII in practice.
     const said = (platform === 1 || bytes.length % 2)
       ? bytes.toString('latin1')
       : Buffer.from(bytes).swap16().toString('utf16le');
-    if (out[nameID] === undefined) out[nameID] = said;
+    out.push({ platform, nameID, said });
   }
   return out;
+}
+
+function familyOf(all) {
+  const windows = all.find((r) => r.platform === 3 && r.nameID === 1);
+  return (windows || all.find((r) => r.nameID === 1) || {}).said;
+}
+
+// The three records the OFL puts a notice in: copyright (0), the trademark
+// line (7), and the licence text (13). A Reserved Font Name declared in any
+// record of any platform counts.
+const NOTICE_IDS = [0, 7, 13];
+
+function reservesItsName(all) {
+  return all.some((r) => NOTICE_IDS.includes(r.nameID)
+    && /reserved font name/i.test(r.said));
 }
 
 // ---------------------------------------------------------------------
@@ -288,9 +322,20 @@ function stageText(html) {
   return markup + literals.join(' ');
 }
 
+// THE ONLY WHITESPACE DROPPED IS THE WHITESPACE THAT IS LAYOUT. HTML collapses
+// exactly these five -- tab, newline, form feed, carriage return and the plain
+// space -- and none of them is a character a source AUTHOR typed on purpose;
+// they are how the file is shaped. Every other space in Unicode is a glyph the
+// font has to supply, and `\s` sweeps them all up: the hair space between the
+// page number and the total (U+200A) matched it, so the one character in
+// `stageOnly` that is a space could never be charged and never be reported as
+// idle either. A list of exceptions with an unmeasurable entry in it is worse
+// than no list.
+const LAYOUT_SPACE = /[\t\n\f\r]/;
+
 function charsOf(text) {
   const out = new Set();
-  for (const ch of text) if (!/\s/.test(ch) || ch === ' ') out.add(ch);
+  for (const ch of text) if (!LAYOUT_SPACE.test(ch)) out.add(ch);
   return out;
 }
 
@@ -330,17 +375,17 @@ function measure(theme, where) {
       );
       continue;
     }
-    const record = names(tables.name);
-    if (record[1] !== face.family) {
+    const all = records(tables.name);
+    const family = familyOf(all);
+    if (family !== face.family) {
       fixes.push(
-        `set the family of ${face.file} in faces.json to "${record[1]}" — that is what `
+        `set the family of ${face.file} in faces.json to "${family}" — that is what `
         + `its own name ID 1 says, and it is the string Chromium answers with; the `
         + `manifest calls it "${face.family}", so themes/${theme}/tokens.css names a `
         + 'face the render gate can never match'
       );
     }
-    const declared = [0, 7, 13].map((id) => record[id] || '').join(' ');
-    if (/reserved font name/i.test(declared)) {
+    if (reservesItsName(all)) {
       fixes.push(
         `rename ${face.file} and say so in themes/${theme}/fonts/OFL.txt — its own name `
         + 'table declares a Reserved Font Name, and OFL 1.1 § 3 forbids a modified '
@@ -447,4 +492,4 @@ if (require.main === module) {
   process.exit(main(process.argv.slice(2)) ? 0 : 1);
 }
 
-module.exports = { split, repack, woff2Tables };
+module.exports = { split, repack, woff2Tables, records, familyOf };

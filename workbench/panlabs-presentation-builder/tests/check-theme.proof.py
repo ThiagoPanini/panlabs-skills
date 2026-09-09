@@ -28,6 +28,7 @@ the resolver reads a fixture, which is not the claim.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -40,9 +41,11 @@ from proof_driver import Proof, cut, read, swap                        # noqa: E
 CHECK = os.path.join(HERE, "check-theme.py")
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
-THEME = os.path.join(SKILL, "themes", "panlabs", "tokens.css")
+THEME = os.path.join(SKILL, "themes", "panlabs")
+TOKENS = os.path.join(THEME, "tokens.css")
+FACES = os.path.join(THEME, "fonts", "faces.json")
 
-REAL = read(THEME)
+REAL = read(TOKENS)
 
 
 def _docs():
@@ -72,15 +75,23 @@ DOCS_TEXT = read(DOCS) if DOCS else None
 
 
 def _run(theme_text=None, docs_text=None):
-    """The documented command, over a planted copy of either side or of neither."""
+    """The documented command, over a planted copy of either side or of neither.
+
+    A PLANTED THEME IS A WHOLE THEME DIRECTORY, not a lone stylesheet: the
+    check reads `tokens.css` AND `fonts/faces.json` out of it, because the head
+    of a font stack is held through the manifest. A copy with no manifest would
+    make every case here prove a red about a missing file.
+    """
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     with tempfile.TemporaryDirectory(prefix="panlabs-theme-proof-") as tmp:
         argv = [sys.executable, CHECK]
         if theme_text is not None:
-            planted = os.path.join(tmp, "tokens.css")
-            with open(planted, "w", encoding="utf-8") as fh:
+            os.makedirs(os.path.join(tmp, "theme", "fonts"))
+            with open(os.path.join(tmp, "theme", "tokens.css"), "w",
+                      encoding="utf-8") as fh:
                 fh.write(theme_text)
-            argv += ["--theme", planted]
+            shutil.copyfile(FACES, os.path.join(tmp, "theme", "fonts", "faces.json"))
+            argv += ["--theme", os.path.join(tmp, "theme")]
         if docs_text is not None:
             planted = os.path.join(tmp, "docs-tokens.css")
             with open(planted, "w", encoding="utf-8") as fh:
@@ -201,6 +212,25 @@ def main():
             lambda: {"docs_text": swap(DOCS_TEXT, "--pd-neutral-page-dark:    #141414;",
                                        "--pd-neutral-page-dark:    #101010;")()},
             "set --surface to #101010",
+        ),
+        # THE HEAD OF A FONT STACK IS THE ONE THING IN IT WORTH CATCHING. The
+        # theme cannot spell the docs' family (it names the EMBEDDED face,
+        # `Inter Variable`), so the head is held through `faces.json`'s
+        # `source` -- and this is the case that would have gone green while the
+        # comparison simply dropped the head on both sides.
+        (
+            "the docs changed face",
+            "the documentation on a family the theme embeds nothing of",
+            lambda: {"docs_text": swap(DOCS_TEXT, "--pd-font-body:      'Inter',",
+                                       "--pd-font-body:      'Satoshi',")()},
+            'cut a new face from "Satoshi"',
+        ),
+        (
+            "a head nobody ships",
+            "the snapshot naming a face no @font-face of the theme writes",
+            lambda: {"theme_text": swap(REAL, "--font-mono: 'Paper Mono',",
+                                        "--font-mono: 'PaperMono',")()},
+            "set the head of --font-mono to a face themes/panlabs/fonts/faces.json ships",
         ),
     ])
 

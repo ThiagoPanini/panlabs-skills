@@ -24,12 +24,23 @@
  * moves, whether the decks move with it is a decision and not a consequence.
  * With no `panlabs-docs` beside the repository it degrades to a named SKIP.
  *
- * ONLY THE DARK APPEARANCE IS HERE. The documentation is born dark and
- * offers light as a toggle; a projected deck has one appearance and nothing
- * to toggle it with, so shipping a light block would be shipping a selector
- * nobody sets. The docs' light values stay one command away --
- * `python3 check-theme.py --print --mode light` resolves them -- and that is
- * the whole of the debt.
+ * ONLY THE DARK APPEARANCE IS HERE, AND #207 ASKED FOR BOTH ("tokens do modo
+ * claro presentes no tema e não exercitados neste ciclo"). This is a
+ * DEPARTURE, and the reason is the rule this same ticket just made a machine
+ * check: `base` owns the vocabulary, and a light appearance is not a value --
+ * it is a second set of names, or a selector, or both. `base` has neither. A
+ * `panlabs` that shipped a light block would be the one theme in the skill
+ * with a structure no other theme could answer, which is exactly the "theme
+ * that could invent a token" `themes/base/tokens.css` refuses one paragraph
+ * up. Light belongs to `base` first, and to a ticket that can render it: a
+ * block nothing paints is a block nobody has ever seen, and this house does
+ * not keep those.
+ *
+ * The values themselves are never more than one command away, which is why
+ * the resolver takes a mode at all:
+ *
+ *   python3 workbench/panlabs-presentation-builder/tests/check-theme.py \
+ *     --print --mode light
  */
 
 :root {

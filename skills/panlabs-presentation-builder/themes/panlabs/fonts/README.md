@@ -18,6 +18,8 @@ A identidade da `panlabs-docs` é escrita em **Inter** para tudo e **Paper Mono*
 
 **Os nomes são os que o upstream deu.** `Inter Variable` e `Paper Mono`, lidos do `name` ID 1 de cada binário e escritos assim no `@font-face` e nos tokens do tema. Nenhuma das duas declara Reserved Font Name — está lido dos bytes e registrado em [`OFL.txt`](OFL.txt) —, então renomear seria permitido; não é feito porque o nome é o que a régua `platform-font` do portão de render compara com o que de fato pintou, e três nomes iguais em três lugares é uma peça a menos para sair de sincronia.
 
+**E é por isso que cada face tem um `source` no manifesto.** A docs escreve `'Inter'` na pilha dela e o tema escreve `'Inter Variable'`, que é o nome do binário; as duas coisas são a mesma fonte e não são a mesma string. O `source` diz de qual família da docs a face foi cortada, e é ele que o `check-theme.py` usa para segurar a cabeça da pilha: sem ele o verificador só poderia comparar os substitutos, e a docs podia trocar a Inter por outra fonte inteira sem nada ficar vermelho.
+
 **Refazer o corte** — quando a docs trocar um arquivo de fonte, ou quando o repertório precisar de um caractere novo. `pyftsubset` é ferramenta de desenvolvimento e não entra nesta árvore: o `.woff2` chega aqui pronto. Num ambiente virtual descartável, com `fonttools` e `brotli` instalados, o corte é `Subsetter` com `flavor="woff2"`, `name_IDs=["*"]`, `notdef_outline=True` e a lista de features abaixo, sobre os `unicodes` do repertório:
 
 ```

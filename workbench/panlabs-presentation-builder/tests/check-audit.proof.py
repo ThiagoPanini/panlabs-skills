@@ -138,14 +138,23 @@ def build(text, assets=(), theme=None):
     return ok, said
 
 
-def themed_block(title, real, theme, cases, width):
-    """One fixture's cases, all built in a theme other than the one it declares.
+def block(title, real, cases, width, theme=None):
+    """One fixture's worth of cases, sharing one green control.
 
-    `theme-repertoire` (#216) is the first ruler whose verdict depends on which
-    identity the deck is wearing: `base` paints with the machine's own faces
-    and promises no repertoire, `panlabs` ships two cut faces and promises 159
-    characters. A block that could only build in the source's declared theme
-    could not reach it at all.
+    THE CONTROL IS BUILT ONCE PER BLOCK, not once per case, and the reason is
+    measured: every successful build hands the page to `gate/render.cjs`, which
+    launches a Chromium (#209) -- so a block of six cases used to pay six
+    browser launches to re-derive a result that cannot differ between them.
+    `check-render.proof.cjs` states the same rule in its own header. What the
+    assertion needs is that the unplanted source is green, and one run answers
+    that for every case that shares the source.
+
+    `theme=` BUILDS THE WHOLE BLOCK IN A THEME THE SOURCE DOES NOT DECLARE
+    (#216). `theme-repertoire` is the first ruler whose verdict depends on
+    which identity the deck is wearing -- `base` paints with the machine's own
+    faces and promises no repertoire, `panlabs` ships two cut faces and
+    promises 159 characters -- so a block that could only build in the header's
+    own theme could not reach it at all.
     """
     settled = []
 
@@ -162,35 +171,6 @@ def themed_block(title, real, theme, cases, width):
         control=control,
         width=width,
     ).run(cases)
-
-
-def block(title, real, cases, width):
-    """One fixture's worth of cases, sharing one green control.
-
-    THE CONTROL IS BUILT ONCE PER BLOCK, not once per case, and the reason is
-    measured: every successful build hands the page to `gate/render.cjs`, which
-    launches a Chromium (#209) -- so a block of six cases used to pay six
-    browser launches to re-derive a result that cannot differ between them.
-    `check-render.proof.cjs` states the same rule in its own header. What the
-    assertion needs is that the unplanted source is green, and one run answers
-    that for every case that shares the source.
-    """
-    settled = []
-
-    def control(_key):
-        if not settled:
-            settled.append(build(real))
-        return settled[0]
-
-    proof = Proof(
-        title=title,
-        label=lambda key: key,
-        invoke=lambda key, payload: build(payload),
-        planted=lambda payload: payload != real,
-        control=control,
-        width=width,
-    )
-    return proof.run(cases)
 
 
 # ── the figure deck, whose payload is a source AND the files beside it (#214) ──
@@ -1180,8 +1160,7 @@ def main():
     ], width=24)
 
     print()
-    failed += themed_block("the theme-repertoire ruler (#216)", FEW_WORDS_SOURCE,
-                           "panlabs", [
+    failed += block("the theme-repertoire ruler (#216)", FEW_WORDS_SOURCE, [
         (
             "a character no face has",
             "an arrow the docs' Inter was cut without",
@@ -1194,31 +1173,30 @@ def main():
             swap(FEW_WORDS_SOURCE, "Catálogo v2", "Catálogo v2 ✓"),
             'rewrite "✓" (U+2713)',
         ),
-    ], width=24)
+    ], width=24, theme="panlabs")
 
     print()
-    failed += themed_block("a note is painted too (#216)", PRESENTING_SOURCE,
-                           "panlabs", [
+    failed += block("a note is painted too (#216)", PRESENTING_SOURCE, [
         (
             "a character in a note",
             "a glyph in the panel only the presenter opens",
             swap(PRESENTING_SOURCE, "<notes>", "<notes>⌫ "),
             'rewrite "⌫" (U+232B)',
         ),
-    ], width=24)
+    ], width=24, theme="panlabs")
 
     print()
     failed += the_theme_may_not_invent_a_token()
 
     print()
     print("and the ones that demand green:  [built kept]")
-    failed += the_unfaced_theme_promises_nothing()
     failed += the_page_is_not_a_template()
     failed += the_category_is_the_whole_title()
     failed += the_divider_may_name_the_arc()
     failed += the_chart_svg_carries_no_colour()
     failed += the_figure_wears_only_the_theme()
     failed += the_notes_never_reach_the_stage()
+    failed += the_unfaced_theme_promises_nothing()
     return failed
 
 

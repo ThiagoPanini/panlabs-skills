@@ -184,7 +184,20 @@ async function main() {
       'stage exceptions gone',
       'the key caps the stage prints, with nothing saying who carries them',
       manifest(swap('"stageOnly": "\\u200a\u2190\u2192\u232b"', '"stageOnly": ""')),
-      'name "\u2190" (U+2190)',
+      // The fix names all four in code-point order, so the arrow is asserted
+      // by its code point rather than by the phrase that precedes it.
+      '(U+2190)',
+    ],
+    // THE ONE EXCEPTION THAT IS A SPACE, and the reason `charsOf` drops only
+    // the five whitespace characters HTML treats as layout. `\s` in JavaScript
+    // matches U+200A too, and while it did, this entry of `stageOnly` could
+    // neither be charged nor reported as idle: the README documented a
+    // guarantee no code was making.
+    [
+      'a hair space exception',
+      'the space between the page number and the total, unlisted',
+      manifest(swap('"stageOnly": "\\u200a', '"stageOnly": "')),
+      '(U+200A)',
     ],
     [
       'an idle exception',

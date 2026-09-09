@@ -41,40 +41,36 @@ FORMAT = "woff2"
 
 MANIFEST = os.path.join("fonts", "faces.json")
 
+# The same shape `icons.py` uses to find the registry it reads: a module that
+# owns files under `themes/` locates them from its own position in the tree.
+# EVERYTHING BELOW IS ADDRESSED BY THEME NAME, so no caller has to know where
+# a theme's faces sit -- `build.py` keeps its own handle on `themes/` for the
+# stylesheets, which are its business, and asks here for the faces, which are
+# not.
 HERE = os.path.dirname(os.path.abspath(__file__))
 THEMES = os.path.join(os.path.dirname(HERE), "themes")
 
 _CACHE = {}
 
 
-def directory(name):
-    """Where a theme lives, by name.
-
-    It is here rather than in `build.py` because the audit needs it too, and
-    two modules each spelling `themes/<name>` is two places to fix the day the
-    layout moves.
-    """
-    return os.path.join(THEMES, name)
-
-
 class Missing(Exception):
     """The manifest names something the theme does not actually carry."""
 
 
-def _read(theme_dir):
-    """The theme's manifest, read once per directory, or None when it has none."""
-    if theme_dir in _CACHE:
-        return _CACHE[theme_dir]
-    path = os.path.join(theme_dir, MANIFEST)
+def _read(theme):
+    """One theme's manifest, read once per name, or None when it has none."""
+    if theme in _CACHE:
+        return _CACHE[theme]
+    path = os.path.join(THEMES, theme, MANIFEST)
     if not os.path.isfile(path):
-        _CACHE[theme_dir] = None
+        _CACHE[theme] = None
         return None
     with open(path, encoding="utf-8") as fh:
-        _CACHE[theme_dir] = json.load(fh)
-    return _CACHE[theme_dir]
+        _CACHE[theme] = json.load(fh)
+    return _CACHE[theme]
 
 
-def repertoire(theme_dir):
+def repertoire(theme):
     """Every character this theme's faces can paint, or None when it ships none.
 
     None is not "no characters" -- it is "this theme makes no promise", which
@@ -82,13 +78,13 @@ def repertoire(theme_dir):
     is a fact about the machine and not about the theme. A ruler that charged
     a repertoire nobody declared would be a ruler inventing its own subject.
     """
-    manifest = _read(theme_dir)
+    manifest = _read(theme)
     if not manifest:
         return None
     return manifest.get("repertoire") or None
 
 
-def faces(theme_dir):
+def faces(theme):
     """The `@font-face` block for this theme, with every face inlined.
 
     Empty string when the theme ships no faces, so the caller can concatenate
@@ -101,16 +97,16 @@ def faces(theme_dir):
     system-ui on a projector, in front of a room, for the one frame between
     layout and decode. The same frame is what the render gate would sample.
     """
-    manifest = _read(theme_dir)
+    manifest = _read(theme)
     if not manifest:
         return ""
     rules = []
     for face in manifest.get("faces", []):
-        path = os.path.join(theme_dir, "fonts", face["file"])
+        path = os.path.join(THEMES, theme, "fonts", face["file"])
         if not os.path.isfile(path):
             raise Missing(
                 f'put {face["file"]} back beside {MANIFEST} in '
-                f"{os.path.basename(theme_dir)}/, or take its entry out of the "
+                f"themes/{theme}/, or take its entry out of the "
                 "manifest — the theme declares a face whose bytes are not there"
             )
         with open(path, "rb") as fh:

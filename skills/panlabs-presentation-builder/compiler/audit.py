@@ -1187,7 +1187,7 @@ def _theme_repertoire(deck, theme):
     moment the presenter opens the panel, and a tofu there is a tofu the room
     never sees and the presenter always does.
     """
-    covers = fonts.repertoire(fonts.directory(theme))
+    covers = fonts.repertoire(theme)
     if not covers:
         return []
     have = set(covers)

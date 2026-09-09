@@ -30,6 +30,7 @@ programs would be two chances to disagree about what `oklch()` means.
 """
 
 import argparse
+import json
 import math
 import os
 import re
@@ -61,13 +62,20 @@ CLIMB = 8
 #           here -- the accent's lightness lock, the hairlines' alpha, the
 #           state ramp's OKLCH.
 #   length  compared as written, once whitespace is squeezed. `16px` is `16px`.
-#   font    compared as a STACK MINUS ITS HEAD. The docs name the family a
-#           reader has installed (`Inter`); the theme names the family the
-#           EMBEDDED face carries (`Inter Variable`, straight off its `name`
-#           ID 1), because that is the string the render gate's `platform-font`
-#           ruler reads back out of Chromium. Holding those two to equality
-#           would fail a deck where nothing is wrong. The fallbacks after the
-#           head are the docs' own and are compared in full.
+#   font    the fallbacks are compared in full, and the HEAD through the
+#           manifest. The docs name the family a reader has installed
+#           (`Inter`); the theme names the family the EMBEDDED face carries
+#           (`Inter Variable`, straight off its `name` ID 1), because that is
+#           the string the render gate's `platform-font` ruler reads back out
+#           of Chromium. Holding those two to equality would fail a deck where
+#           nothing is wrong -- but DROPPING the head would be worse, because
+#           the family is the one thing in a font stack worth catching a drift
+#           in: the docs could swap Inter for another face entirely and three
+#           of these thirteen pairs would stay green. So the head goes through
+#           `fonts/faces.json`, which records for each embedded face both the
+#           family it carries and the `source` family it was cut from. The
+#           theme's head must be a face the theme ships; that face's `source`
+#           must be what the docs now name.
 SNAPSHOT = (
     ("--surface", "--pd-surface-page", "colour"),
     ("--ink", "--pd-text-strong", "colour"),
@@ -187,11 +195,19 @@ def _split(text):
 
 
 def _number(text, of=1.0):
-    """A CSS number, with `%` read as a fraction of `of`."""
+    """A CSS number, with `%` read as a fraction of `of`.
+
+    A unit this does not know -- `240deg`, `1turn`, a `calc()` -- comes back as
+    `Unresolved` and not as a `ValueError`, because `compare()` promises the
+    reader a fix ("teach check-theme.py to read …") and a traceback is not one.
+    """
     text = text.strip()
-    if text.endswith("%"):
-        return float(text[:-1]) / 100 * of
-    return float(text)
+    try:
+        if text.endswith("%"):
+            return float(text[:-1]) / 100 * of
+        return float(text)
+    except ValueError:
+        raise Unresolved(text) from None
 
 
 def _channel(expr, value):
@@ -277,25 +293,28 @@ def declarations(css, selector):
 
     ONLY BLOCKS AT THE TOP LEVEL. `tokens.css` also carries a `:root` nested
     inside a `@media (min-width: 997px)`, and a scan that swept it up would
-    have a token's value depend on a viewport nobody projects at.
+    have a token's value depend on a viewport nobody projects at. Reading each
+    top-level block WHOLE, with `_body`, is what keeps the nested one out
+    without this having to know what `@media` is.
+
+    A `;` AT THE TOP LEVEL ENDS A SELECTOR TOO. `@charset "utf-8";`,
+    `@import …;` and `@layer a, b;` are statements rather than blocks, and text
+    that only ever reset on a brace would glue one of them onto the front of
+    the next selector -- `@charset "utf-8" :root` matches nothing, the block
+    vanishes, and every pair comes back as "the snapshot is missing it".
     """
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
-    out, depth, head, i = {}, 0, "", 0
+    out, head, i = {}, "", 0
     while i < len(css):
         ch = css[i]
         if ch == "{":
-            depth += 1
-            if depth == 1:
-                take = " ".join(head.split()) == selector
-                head = ""
-                body, i = _body(css, i + 1)
-                depth = 0
-                if take:
-                    out.update(_pairs(body))
-                continue
+            take = " ".join(head.split()) == selector
             head = ""
-        elif ch == "}":
-            depth = max(0, depth - 1)
+            body, i = _body(css, i + 1)
+            if take:
+                out.update(_pairs(body))
+            continue
+        if ch in ";}":
             head = ""
         else:
             head += ch
@@ -332,6 +351,59 @@ def stack(value):
     return [f.strip().strip("'\"") for f in value.split(",") if f.strip()]
 
 
+def _flat(value, look):
+    """A declaration whose whole value is `var(--x)`, followed one hop.
+
+    The docs alias rather than repeat -- `--pd-font-heading: var(--pd-font-body)`
+    is the sentence "headings are the body face" -- and a comparison that read
+    the alias as a family name would be comparing a token to a token.
+    """
+    m = VAR.match(value)
+    return look(m.group(1)) if m else value
+
+
+def shipped(theme_dir):
+    """Every face the theme embeds, as `family -> source`.
+
+    Empty when the theme ships none, which is `base`: there is no manifest to
+    read and the head of its stack is a family the machine supplies, so the
+    docs' head and the theme's head are compared to each other directly.
+    """
+    path = os.path.join(theme_dir, "fonts", "faces.json")
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        manifest = json.load(fh)
+    return {f["family"]: f.get("source") for f in manifest.get("faces", [])}
+
+
+def head_fix(token, theirs_name, ours_head, theirs_head, faces):
+    """The fix for a font stack whose first family no longer lines up, or None."""
+    if not faces:
+        if ours_head == theirs_head:
+            return None
+        return (
+            f'set the head of {token} to "{theirs_head}" in themes/panlabs/tokens.css '
+            f'— it names "{ours_head}", and {theirs_name} in the docs now leads with '
+            f'"{theirs_head}"'
+        )
+    if ours_head not in faces:
+        return (
+            f'set the head of {token} to a face themes/panlabs/fonts/faces.json ships '
+            f'— it names "{ours_head}", which no @font-face the theme writes declares, '
+            "so the render gate's platform-font ruler can never match it"
+        )
+    source = faces[ours_head]
+    if source != theirs_head:
+        return (
+            f'cut a new face from "{theirs_head}" and point {token} at it, or accept '
+            f'the drift on purpose — the theme embeds "{ours_head}", which faces.json '
+            f'says was cut from "{source}", and {theirs_name} in the docs now leads '
+            f'with "{theirs_head}"'
+        )
+    return None
+
+
 # ── finding the documentation ────────────────────────────────────────────────
 
 def find_docs():
@@ -359,8 +431,9 @@ def tokens_of(css, mode):
     return out
 
 
-def compare(theme_css, docs_css, mode):
+def compare(theme_css, docs_css, mode, faces=None):
     """Every pair of SNAPSHOT, as a list of fixes -- empty when they agree."""
+    faces = faces or {}
     theirs = tokens_of(docs_css, mode)
     if not theirs:
         return [
@@ -388,17 +461,22 @@ def compare(theme_css, docs_css, mode):
         try:
             if kind == "colour":
                 want = spell(resolve_colour(look(theirs_name), look))
-                got = spell(resolve_colour(mine, look))
+                # THE THEME'S OWN VALUE IS RESOLVED THROUGH THE THEME'S OWN
+                # DECLARATIONS. It is literals today, so nothing is looked up
+                # at all -- but resolving it through the docs' table would mean
+                # a `var()` in the snapshot silently picking up the docs' value
+                # and agreeing with itself.
+                got = spell(resolve_colour(mine, ours.__getitem__))
             elif kind == "length":
-                want, got = look(theirs_name), mine
-                m = VAR.match(want)
-                if m:
-                    want = look(m.group(1))
+                want, got = _flat(look(theirs_name), look), mine
             else:
-                want, got = stack(look(theirs_name))[1:], stack(mine)[1:]
-                m = VAR.match(look(theirs_name))
-                if m:
-                    want = stack(look(m.group(1)))[1:]
+                theirs_stack = stack(_flat(look(theirs_name), look))
+                ours_stack = stack(mine)
+                want, got = theirs_stack[1:], ours_stack[1:]
+                bad = head_fix(token, theirs_name, ours_stack[0],
+                               theirs_stack[0], faces)
+                if bad:
+                    fixes.append(bad)
         except Unresolved as e:
             fixes.append(
                 f"teach check-theme.py to read {e} — resolving {theirs_name} for "
@@ -448,8 +526,9 @@ def main(argv=None):
                     help="print the token block resolved from the docs, instead of comparing")
     ap.add_argument("--mode", default="dark", choices=sorted(MODES),
                     help="which appearance of the docs to read (default: dark)")
-    ap.add_argument("--theme", default=os.path.join(THEME, "tokens.css"),
-                    help="the theme sheet to hold (default: the real one)")
+    ap.add_argument("--theme", default=THEME,
+                    help="the theme DIRECTORY to hold — its tokens.css and its\n"
+                         "fonts/faces.json (default: the real one)")
     ap.add_argument("--docs", default=None,
                     help="the docs' tokens.css (default: found beside the repository)")
     args = ap.parse_args(argv)
@@ -470,8 +549,8 @@ def main(argv=None):
         print(snapshot(docs_css, args.mode))
         return 0
 
-    theme_css = open(args.theme, encoding="utf-8").read()
-    fixes = compare(theme_css, docs_css, args.mode)
+    theme_css = open(os.path.join(args.theme, "tokens.css"), encoding="utf-8").read()
+    fixes = compare(theme_css, docs_css, args.mode, shipped(args.theme))
     total = f"{len(SNAPSHOT)} token pairs"
     print(f"── theme · themes/panlabs against {docs} · {args.mode}")
     if fixes:

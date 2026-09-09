@@ -49,6 +49,7 @@ from catalog import (DECK_FIELDS, EVIDENCE_TAGS, ICON, MOTION_PROFILES,  # noqa:
 from source import (Refused, fields_of, inline_markup,         # noqa: E402
                     plain_text, read)
 
+THEMES = os.path.join(ROOT, "themes")
 # THE THEME EVERY OTHER THEME IS A SHEET OF OVERRIDES OVER. `base` is not one
 # theme among several: it is the structure -- stage, patterns, type scale,
 # motion -- plus a complete unbranded set of values, and it is loaded under
@@ -116,14 +117,13 @@ DECLARED = re.compile(r"(--[A-Za-z0-9_-]+)\s*:")
 
 def sheets_of(name):
     """One theme's own stylesheets, concatenated, in a stable order."""
-    directory = fonts.directory(name)
+    directory = os.path.join(THEMES, name)
     sheets = []
     if os.path.isdir(directory):
         sheets = sorted(f for f in os.listdir(directory) if f.endswith(".css"))
     if not sheets:
         have = sorted(
-            d for d in os.listdir(fonts.THEMES)
-            if os.path.isdir(fonts.directory(d))
+            d for d in os.listdir(THEMES) if os.path.isdir(os.path.join(THEMES, d))
         )
         refuse(f'build with a theme this skill carries: {", ".join(have)} — "{name}" is not one')
     return "\n".join(
@@ -173,7 +173,7 @@ def theme_css(name):
                 for token in strangers
             ])
     try:
-        faces = fonts.faces(fonts.directory(name))
+        faces = fonts.faces(name)
     except fonts.Missing as e:
         refuse(str(e))
     return "\n".join(part for part in (faces, base, sheet) if part)

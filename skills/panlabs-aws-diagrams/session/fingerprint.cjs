@@ -7,8 +7,8 @@
  *   > What happens when the human edited the `.drawio` by hand between the two
  *   > sessions — is the model still valid? Does the skill detect divergence?
  *
- * "Detecting divergence" with a hash of the whole file does not work, and this is
- * MEASURED in `workbench/panlabs-aws-diagrams/tests/check-fingerprint.cjs`, not assumed: opening and saving in
+ * "Detecting divergence" with a hash of the whole file does not work, and this
+ * was MEASURED before #235 retired the bench, not assumed: opening and saving in
  * draw.io itself, without touching anything, already rewrites the XML. A file hash
  * flags an untouched file. And, worse, it does not distinguish moving a box
  * (harmless) from deleting a service (the model became a lie).
@@ -41,7 +41,7 @@
  * private subnet as public and still call the file untouched.
  *
  * That is why the semantic slice of the style includes `strokeColor` and
- * `fillColor`. The control experiment in `workbench/panlabs-aws-diagrams/tests/check-fingerprint.cjs` proves that
+ * `fillColor`. The control experiment the bench ran until #235 proved that
  * the slice without color lets this case slip through.
  */
 
@@ -199,7 +199,7 @@ function semanticSlice(c, withColor = true) {
  * z-order) and everything else in the style.
  *
  * The first version called this the "geometric fingerprint" and only looked at
- * x/y/w/h. The measurement in `workbench/panlabs-aws-diagrams/tests/check-fingerprint.cjs` brought that down:
+ * x/y/w/h. The measurement the bench ran until #235 brought that down:
  * changing the font or collapsing a container does not touch a single coordinate,
  * and the file came out as INTACT — meaning "regenerate at will" — silently
  * discarding the human's adjustment.
@@ -255,8 +255,8 @@ function semanticFingerprint(cells, opts = {}) {
  * `moved`, which is the skill warning "regenerating erases your adjustment" over an
  * adjustment that does not exist.
  *
- * The control case is still kept: `workbench/panlabs-aws-diagrams/tests/check-fingerprint.cjs` moves a cell to
- * another position AMONG SIBLINGS and requires `moved`.
+ * The control case moved a cell to another position AMONG SIBLINGS and
+ * required `moved`; it left the tree with the bench in #235.
  */
 function appearanceFingerprint(cells) {
   const siblingIndex = new Map();

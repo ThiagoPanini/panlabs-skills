@@ -48,8 +48,9 @@ __pycache__/
 .claude/skills/
 
 # Onde `workbench/panlabs-presentation-builder/tools/render-examples.sh` deixa o
-# que ele constrói: os dois `.html` dos exemplos, os dois storyboards e as duas
-# folhas de contato. Derivado dos `.deck.html` da skill, e determinístico — o
+# que ele constrói: um `.html`, um storyboard e uma folha de contato por exemplo
+# — eram dois quando esta entrada nasceu, e o #220 levou o corpus a três.
+# Derivado dos `.deck.html` da skill, e determinístico — o
 # `SKILL.md` promete que duas construções da mesma fonte não diferem em um byte.
 #
 # ⚠️ O #219 CONSIDEROU VERSIONAR AS FOLHAS DE CONTATO E NÃO VERSIONOU, pela
@@ -61,3 +62,10 @@ __pycache__/
 # — é o comando, e ele existe; o que prova que o corpus renderiza é a camada 2
 # da suíte, rodando.
 workbench/panlabs-presentation-builder/renders/
+
+# O lock de tarefas agendadas do harness. Estado de runtime de UMA sessão — ele
+# carrega `sessionId`, `pid` e o instante em que a sessão pegou o lock, e some
+# de sentido em qualquer outra máquina. Apareceu como não rastreado na limpeza
+# do #235, ao lado do `settings.local.json` que já estava aqui pelo mesmo
+# motivo: o que a sessão escreve sobre si mesma nunca é do repositório.
+.claude/scheduled_tasks.lock

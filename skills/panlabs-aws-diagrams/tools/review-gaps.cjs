@@ -9,9 +9,9 @@
  * Eats `model@1`. If what you have is a `session@1`, project it first — same as
  * `check-geometry.cjs`, and for the same reason (see `guide/inquiry.md`).
  *
- * The whole-corpus table (`--corpus`) moved out with the corpus itself (#44) —
- * it lives in `workbench/panlabs-aws-diagrams/tests/check-gaps.cjs`, which is
- * where the L2/L3 rule-coverage ruler actually runs.
+ * The whole-corpus table (`--corpus`) moved out with the corpus itself (#44),
+ * and #235 retired the bench that held both — the L2/L3 rule-coverage ruler
+ * no longer runs anywhere.
  */
 
 const fs = require('fs');

@@ -8,9 +8,10 @@
 # skill, never by whoever EXECUTES it, and the tree that gets installed
 # should not carry their weight. It points INTO
 # skills/panlabs-presentation-builder/ -- the only direction a reference from
-# here is allowed to travel. The sibling suite in
-# `workbench/panlabs-aws-diagrams/tests/run.sh` is the template for the
-# shape; nothing is shared between them but the shape.
+# here is allowed to travel. The shape came from the sibling suite of
+# `panlabs-aws-diagrams`, which #235 took out of the tree and into the
+# history; nothing was ever shared between them but the shape, so this file
+# outlived it unchanged.
 #
 # ⚠️ NO MACHINE RUNS THIS. `.github/workflows/skills.yml` runs
 # `scripts/check-skills.sh` and its proof, and nothing else -- that is the

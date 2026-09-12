@@ -564,7 +564,7 @@ function drawOutsiders(layoutPlan, model, d, res, g, mo) {
  * the SAME two ends bound every segment.
  *
  * The route that actually works is the one #24 already measured for the
- * grid's own cross-zone edges (`workbench/panlabs-aws-diagrams/tools/measure-fan.cjs`): don't cut through
+ * grid's own cross-zone edges (the fan ruler, retired in #235): don't cut through
  * the middle, go around the OUTSIDE. In column mode a band is a full-HEIGHT
  * strip, so "outside" means a row below every band — north was measured too
  * and rejected: it runs into the title block, which owns everything above
@@ -1743,7 +1743,7 @@ function outsideEdges(layoutPlan, d, res, g, abs, opts) {
 }
 
 // `iconGeo`/`narrowAnchor` are exported for #195's regression proof
-// (`workbench/panlabs-aws-diagrams/tests/check-leaf-box.cjs`) — the same reason
+// (retired with the bench in #235) — the same reason
 // `resolve.cjs` exports `labelLines`/`textWidth`: a pure formula is tested
 // directly, not reconstructed from an ELK run that may or may not exercise it.
 module.exports = { elkPlan, gridPlan, accountPlan, paint, frame, iconGeo, narrowAnchor };

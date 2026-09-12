@@ -48,7 +48,7 @@ const VIEWS = ['logical', 'technical'];
  * them. `ou` was the most costly: without it, multi-account through the arc could
  * not express a single organizational unit — the skill's two flags did not combine.
  *
- * `workbench/panlabs-aws-diagrams/tests/check-technical-parity.cjs` (#37) measures two parities, not one:
+ * The technical-parity check (#37, retired with the bench in #235) measured two parities, not one:
  * model@1.node against session@1.technicalFacet (the two SCHEMAS), and this list
  * against session@1.technicalFacet (the schema against whoever actually PROJECTS).
  * The first alone would not have caught the gap that `layer` (#22) had here until

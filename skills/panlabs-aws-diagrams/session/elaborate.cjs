@@ -12,8 +12,8 @@
  * Until #37, `elaboration@1` had no schema file: the only way to catch the delta's
  * SHAPE being wrong (a typo'd field, the wrong `schema`, a new node with no
  * `layer`) was to fall straight into the domain errors below, or not even that.
- * Now the shape is checked first, against the same schema
- * `workbench/panlabs-aws-diagrams/tests/check-single-schema.cjs` started sweeping.
+ * Now the shape is checked first, against the same schema the single-schema
+ * check started sweeping, before #235 retired the bench.
  *
  * What the delta can do:
  *   nodes         add infrastructure (mandatory "technical" layer)

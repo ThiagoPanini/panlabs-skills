@@ -17,7 +17,7 @@
  *     cannot name them. Here that's not a runtime rule: it's the absence of a
  *     word in the schema, the same trick #11 used for the coordinate boundary.
  *
- *  3. The ruler (workbench/panlabs-aws-diagrams/tools/measure-ruler.cjs) showed that the AWS palette is
+ *  3. The ruler (retired with the bench in #235) showed that the AWS palette is
  *     calibrated for pure white: `#ED7100` only reaches 3:1 against `#FFFFFF`.
  *     So `background` is a two-state SWITCH, not a color picker — and the
  *     second state is the dark deck that AWS itself publishes (#5 F3).
@@ -193,10 +193,10 @@ function build(raw, t) {
    * TEXT METRIC — and this is where it becomes clear the theme is NOT
    * downstream of layout. `resolve.cjs` calibrated 6.7 px/character and
    * 17 px/line against `fontSize=12`; changing the body changes the reserved
-   * box, which changes the gap, which changes the geometry. See
-   * workbench/panlabs-aws-diagrams/tests/check-partition.cjs, which separates the tokens that move a
-   * coordinate from the ones that only paint — and proves the separation by
-   * generating.
+   * box, which changes the gap, which changes the geometry. The partition
+   * check separated the tokens that move a coordinate from the ones that
+   * only paint — and proved the separation by generating. It was retired
+   * with the bench in #235.
    */
   const perPt = pt => 6.7 * (pt / 12);
   const metric = {
@@ -348,7 +348,7 @@ function build(raw, t) {
      *
      * In other words: #12 was already using #13's tokens without knowing it —
      * writing out their values. That's not coincidence, it's the same
-     * normative palette on both ends. `workbench/panlabs-aws-diagrams/tests/check-tokens-of-12.cjs` checks it.
+     * normative palette on both ends — checked until #235 retired the bench.
      *
      * And that's why it lives here and not in `plan.cjs`: with the hex in
      * there, the dark deck would draw a `#232F3E` bus over a `#1C1C1C`
@@ -398,10 +398,11 @@ function build(raw, t) {
 }
 
 /**
- * A theme with one token swapped, without going through a file. Exists so
- * `workbench/panlabs-aws-diagrams/tests/check-partition.cjs` can perturb one token at a time and measure
- * whether the geometry moves — which is how the paint/metric partition stops
- * being an assertion and becomes a check.
+ * A theme with one token swapped, without going through a file. Existed so
+ * the partition check could perturb one token at a time and measure whether
+ * the geometry moves — which is how the paint/metric partition stopped being
+ * an assertion and became a check. The check left the tree with the bench in
+ * #235; the seam it needed is kept.
  */
 function withPatch(base, patch) {
   const b = typeof base === 'string' ? load(base) : base;

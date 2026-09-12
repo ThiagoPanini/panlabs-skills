@@ -83,7 +83,7 @@ E mais duas perguntas que não moram no cabeçalho e mudam tudo o que vem depois
 python3 compiler/build.py /tmp/<nome>.storyboard.md /tmp/<nome>.esqueleto.html --skeleton
 ```
 
-Sai uma página com **a mensagem de cada linha no slot em que aquele padrão faz a sua afirmação** e todo o resto marcado como amostra, e sai a folha de contato ao lado dela. **É a folha que você entrega**, não a página: ela é o storyboard virado imagem, e é o que faz uma tabela de quinze linhas virar um julgamento de dez segundos — qual slide segura o palco sozinho, onde cai o respiro, se a coisa lê como uma história ou como uma pilha. **O esqueleto nunca é entregue como deck**: ele não tem uma frase de conteúdo, nasce no temporário e morre ali.
+O que sai dele está descrito em [Construir](#construir); **o que este turno entrega é a folha de contato**, não a página. Ela é o storyboard virado imagem, e é o que faz uma tabela de quinze linhas virar um julgamento de dez segundos — qual slide segura o palco sozinho, onde cai o respiro, se a coisa lê como uma história ou como uma pilha. **O esqueleto nunca é entregue como deck**: ele não tem uma frase de conteúdo, nasce no temporário e morre ali.
 
 **Fecha quando** quem pediu responde a rodada, ou diz «vai».
 
@@ -132,7 +132,7 @@ A fonte gravada é o que faz este turno existir depois que a sessão acabou: rec
 python3 compiler/build.py <projeto>/<nome>.deck.html <projeto>/<nome>.md --article
 ```
 
-Sai a apresentação escrita como história — o título e a ocasião abrindo, os divisores virando capítulos, **as notas do apresentador como a prosa** —, e saem os `.svg` de cada gráfico e de cada figura ao lado dela. É a metade do deck que nunca chegou ao palco, e é o que se publica depois de apresentar sem reescrever nada. **Gere-o do deck que foi ajustado, nunca antes**: um artigo escrito do primeiro corte é um artigo que conta uma história que ninguém aprovou.
+Sai a apresentação escrita como história, com os desenhos ao lado — o que exatamente entra nela está em [Construir](#construir). É a metade do deck que nunca chegou ao palco, e é o que se publica depois de apresentar sem reescrever nada. **Gere-o do deck que foi ajustado, nunca antes**: um artigo escrito do primeiro corte conta uma história que ninguém aprovou.
 
 **Fecha quando** quem pediu para de pedir.
 

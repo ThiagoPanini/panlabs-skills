@@ -125,7 +125,7 @@ def _move_into(md, drop, which, fenced):
 def _turn_bounds(md, which):
     """(first line, last line) of one turn's body, by index.
 
-    Turn bodies are what four of the six families read, and slicing them by
+    Turn bodies are what six of the nine families read, and slicing them by
     heading is the only way a plant can touch ONE turn and leave the rest of
     the document exactly as it was.
     """
@@ -575,6 +575,69 @@ def plant_article_before_the_build():
         f"python3 compiler/{check.BUILDER} /tmp/a.deck.html /tmp/a.md {ART}"))
 
 
+def plant_article_also_in_the_build():
+    """The article stays in its own turn AND is offered in the one that builds.
+
+    THE CASE A CODE REVIEW FOUND BY PLANTING IT. Every line the ticket asked
+    for is still there, in the right turn; there is simply one more, in the
+    wrong one. The family read `at[0]` and called it green, and its own success
+    message then reported the innocent copy -- a green whose evidence was the
+    half of the document that was not the defect.
+    """
+    md = _front()
+    lines = md.split("\n")
+    _l, start, _e = _turn_bounds(md, _deck_turn(md))
+    extra = fence(f"python3 compiler/{check.BUILDER} /tmp/a.deck.html "
+                  f"/tmp/a.md {ART}")
+    return dict(skill_md="\n".join(lines[:start + 1] + [extra]
+                                    + lines[start + 1:]))
+
+
+def plant_skeleton_also_in_the_build():
+    """The same defect from the other side: the rehearsal offered twice."""
+    md = _front()
+    lines = md.split("\n")
+    _l, start, _e = _turn_bounds(md, _deck_turn(md))
+    extra = fence(f"python3 compiler/{check.BUILDER} /tmp/a.storyboard.md "
+                  f"/tmp/a.esqueleto.html {SKEL}")
+    return dict(skill_md="\n".join(lines[:start + 1] + [extra]
+                                    + lines[start + 1:]))
+
+
+# --------------------------------------------------------------------------
+# 9 - the turn that builds hands back a list of four things to check by eye
+# --------------------------------------------------------------------------
+def _visual_items(md):
+    """(lines, the indices of the numbered items in the turn that builds)."""
+    lines = md.split("\n")
+    _l, start, end = _turn_bounds(md, _deck_turn(md))
+    at = [i for i in range(start, end)
+          if re.match(r"^\s*\d+\.\s+\S", lines[i])]
+    if not at:
+        raise Drifted("the turn that builds asks for nothing to be checked by "
+                      "eye, so there is no item to drop -- already red")
+    return lines, at
+
+
+def plant_one_check_dropped():
+    """Three things to look at where the document promised four.
+
+    The realistic regression, and the reason the family counts: somebody
+    rewrites the list, loses a line to an edit, and every ruler stays green --
+    because not one of them was ever looking at the page.
+    """
+    lines, at = _visual_items(_front())
+    drop = at[-1]
+    return dict(skill_md="\n".join(lines[:drop] + lines[drop + 1:]))
+
+
+def plant_the_whole_list_dropped():
+    lines, at = _visual_items(_front())
+    keep = set(at)
+    return dict(skill_md="\n".join(line for i, line in enumerate(lines)
+                                    if i not in keep))
+
+
 CASES = [
     ("four-turns", "a fifth turn", plant_fifth_turn,
      "fold the extra ones back in"),
@@ -591,25 +654,11 @@ CASES = [
     ("calibration-first", "the build moved in front of the round",
      plant_build_in_front_of_the_round, "move the build into a later turn"),
     ("storyboard-first", "no turn proposes a storyboard",
-     plant_no_storyboard_at_all, "propose it in turn 1"),
+     plant_no_storyboard_at_all,
+     "propose it in the turn that calibrates"),
     ("storyboard-first", "the storyboard proposed after the deck exists",
-     plant_storyboard_after_the_build, "move the proposal into turn 1"),
-    ("survey-first", "one arc function with no row in the map",
-     plant_arc_row_dropped, "a row per function"),
-    ("survey-first", "the survey moved behind the round",
-     plant_survey_after_the_round, "put the survey first"),
-    ("survey-first", "the survey stops naming the extractor",
-     plant_extractor_unnamed, "name the extractor in the survey"),
-    ("survey-first", "the round folded into the survey's own turn",
-     plant_round_folded_into_the_survey, "split the round into a later turn"),
-    ("modes-in-their-turns", "the skeleton never offered",
-     plant_skeleton_dropped, "offer the skeleton in the turn before"),
-    ("modes-in-their-turns", "the skeleton offered once the deck exists",
-     plant_skeleton_after_the_build, "move --skeleton to the turn before"),
-    ("modes-in-their-turns", "the article never offered", plant_article_dropped,
-     "offer the article in the turn after"),
-    ("modes-in-their-turns", "the article offered before a deck exists",
-     plant_article_before_the_build, "move --article to the turn after"),
+     plant_storyboard_after_the_build,
+     "move the proposal into the turn that calibrates"),
     ("paths-exist", "a command naming a path that does not exist",
      plant_dangling_path, "fix the spelling"),
     ("paths-exist", "a command reaching above the skill root",
@@ -637,6 +686,30 @@ CASES = [
     ("register-published", "a title that refuses stops being published",
      plant_category_title_dropped,
      "make `reference()` in compiler/catalog.py emit"),
+    ("survey-first", "one arc function with no row in the map",
+     plant_arc_row_dropped, "a row per function"),
+    ("survey-first", "the survey moved behind the round",
+     plant_survey_after_the_round, "put the survey first"),
+    ("survey-first", "the survey stops naming the extractor",
+     plant_extractor_unnamed, "name the extractor in the survey"),
+    ("survey-first", "the round folded into the survey's own turn",
+     plant_round_folded_into_the_survey, "split the round into a later turn"),
+    ("modes-in-their-turns", "the skeleton never offered",
+     plant_skeleton_dropped, "offer the skeleton in the turn before"),
+    ("modes-in-their-turns", "the skeleton offered once the deck exists",
+     plant_skeleton_after_the_build, "move every --skeleton to a turn before"),
+    ("modes-in-their-turns", "the article never offered", plant_article_dropped,
+     "offer the article in the turn after"),
+    ("modes-in-their-turns", "the article offered before a deck exists",
+     plant_article_before_the_build, "move every --article to a turn after"),
+    ("modes-in-their-turns", "the article offered AGAIN in the turn that builds",
+     plant_article_also_in_the_build, "move every --article to a turn after"),
+    ("modes-in-their-turns", "the skeleton offered AGAIN in the turn that builds",
+     plant_skeleton_also_in_the_build, "move every --skeleton to a turn before"),
+    ("visual-list-of-four", "one of the four checks dropped",
+     plant_one_check_dropped, "restore the missing item"),
+    ("visual-list-of-four", "the whole list of checks dropped",
+     plant_the_whole_list_dropped, "numbered list of 4 things to check"),
 ]
 
 

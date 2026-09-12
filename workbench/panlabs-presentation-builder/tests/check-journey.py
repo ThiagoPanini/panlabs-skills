@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""THE FRONT DOOR, MEASURED AGAINST ITS OWN DOCUMENTS. Eight families.
+"""THE FRONT DOOR, MEASURED AGAINST ITS OWN DOCUMENTS. Nine families.
 
     workbench/panlabs-presentation-builder/tests/check-journey.py
 
@@ -11,7 +11,7 @@ and merged green without either author reading the result.
 
 WHAT IS MECHANICAL IS HERE; THE REST IS PROSE, AND PROSE IS READ BY A HUMAN. A
 checker that grepped for sentences would go red on the first rewording and
-teach everyone to edit around it. What these eight read is POSITION and the
+teach everyone to edit around it. What these nine read is POSITION and the
 REGISTER: where a turn sits, which turn runs the builder IN WHICH MODE, what
 names the catalog holds. Reword any paragraph in the document and every one of
 them stays green.
@@ -80,6 +80,15 @@ them stays green.
                           document that offers the article in the turn that
                           builds is offering it before anyone has seen the
                           deck.
+  9  visual-list-of-four  the turn that builds hands back a numbered list of
+                          exactly four things to check by eye. #237 asks for
+                          it because the two gates are blind in the same
+                          place: a green verdict says every ruler passed, not
+                          that the deck reads. WHAT IS COUNTED IS THE LIST,
+                          NEVER THE FOUR SENTENCES -- reword any of them and
+                          this stays green, but drop one and the reader is
+                          handed three checks where the document promised
+                          four.
 
 NOTHING HERE KNOWS THE VOCABULARY, on purpose, and family 6 is where that is
 hardest to hold: it never lists a pattern, a slot or a number. It walks the
@@ -275,10 +284,31 @@ def _builds(ts, mode=None):
             if BUILDER not in c:
                 continue
             flags = [f for f in MODE_FLAGS if f in c]
-            if mode in flags if mode else not flags:
+            wanted = mode in flags if mode else not flags
+            if wanted:
                 out.append(i)
                 break
     return out
+
+
+def _ordered_runs(body):
+    """The length of every run of consecutive numbered-list items in a body.
+
+    RUNS, NOT A TOTAL. Two separate lists of two are not a list of four, and a
+    family that summed them would call a document green that hands the reader
+    two half-lists.
+    """
+    runs, current = [], 0
+    for line in body.split("\n"):
+        if re.match(r"^\s*\d+\.\s+\S", line):
+            current += 1
+            continue
+        if current:
+            runs.append(current)
+        current = 0
+    if current:
+        runs.append(current)
+    return runs
 
 
 def _round_at(ts):
@@ -398,8 +428,8 @@ def check_storyboard_first(skill_md=None, **_):
     named = [i for i, t in enumerate(ts) if STORYBOARD in t["body"].lower()]
     if not named:
         return False, (f"no turn proposes a {STORYBOARD} -- the reader corrects "
-                       f"the story by reading slides. Propose it in turn 1, "
-                       f"one line per slide")
+                       f"the story by reading slides. Propose it in the turn "
+                       f"that calibrates, one line per slide")
     # THE TURN THAT PROPOSES IS THE TURN THAT CALIBRATES, and asking it that
     # way rather than by position is what #240 had to buy: the survey went in
     # front, and its table of inputs names the storyboard IN PASSING -- "a
@@ -411,14 +441,16 @@ def check_storyboard_first(skill_md=None, **_):
         return False, (f"\"{ts[at]['title']}\" decides the header and never "
                        f"names the {STORYBOARD} -- the round settles what the "
                        f"deck looks like and leaves what it SAYS to whoever "
-                       f"writes the source. Move the proposal into turn 1, "
-                       f"beside the round, one line per slide")
+                       f"writes the source. Move the proposal into the "
+                       f"turn that calibrates, beside the round, one line "
+                       f"per slide")
     builds = _builds(ts)
     if builds and named[0] >= builds[0]:
         return False, (f"the {STORYBOARD} first appears in "
                        f"\"{ts[named[0]]['title']}\", once the deck already "
-                       f"exists -- move the proposal into turn 1, where the "
-                       f"story is still a paragraph and not a rebuild")
+                       f"exists -- move the proposal into the turn that "
+                       f"calibrates, where the story is still a paragraph "
+                       f"and not a rebuild")
     return True, (f"\"{ts[at]['title']}\" proposes the {STORYBOARD}, "
                   f"before anything is built")
 
@@ -729,6 +761,7 @@ def check_modes_in_their_turns(skill_md=None, **_):
                        f"modes are rehearsals of a deck that is never built. "
                        f"Restore the build command")
 
+    seen = {}
     for mode, side in ((SKELETON, "before"), (ARTICLE, "after")):
         at = _builds(ts, f"--{mode}")
         if not at:
@@ -736,24 +769,61 @@ def check_modes_in_their_turns(skill_md=None, **_):
                            f"of the same command and nothing in the journey "
                            f"reaches it, so it ships unreachable. Offer the "
                            f"{mode} in the turn {side} the deck is built")
-        ok = at[0] < deck[0] if side == "before" else at[-1] > deck[0]
-        if not ok:
-            where = ts[at[0] if side == "before" else at[-1]]["title"]
+        # EVERY OCCURRENCE, AND NOT THE FIRST ONE ON THE RIGHT SIDE. A
+        # document that offers the article in its own turn AND again in the
+        # turn that builds has made exactly the defect this family exists to
+        # name; a rule reading `at[0]` hands it a green, and its own success
+        # message then reports the innocent copy.
+        wrong = [i for i in at
+                 if (i >= deck[0] if side == "before" else i <= deck[0])]
+        if wrong:
+            where = ", ".join(f'"{ts[i]["title"]}"' for i in wrong)
             why = ("a rehearsal shown once the deck exists is a rehearsal of "
                    "nothing -- the rhythm it would have cost a row to fix now "
                    "costs the deck"
                    if side == "before" else
                    "an article is written FROM a deck, so offering it before "
                    "one exists offers a write-up of slides nobody has seen")
-            return False, (f"{BUILDER} --{mode} sits in \"{where}\", and the "
-                           f"deck is built in \"{ts[deck[0]]['title']}\" -- "
-                           f"{why}. Move --{mode} to the turn {side} the "
-                           f"build")
+            return False, (f"{BUILDER} --{mode} sits in {where}, and the deck "
+                           f"is built in \"{ts[deck[0]]['title']}\" -- {why}. "
+                           f"Move every --{mode} to a turn {side} the build")
+        seen[mode] = at
 
     return True, (f"the {BUILDER} modes land in order: --{SKELETON} in "
-                  f"\"{ts[_builds(ts, f'--{SKELETON}')[0]]['title']}\", the "
-                  f"deck in \"{ts[deck[0]]['title']}\", --{ARTICLE} in "
-                  f"\"{ts[_builds(ts, f'--{ARTICLE}')[-1]]['title']}\"")
+                  f"\"{ts[seen[SKELETON][0]]['title']}\", the deck in "
+                  f"\"{ts[deck[0]]['title']}\", --{ARTICLE} in "
+                  f"\"{ts[seen[ARTICLE][-1]]['title']}\"")
+
+
+# --------------------------------------------------------------------------
+# 9 - the turn that builds hands back a list of four things to check by eye
+# --------------------------------------------------------------------------
+VISUAL_LIST = 4
+
+
+def check_visual_list(skill_md=None, **_):
+    ts = turns(_front(skill_md))
+    builds = _builds(ts)
+    if not builds:
+        return False, (f"no turn runs {BUILDER} into a deck, so there is no "
+                       f"contact sheet to look at and nothing to check by eye. "
+                       f"Restore the build command")
+    turn = ts[builds[0]]
+    runs = _ordered_runs(turn["body"])
+    if VISUAL_LIST in runs:
+        return True, (f"\"{turn['title']}\" hands back {VISUAL_LIST} things to "
+                      f"check by eye before the deck reaches anyone")
+    if not runs:
+        return False, (f"\"{turn['title']}\" builds the deck and asks for "
+                       f"nothing to be looked at -- both gates are blind to "
+                       f"whether the deck READS, and green is not the same as "
+                       f"right. Give the turn a numbered list of "
+                       f"{VISUAL_LIST} things to check on the contact sheet")
+    return False, (f"\"{turn['title']}\" asks for {' and '.join(map(str, runs))} "
+                   f"thing(s) to be checked by eye, not {VISUAL_LIST} -- the "
+                   f"list is the one part of the verdict a ruler cannot give, "
+                   f"so a short one is a defect nobody is looking for. Restore "
+                   f"the missing item(s)")
 
 
 FAMILIES = [
@@ -765,6 +835,7 @@ FAMILIES = [
     ("register-published", check_register_published),
     ("survey-first", check_survey_first),
     ("modes-in-their-turns", check_modes_in_their_turns),
+    ("visual-list-of-four", check_visual_list),
 ]
 
 BY_NAME = dict(FAMILIES)

@@ -20,8 +20,8 @@ python3 compiler/build.py ../../workbench/panlabs-presentation-builder/benchmark
 
 **A lista visual do turno 2, respondida olhando a folha:**
 
-1. *três slides de texto seguidos sem um momento* — **não achei.** As corridas mais longas são de dois: o 3 e o 4, depois o 17 e o 19, e entre elas sempre cai um divisor, uma citação ou um gráfico.
-2. *capítulo sem pico* — **não achei.** O trecho 01 tem a citação de tela cheia do slide 7; o 02, a figura do pipeline no 11 e as métricas no 14; o 03, o fecho do 21.
+1. *três slides de texto seguidos sem um momento* — **não achei.** A corrida mais longa é de dois, o 3 e o 4; depois disso cai sempre um divisor, uma citação ou um gráfico antes do terceiro — o 17 e o 19 têm o gráfico do 18 entre eles.
+2. *capítulo sem pico* — **não achei.** O trecho 01 tem a citação do slide 7; o 02, a figura do pipeline no 11; o 03, o fecho do 21. Este deck renunciou à afirmação de tela cheia, e é a citação que segura o palco no lugar dela.
 3. *a assinatura onde a direção prometeu* — **está.** A direção promete «o divisor numerado que volta três vezes», e ele volta nos slides 5, 10 e 15, sempre com o mesmo par de número e nome. **Ela não é de slide, é de trecho** — e foi este deck que mostrou que a pergunta precisava ser «onde a direção prometeu» e não «em todos», porque cobrar os vinte e um slides de um motivo declarado por trecho é pedir o que ninguém prometeu. O `SKILL.md` foi corrigido por causa disto.
 4. *algum slide que lê como pilha* — **não achei.** O mais denso é o 12, a tabela de comandos e artefatos, e ele tem cabeçalho, duas colunas e cinco linhas: é tabela, não pilha.
 
@@ -41,14 +41,14 @@ python3 compiler/build.py ../../workbench/panlabs-presentation-builder/benchmark
 
 **As sete idas e voltas de máquina, que não chegaram a ninguém.** O primeiro laudo recusou em quatro réguas de uma vez e cada recusa nomeou o conserto: `share` aceita de duas a três fatias e elas somam 100 (eram quatro, somando 37); `inline-metrics` não tem `mark=`; `table` quer um `<table>` e `timeline` quer um `<ol>`; os ícones têm de existir no Lucide vendorizado, e `01`, `02`, `03`, `04` não existem. Depois disso, duas rodadas de calibragem entre o teto de palavras de um padrão e o piso de ocupação do palco — que é o vão em que este deck de fato se escreveu.
 
-**O esqueleto previu o slide vazio, com o número exato.** Ele reprova `occupancy` nos dois `two-columns` com **37,6%**, e 37,6% é precisamente o que o slide 3 do deck real media antes de eu alongá-lo. É o turno 1 fazendo o que o #237 pediu dele: o defeito de composição aparece no ensaio, onde consertá-lo custa uma linha da tabela, e não no deck.
+**O esqueleto acusa o mesmo slide, com o mesmo número — e a ordem em que isto foi medido importa.** Ele reprova `occupancy` nos dois `two-columns` com **37,6%**, que é exatamente o que o slide 3 do deck real media antes de ser alongado. Mas **o `.storyboard.md` daqui saiu do deck já construído**, e não de uma tabela proposta antes dele: os comandos acima derivam um do outro, nesta ordem. Então isto **não é** prova de que o ensaio chegou primeiro — é prova de que o marcador de um `two-columns` mede os mesmos 37,6% que o conteúdo curto mediria, e portanto de que o esqueleto **teria** acusado o slide se tivesse sido pintado do storyboard proposto no turno 1. A precedência é a promessa do `SKILL.md`; o que este registro mostra é que o número que ela entrega é o certo.
 
 **A lista visual do turno 2, respondida olhando a folha — e duas acharam defeito:**
 
-1. *três slides de texto seguidos sem um momento* — **não achei.** A corrida mais longa é 17 e 18, e o 19 é a afirmação de tela cheia.
+1. *três slides de texto seguidos sem um momento* — **não achei.** A corrida mais longa é 18 e 19, e o 20 é a afirmação de tela cheia.
 2. *capítulo sem pico* — **achei, e consertei.** O trecho 01 ia do 6 ao 8 com três slides de informação e nenhum que segurasse o palco sozinho. Entrou uma afirmação de tela cheia fechando o trecho — «Metade do repositório permanece deliberadamente invisível para quem instala o plugin» —, e o deck passou de 20 para 21 slides. Os momentos foram de quatro para cinco, e `standard` admite até cinco.
-3. *a assinatura onde a direção prometeu* — **achei, e consertei a promessa.** A direção dizia «sob todo slide que carrega número», e o slide da linha do tempo carrega `#237`, `#238` e `#246` sem linha de fonte — o padrão `timeline` não tem slot de fonte para carregar. A promessa passou a ser «sob todo slide que põe uma **medida** no palco», que é o que o deck cumpre: um identificador de issue não é uma medida.
-4. *algum slide que lê como pilha* — **não achei.** O 18, a lista de quatro itens, é o mais carregado e cada item tem ícone e uma linha.
+3. *a assinatura onde a direção prometeu* — **achei, e consertei a promessa.** A direção dizia «sob todo slide que carrega número», e a linha do tempo do slide 16 carrega `#237`, `#238` e `#246` sem linha de fonte — o padrão `timeline` não tem slot de fonte para carregar. A promessa passou a ser «sob todo slide que põe uma **medida** no palco», que é o que o deck cumpre: um identificador de issue não é uma medida.
+4. *algum slide que lê como pilha* — **não achei.** O 19, a lista de quatro itens, é o mais carregado, e cada item tem um ícone e uma linha só.
 
 ## O que as duas juntas mediram
 

@@ -617,9 +617,34 @@ step "the skill installs at both paths, and runs from both" \
   python3 "$HERE/check-install.py"
 
 echo
+echo "════ layer 7 · the extractor ════"
+# THE ONE SEAM THAT IS NOT THE COMPILER. Everything above measures what the skill
+# BUILDS; `tools/extract.py` is what a session runs BEFORE there is a deck --
+# #238 makes every number on a stage cite a source, and this is the command that
+# turns the .docx somebody mailed into the `<li>` the header wants. It is a
+# command with a promise of its own (a fragment, a named SKIP, or a refusal), so
+# it gets a layer rather than a family inside one.
+#
+# IT COMES LAST BECAUSE NOTHING ABOVE DEPENDS ON IT. A deck compiles whether or
+# not this command exists; what breaks without it is the work of WRITING the
+# provenance, which is a session's, not the compiler's.
+#
+# ⚠️ NO NETWORK, HERE OR ANYWHERE IN THIS SUITE. The command reads a URL and a
+# video's captions, and neither is measured: what layer 7 holds is the half that
+# answers on this machine -- the six formats it reads with the Python of the
+# house, the two named SKIPs for the tools it delegates to, the refusals, and
+# that nothing it does writes inside the tree that gets installed. The URL half
+# is exercised by hand; `check-extract.py`'s own header says so.
+step "the extractor check proves it measures" \
+  python3 "$HERE/check-extract.proof.py"
+
+step "the extractor reads what it says it reads, and names what it cannot" \
+  python3 "$HERE/check-extract.py"
+
+echo
 if [ "$failed" -ne 0 ]; then
   echo "SUITE RED — ${#REDS[@]} step(s):"
   for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, every storyboard still describes the deck beside it, and the front door still conducts the three turns and installs where the house looks."
+echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, every storyboard still describes the deck beside it, the front door still conducts the three turns and installs where the house looks, and the extractor reads what it says it reads and names what it cannot."

@@ -150,6 +150,26 @@ A fonte gravada é o que faz este turno existir depois que a sessão acabou: rec
 
 **A árvore carrega dois exemplos, e entre os dois todo padrão do catálogo aparece pelo menos uma vez.** [`examples/canonical.deck.html`](examples/canonical.deck.html) é o **exemplo canônico**: um resultado com dados no tema `panlabs`, com as seis formas de gráfico, as duas metades da figura, a tabela, a linha do tempo e as métricas — e é contra a capa e a assinatura **dele** que a `difference` de todo outro deck é escrita. [`examples/proposal.deck.html`](examples/proposal.deck.html) é a contraparte sem marca: uma proposta no tema `base`, com os padrões feitos de palavra — colunas, comparação, citação, pergunta-pivô, lista com ícones —, mais as notas do apresentador, os fragmentos e uma figura desenhada. É nele que a **cor de conteúdo significa o que o cabeçalho diz**: um gráfico gasta as duas cores emprestadas sem ninguém digitar nenhuma, então um deck de gráficos só pode declarar o que o palco faz com elas; este renuncia ao gráfico e gasta as duas à mão, uma vez cada, nas duas coisas de que a proposta inteira trata. Os dois são sintéticos: não existe o Estaleiro, não existe a oficina, e nenhum número deles foi medido em lugar nenhum.
 
+**Todo número que chega ao palco diz de onde veio, e quem diz é o cabeçalho.** Depois do `<direction>`, e ainda antes do primeiro slide, vem um `<sources>` com as fontes do deck — uma por `<li>`, com um `id=` no item e um `<p>` por campo:
+
+```html
+<sources>
+  <li id="F1"><p class="what">As skills instaladas nesta máquina</p><p class="where">a máquina do dono, ~/.claude/skills/</p><p class="when">09/set/2026</p></li>
+  <li id="F2"><p class="what">Retrospectiva de março, ata</p><p class="where">docs/retros/2026-03.md</p><p class="when">2026-03-12</p><p class="excerpt">A gente sabe o que está gasto. A gente nunca tem a terça de manhã.</p></li>
+</sources>
+```
+
+`what`, `where` e `when` são obrigatórios, e `when` é uma data com **mês e ano** no mínimo. Os cinco padrões que põem número ou citação no palco — `big-number`, `inline-metrics`, `table`, `chart` e `pull-quote` — carregam um slot `source` obrigatório, e o que vai nele é **só o id**, do mesmo jeito que um slot de ícone carrega só o nome Lucide: o palco imprime «o quê · quando» a partir do bloco, então a mesma fonte citada por quatro slides é escrita uma vez e corrigida em um lugar. O `excerpt` é opcional, e **obrigatório na fonte que uma citação cita** — é contra ele que a frase do `pull-quote` é conferida, palavra por palavra e na ordem, com `[…]` marcando o que você cortou. Um deck que não põe número nenhum no palco não precisa do bloco.
+
+**E o texto de uma fonte você não precisa copiar à mão.** `python3 tools/extract.py` recebe um arquivo ou uma URL e devolve o fragmento do bloco já preenchido, com o texto do documento embaixo:
+
+```bash
+python3 tools/extract.py <caminho/da/ata.docx> --id F2 --out /tmp/f2.md
+python3 tools/extract.py <https://exemplo.org/relatorio.html> --id F3
+```
+
+Ele lê `.docx`, `.xlsx`, `.csv`, `.md`, `.txt` e `.html` só com o Python da casa; `.pdf` precisa do `pypdf` e as legendas de um vídeo do YouTube precisam do `yt-dlp`, e sem eles a saída é um **SKIP nomeado** dizendo o que falta na máquina — nunca um texto inventado. Nada é gravado dentro desta árvore: sem `--out` o fragmento sai na saída padrão.
+
 ## Construir
 
 ```bash
@@ -209,7 +229,6 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
    ✓ icon-known · every icon a slide names is one the vendored Lucide set carries
    ✓ icon-paired · a slot never appears without the one it is paired with
    ✓ chart-data · every value a chart draws is a number, and a share adds up
-   ✓ chart-source · every chart says where its number came from, and when
    ✓ chart-fit · every label a chart draws fits the room its form gives it
    ✓ figure-paint · every colour a drawn figure wears is a token of the theme
    ✓ figure-asset · every image a figure points at is there, and fits under the ceiling
@@ -218,12 +237,18 @@ Toda construção imprime o laudo, verde ou vermelho, para «o que está errado 
    ✓ colour-semantics · every content colour a slide paints with is one the direction declared
    ✓ renounced-pattern · no slide takes a shape the direction gave up
    ✓ arc-closing · the deck ends on a closing, and the closing asks for something
-   16 rulers, green
+   ✓ sources-present · a deck that puts a number on the stage says where it read it
+   ✓ source-known · every source a slide cites is one the header declares
+   ✓ source-dated · every source says which month and year it is from
+   ✓ quote-verbatim · every quotation is in the excerpt of the source it cites
+   19 rulers, green
 ```
 
-**Uma régua lê o dialeto e quinze leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, a mesma forma em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, um item de lista com o ícone e sem o texto ou vice-versa, um valor de gráfico que não é número ou uma proporção que não soma cem, um gráfico cuja fonte não diz de quando é o dado, um rótulo maior do que o espaço que a forma dá a ele, uma cor escrita dentro de uma figura em vez de um token do tema, uma imagem que não resolve, passa do teto de bytes ou não é do formato que o próprio nome promete, e um caractere que as fontes do tema não carregam.
+**Uma régua lê o dialeto e dezoito leem a doutrina.** A primeira recusa uma fonte que o compilador não sabe construir. As outras construiriam sem reclamar e entregariam um deck que falha na sala: o slide que gasta mais palavras do que o padrão orça, o título que nomeia uma pasta em vez de dizer alguma coisa — a lista fechada de títulos-categoria está no [`CATALOG.md`](CATALOG.md) —, a mesma forma em dois slides seguidos, que a plateia lê como um slide que não avançou, um ícone que o conjunto vendorizado não conhece, um item de lista com o ícone e sem o texto ou vice-versa, um valor de gráfico que não é número ou uma proporção que não soma cem, um rótulo maior do que o espaço que a forma dá a ele, uma cor escrita dentro de uma figura em vez de um token do tema, uma imagem que não resolve, passa do teto de bytes ou não é do formato que o próprio nome promete, e um caractere que as fontes do tema não carregam.
 
 **E quatro leem a direção de arte de volta contra os slides.** Elas são as únicas aqui que medem o deck contra uma promessa que ele mesmo fez no próprio cabeçalho: quantos momentos ele teria — um momento é uma figura desenhada, um gráfico ou uma afirmação de tela cheia, e a escala `high` só é emprestada ao movimento cinemático —, que cores de conteúdo significam alguma coisa nele, que padrões ele abriu mão de usar, e que ele acabaria pedindo alguma coisa. Sem `<direction>` no cabeçalho as quatro ficam caladas: a régua do dialeto já nomeou a falta, e quatro vermelhos sobre promessas que ninguém fez enterrariam o único conserto que produz todos eles. Todas são estáticas porque a fonte já responde por elas: contar palavras, ler um título, comparar dois `pattern=`, conferir um nome contra um registro, somar uma coluna de números e perguntar ao disco se um arquivo está lá não precisa de navegador.
+
+**E quatro leem a procedência de volta contra os slides.** Elas são para o `<sources>` o que as quatro acima são para o `<direction>`, e o que elas medem é de outra natureza: um deck que promete `sober` e entrega seis picos é um deck cuja direção parou de descrevê-lo; um número no palco com procedência faltando, desconhecida ou sem data é um deck **afirmando o que não pode mostrar**. A primeira cobra o bloco de quem cita, a segunda que todo id citado esteja declarado, a terceira que toda fonte diga **mês e ano**, e a quarta que a citação esteja, palavra por palavra e na ordem, no trecho da fonte que ela cita — com `[…]` onde você cortou. Sem bloco, só a primeira fala: as outras três dariam um vermelho por citação sobre uma lista que ninguém escreveu.
 
 **A forma do gráfico conta como forma.** Dois slides seguidos de `pattern="chart"` passam quando o `type=` difere — barra depois de linha não é um slide que deixou de avançar —, e reprovam quando é o mesmo.
 
@@ -306,5 +331,7 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | quiser saber o que sai no storyboard, ou de onde vem a mensagem de um slide | [`compiler/storyboard.py`](compiler/storyboard.py) |
 | for propor um storyboard, escolher o arco, ou decidir o que fica de fora do deck | [`NARRATIVE.md`](NARRATIVE.md) |
 | quiser saber de que capa e de que assinatura o seu deck é obrigado a diferir | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
+| for extrair o texto de um arquivo ou de uma URL para virar fonte | [`tools/extract.py`](tools/extract.py) |
+| for escrever o bloco de fontes, ou conferir uma citação contra o trecho dela | [`examples/proposal.deck.html`](examples/proposal.deck.html) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

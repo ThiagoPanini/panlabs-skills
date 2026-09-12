@@ -177,6 +177,24 @@ class Slot:
     role: str
     purpose: str       # Portuguese: the line the reference publishes about it
     pairs_with: str = None  # another slot that must be written exactly when this one is (#211)
+    # THE SLOT WHOSE CONTENT IS AN ID AND NOT A SENTENCE (#238). A slot that
+    # cites carries the id of one source in the deck's own `<sources>` block --
+    # the way an ICON slot carries a Lucide name and never a word the room reads
+    # -- and the stage gets "what · when" written out of the block instead. It is
+    # declared here rather than matched on the slot's NAME for the reason every
+    # other fact in this file is: `compiler/audit.py` holds a citation to the
+    # block, `compiler/build.py` prints it and `compiler/storyboard.py` publishes
+    # the sources, and three files each matching `== "source"` is one rule living
+    # in three places.
+    cites: bool = False
+    # THE SLOT WHOSE WORDS ARE SOMEBODY ELSE'S (#238). A quotation is the one
+    # text on a stage that can be WRONG rather than merely bad -- attributing to
+    # a person a sentence they did not write -- so the slot says so and
+    # `quote-verbatim` holds it against the excerpt of the source it cites. The
+    # flag rides on the slot and not on the pattern because a pattern may one day
+    # carry a quotation beside prose of its own, and it is the quotation that has
+    # to be verbatim.
+    verbatim: bool = False
 
 
 @dataclass(frozen=True)
@@ -475,6 +493,12 @@ class Pattern:
 # number here would be a second ceiling nobody asked for.
 ABSOLUTE_BUDGET = 90
 
+# THE ONE LINE THE FIVE CITING PATTERNS PUBLISH ABOUT THEIR `source` (#238), and
+# it is written once because it says the same thing in all five: five copies of
+# it would be five places to edit the day the provenance block grows a field.
+CITES_PURPOSE = ("o id de uma fonte do bloco `<sources>` do cabeçalho — só o "
+                 "id, e o palco imprime «o quê · quando» a partir dele")
+
 PATTERNS = {
     p.name: p
     for p in (
@@ -535,9 +559,16 @@ PATTERNS = {
             slots=(
                 Slot("number", FIGURE, "o número, sozinho no maior corpo do palco"),
                 Slot("caption", CLAIM, "o que o número prova"),
-                Slot("meta", META, "de onde veio o número, e quando foi medido"),
+                # THE `meta` THIS SLOT REPLACED SAID "de onde veio o número, e
+                # quando foi medido" IN PROSE (#238). It was the right line and
+                # the wrong end of the contract: prose beside a number is a
+                # provenance nothing can check, and the room reading it has no
+                # way to tell a measured number from an invented one. The slot
+                # now carries an id, the block carries the date, and
+                # `source-dated` is what holds it.
+                Slot("source", META, CITES_PURPOSE, cites=True),
             ),
-            required=("number", "caption"),
+            required=("number", "caption", "source"),
             budget=25,
             purpose="Um número gigante e a legenda que diz o que ele prova",
         ),
@@ -545,8 +576,9 @@ PATTERNS = {
             name="inline-metrics",
             slots=(
                 Slot("claim", CLAIM, "o que as métricas, juntas, provam"),
+                Slot("source", META, CITES_PURPOSE, cites=True),
             ),
-            required=("claim",),
+            required=("claim", "source"),
             budget=48,
             purpose="De duas a quatro métricas lado a lado, cada uma com seu número e seu rótulo",
             group=Group(
@@ -589,8 +621,9 @@ PATTERNS = {
             name="table",
             slots=(
                 Slot("claim", CLAIM, "o que a tabela prova"),
+                Slot("source", META, CITES_PURPOSE, cites=True),
             ),
-            required=("claim",),
+            required=("claim", "source"),
             budget=ABSOLUTE_BUDGET,
             purpose="Uma tabela com cabeçalho obrigatório e até seis linhas ao todo, "
                     "cabeçalho incluído",
@@ -609,14 +642,21 @@ PATTERNS = {
         # with, and a number with no date is one it cannot check. #207 asks for
         # both by name ("toda visualização carrega título-tese e legenda com
         # fonte e data").
+        #
+        # AND SINCE #238 THE SOURCE IS AN ID RATHER THAN THE LEGEND ITSELF. The
+        # slot used to carry the whole line -- "painel do Estaleiro · dez/2026" --
+        # and a ruler could only ask that a year appear somewhere in it. What the
+        # deck states once in `<sources>` is now what the stage prints, so the
+        # same legend is cited by four charts without being typed four times, and
+        # the date is held by `source-dated` against a real date instead of
+        # against four digits inside a sentence.
         Pattern(
             name="chart",
             slots=(
                 Slot("title", CLAIM, "a tese que o gráfico prova — com verbo ou número"),
                 Slot("unit", META, "em que unidade os valores estão, ou o que os cem "
                                    "por cento somam"),
-                Slot("source", META, "de onde veio o dado, e quando foi medido — a "
-                                     "data é obrigatória"),
+                Slot("source", META, CITES_PURPOSE, cites=True),
             ),
             required=("title", "unit", "source"),
             budget=60,
@@ -765,10 +805,19 @@ PATTERNS = {
         Pattern(
             name="pull-quote",
             slots=(
-                Slot("quote", CLAIM, "a frase citada, na voz de quem a disse"),
+                Slot("quote", CLAIM, "a frase citada, na voz de quem a disse — "
+                                     "literal, e o corte se marca com "
+                                     "`[…]`", verbatim=True),
                 Slot("attribution", META, "quem disse, e em que papel"),
+                # THE ATTRIBUTION AND THE SOURCE ARE TWO DIFFERENT QUESTIONS, and
+                # #238 is where the second one gets asked. "Quem disse" is prose a
+                # person writes; "de onde saiu, e quando" is a fact -- and it is
+                # the fact that makes a quotation checkable, which is why
+                # `quote-verbatim` reads the cited source's own excerpt and
+                # refuses a sentence that is not in it.
+                Slot("source", META, CITES_PURPOSE, cites=True),
             ),
-            required=("quote", "attribution"),
+            required=("quote", "attribution", "source"),
             budget=30,
             purpose="Uma citação segurando o palco, com a atribuição na base",
         ),
@@ -1166,6 +1215,115 @@ def scale_of(name):
     return None
 
 
+# ── the provenance of one deck (#238) ────────────────────────────────────────
+# THE SECOND BLOCK OF THE HEADER, AND A SIBLING OF THE ART DIRECTION. The
+# direction records what a deck DECIDED; this one records what it KNOWS and
+# where it read it. #237's diagnosis of the v2 is that the old `chart-source`
+# slot "cobra que a linha de fonte exista, não que o número exista" -- a chart
+# could carry "painel do Estaleiro · dez/2026" whether or not a panel had ever
+# been read, and the compiler had no way to tell an invented number from a
+# measured one. Neither has this register: what it CAN do is make the deck say,
+# once and in one place, what every number on the stage came from -- so a reader
+# checking it has a list to check, and the same source cited by four slides is
+# written once instead of four times, in four wordings.
+#
+# IT LIVES INSIDE THE SOURCE AND NOT BESIDE IT, which is the owner's own reason
+# recorded in #237: "um arquivo só já viaja para a sessão seguinte". A companion
+# file would be the second end of a contract, and the deck that outlived it
+# would be a deck citing provenance nobody has.
+#
+# WRITTEN AS A GROUP, BECAUSE PROVENANCE IS A SERIES. It is the same shape
+# `Group` gives a metric row one level down -- a container, an item, a field per
+# named `<p>` -- with the one thing a group never needs: an ITEM KEY. A metric is
+# read by its position in the row; a source is read by its name from a slide five
+# pages away, so the item carries an `id=` and the slots that cite carry that id
+# and nothing else.
+SOURCES_TAG = "sources"
+
+
+@dataclass(frozen=True)
+class Sources:
+    """The provenance block: every source the slides may cite, by id.
+
+    `key` IS THE ONE FIELD THAT IS NOT A FIELD. `what`, `where`, `when` and
+    `excerpt` are written as named `<p>`s the way every other group's fields
+    are; the id is an ATTRIBUTE on the item, because it is not something the
+    source says about itself -- it is the handle the rest of the deck holds it
+    by, and a `<p class="id">` would be a handle that could be set as prose on a
+    stage.
+    """
+
+    container: str        # the tag the sources sit inside: "sources"
+    item: str             # the tag one source is written as: "li"
+    key: str              # the attribute carrying the id: "id"
+    fields: tuple         # the Field(s) a source carries, in reading order
+    required_fields: tuple
+    minimum: int
+    maximum: int
+    purpose: str          # Portuguese: the line the reference publishes about it
+    separator: str        # what the stage prints between the two halves it shows
+    elision: str          # how a quotation marks the words it left out
+
+
+# The four names, spelled once here because four readers ask for them: the audit
+# holds `when` to a date and `excerpt` to a quotation, the build prints `what`
+# and `when` onto the stage, and the storyboard publishes all four.
+SOURCE_WHAT = "what"
+SOURCE_WHERE = "where"
+SOURCE_WHEN = "when"
+SOURCE_EXCERPT = "excerpt"
+
+SOURCES_SPEC = Sources(
+    container=SOURCES_TAG,
+    item="li",
+    key="id",
+    fields=(
+        Field(SOURCE_WHAT, META, "o que esta fonte é, em uma linha — é a metade "
+                                 "que o palco imprime"),
+        Field(SOURCE_WHERE, META, "onde ela está: o caminho, a URL, o repositório "
+                                  "e o commit, ou a máquina em que foi medida"),
+        Field(SOURCE_WHEN, META, "de quando ela é — uma data com mês e ano, no "
+                                 "mínimo"),
+        Field(SOURCE_EXCERPT, BODY, "o trecho literal, quando alguma citação do "
+                                    "deck sai desta fonte"),
+    ),
+    required_fields=(SOURCE_WHAT, SOURCE_WHERE, SOURCE_WHEN),
+    minimum=1,
+    # TWELVE, AND THE CEILING IS ABOUT THE DECK RATHER THAN ABOUT THE BLOCK. A
+    # deck reading from more than twelve places in twenty minutes is a literature
+    # review wearing a deck's clothes -- and the block has no page of its own to
+    # grow onto, since nothing in it reaches the stage except through a slide
+    # that cites it. The floor is the half that earns its keep every day: an
+    # empty `<sources>` is a header that promised provenance and gave none.
+    maximum=12,
+    purpose="cada `<li>` é uma fonte, com um `id=` no item e um `<p>` por campo",
+    separator=" · ",
+    # HOW A QUOTATION SAYS IT LEFT WORDS OUT, and it is in the register because
+    # `quote-verbatim` reads it. A slide budgets thirty words and a real paragraph
+    # spends ninety, so the only way a checked quotation fits a stage at all is by
+    # eliding -- and a ruler with no mark for elision would push every deck to
+    # quote a sentence that says less, or to paste the whole paragraph and refuse
+    # on the budget instead. The two halves still have to be in the excerpt, in
+    # the order they are read: this permits a cut, never a splice.
+    elision="[…]",
+)
+
+
+def cites_of(name):
+    """The slot of a pattern that carries a source id, or None for the rest."""
+    return next((s for s in slot_specs(name) if s.cites), None)
+
+
+def verbatim_of(name):
+    """The slot of a pattern whose words are quoted, or None for the rest."""
+    return next((s for s in slot_specs(name) if s.verbatim), None)
+
+
+def citing_patterns():
+    """Every pattern that has to cite a source, in the arc's order."""
+    return tuple(n for n in PATTERNS if cites_of(n))
+
+
 # ── the reference the model reads ────────────────────────────────────────────
 # Generated, never written: `CATALOG.md` carries the block between the two
 # markers below and nothing else of this file's business. The prose around
@@ -1224,9 +1382,10 @@ def reference():
         "for o perfil.",
         "",
         f"O cabeçalho não acaba aí: o primeiro filho do `<deck>` é um "
-        f"`<{DIRECTION_TAG}>` com a direção de arte, e toda `<section>` carrega um "
-        f"`{ARC_ATTR}=` dizendo a sua função no arco. As duas últimas seções deste "
-        "documento são sobre isso.",
+        f"`<{DIRECTION_TAG}>` com a direção de arte, um `<{SOURCES_TAG}>` vem "
+        f"depois dele com a procedência de tudo o que o deck afirma, e toda "
+        f"`<section>` carrega um `{ARC_ATTR}=` dizendo a sua função no arco. As "
+        "três últimas seções deste documento são sobre isso.",
         "",
         f"São {len(PATTERNS)} padrões, na ordem do arco. O orçamento é do slide "
         "inteiro, mobília inclusive, e nenhum slide passa de "
@@ -1424,6 +1583,45 @@ def reference():
         "pintada com ela, e também um gráfico, que o palco desenha nas duas sem "
         "ninguém escrever cor nenhuma. É assim que a mesma cor marca a mesma coisa "
         "do primeiro slide ao último.",
+        "",
+        "### A procedência",
+        "",
+        f"Depois da direção de arte, e ainda antes do primeiro slide, vem um "
+        f"`<{SOURCES_TAG}>`: **todo número que chega ao palco diz de onde veio e "
+        f"de quando é**, e é aqui que ele diz. De {SOURCES_SPEC.minimum} a "
+        f"{SOURCES_SPEC.maximum} `<{SOURCES_SPEC.item}>` dentro dele, cada um com "
+        f"um `{SOURCES_SPEC.key}=` que é o nome pelo qual os slides o citam — "
+        f"{SOURCES_SPEC.purpose}.",
+        "",
+        "| campo | papel | obrigatório | o que vai nele |",
+        "| --- | --- | --- | --- |",
+    ]
+    for f in SOURCES_SPEC.fields:
+        need = "sim" if f.name in SOURCES_SPEC.required_fields else "não"
+        out.append(f"| `{f.name}` | {ROLE_LABEL[f.role]} | {need} | {f.purpose} |")
+
+    out += [
+        "",
+        "**Quem cita, cita por id.** Estes padrões carregam um slot `source` "
+        "obrigatório, e o que vai nele é o id e nada mais: "
+        + ", ".join(f"`{n}`" for n in citing_patterns())
+        + f". O palco imprime «`{SOURCE_WHAT}`{SOURCES_SPEC.separator}"
+        f"`{SOURCE_WHEN}`» na linha de metadado, a partir do bloco — então a mesma "
+        "fonte citada por quatro slides é escrita uma vez, e não quatro, em quatro "
+        "redações diferentes.",
+        "",
+        "Quatro coisas reprovam a construção, e cada uma tem o seu vermelho: um "
+        f"deck que cita sem ter o bloco (`sources-present`), um id que o bloco não "
+        f"declara (`source-known`), uma fonte cujo `{SOURCE_WHEN}` não tem mês e "
+        f"ano (`source-dated`), e uma citação que não está no `{SOURCE_EXCERPT}` da "
+        f"fonte que ela cita (`quote-verbatim`). O `{SOURCE_EXCERPT}` é opcional "
+        "em geral e **obrigatório na fonte que uma citação cita** — é ele que faz "
+        "a citação conferível.",
+        "",
+        f"**Uma citação pode cortar, nunca emendar.** Escreva `{SOURCES_SPEC.elision}` "
+        "onde você tirou palavras, e cada pedaço que sobrou tem de estar no trecho, "
+        "na ordem em que está lá. Um slide orça trinta palavras e um parágrafo real "
+        "gasta noventa: o corte é como uma frase literal caberia no palco.",
         "",
         "### A função no arco",
         "",

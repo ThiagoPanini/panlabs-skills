@@ -18,6 +18,8 @@
 
 **A figura é o slot que este catálogo não limita (#214).** Todo padrão acima diz o que vai dentro dele; `figura com legenda` diz apenas **de que** a figura pode ser feita, porque o momento em que o catálogo não tem o que o slide pede — um ciclo, um organograma, um fluxo — é o momento que a spec se recusa a sacrificar. Você escreve um `<svg>` e desenha, ou aponta um `<img src="…"/>` para um arquivo e o compilador o embute em base64. Sem `title`, a figura fica com o palco inteiro; com ele, divide. **Toda cor é do tema**: `fill` e `stroke` só aceitam `none` ou `var(--token)`, e é isso que faz o mesmo desenho trocar de identidade junto com o deck. **O vocabulário do desenho é fechado**, e é ele — e não uma regra por ameaça — que recusa `<script>`, `<use>`, `href=` e `style=`. **E o arquivo é conferido antes de virar página**: caminho que não existe, peso acima do teto e bytes que não são do formato que a extensão promete recusam a construção, que é como «retrato vazio proibido» deixa de ser doutrina e vira régua.
 
+**Todo número que chega ao palco diz de onde veio, e é o cabeçalho que diz (#238).** Um `<sources>` depois da direção de arte lista as fontes do deck — uma por `<li>`, com um `id=` e um `<p>` por campo —, e os cinco padrões que põem número ou citação no palco carregam um slot `source` obrigatório com **só esse id dentro**. O palco imprime «o quê · quando» a partir do bloco, então a mesma fonte citada por quatro slides é escrita uma vez e corrigida em um lugar. Foi assim que a v2 deixou de cobrar só que a linha de fonte existisse: **a data agora é uma data**, com mês e ano, e uma citação é conferida contra o trecho literal da fonte que ela cita — com `[…]` onde você cortou palavras, porque um slide orça trinta delas e um parágrafo real gasta noventa.
+
 **Os dezoito padrões cabem em dois exemplos, e a árvore carrega exatamente esses dois.** [`examples/canonical.deck.html`](examples/canonical.deck.html) é o canônico, no tema `panlabs`: a capa numerada, o número gigante, as métricas em linha, a linha do tempo, a tabela, as seis formas de gráfico e as duas metades da figura — a desenhada à mão e a importada por caminho —, com o divisor, o título-tese, a afirmação de tela cheia e o fecho entre elas. [`examples/proposal.deck.html`](examples/proposal.deck.html) é a contraparte no tema `base`: a capa manchete, a pergunta-pivô, duas e três colunas, a comparação, a citação e a lista com ícones, mais as notas do apresentador, os fragmentos e uma figura desenhada — a única do corpus cujas duas cores de conteúdo foram escolhidas por uma pessoa em vez de gastas por um gráfico. Os dois compilam pelo comando documentado no [`SKILL.md`](SKILL.md), e os dois são **sintéticos** — nenhum número neles foi medido em lugar nenhum.
 
 <!-- catalog:begin -->
@@ -26,7 +28,7 @@ O cabeçalho é o próprio `<deck>`, e todos os campos dele são obrigatórios: 
 
 `motion` é o perfil de movimento do deck, e vale um destes: `static`, `editorial`, `cinematic`. Ele decide como um slide chega e como um fragmento entra, e mais nada; numa máquina que pediu menos movimento nenhuma animação roda, seja qual for o perfil.
 
-O cabeçalho não acaba aí: o primeiro filho do `<deck>` é um `<direction>` com a direção de arte, e toda `<section>` carrega um `arc=` dizendo a sua função no arco. As duas últimas seções deste documento são sobre isso.
+O cabeçalho não acaba aí: o primeiro filho do `<deck>` é um `<direction>` com a direção de arte, um `<sources>` vem depois dele com a procedência de tudo o que o deck afirma, e toda `<section>` carrega um `arc=` dizendo a sua função no arco. As três últimas seções deste documento são sobre isso.
 
 São 18 padrões, na ordem do arco. O orçamento é do slide inteiro, mobília inclusive, e nenhum slide passa de 90 palavras seja qual for o padrão.
 
@@ -77,7 +79,7 @@ Um número gigante e a legenda que diz o que ele prova.
 | --- | --- | --- | --- |
 | `number` | número | sim | o número, sozinho no maior corpo do palco |
 | `caption` | afirmação | sim | o que o número prova |
-| `meta` | metadado | não | de onde veio o número, e quando foi medido |
+| `source` | metadado | sim | o id de uma fonte do bloco `<sources>` do cabeçalho — só o id, e o palco imprime «o quê · quando» a partir dele |
 
 ### `inline-metrics` · até 48 palavras
 
@@ -86,6 +88,7 @@ De duas a quatro métricas lado a lado, cada uma com seu número e seu rótulo.
 | slot | papel | obrigatório | o que vai nele |
 | --- | --- | --- | --- |
 | `claim` | afirmação | sim | o que as métricas, juntas, provam |
+| `source` | metadado | sim | o id de uma fonte do bloco `<sources>` do cabeçalho — só o id, e o palco imprime «o quê · quando» a partir dele |
 
 De 2 a 4 `<li>` dentro de um `<ul>`, sem `class=` em nenhum dos dois — cada `<li>` é uma métrica, com seu `value` e seu `label`.
 
@@ -116,6 +119,7 @@ Uma tabela com cabeçalho obrigatório e até seis linhas ao todo, cabeçalho in
 | slot | papel | obrigatório | o que vai nele |
 | --- | --- | --- | --- |
 | `claim` | afirmação | sim | o que a tabela prova |
+| `source` | metadado | sim | o id de uma fonte do bloco `<sources>` do cabeçalho — só o id, e o palco imprime «o quê · quando» a partir dele |
 
 Um `<table>` sem `class=`, com um `<thead>` de um `<tr>` de `<th>` (o cabeçalho, obrigatório) e um `<tbody>` de um a 5 `<tr>` de `<td>` — 6 linhas ao todo, cabeçalho incluído, e toda linha do corpo com o mesmo número de células que o cabeçalho.
 
@@ -127,7 +131,7 @@ Um gráfico desenhado a partir dos dados escritos no próprio slide, com título
 | --- | --- | --- | --- |
 | `title` | afirmação | sim | a tese que o gráfico prova — com verbo ou número |
 | `unit` | metadado | sim | em que unidade os valores estão, ou o que os cem por cento somam |
-| `source` | metadado | sim | de onde veio o dado, e quando foi medido — a data é obrigatória |
+| `source` | metadado | sim | o id de uma fonte do bloco `<sources>` do cabeçalho — só o id, e o palco imprime «o quê · quando» a partir dele |
 
 De 2 a 12 `<li>` dentro de um `<ul>`, sem `class=` em nenhum dos dois — cada `<li>` é um ponto da série, com seu `label` e seu `value`. `<li mark>` marca o ponto que o slide é sobre, na cor de acento, em no máximo um `<li>`.
 
@@ -231,8 +235,9 @@ Uma citação segurando o palco, com a atribuição na base.
 
 | slot | papel | obrigatório | o que vai nele |
 | --- | --- | --- | --- |
-| `quote` | afirmação | sim | a frase citada, na voz de quem a disse |
+| `quote` | afirmação | sim | a frase citada, na voz de quem a disse — literal, e o corte se marca com `[…]` |
 | `attribution` | metadado | sim | quem disse, e em que papel |
+| `source` | metadado | sim | o id de uma fonte do bloco `<sources>` do cabeçalho — só o id, e o palco imprime «o quê · quando» a partir dele |
 
 ### `section-divider` · até 8 palavras
 
@@ -303,6 +308,23 @@ A capa sai destes padrões: `cover-headline`, `cover-numbered`.
 | `high` | 6 ou mais | seis ou mais, e só com `motion="cinematic"` — o palco assumido, nunca o acidente |
 
 As duas cores de conteúdo são as únicas que o tema empresta além do acento, e a direção diz o que cada uma significa neste deck. Um slide que gaste uma cor que a direção não declarou reprova a construção — uma figura pintada com ela, e também um gráfico, que o palco desenha nas duas sem ninguém escrever cor nenhuma. É assim que a mesma cor marca a mesma coisa do primeiro slide ao último.
+
+### A procedência
+
+Depois da direção de arte, e ainda antes do primeiro slide, vem um `<sources>`: **todo número que chega ao palco diz de onde veio e de quando é**, e é aqui que ele diz. De 1 a 12 `<li>` dentro dele, cada um com um `id=` que é o nome pelo qual os slides o citam — cada `<li>` é uma fonte, com um `id=` no item e um `<p>` por campo.
+
+| campo | papel | obrigatório | o que vai nele |
+| --- | --- | --- | --- |
+| `what` | metadado | sim | o que esta fonte é, em uma linha — é a metade que o palco imprime |
+| `where` | metadado | sim | onde ela está: o caminho, a URL, o repositório e o commit, ou a máquina em que foi medida |
+| `when` | metadado | sim | de quando ela é — uma data com mês e ano, no mínimo |
+| `excerpt` | corpo | não | o trecho literal, quando alguma citação do deck sai desta fonte |
+
+**Quem cita, cita por id.** Estes padrões carregam um slot `source` obrigatório, e o que vai nele é o id e nada mais: `big-number`, `inline-metrics`, `table`, `chart`, `pull-quote`. O palco imprime «`what` · `when`» na linha de metadado, a partir do bloco — então a mesma fonte citada por quatro slides é escrita uma vez, e não quatro, em quatro redações diferentes.
+
+Quatro coisas reprovam a construção, e cada uma tem o seu vermelho: um deck que cita sem ter o bloco (`sources-present`), um id que o bloco não declara (`source-known`), uma fonte cujo `when` não tem mês e ano (`source-dated`), e uma citação que não está no `excerpt` da fonte que ela cita (`quote-verbatim`). O `excerpt` é opcional em geral e **obrigatório na fonte que uma citação cita** — é ele que faz a citação conferível.
+
+**Uma citação pode cortar, nunca emendar.** Escreva `[…]` onde você tirou palavras, e cada pedaço que sobrou tem de estar no trecho, na ordem em que está lá. Um slide orça trinta palavras e um parágrafo real gasta noventa: o corte é como uma frase literal caberia no palco.
 
 ### A função no arco
 

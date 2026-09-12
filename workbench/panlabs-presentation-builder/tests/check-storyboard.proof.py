@@ -270,6 +270,28 @@ def main():
     ], width=24)
 
     print()
+    # THE TAIL THIS PAGE IS THE ONLY PUBLISHER OF (#238). A source has four
+    # fields and a stage prints two of them; `where` and `excerpt` exist nowhere
+    # a reader can see except here. A generator that dropped either would leave
+    # the deck looking sourced, the number unfindable, and every other layer of
+    # this suite green -- which is the same argument that put the rest of this
+    # file here, one block over.
+    failed += board_block("the provenance beside the deck (#238)", [
+        (
+            "the sources dropped",
+            "a deck that cites, and a page that never says what it cited",
+            cut(board, r"\n\n## Fontes.*", "the provenance section"),
+            "the storyboard never lists it",
+        ),
+        (
+            "a field the stage never prints",
+            "the source's own address taken out of the row",
+            swap(board, "examples/proposal.deck.html", "em algum lugar"),
+            "under `where`",
+        ),
+    ], width=24)
+
+    print()
     failed += the_generator_may_not_carry_a_clock()
 
     print()

@@ -20,6 +20,14 @@
      and stroke names a token, which is what lets the same figure change
      identity with the theme.
 
+     AND SINCE #238 THE DECK SAYS SO ON THE STAGE ITSELF. Six slides here put a
+     number in front of a room, so six of them cite a source -- and the one
+     source this deck declares is `S1`, whose own `what` is "Nada aqui foi
+     medido". The line under every chart is that sentence, which is the
+     honest legend for a synthetic deck and the shortest possible demonstration
+     of what the provenance block is for: the `<sources>` header is where a deck
+     says where it read things, and a deck that read nothing says that instead.
+
      Build it with `python3 compiler/build.py examples/canonical.deck.html
      /tmp/canonical.html`, and add `--theme base` to see the same eleven
      patterns with no brand behind them. -->
@@ -42,6 +50,10 @@
     <p class="renounced-2">comparison</p>
     <p class="renounced-3">three-columns</p>
   </direction>
+
+  <sources>
+    <li id="S1"><p class="what">Nada aqui foi medido</p><p class="where">examples/canonical.deck.html — o Estaleiro é invenção deste exemplo, e todo número dele com ele</p><p class="when">2026-09</p></li>
+  </sources>
 
   <section pattern="cover-numbered" arc="context">
     <p class="number">9</p>
@@ -74,7 +86,7 @@
   <section pattern="chart" type="bars-h" arc="evidence">
     <p class="title">Cinco equipes cortaram a espera pela metade</p>
     <p class="unit">horas entre o merge e a produção, mediana</p>
-    <p class="source">painel do Estaleiro · dez/2026</p>
+    <p class="source">S1</p>
     <ul>
       <li><p class="label">Cartografia</p><p class="value">3</p></li>
       <li><p class="label">Correnteza</p><p class="value">5</p></li>
@@ -88,7 +100,7 @@
   <section pattern="chart" type="bars-v" arc="evidence">
     <p class="title">O reprocesso caiu de doze para três por mês</p>
     <p class="unit">entregas refeitas no mês</p>
-    <p class="source">painel do Estaleiro · dez/2026</p>
+    <p class="source">S1</p>
     <ul>
       <li><p class="label">Jan</p><p class="value">12</p></li>
       <li><p class="label">Mar</p><p class="value">9</p></li>
@@ -102,13 +114,13 @@
   <section pattern="big-number" arc="evidence">
     <p class="number">31%</p>
     <p class="caption">do tempo de uma entrega era espera por ambiente</p>
-    <p class="meta">medido em fevereiro de 2026, antes do Estaleiro</p>
+    <p class="source">S1</p>
   </section>
 
   <section pattern="chart" type="line" arc="evidence">
     <p class="title">A fila por ambiente encolheu em todo trimestre</p>
     <p class="unit">pedidos na fila, média do trimestre</p>
-    <p class="source">fila do Estaleiro · 2026</p>
+    <p class="source">S1</p>
     <ul>
       <li><p class="label">1º tri</p><p class="value">48</p></li>
       <li><p class="label">2º tri</p><p class="value">31</p></li>
@@ -120,7 +132,7 @@
   <section pattern="chart" type="area" arc="evidence">
     <p class="title">O acumulado passou de mil entregas em outubro</p>
     <p class="unit">entregas acumuladas no ano</p>
-    <p class="source">painel do Estaleiro · dez/2026</p>
+    <p class="source">S1</p>
     <ul>
       <li><p class="label">Fev</p><p class="value">90</p></li>
       <li><p class="label">Abr</p><p class="value">260</p></li>
@@ -133,6 +145,7 @@
 
   <section pattern="inline-metrics" arc="evidence">
     <p class="claim">O ano fechou melhor em três frentes</p>
+    <p class="source">S1</p>
     <ul>
       <li><p class="value">9</p><p class="label">equipes</p></li>
       <li><p class="value">1310</p><p class="label">entregas</p></li>
@@ -143,7 +156,7 @@
   <section pattern="chart" type="sparkline" arc="evidence">
     <p class="title">A espera caiu em dez meses seguidos</p>
     <p class="unit">minutos de espera por ambiente, mediana</p>
-    <p class="source">telemetria do Estaleiro · 2026</p>
+    <p class="source">S1</p>
     <ul>
       <li><p class="label">Mar</p><p class="value">74</p></li>
       <li><p class="label">Abr</p><p class="value">66</p></li>
@@ -160,6 +173,7 @@
 
   <section pattern="table" arc="evidence">
     <p class="claim">Quatro equipes mediram o mesmo ganho, cada uma do seu jeito</p>
+    <p class="source">S1</p>
     <table>
       <thead><tr><th>Equipe</th><th>Antes</th><th>Depois</th></tr></thead>
       <tbody>
@@ -179,7 +193,7 @@
   <section pattern="chart" type="share" arc="plan">
     <p class="title">Metade do próximo ano vai para o que já existe</p>
     <p class="unit">100% são o esforço planejado para 2027</p>
-    <p class="source">planejamento do Estaleiro · dez/2026</p>
+    <p class="source">S1</p>
     <ul>
       <li><p class="label">Manutenção</p><p class="value">50</p></li>
       <li><p class="label">Novas equipes</p><p class="value">30</p></li>

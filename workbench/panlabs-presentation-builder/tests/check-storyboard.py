@@ -23,8 +23,9 @@ TWO QUESTIONS, AND THE SECOND IS THE ONE #217 ASKS BY NAME:
 
   reflects      one row per slide, in order, each carrying that slide's own
                 pattern, its own function in the arc and words the deck really
-                says, and the header table carrying every choice the direction
-                wrote
+                says, the header table carrying every choice the direction
+                wrote, and the tail carrying every source the deck declares,
+                whole -- including the two fields no stage ever prints
   reproducible  the same source built twice, byte for byte the same page --
                 so a diff after a one-word fix is a diff of one word
 
@@ -56,6 +57,13 @@ ATTR = re.compile(r'([a-z-]+)="([^"]*)"')
 DIRECTION = re.compile(r"<direction\s*>(.*?)</direction\s*>", re.S)
 CHOICE = re.compile(r'<p\s+class="([^"]+)"\s*>(.*?)</p>', re.S)
 TAGS = re.compile(r"<[^>]+>")
+
+# The provenance block, read the same blunt way (#238). The stage prints two of
+# a source's four fields; this page is the only one that publishes all four, so
+# it is the only place a reader can check where a number came from without
+# opening the source -- which makes a dropped field invisible everywhere else.
+SOURCES = re.compile(r"<sources\s*>(.*?)</sources\s*>", re.S)
+SOURCE_ITEM = re.compile(r'<li\s+id="([^"]+)"\s*>(.*?)</li\s*>', re.S)
 
 # The storyboard's slide table, read back the same blunt way. The header table
 # above it needs no pattern of its own: what this holds it to is that every
@@ -102,6 +110,25 @@ def choices_of(source):
     return {
         name: " ".join(TAGS.sub("", said).split())
         for name, said in CHOICE.findall(block.group(1))
+    }
+
+
+def provenance_of(source):
+    """The sources a deck declares, by id, with the tags stripped out.
+
+    THE SAME SHAPE `choices_of` READS ONE BLOCK UP, and deliberately so: a source
+    is an `<li>` of named `<p>`s, which is what a choice already is plus a key.
+    Reusing `CHOICE` for the fields is what keeps this second reader as dumb as
+    the first -- it knows nothing about which fields exist, so a field added to
+    the register is one this file publishes without being told.
+    """
+    block = SOURCES.search(source)
+    if not block:
+        return {}
+    return {
+        key: {name: " ".join(TAGS.sub("", said).split())
+              for name, said in CHOICE.findall(body)}
+        for key, body in SOURCE_ITEM.findall(block.group(1))
     }
 
 
@@ -179,6 +206,30 @@ def reflects(source, board, where):
                 f"`{name}` and the storyboard never publishes it; a choice the "
                 "page drops is a choice nobody can argue with"
             )
+
+    # THE PROVENANCE, AND THE WHOLE OF IT (#238). Two of a source's fields reach
+    # the stage, printed under every slide that cites it; `where` and `excerpt`
+    # reach nothing at all. This page is the only place they are published, which
+    # means a generator that quietly stopped writing one would leave the deck
+    # looking sourced and the source unfindable -- and no ruler in the compiler
+    # reads this page. The pipes are unescaped first: the table writes a `|`
+    # inside a field as `\|` so a path cannot end the column early.
+    sources = provenance_of(source)
+    tail = board.split("## Fontes")[-1].replace("\\|", "|") if "## Fontes" in board else ""
+    for key, fields in sources.items():
+        if f"`{key}`" not in tail:
+            fixes.append(
+                f'rebuild {where} — the deck declares the source "{key}" and the '
+                "storyboard never lists it; the page beside the deck is the only "
+                "one that publishes where a number came from"
+            )
+            continue
+        for name, value in fields.items():
+            if value and value not in tail:
+                fixes.append(
+                    f'rebuild {where} — the source "{key}" says "{value}" under '
+                    f"`{name}` and the storyboard never publishes it"
+                )
     return fixes
 
 

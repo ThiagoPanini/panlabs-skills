@@ -40,13 +40,15 @@ from catalog import (ARC_ATTR, ARC_CALL, ARC_FUNCTIONS, BREAK_TAG,
                      CATEGORY_TITLES, COLOUR_CHOICES, COVER_CHOICE,
                      DIRECTION_REQUIRED, DIRECTION_TAG, EVIDENCE_TAGS, ICON,
                      INLINE_TAGS, MOMENT_SCALES, MOMENTS_CHOICE, NOTES_TAG,
-                     PATTERNS, RENOUNCE_CHOICES, SLOT_TAG, STEP_ATTR,
-                     TABLE_MAX_ROWS, allow_break_of, budget_of, chart_of,
-                     choice_names, choice_of, claims_of, closings, evidence_of,
-                     figure_of, form_names, form_of, group_of, moment_of,
-                     pattern_names, role_of_element, scale_of, slot_specs,
-                     slots_of)
-from source import fields_of, plain_text, texts_of
+                     PATTERNS, RENOUNCE_CHOICES, SLOT_TAG, SOURCE_EXCERPT,
+                     SOURCE_WHAT, SOURCE_WHEN, SOURCES_SPEC, SOURCES_TAG,
+                     STEP_ATTR, TABLE_MAX_ROWS, allow_break_of, budget_of,
+                     chart_of, choice_names, choice_of, cites_of, claims_of,
+                     closings, evidence_of, figure_of, form_names, form_of,
+                     group_of, moment_of, pattern_names, role_of_element,
+                     scale_of, slot_specs, slots_of, verbatim_of)
+from source import (fields_of, plain_text, source_line, sources_of, squeeze,
+                    texts_of)
 
 
 @dataclass(frozen=True)
@@ -100,11 +102,6 @@ CHART_DATA = Ruler(
     "every value a chart draws is a number, and a share adds up",
 )
 
-CHART_SOURCE = Ruler(
-    "chart-source",
-    "every chart says where its number came from, and when",
-)
-
 CHART_FIT = Ruler(
     "chart-fit",
     "every label a chart draws fits the room its form gives it",
@@ -143,6 +140,35 @@ RENOUNCED_PATTERN = Ruler(
 ARC_CLOSING = Ruler(
     "arc-closing",
     "the deck ends on a closing, and the closing asks for something",
+)
+
+# ── the four the provenance block buys (#238) ────────────────────────────────
+# THE ONE THEY REPLACE IS `chart-source`, AND IT DID HALF OF ONE OF THESE. It
+# read the chart's own `source` slot and asked that four digits appear somewhere
+# inside it, which is every bit of "when" a sentence can be held to -- and
+# nothing at all of "is this the same source the slide three pages back cited",
+# "is there a source", or "did the person really say that". The slot stopped
+# being prose in this ticket, so the ruler's subject went with it; what it
+# measured is now the first half of `source-dated`, against a date rather than
+# against a substring.
+SOURCES_PRESENT = Ruler(
+    "sources-present",
+    "a deck that puts a number on the stage says where it read it",
+)
+
+SOURCE_KNOWN = Ruler(
+    "source-known",
+    "every source a slide cites is one the header declares",
+)
+
+SOURCE_DATED = Ruler(
+    "source-dated",
+    "every source says which month and year it is from",
+)
+
+QUOTE_VERBATIM = Ruler(
+    "quote-verbatim",
+    "every quotation is in the excerpt of the source it cites",
 )
 
 
@@ -1013,11 +1039,161 @@ def _direction(node):
     return fixes
 
 
+# ── the provenance, which is the header's third block (#238) ─────────────────
+# IT READS LIKE A GROUP, the way `_direction` reads like a slide: a source is an
+# `<li>` carrying a `<p>` per named field, which is exactly what a metric of
+# `inline-metrics` already is -- so the FIELD dialect is not rewritten here, it
+# is `_field` and `_field_list`, called with `SOURCES_SPEC` in the place of a
+# group. Those two ask a record for `.fields` and `.item`, and the provenance
+# block has both; a second copy of "a field is a `<p>` with one class and no
+# attributes" is precisely the drift this file refuses everywhere else.
+#
+# WHAT IS NOT SHARED IS THE ITEM, AND THE `id=` IS WHY. `_group` measures a
+# series against a pattern's bounds and knows nothing about a key -- a metric is
+# read by its place in the row, and nothing outside the slide ever refers to it.
+# A source is read by NAME, from a slide pages away, so the item carries an id
+# and the walk below is about that: an item with no id is a source nothing can
+# cite, and two items under one id are two sources one citation resolves to.
+#
+# EVERY RED HERE IS INSIDE THE BLOCK. Whether a SLIDE cites something the block
+# declares is a question about two places at once, and that is `source-known`
+# below -- the same division `_direction` keeps with the four rulers that read
+# the art direction back against the slides.
+
+def _source_at(item):
+    """How a red names one source: by its id when it has one, by its line always."""
+    key = item.attrs.get(SOURCES_SPEC.key, "").strip()
+    named = f'the source "{key}"' if key else f"the <{SOURCES_SPEC.item}>"
+    return f"{named} (line {item.line})"
+
+
+def _sources(node):
+    """The provenance block: every source it declares, and no other shape."""
+    at = f"the <{SOURCES_TAG}> (line {node.line})"
+    fixes = []
+
+    for key in sorted(node.attrs):
+        fixes.append(
+            f"{at}: drop {key}= from the <{SOURCES_TAG}> — the provenance is "
+            "written as sources inside it, never as attributes on it"
+        )
+
+    count = 0
+    named = []
+    for child in node.children:
+        if isinstance(child, str):
+            if child.strip():
+                fixes.append(
+                    f"{at}: wrap the loose text in a <{SOURCES_SPEC.item}> — a "
+                    f"<{SOURCES_TAG}> holds <{SOURCES_SPEC.item}> and nothing else"
+                )
+            continue
+        if child.tag != SOURCES_SPEC.item:
+            fixes.append(
+                f"{at}: write each source as <{SOURCES_SPEC.item}>, not "
+                f"<{child.tag}> — the block counts <{SOURCES_SPEC.item}>, one "
+                "per source"
+            )
+            continue
+        count += 1
+        here = _source_at(child)
+
+        for key in sorted(k for k in child.attrs if k != SOURCES_SPEC.key):
+            fixes.append(
+                f"{here}: drop {key}= from the <{SOURCES_SPEC.item}> — the only "
+                f"attribute a source carries is the `{SOURCES_SPEC.key}` the "
+                "slides cite it by"
+            )
+        key = child.attrs.get(SOURCES_SPEC.key, "").strip()
+        if not key:
+            fixes.append(
+                f"{here}: give the <{SOURCES_SPEC.item}> an "
+                f'{SOURCES_SPEC.key}="…" — a source with no name is a source no '
+                "slide can cite"
+            )
+        elif key in named:
+            fixes.append(
+                f'{here}: rename this source — "{key}" is already taken, and a '
+                "citation cannot resolve to two sources"
+            )
+        else:
+            named.append(key)
+
+        seen = []
+        for sub in child.children:
+            if isinstance(sub, str):
+                if sub.strip():
+                    fixes.append(
+                        f"{here}: wrap the loose text in a field — "
+                        + _field_list(SOURCES_SPEC)
+                    )
+                continue
+            fixes.extend(_field(sub, here, SOURCES_SPEC, seen, allow_break=False))
+
+        written = fields_of(child)
+        for want in SOURCES_SPEC.required_fields:
+            if want not in seen:
+                fixes.append(
+                    f'{here}: add the missing <{SLOT_TAG} class="{want}"> — '
+                    "every source says what it is, where it is and when it is from"
+                )
+            elif not plain_text(written[want]).strip():
+                fixes.append(
+                    f'{here}: write something in the <{SLOT_TAG} class="{want}"> '
+                    "— it is there and it is empty, and a blank field is a "
+                    "provenance that says nothing"
+                )
+        for name in sorted(set(s for s in seen if seen.count(s) > 1)):
+            fixes.append(
+                f'{here}: keep one <{SLOT_TAG} class="{name}"> — a source '
+                "declares the field once"
+            )
+
+    low, high = SOURCES_SPEC.minimum, SOURCES_SPEC.maximum
+    if count < low:
+        fixes.append(
+            f"{at}: add {low - count} more <{SOURCES_SPEC.item}>, or drop the "
+            f"<{SOURCES_TAG}> — the block holds {low} to {high} sources, and "
+            f"this one holds {count}"
+        )
+    elif count > high:
+        fixes.append(
+            f"{at}: drop {count - high} <{SOURCES_SPEC.item}> — the block holds "
+            f"{low} to {high} sources, and this one holds {count}; a deck reading "
+            "from more places than that is a literature review"
+        )
+    return fixes
+
+
 def _vocabulary(deck, theme):
     fixes = []
     n = 0
     header = False
+    provenance = False
     for index, node in enumerate(deck.children):
+        # THE BLOCK IS OPTIONAL AND ITS POSITION IS NOT (#238). A deck with no
+        # number on the stage needs no provenance, so nothing here charges a
+        # missing block -- `sources-present` does, and only when something cites.
+        # What this refuses is a block written in the wrong place: the header is
+        # read before the slides, and provenance that arrives after slide nine is
+        # provenance nobody read before writing slide nine.
+        if node.tag == SOURCES_TAG:
+            if provenance:
+                fixes.append(
+                    f"line {node.line}: keep one <{SOURCES_TAG}> — a deck has "
+                    "one provenance, and a citation cannot choose between two "
+                    "lists of sources"
+                )
+                continue
+            provenance = True
+            if n:
+                fixes.append(
+                    f"line {node.line}: move the <{SOURCES_TAG}> above the first "
+                    "<section> — it is part of the header, and everything the "
+                    "slides cite is declared there before a slide cites it"
+                )
+            fixes.extend(_sources(node))
+            continue
         if node.tag == DIRECTION_TAG:
             if header:
                 fixes.append(
@@ -1037,7 +1213,8 @@ def _vocabulary(deck, theme):
         if node.tag != "section":
             fixes.append(
                 f"line {node.line}: drop the <{node.tag}> — a deck holds one "
-                f"<{DIRECTION_TAG}> and its <section>s, and nothing else"
+                f"<{DIRECTION_TAG}>, at most one <{SOURCES_TAG}> and its "
+                "<section>s, and nothing else"
             )
             continue
         n += 1
@@ -1059,6 +1236,19 @@ def _vocabulary(deck, theme):
 # pattern is noise on top of the fix.
 
 def _word_budget(deck, theme):
+    # THE BUDGET COUNTS WHAT IS PRINTED, AND A CITING SLOT IS NOT (#238). Its
+    # text is an id; what lands on the stage is the source's own `what` and
+    # `when`, which can be eight words where the id was one. Counting the id
+    # would price a slide at less than the room reads, which is the one direction
+    # a budget must never err in -- so the line the block will print is what is
+    # charged, and the id itself costs nothing.
+    printed = {}
+    said = sources_of(deck) or {}
+    for n, _, slot, key in _citations(deck):
+        fields = said.get(key)
+        if fields is not None:
+            printed[n, slot] = source_line(fields)
+
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         pattern = node.attrs.get("pattern", "")
@@ -1074,7 +1264,9 @@ def _word_budget(deck, theme):
         # goes to the notes and nothing is lost, so a budget that also counted
         # the notes would price the fix at the same rate as the defect.
         spent = sum(
-            _words(plain_text(el)) for el in node.elements()
+            _words(printed.get((n, el.attrs.get("class", "").strip()),
+                               plain_text(el)))
+            for el in node.elements()
             if el.tag != NOTES_TAG and role_of_element(pattern, el) != ICON
         )
         if spent > ceiling:
@@ -1243,12 +1435,6 @@ def _chart_of_slide(node):
 # processor produce for it.
 NEGATIVE = ("-", "−")
 
-# The date a source line has to carry. A year is the whole of it: "post-mortems
-# · 2026" and "IBGE, Censo 2022" both date a number well enough for a room to
-# ask how old it is, and demanding a full date would refuse the way every real
-# source is actually cited.
-DATED = re.compile(r"(19|20)\d{2}")
-
 
 def _chart_data(deck, theme):
     fixes = []
@@ -1307,23 +1493,12 @@ def _chart_data(deck, theme):
     return fixes
 
 
-def _chart_source(deck, theme):
-    fixes = []
-    for n, node in enumerate(deck.sections, start=1):
-        _, _, points = _chart_of_slide(node)
-        if not points:
-            continue
-        for el in node.elements():
-            if el.attrs.get("class", "").strip() != "source":
-                continue
-            said = plain_text(el)
-            if said and not DATED.search(said):
-                fixes.append(
-                    f'{_at(n, node)}, slot "source": add the year the data is '
-                    f'from to "{said}" — a number the room cannot date is a '
-                    "number it cannot check"
-                )
-    return fixes
+# WHERE `chart-source` WENT (#238). It stood here and read the chart's own
+# `source` slot for four digits, because until this ticket that slot held the
+# whole legend as prose. The slot now holds an id, the date lives in the
+# `<sources>` block, and the ruler moved to the bottom of this file as
+# `source-dated` -- where it holds a real date, for every source, cited by any
+# pattern rather than by a chart alone.
 
 
 def _chart_fit(deck, theme):
@@ -1426,37 +1601,71 @@ def _theme_repertoire(deck, theme):
     blame. The refusal names the character and its code point, because a
     dash-like thing that is the wrong dash-like thing is invisible in a diff.
 
-    AN ICON SLOT IS NOT READ. Its text is a Lucide name the compiler consumes
-    into a `<symbol>`; nothing of it reaches the stage. Every other slot does,
-    the notes included -- a note is painted in the theme's own faces the
-    moment the presenter opens the panel, and a tofu there is a tofu the room
-    never sees and the presenter always does.
+    AN ICON SLOT IS NOT READ, AND NEITHER IS A CITING ONE (#238). Both carry a
+    name the compiler CONSUMES rather than prints -- a Lucide name into a
+    `<symbol>`, a source id into the two fields the block holds -- so reading
+    either would charge the theme for characters the room never sees. Every
+    other slot does reach the stage, the notes included: a note is painted in
+    the theme's own faces the moment the presenter opens the panel, and a tofu
+    there is a tofu the room never sees and the presenter always does.
     """
     covers = fonts.repertoire(theme)
     if not covers:
         return []
     have = set(covers)
+
+    def strangers(text):
+        return sorted(
+            {c for c in text if c not in have and not c.isspace()}, key=ord)
+
+    def spell(missing):
+        return ", ".join(f'"{c}" (U+{ord(c):04X})' for c in missing)
+
+    tail = (f'with a character the theme "{theme}" carries — its faces are cut '
+            "to a repertoire, and what is outside it paints in whatever face "
+            "the machine falls back to")
+
     fixes = []
     for n, node in enumerate(deck.sections, start=1):
         pattern = node.attrs.get("pattern", "")
+        cites = cites_of(pattern)
         for el in node.elements():
+            where = el.attrs.get("class", "").strip()
             if role_of_element(pattern, el) == ICON:
                 continue
-            missing = sorted(
-                {c for c in plain_text(el) if c not in have and not c.isspace()},
-                key=ord,
-            )
+            if cites is not None and where == cites.name:
+                continue
+            missing = strangers(plain_text(el))
             if not missing:
                 continue
-            where = el.attrs.get("class", "").strip()
             said = f'slot "{where}"' if where else f"<{el.tag}>"
-            spelled = ", ".join(f'"{c}" (U+{ord(c):04X})' for c in missing)
             fixes.append(
-                f"{_at(n, node)}, {said}: rewrite {spelled} with a character the "
-                f'theme "{theme}" carries — its faces are cut to a repertoire, '
-                "and what is outside it paints in whatever face the machine "
-                "falls back to"
+                f"{_at(n, node)}, {said}: rewrite {spell(missing)} {tail}"
             )
+
+    # AND WHAT THE BLOCK PUTS ON THE STAGE IN THE ID'S PLACE (#238). The walk
+    # above sees "F2"; what a slide really paints is the source's own `what` and
+    # `when`, written there by `compiler/build.py`. Without this second pass a
+    # tofu in the words the header holds would reach the room with no red
+    # anywhere -- the one class of defect this ruler exists for, moved one file
+    # away by the ticket that put the words in the header.
+    #
+    # ONE RED PER SOURCE AND FIELD, NOT PER SLIDE. Four charts citing one source
+    # paint the same line four times, and a fix applied in the header once should
+    # not be named four times.
+    said = sources_of(deck) or {}
+    for key in dict.fromkeys(c[3] for c in _citations(deck)):
+        fields = said.get(key)
+        if fields is None:
+            continue
+        for field in (SOURCE_WHAT, SOURCE_WHEN):
+            missing = strangers(fields.get(field, ""))
+            if missing:
+                fixes.append(
+                    f'the source "{key}", field "{field}": rewrite '
+                    f"{spell(missing)} {tail} — it is printed on every slide "
+                    "that cites this source"
+                )
     return fixes
 
 
@@ -1701,6 +1910,192 @@ def _arc_closing(deck, theme):
     return fixes
 
 
+# ── the provenance, read back against the slides (#238) ──────────────────────
+# THE FOUR BELOW ARE TO `<sources>` WHAT THE FOUR ABOVE ARE TO `<direction>`:
+# they read the header and the slides at once. The difference is what a broken
+# one means. A deck that outgrew its declared scale of moments is a deck whose
+# art direction stopped describing it -- a taste that drifted. A number on the
+# stage whose provenance is missing, unknown or undated is a deck ASSERTING
+# something it cannot show, which is the defect #237 opens on: the v2's ruler
+# "cobra que a linha de fonte exista, não que o número exista".
+#
+# THEY GO QUIET WITHOUT A BLOCK, EXCEPT THE FIRST. `sources-present` is the one
+# whose subject IS the absence; the other three would each print a red per
+# citation about a list nobody wrote, burying the single fix that produces them
+# all. Same rule the direction's four keep, for the same reason.
+
+
+def _written(node, name):
+    """The element of one slide carrying this slot's name, or None."""
+    return next((el for el in node.elements()
+                 if el.attrs.get("class", "").strip() == name), None)
+
+
+def _citations(deck):
+    """(slide number, node, slot name, id) for every citation the deck writes.
+
+    A SLIDE WITH NO SLOT, OR WITH AN EMPTY ONE, IS NOT A CITATION. `_slide`
+    already refuses a required slot that is missing and one that is present and
+    blank; counting either as a citation here would answer the same mistake a
+    second time, in a red that names a different fix.
+    """
+    out = []
+    for n, node in enumerate(deck.sections, start=1):
+        slot = cites_of(node.attrs.get("pattern", ""))
+        if slot is None:
+            continue
+        el = _written(node, slot.name)
+        if el is None:
+            continue
+        said = plain_text(el).strip()
+        if said:
+            out.append((n, node, slot.name, said))
+    return out
+
+
+def _sources_present(deck, theme):
+    """One red, on the first citation, naming the header as the place to fix."""
+    if sources_of(deck) is not None:
+        return []
+    cited = _citations(deck)
+    if not cited:
+        return []
+    n, node, slot, said = cited[0]
+    return [
+        f'{_at(n, node)}, slot "{slot}": add a <{SOURCES_TAG}> to the header, '
+        f'after the <{DIRECTION_TAG}>, with a <{SOURCES_SPEC.item} '
+        f'{SOURCES_SPEC.key}="{said}"> saying what it is, where it is and when '
+        f"it is from — {len(cited)} slide(s) cite a source and this deck "
+        "declares none, so every number on the stage is one the room has to "
+        "take on trust"
+    ]
+
+
+def _source_known(deck, theme):
+    said = sources_of(deck)
+    # AN EMPTY BLOCK IS `_sources`' RED AND NOT THIS ONE'S. It already asks for
+    # the first source; a citation that cannot resolve because there is nothing
+    # to resolve against would be the same absence, charged twice.
+    if not said:
+        return []
+    known = ", ".join(said)
+    fixes = []
+    for n, node, slot, cited in _citations(deck):
+        if cited not in said:
+            fixes.append(
+                f'{_at(n, node)}, slot "{slot}": replace "{cited}" with an '
+                f"{SOURCES_SPEC.key} the <{SOURCES_TAG}> declares ({known}), or "
+                f"declare that source — the slot carries an id and nothing else, "
+                "and the stage prints the source's own words from the block"
+            )
+    return fixes
+
+
+# THE MONTHS AS PORTUGUESE DATES A SOURCE, and the three letters every one of
+# them opens with, which is also how the full word opens. The register stays out
+# of this: what a date LOOKS like is not a name the dialect declares, it is a
+# fact about the language the `when` field is written in.
+MONTHS = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out",
+          "nov", "dez")
+
+# A DATE WITH A MONTH IN IT, in the three shapes a real citation is written in:
+# ISO (2026-09, 2026-09-11), numeric (09/2026), and the month by name, abbreviated
+# or whole, joined to its year by a slash, a space or "de" (dez/2026, set 2026,
+# setembro de 2026).
+#
+# THE YEAR ALONE IS WHAT THIS REFUSES, and that is the whole distance between
+# this ruler and the `chart-source` it replaced. "IBGE, Censo 2022" dates a
+# number to a year, which was enough while the date lived inside a sentence
+# somebody wrote; a block written to be read source by source can say the month,
+# and the room asking how old a number is wants the month -- the difference
+# between "measured this quarter" and "measured in January" is the whole of
+# whether it still holds.
+DATED_MONTH = re.compile(
+    r"(?:(?:19|20)\d{2}-(?:0[1-9]|1[0-2]))"
+    r"|(?:\b(?:0[1-9]|1[0-2])\s*/\s*(?:19|20)\d{2})"
+    r"|(?:\b(?:" + "|".join(MONTHS) + r")[a-zç]*\.?\s*(?:/|\s+de\s+|\s+)\s*"
+    r"(?:19|20)\d{2})",
+    re.I,
+)
+
+
+def _source_dated(deck, theme):
+    said = sources_of(deck)
+    if not said:
+        return []
+    fixes = []
+    for key, fields in said.items():
+        when = fields.get(SOURCE_WHEN, "").strip()
+        # A MISSING OR BLANK `when` IS `_sources`' RED. It is a required field,
+        # and "there is no date" is a different fix from "this date has no month".
+        if not when:
+            continue
+        if not DATED_MONTH.search(when):
+            fixes.append(
+                f'the source "{key}": write the month into its '
+                f'<{SLOT_TAG} class="{SOURCE_WHEN}"> — "{when}" dates it to a '
+                'year, and the stage prints this line under a number. Any of '
+                "2026-09, 09/2026, set/2026 or setembro de 2026"
+            )
+    return fixes
+
+
+def _quote_verbatim(deck, theme):
+    """A quotation is in the excerpt of the source it cites, cuts included.
+
+    THE CUT IS PERMITTED AND THE SPLICE IS NOT, and the order is what tells them
+    apart. Each piece of the quotation has to appear in the excerpt AFTER the
+    one before it, so a sentence quoted from the top of a paragraph and one from
+    its end can stand on a slide together -- which is the only way a checked
+    quotation fits a 30-word budget at all -- while two sentences swapped, or a
+    clause borrowed from somebody else, cannot.
+    """
+    said = sources_of(deck)
+    if not said:
+        return []
+    fixes = []
+    for n, node in enumerate(deck.sections, start=1):
+        pattern = node.attrs.get("pattern", "")
+        quoted = verbatim_of(pattern)
+        slot = cites_of(pattern)
+        if quoted is None or slot is None:
+            continue
+        el, cite = _written(node, quoted.name), _written(node, slot.name)
+        if el is None or cite is None:
+            continue
+        words = squeeze(plain_text(el)).strip()
+        key = plain_text(cite).strip()
+        fields = said.get(key)
+        if not words or fields is None:
+            continue          # `_slide` and `source-known` have both of these
+        excerpt = squeeze(fields.get(SOURCE_EXCERPT, "")).strip()
+        if not excerpt:
+            fixes.append(
+                f'the source "{key}": add a <{SLOT_TAG} '
+                f'class="{SOURCE_EXCERPT}"> carrying the words slide {n} quotes '
+                "— a quotation with no excerpt behind it is a sentence nobody "
+                "can check, and putting words in somebody's mouth is the one "
+                "mistake on a stage that is not a matter of taste"
+            )
+            continue
+        found = 0
+        for part in words.split(SOURCES_SPEC.elision):
+            part = part.strip()
+            if not part:
+                continue
+            at = excerpt.find(part, found)
+            if at < 0:
+                fixes.append(
+                    f'{_at(n, node)}, slot "{quoted.name}": quote "{part}" the '
+                    f'way the source "{key}" writes it, or mark the cut with '
+                    f"`{SOURCES_SPEC.elision}` — those words are not in that "
+                    "source's excerpt, in that order"
+                )
+                break
+            found = at + len(part)
+    return fixes
+
+
 # APPEND AT THE END. The order is the order the report prints, and the report
 # is read top to bottom by whoever is fixing a deck: the dialect first,
 # because a source that does not parse into slides has nothing for the
@@ -1720,7 +2115,6 @@ RULERS = (
     (ICON_KNOWN, _icon_known),
     (ICON_PAIRED, _icon_paired),
     (CHART_DATA, _chart_data),
-    (CHART_SOURCE, _chart_source),
     (CHART_FIT, _chart_fit),
     (FIGURE_PAINT, _figure_paint),
     (FIGURE_ASSET, _figure_asset),
@@ -1729,6 +2123,10 @@ RULERS = (
     (COLOUR_SEMANTICS, _colour_semantics),
     (RENOUNCED_PATTERN, _renounced_pattern),
     (ARC_CLOSING, _arc_closing),
+    (SOURCES_PRESENT, _sources_present),
+    (SOURCE_KNOWN, _source_known),
+    (SOURCE_DATED, _source_dated),
+    (QUOTE_VERBATIM, _quote_verbatim),
 )
 
 

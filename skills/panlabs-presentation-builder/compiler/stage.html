@@ -275,7 +275,14 @@ body {
 /* ── pattern · big-number (#212) ─────────────────────────────────────────────
  * The same anchor-and-horizon as cover-numbered, spent mid-deck instead of at
  * the open: the figure leads, the caption says what it proves one step below
- * it, and the source line -- when written -- holds the bottom edge.
+ * it, and the source line holds the bottom edge.
+ *
+ * THE LINE USED TO BE A `meta` AND IS NOW THE `source` (#238), and the rule it
+ * carries is the same one it always did: this pattern's whole composition is a
+ * number in the air with something small under it, so whatever names where the
+ * number came from is what holds the floor. Before that ticket the slot was
+ * optional and this selector had to say "when written"; a big number now always
+ * cites, which is one less way for the pattern to arrive half-composed.
  */
 .slide[data-pattern="big-number"] .number {
   margin-top: auto;
@@ -288,7 +295,7 @@ body {
   max-width: 82%;
 }
 
-.slide[data-pattern="big-number"] .meta { margin-top: auto; }
+.slide[data-pattern="big-number"] .source { margin-top: auto; }
 
 /* ── pattern · inline-metrics (#212) ──────────────────────────────────────────
  * The claim holds the top edge; the row of metrics is the horizon, each one a
@@ -319,6 +326,15 @@ body {
   font-size: var(--type-title);
   letter-spacing: -0.02em;
 }
+
+/* THE CITATION READS LAST AND IS WRITTEN SECOND (#238), exactly as the chart's
+ * own source does further down this sheet. The register orders the slots the way
+ * they are AUTHORED -- the claim, then where the numbers came from -- and a
+ * group reaches the page after every slot, so the row of metrics arrives in the
+ * markup between them. One `order` is what puts the line under the evidence it
+ * is about, and it is on the source rather than on the row because the row is
+ * what the auto margins above are already positioning. */
+.slide[data-pattern="inline-metrics"] .source { order: 1; }
 
 /* ── pattern · timeline (#212) ────────────────────────────────────────────────
  * The claim holds the top edge; the milestones sit on one hairline that runs
@@ -404,6 +420,10 @@ body {
   border-bottom-color: var(--hairline-strong);
   border-bottom-width: calc(var(--stage-height) * 0.003);
 }
+
+/* The same one order as `inline-metrics` above, and for the same reason: the
+ * citation is authored after the claim and read after the table (#238). */
+.slide[data-pattern="table"] .source { order: 1; }
 
 /* ── pattern · chart (#213) ──────────────────────────────────────────────────
  * The thesis on the top edge, the unit under it, the source on the bottom one,

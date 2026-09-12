@@ -57,6 +57,7 @@ import filecmp
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -77,6 +78,7 @@ BOARD_SUFFIX = ".storyboard.md"
 SLIDE = re.compile(r"<section\s+([^>]*?)\s*>(.*?)</section\s*>", re.S)
 ATTR = re.compile(r'([a-z-]+)="([^"]*)"')
 SLOT = re.compile(r'<p\s+class="([^"]+)"[^>]*>(.*?)</p\s*>', re.S)
+NOTES_TAG = "notes"
 NOTES = re.compile(r"<notes\s*>(.*?)</notes\s*>", re.S)
 CELL = re.compile(r"<t([hd])\s*>(.*?)</t[hd]\s*>", re.S)
 SOURCES = re.compile(r"<sources\s*>(.*?)</sources\s*>", re.S)
@@ -130,6 +132,16 @@ ABSENT = "—"
 # own, asserted here rather than imported, for the same reason the readers above
 # are hand-written.
 SAMPLE = "amostra"
+
+# The pattern this check writes into a plan to be refused for. It is spelled in
+# English like every pattern the catalog declares, and it is a plausible slip
+# rather than a nonsense word -- the register's own name is `pivot-question`.
+STRANGER = "question-pivot"
+
+# The note this check adds to a slide that had none. It says what it is because
+# it lands in a copy of a real source, and a reader who finds it in a temp
+# directory should not have to guess where it came from.
+PROBE = "A nota que o check-modes acrescenta a um slide sem nota."
 
 # How long a piece of the real deck has to be before its absence from a skeleton
 # means anything. A cover's own `number` is "9", and a page of CSS has a nine in
@@ -274,7 +286,7 @@ def check_refuses(skill=SKILL, source=None, board=None, **_):
     plants = [
         ("a pattern the catalog never heard of",
          head + mark + table.replace(rows[0][PATTERN_COLUMN].split("`")[1],
-                                     "pergunta-pivo", 1),
+                                     STRANGER, 1),
          "replace the pattern"),
         ("a column the table is missing",
          head + mark + table.replace(
@@ -284,7 +296,7 @@ def check_refuses(skill=SKILL, source=None, board=None, **_):
 
     with tempfile.TemporaryDirectory(prefix="panlabs-modes-refuse-") as tmp:
         for what, payload, must_say in plants:
-            if payload is None or payload == board:
+            if payload == board:
                 return False, (f"the storyboard no longer carries what this "
                                f'family plants into for "{what}" -- pick '
                                "another needle, or the plant proves nothing")
@@ -301,7 +313,7 @@ def check_refuses(skill=SKILL, source=None, board=None, **_):
                 return False, (f"the red for {what} never says "
                                f'"{must_say}" -- it said: '
                                f"{said.splitlines()[0] if said else '(nothing)'}")
-    return True, f"both plans the register cannot paint are refused by name"
+    return True, "both plans the register cannot paint are refused by name"
 
 
 # ── 2 · the skeleton is the plan, and only the plan ──────────────────────────
@@ -477,6 +489,10 @@ def check_article(skill=SKILL, source=None, **_):
                            "the deck wrote, never a heading the generator "
                            "thought of")
 
+    bare = _note_reaches_a_bare_slide(skill, source)
+    if bare:
+        return False, bare
+
     tail = said_plain.split(REFERENCES)[-1] if REFERENCES in said_plain else ""
     for key, fields in provenance_of(said).items():
         if f"`{key}`" not in tail:
@@ -490,6 +506,48 @@ def check_article(skill=SKILL, source=None, **_):
                                f"`{name}` and the article's references do not")
     return True, (f"{len(slides)} stretch(es), {len(chapters)} chapter(s), "
                   f"{len(beside)} drawing(s) beside it, colours resolved")
+
+
+def _note_reaches_a_bare_slide(skill, source):
+    """A note added to a slide that had none, and the one fix it needs, or "".
+
+    THE CORPUS LEAVES SOME SLIDES BARE, AND THEY ARE ALL DIVIDERS. Every divider
+    in all three decks carries no speaker notes -- and the generator turns a
+    divider into a CHAPTER by a different path from every other slide, so the
+    loop above walks right past the one stretch where a note could be dropped.
+    It was: the chapter branch returned its heading and never reached the notes,
+    and every layer of this suite stayed green because no divider had one.
+
+    THE FIXTURE IS BUILT HERE AND NEVER COMMITTED, the same way
+    `check-extract.py` builds its own. The source's whole DIRECTORY is copied,
+    because a figure may point at a file beside it and a lone source in a temp
+    directory would be refused for a picture that never moved.
+    """
+    said = read(source)
+    at = next((body for _, body in SLIDE.findall(said)
+               if not NOTES.search(body)), None)
+    if at is None:
+        return ("every slide of this deck already carries notes, so the "
+                "assertion this family makes about a bare one measured nothing "
+                "-- it is the dividers that are usually bare, and a generator "
+                "that drops their notes goes unseen")
+    with tempfile.TemporaryDirectory(prefix="panlabs-modes-bare-") as tmp:
+        beside = os.path.join(tmp, "beside")
+        shutil.copytree(os.path.dirname(os.path.abspath(source)), beside)
+        where = os.path.join(beside, os.path.basename(source))
+        with open(where, "w", encoding="utf-8") as fh:
+            fh.write(said.replace(at, at + f"<{NOTES_TAG}>{PROBE}</{NOTES_TAG}>", 1))
+        out = pathlib.Path(tmp) / "bare.md"
+        ok, why = build(skill, where, out, "--article")
+        if not ok:
+            return f"a copy of this deck with one note added was refused: {why}"
+        if PROBE not in plain(read(out)):
+            return ("a note added to a slide that had none never reaches the "
+                    "article -- carry the notes of EVERY stretch, the chapters "
+                    "included: a divider's note is the only place that act's "
+                    "detail was ever written down, since it never reached the "
+                    "stage either")
+    return ""
 
 
 # ── 4 · each mode, twice, byte for byte ──────────────────────────────────────
@@ -571,7 +629,6 @@ def over(skill, source):
 def main(argv):
     print("modes:")
     skill = SKILL
-    sources = []
     rest = list(argv)
     if "--skill" in rest:
         at = rest.index("--skill")

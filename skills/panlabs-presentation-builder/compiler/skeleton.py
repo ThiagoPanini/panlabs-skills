@@ -42,7 +42,7 @@ import html
 from catalog import (BODY, DIRECTION_TAG, FIGURE, ICON, SLOT_TAG,
                      SOURCE_EXCERPT, SOURCE_WHAT, SOURCE_WHEN, SOURCE_WHERE,
                      SOURCES_SPEC, TABLE_MAX_ROWS, chart_of, figure_of, form_of,
-                     group_of, is_table, required_of, slot_specs)
+                     group_of, is_table, slot_specs)
 from source import Refused
 from storyboard import message_slot
 
@@ -118,6 +118,10 @@ def _slot(name, said):
 def placeholder(slot, row):
     """What a slot stands in with, decided by the role the register gives it.
 
+    A CITING SLOT NEVER REACHES HERE. Its content is the id of a source, which
+    is the plan's to give and not this function's to invent -- `_slide` writes it
+    before it asks for a placeholder, the same way it writes the message.
+
     THE NUMBER IS THE SLIDE'S OWN, and that is the one placeholder that is not a
     word. A `figure` slot is set in the largest type on the stage and a sentence
     there would not be read as a number at all -- so what goes in it is the
@@ -125,13 +129,16 @@ def placeholder(slot, row):
     anybody and gives a numbered divider its own number instead of three
     dividers all saying the same thing.
     """
-    if slot.cites:
-        return None            # the id is written by the caller, from the plan
     if slot.role == ICON:
         return SAMPLE_ICON
     if slot.role == FIGURE:
         return f"{row.number:02d}"
     if slot.role == BODY:
+        # AS LONG AS PROSE IS, BECAUSE THE OCCUPANCY RULER MEASURES THE STAGE.
+        # A three-word placeholder in three columns fills 37% of the slide and
+        # the render gate refuses it -- on a page whose whole job is to be
+        # looked at, so the red would be about the marker and not about the
+        # deck. A line this long is roughly what a real column holds.
         return (f"{SAMPLE} · {slot.name} — o texto real entra aqui, e ocupa "
                 "mais ou menos esta altura")
     return f"{SAMPLE} · {slot.name}"
@@ -144,10 +151,19 @@ def _field(field, index):
     return f"{SAMPLE} {index}"
 
 
-def _item(group, index, marked):
-    """One `<li>` of a placeholder group, fields in the register's order."""
+def _item(group, index, marked, said=None):
+    """One `<li>` of a placeholder group, fields in the register's order.
+
+    `said` OVERRIDES A FIELD BY ITS ROLE AND NOT BY ITS NAME, which is what a
+    chart's series needs: a value it draws has to be a NUMBER a form can scale,
+    and "amostra 3" is not one. Keyed by role, the override is the register's own
+    question -- a series whose figures move to another field name still gets its
+    numbers, and this file never spells `value`.
+    """
     flag = f" {group.flag}" if marked and group.flag else ""
-    cells = "".join(_slot(f.name, _field(f, index)) for f in group.fields)
+    said = said or {}
+    cells = "".join(
+        _slot(f.name, said.get(f.role, _field(f, index))) for f in group.fields)
     return f"<{group.item}{flag}>{cells}</{group.item}>"
 
 
@@ -166,34 +182,56 @@ def _series(chart, form, count):
     return [10 * (i + 1) for i in range(count)]
 
 
-def _group(pattern, row):
-    """The series a pattern shows, at the smallest count its shape admits.
+def _point(group, values, index):
+    """The fields of one point of a placeholder series, by role.
 
-    THE FLOOR, NOT A MIDDLE. A skeleton is about composition, and the widest
-    thing a group does to a stage it already does at its minimum -- while every
-    item beyond it is one more placeholder for a reader to scan past. The count
-    is the register's: a chart's is the FORM's (a line of two points is broken
-    and a line of three is not), and every other group's is its own.
+    EVERY FIELD OF A CHART'S ITEM IS A NUMBER, and that is the one place a
+    placeholder cannot say the word. The value has to be a number a form can
+    scale -- "amostra 3" is not one. And the LABEL has to be SHORT, because it
+    is drawn into a plot whose room per label is measured: "amostra 8" under the
+    eighth point of a line runs into "amostra 7" beside it, and that collision
+    is invisible to every ruler that measures against the stage, which is how it
+    reached a contact sheet once. Two digits fit every form at its ceiling --
+    the tightest is the sparkline, which spends its width on twelve points and
+    leaves five characters under each -- and they read as a placeholder beside a
+    `unit` slot that says so in words.
+    """
+    return {f.role: (str(values[index]) if f.role == FIGURE
+                     else f"{index + 1:02d}")
+            for f in group.fields}
+
+
+def _group(pattern, row):
+    """The series a pattern shows, at the widest count its shape admits.
+
+    IT ANSWERS FOR A CHART TOO, which is why the cascade in `_slide` is
+    three-way where `compiler/build.py`'s is four. A chart's series IS a group --
+    the same container, the same item, the same named fields -- and what the
+    chart adds is whose counts apply and what a value has to look like. Both are
+    this function's business, and a fourth branch up there would call back into
+    it anyway.
+
+    THE CEILING, LIKE `_slide`, AND FOR THE SAME REASON: a rehearsal is judged
+    on composition, and a series is at its most composed when it is full -- a
+    chart of two bars where the deck will draw six rehearses a slide nobody is
+    going to see, and a shape that holds at its ceiling holds at every width
+    under it. The count is the register's: a chart's is the FORM's (a line of
+    two points is broken and a line of eight is the widest it draws), and every
+    other group's is its own.
     """
     group = group_of(pattern)
-    if group is None:
-        return ""
     chart = chart_of(pattern)
     if chart:
         form = form_of(pattern, row.form or chart.forms[0].name)
-        count = form.minimum
+        count = form.maximum
         values = _series(chart, form, count)
-        items = "".join(
-            f"<{group.item}{' ' + group.flag if group.flag and i == count - 1 else ''}>"
-            f'{_slot("label", f"{SAMPLE} {i + 1}")}'
-            f'{_slot("value", str(values[i]))}'
-            f"</{group.item}>"
-            for i in range(count)
-        )
-        return f"<{group.container}>{items}</{group.container}>"
+        said = [_point(group, values, i) for i in range(count)]
+    else:
+        count = group.maximum
+        said = [None] * count
     items = "".join(
-        _item(group, i + 1, marked=(i == group.minimum - 1))
-        for i in range(group.minimum)
+        _item(group, i + 1, marked=(i == count - 1), said=said[i])
+        for i in range(count)
     )
     return f"<{group.container}>{items}</{group.container}>"
 
@@ -223,13 +261,19 @@ def _figure(pattern):
     placeholder path would produce.
     """
     figure = figure_of(pattern)
-    if figure is None:
-        return ""
     return f'<{figure.drawn} {figure.box}="{FIGURE_BOX}">{FIGURE_DRAWING}</{figure.drawn}>'
 
 
-def _names(pattern):
-    """Which slots a placeholder slide writes: the required ones, and the message.
+def _slide(row, cited):
+    """One placeholder slide, every slot the register declares, in its order.
+
+    EVERY SLOT AND NOT ONLY THE REQUIRED ONES, because what a rehearsal is for
+    is the COMPOSITION, and a pattern's composition is the whole of what it
+    declares. `icon-list` requires one item and offers five; a skeleton that
+    painted one would show a list reading as a mistake rather than as a list,
+    and a cover with a hole where its kicker goes is a cover nobody can judge
+    the weight of. The counts inside a SERIES are the other way round -- see
+    `_group`.
 
     THE MESSAGE'S SLOT IS ASKED OF THE PAGE THAT PUBLISHES IT. `message_slot`
     (compiler/storyboard.py) is the one rule for "which slot a slide's message
@@ -237,28 +281,11 @@ def _names(pattern):
     go INTO the slot the storyboard would have taken them from. A second copy
     here is how a storyboard ends up publishing one slot and a skeleton filling
     another, over a page nobody compares.
-
-    IT IS ASKED OVER EVERY SLOT AND NOT ONLY THE REQUIRED ONES, which is what
-    gives a figure its thesis. `figure-caption` requires the caption alone and
-    declares an optional title; the storyboard of a real deck reads the title
-    when it is there, so a skeleton that only ever wrote the caption would paint
-    the one composition that pattern has two of.
     """
-    slots = slot_specs(pattern)
-    names = set(required_of(pattern))
-    said = message_slot(pattern, {s.name for s in slots})
-    if said is not None:
-        names.add(said.name)
-    return names, said
-
-
-def _slide(row, cited):
-    """One placeholder slide, its slots in the order the register declares them."""
-    names, said = _names(row.pattern)
+    slots = slot_specs(row.pattern)
+    said = message_slot(row.pattern, {s.name for s in slots})
     body = []
-    for slot in slot_specs(row.pattern):
-        if slot.name not in names:
-            continue
+    for slot in slots:
         if slot is said:
             body.append(_slot(slot.name, row.message))
             continue
@@ -340,10 +367,13 @@ def source(plan):
     return (
         "<!-- O ESQUELETO DESTE STORYBOARD, GERADO POR compiler/build.py "
         "--skeleton.\n"
-        "     Nada aqui é conteúdo: toda palavra que não vem da coluna de "
-        "mensagem é\n"
-        f"     um marcador que começa por «{SAMPLE}» e diz em que slot ele "
-        "está. -->\n"
+        "     O cabeçalho é o do plano, palavra por palavra: a direção de arte "
+        "e as\n"
+        "     fontes vêm da própria tabela. Nos SLIDES nada é conteúdo — só a "
+        "mensagem\n"
+        "     de cada linha, e todo o resto é um marcador que começa por "
+        f"«{SAMPLE}» e\n"
+        "     diz em que slot ele está. -->\n"
         f"<deck {header}>\n"
         f"  <{DIRECTION_TAG}>{direction}\n  </{DIRECTION_TAG}>\n"
         f"{provenance}\n"

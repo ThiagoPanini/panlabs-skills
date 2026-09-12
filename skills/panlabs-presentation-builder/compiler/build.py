@@ -618,13 +618,24 @@ def with_slides(deck):
 
 # ── the three modes ──────────────────────────────────────────────────────────
 
-def deck_mode(args):
-    """A source in, one self-contained page out, the storyboard beside it."""
+def read_deck(args):
+    """The source on disk, read, header-checked, and holding at least one slide.
+
+    THE TWO MODES THAT TAKE A SOURCE OPEN THE SAME WAY, and they opened with the
+    same four lines each until this function existed. What they do afterwards is
+    all that differs: one paints a page, the other writes prose.
+    """
     deck = with_slides(deck_of(
         text_of(args.source, "a source"),
         os.path.dirname(os.path.abspath(args.source)),
     ))
     check_header(deck)
+    return deck
+
+
+def deck_mode(args):
+    """A source in, one self-contained page out, the storyboard beside it."""
+    deck = read_deck(args)
     theme = args.theme or deck.theme
     css = theme_css(theme)
     judged(deck, theme, RULERS)
@@ -672,11 +683,7 @@ def skeleton_mode(args):
 
 def article_mode(args):
     """A source in, the deck as an article out, its drawings beside it."""
-    deck = with_slides(deck_of(
-        text_of(args.source, "a source"),
-        os.path.dirname(os.path.abspath(args.source)),
-    ))
-    check_header(deck)
+    deck = read_deck(args)
     theme = args.theme or deck.theme
     sheets = theme_sheets(theme)
     judged(deck, theme, RULERS)

@@ -32,6 +32,12 @@ corpus member in the unbranded theme, so it is also the cheapest: `base` embeds
 no faces. The corpus of three is what `check-modes.py` itself eats when the
 suite runs it with no arguments.
 
+THE `article` FAMILY CARRIES THE ONE DEFECT THAT WAS REALLY THERE. Its chapter
+branch returned the heading of a divider and never reached the notes, so every
+divider's speaker notes were dropped -- and the corpus hid it, because no
+divider in any of the three decks carries one. `check-modes.py` now adds a note
+to a bare slide itself, and this is the plant that proves it looks.
+
 TWO CASES SHARE THE `refuses` FAMILY, and neither of them breaks the refusal by
 deleting it -- they break it by being LENIENT, which is the shape the defect
 really takes. A reader that raised on a stranger pattern would still be refused
@@ -41,6 +47,7 @@ never asked for, or reads the message out of whichever column happens to be
 first. Both build green, and both are a plan quietly replaced by another one.
 """
 
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -51,6 +58,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from proof_driver import Proof, read, swap                        # noqa: E402
+
+# THE FAMILY LIST IS THE CHECK'S, LOADED AND NEVER RETYPED. `coverage` below
+# asks whether every family has a defect planted against it, and a copy of the
+# list here would answer that about a list nobody updated -- green while a
+# family added yesterday has never been seen red. The two siblings that call
+# `coverage` (check-journey.proof.py, check-install.proof.py) load it the same
+# way, by location, because the file's name carries the house's hyphen.
+_spec = importlib.util.spec_from_file_location(
+    "check_modes", os.path.join(HERE, "check-modes.py"))
+check = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(check)
 
 SKILL = os.path.abspath(os.path.join(HERE, "..", "..", "..",
                                      "skills", "panlabs-presentation-builder"))
@@ -82,6 +100,18 @@ THE_MESSAGE = "        if slot is said:"
 THE_NOTES = """        if el.tag == NOTES_TAG:
             blocks.extend(notes_of(el))
             continue"""
+
+THE_CHAPTER = """    if message is not None and message.role == CHAPTER_ROLE:
+        # A CHAPTER IS A HEADING AND ITS NOTES, NEVER A HEADING ALONE. Returning
+        # here with the heading dropped the speaker notes of every divider --
+        # which is the one class of text this whole file exists to rescue, since
+        # a note never reached the stage either. A divider carries at most two
+        # slots and both are in the heading, so the note is all that is left.
+        return [chapter(slide, pattern)] + [
+            said for el in slide.elements() if el.tag == NOTES_TAG
+            for said in notes_of(el)
+        ]
+"""
 
 THE_TAIL = """    lines += references(deck)
     lines.append("")
@@ -146,8 +176,6 @@ def main():
             "to plant into"
         )
 
-    families = [("refuses", None), ("skeleton", None), ("article", None),
-                ("deterministic", None)]
     cases = [
         (
             "refuses",
@@ -189,6 +217,15 @@ def main():
             "the notes are the prose of an article",
         ),
         (
+            "article",
+            "a chapter written as a heading with its own notes dropped",
+            planted_in("article.py", THE_CHAPTER,
+                       "    if message is not None and message.role == "
+                       "CHAPTER_ROLE:\n"
+                       "        return [chapter(slide, pattern)]\n"),
+            "carry the notes of EVERY stretch",
+        ),
+        (
             "deterministic",
             "a generator that writes a different article every time it runs",
             planted_in("article.py", THE_TAIL,
@@ -208,7 +245,7 @@ def main():
         width=15,
     )
     failed = proof.run(cases)
-    failed += proof.coverage(families, cases)
+    failed += proof.coverage(check.FAMILIES, cases)
     return failed
 
 

@@ -900,20 +900,6 @@ def claims_of(name):
     return tuple(s.name for s in slot_specs(name) if s.role == CLAIM)
 
 
-def required_of(name):
-    """The slots without which a slide is not the pattern, or () for a stranger.
-
-    IT IS AN ACCESSOR AND NOT A SECOND FACT (#239). `compiler/audit.py` reads
-    `PATTERNS[pattern].required` straight, because by then it has already
-    refused a stranger pattern and has the record in hand; `compiler/
-    skeleton.py` asks for the required slots of a pattern it has only a NAME
-    for, and a `PATTERNS.get(...)` written at that call site would be the one
-    reader of this register that has to know it is a dict.
-    """
-    p = PATTERNS.get(name)
-    return p.required if p else ()
-
-
 def budget_of(name):
     """The words a slide of this pattern may spend, or None for a stranger."""
     p = PATTERNS.get(name)

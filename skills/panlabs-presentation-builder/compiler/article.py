@@ -80,8 +80,6 @@ from storyboard import (SEPARATOR, SOURCE_COLUMNS, SOURCES_HEADING,
 HERE = os.path.dirname(os.path.abspath(__file__))
 STAGE = os.path.join(HERE, "stage.html")
 
-SUFFIX = ".md"
-
 # THE ROLE THAT OPENS A CHAPTER, asked of the register rather than matched on a
 # pattern's name. A slide whose message is a NAME is a slide naming something,
 # and that is the whole of what a chapter heading does.
@@ -163,11 +161,18 @@ class Paint:
 
 @dataclass(frozen=True)
 class Beside:
-    """One file the article carries with it: written, or copied from disk."""
+    """One file the article carries with it: written, or copied from disk.
 
-    name: str          # the basename the article references, and writes under
-    text: str = ""     # the SVG this generator built, when it built one
-    copy: str = ""     # the file on disk to copy, when the figure was imported
+    EXACTLY ONE OF THE TWO IS SET, and they are `None` rather than "" so that
+    which one it is is a question with an answer. A drawing this generator built
+    arrives as text; an imported picture arrives as the path its bytes are at,
+    because re-encoding somebody's PNG to carry it four lines is work with no
+    reader.
+    """
+
+    name: str                # the basename the article references, and writes under
+    text: str = None         # the SVG this generator built, when it built one
+    source: str = None       # the file on disk to copy, when the figure was imported
 
 
 def palette(sheets):
@@ -249,17 +254,25 @@ def _padded(view):
     return " ".join(_n(v) for v in box), box
 
 
-def standalone(view, rules, body, described, colours, kind):
-    """One drawing as an `.svg` file: its own namespace, sheet and surface."""
+def standalone(view, body, described, sheet, paint, kind):
+    """One drawing as an `.svg` file: its own namespace, sheet and surface.
+
+    `sheet` IS THE ONE THING THE TWO CALLERS DISAGREE ABOUT, and everything else
+    they need comes out of the same `Paint` -- so the sheet is an argument and
+    the palette is not. Taking both apart would be passing one record's two
+    halves as two parameters, and the day a third kind of drawing lands the
+    third caller has to know which halves those were.
+    """
     said, (x, y, w, h) = _padded(view)
     ground = (f'<rect x="{_n(x)}" y="{_n(y)}" width="{_n(w)}" '
-              f'height="{_n(h)}" fill="{literal(f"var({SURFACE})", colours)}"/>')
-    sheet = f"<style>\n{rules}\n</style>" if rules else ""
+              f'height="{_n(h)}" '
+              f'fill="{literal(f"var({SURFACE})", paint.colours)}"/>')
+    style = f"<style>\n{sheet}\n</style>" if sheet else ""
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" '
         f'class="{kind}" viewBox="{said}" role="img" '
         f'aria-label="{html.escape(described, quote=True)}">'
-        f"{sheet}{ground}{body}</svg>\n"
+        f"{style}{ground}{body}</svg>\n"
     )
 
 
@@ -270,10 +283,10 @@ def _chart(slide, pattern, container, paint):
     said = charts.described(points)
     drawn = standalone(
         f"0 0 {charts.PLOT_W} {charts.PLOT_H}",
-        paint.plot,
         charts.marks(slide.attrs[chart.attribute].strip(), points),
         said,
-        paint.colours,
+        paint.plot,
+        paint,
         "plot",
     )
     return drawn, said
@@ -283,10 +296,10 @@ def _drawn(figure, container, described, paint):
     """One hand-drawn figure of a deck, as a standalone SVG."""
     return standalone(
         figures.attribute(container, figure.box).strip(),
-        paint.figure,
         literal(figures.body(container, figure), paint.colours),
         described,
-        paint.colours,
+        paint.figure,
+        paint,
         "figure",
     )
 
@@ -448,7 +461,7 @@ def exhibit(slide, n, container, pattern, paint):
         else:
             where, extension = _imported(figure, container, paint)
             name = f"{paint.stem}.slide-{n:02d}{extension}"
-            paint.drawings.append(Beside(name, copy=where))
+            paint.drawings.append(Beside(name, source=where))
         return f"![{_cell(caption)}]({name})"
     if chart_of(pattern):
         name = f"{paint.stem}.slide-{n:02d}.svg"
@@ -483,7 +496,15 @@ def stretch(slide, n, paint):
     message = message_slot(pattern, {k for k, v in said.items() if v})
 
     if message is not None and message.role == CHAPTER_ROLE:
-        return [chapter(slide, pattern)]
+        # A CHAPTER IS A HEADING AND ITS NOTES, NEVER A HEADING ALONE. Returning
+        # here with the heading dropped the speaker notes of every divider --
+        # which is the one class of text this whole file exists to rescue, since
+        # a note never reached the stage either. A divider carries at most two
+        # slots and both are in the heading, so the note is all that is left.
+        return [chapter(slide, pattern)] + [
+            said for el in slide.elements() if el.tag == NOTES_TAG
+            for said in notes_of(el)
+        ]
 
     blocks = []
     if message is not None:
@@ -600,8 +621,8 @@ def write(path, deck, theme, sheets):
     written = [path]
     for drawing in paint.drawings:
         beside = os.path.join(where, drawing.name)
-        if drawing.copy:
-            shutil.copyfile(drawing.copy, beside)
+        if drawing.source is not None:
+            shutil.copyfile(drawing.source, beside)
         else:
             with open(beside, "w", encoding="utf-8") as fh:
                 fh.write(drawing.text)

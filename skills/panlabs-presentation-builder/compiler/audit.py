@@ -2164,11 +2164,10 @@ RULERS = (
 # What it must still be is buildable, and that is what the dialect answers.
 #
 # IT IS DERIVED FROM `RULERS` RATHER THAN LISTED, so the day a second dialect
-# ruler lands it joins by being named once above. `_vocabulary` is the whole of
-# the dialect today; `DOCTRINE` is what is left, and it exists to make that
-# sentence checkable from the other side.
+# ruler lands it joins by being named once above -- and the doctrine stays what
+# is left rather than a second list beside this one, which would be two places
+# to edit the day a ruler changes sides.
 DIALECT = tuple(pair for pair in RULERS if pair[0] is VOCABULARY)
-DOCTRINE = tuple(pair for pair in RULERS if pair not in DIALECT)
 
 
 def audit(deck, theme, rulers=RULERS):

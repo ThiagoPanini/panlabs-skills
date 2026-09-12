@@ -6,9 +6,15 @@
 `SKILL.md` is the file every ticket edits, and a checker over a document is the
 easiest kind to write green by accident: reword the rule it greps for and it
 passes by vacuity, saying nothing about a journey that has quietly grown a
-fourth turn, lost its round of questions, or started building before it asks
+fifth turn, lost its round of questions, or started building before it asks
 anything. Every family of `check-journey.py` is planted against here, on the
 standard `proof_driver.py` states in full.
+
+#240 ADDED THE TWO CASES THAT ARE ABOUT ORDER RATHER THAN PRESENCE, and they
+are the ones worth reading twice. A survey that runs AFTER the round is a
+survey nobody can act on, and a rehearsal offered AFTER the deck exists is a
+rehearsal of nothing -- both plant a document in which every line the ticket
+asked for is still present, moved.
 
 THE CASE #218 NAMES BY NAME IS `calibration-first`'s FIRST. Cut the round out
 of turn 1 -- the table that decides the header -- and the family has to go red;
@@ -43,6 +49,11 @@ _spec.loader.exec_module(check)
 FRONT = check.FRONT.read_text(encoding="utf-8") if check.FRONT.exists() else None
 DOC = check.DOC.read_text(encoding="utf-8") if check.DOC.exists() else None
 
+# The two mode flags, spelled once and read from the checker rather than from
+# the document: rename `compiler/skeleton.py` and both sides move together.
+SKEL = f"--{check.SKELETON}"
+ART = f"--{check.ARTICLE}"
+
 
 def _front():
     if FRONT is None:
@@ -60,6 +71,55 @@ def _doc():
 
 def fence(body):
     return f"\n```bash\n{body}\n```\n"
+
+
+def _turns(md):
+    return check.turns(md)
+
+
+def _last_turn(md):
+    return len(_turns(md)) - 1
+
+
+def _round_turn(md):
+    """The index of the turn that decides the header -- the round's own turn."""
+    at, _u = check._round_at(_turns(md))
+    if at is None:
+        raise Drifted("the journey has no turns, so there is no round to find")
+    return at
+
+
+def _deck_turn(md):
+    """The index of the turn that builds the deck."""
+    built = check._builds(_turns(md))
+    if not built:
+        raise Drifted(f"no turn runs {check.BUILDER} into a deck, so there is "
+                      f"nothing to order the other modes against")
+    return built[0]
+
+
+def _drop_lines(md, keep):
+    """Every line for which `keep` is false, gone -- and Drifted if none was."""
+    lines = md.split("\n")
+    rest = [line for line in lines if keep(line)]
+    if len(rest) == len(lines):
+        return None
+    return rest
+
+
+def _move_into(md, drop, which, fenced):
+    """Drop the lines `drop` matches, and plant `fenced` inside turn `which`.
+
+    The two ordering plants of #240 are the same move twice: the document keeps
+    every promise it made and breaks only the ORDER in which it makes them,
+    which is the only defect a family reading position can be proved against.
+    """
+    rest = _drop_lines(md, lambda line: not drop(line))
+    if rest is None:
+        raise Drifted("no line matches, so there is nothing to move -- the "
+                      "document is already red")
+    _l, start, _e = _turn_bounds("\n".join(rest), which)
+    return "\n".join(rest[:start + 1] + [fence(fenced)] + rest[start + 1:])
 
 
 def _turn_bounds(md, which):
@@ -82,22 +142,26 @@ def _turn_bounds(md, which):
 
 
 # --------------------------------------------------------------------------
-# 1 - three turns, one section, each closing
+# 1 - four turns, one section, each closing
 # --------------------------------------------------------------------------
-def plant_fourth_turn():
-    return dict(skill_md=_front() + "\n### Turno 4 · O portão\n\n"
+def plant_fifth_turn():
+    return dict(skill_md=_front() + "\n### Turno 5 · O portão\n\n"
                 "**Fecha quando** alguém disser que fecha.\n")
 
 
 def plant_second_section():
     """The LAST turn moves under a heading of its own, and nothing else moves.
 
-    Adding a fourth turn under a new section would plant two defects at once,
+    Adding one more turn under a new section would plant two defects at once,
     and the count rule -- which returns first -- would be the one to fire. A
     case whose red comes from a rule it was not aiming at proves that rule
     twice and this one never.
+
+    THE LAST TURN IS FOUND, NOT COUNTED TO. #240 put a turn in front of the
+    three, and a plant holding the index 2 would have moved the ADJUSTMENT's
+    predecessor while leaving the last turn where it was.
     """
-    lines, start, _ = _turn_bounds(_front(), 2)
+    lines, start, _ = _turn_bounds(_front(), _last_turn(_front()))
     return dict(skill_md="\n".join(lines[:start] + ["## Um apêndice", ""]
                                    + lines[start:]))
 
@@ -118,10 +182,10 @@ def plant_round_removed():
 
     Every line of turn 1 naming a header field goes, and the three other turns
     -- the build included -- stay exactly where they were. What is left reads
-    as a well-formed journey of three turns that never asks anything, which is
-    precisely the regression a family measuring only POSITION would miss.
+    as a well-formed journey that never asks anything, which is precisely the
+    regression a family measuring only POSITION would miss.
     """
-    lines, start, end = _turn_bounds(_front(), 0)
+    lines, start, end = _turn_bounds(_front(), _round_turn(_front()))
     names = check._header_names()
     body = [line for line in lines[start:end]
             if not any(f"`{n}`" in line for n in names)]
@@ -214,21 +278,20 @@ def plant_no_storyboard_at_all():
 
 
 def plant_storyboard_after_the_build():
-    """The proposal moves out of turn 1 and into the turn that builds.
+    """The proposal moves out of the round's turn and into the one that builds.
 
     The realistic version of this defect, and the reason the family reads
     POSITION rather than presence: a document that mentions the storyboard only
     where the compiler happens to write one has turned the story into a
     by-product of the deck, which is the exact order #207 refuses.
     """
-    lines = _without_storyboard(_front().split("\n"))
-    heads = [i for i, line in enumerate(lines) if line.startswith("### ")]
-    if len(heads) < 2:
-        raise Drifted("there is no later turn to move the proposal into")
-    at = heads[1] + 1
+    md = "\n".join(_without_storyboard(_front().split("\n")))
+    lines = md.split("\n")
+    _l, start, _e = _turn_bounds(md, _deck_turn(_front()))
     moved = (f"\nO {check.STORYBOARD} proposto sai aqui, ao lado do deck "
              f"construído.\n")
-    return dict(skill_md="\n".join(lines[:at] + [moved] + lines[at:]))
+    return dict(skill_md="\n".join(lines[:start + 1] + [moved]
+                                    + lines[start + 1:]))
 
 
 # --------------------------------------------------------------------------
@@ -392,12 +455,132 @@ def plant_category_title_dropped():
     return _drop_from_doc(f"«{check.catalog.CATEGORY_TITLES[0]}»")
 
 
+# --------------------------------------------------------------------------
+# 7 - the journey opens on the survey, and the survey covers the whole arc
+# --------------------------------------------------------------------------
+def plant_arc_row_dropped():
+    """One function of the arc stops being mapped, and only that one.
+
+    The register supplies the list, so this is the shape of red the document
+    gets the day a seventh function lands: one name to write, not a turn to
+    rewrite.
+
+    THE NAME IS REPLACED, NOT ITS LINE DROPPED. The survey names all six on ONE
+    line -- markdown here carries no hard wrap -- so cutting the line that says
+    `call` would plant six defects, and the case would report a red it did not
+    aim at while claiming to have removed one row.
+    """
+    last = check.catalog.ARC_FUNCTIONS[-1]
+    md = _front()
+    if f"`{last}`" not in md:
+        raise Drifted(f"`{last}` is not in the document, so removing it "
+                      f"changes nothing -- the document is already red")
+    return dict(skill_md=md.replace(f"`{last}`", "«a definir»"))
+
+
+def plant_survey_after_the_round():
+    """The survey keeps every word and moves behind the round.
+
+    NOTHING IS DELETED HERE. The map is intact, the extractor is still named,
+    the six rows are still six -- and the findings now arrive after the header
+    they were supposed to inform. A family reading presence calls this green.
+    """
+    md = _front()
+    lines, s0, e0 = _turn_bounds(md, 0)
+    at = _round_turn(md)
+    if at == 0:
+        raise Drifted("the round is already in the first turn, so there is "
+                      "nothing to move it behind")
+    _l, _s1, e1 = _turn_bounds(md, at)
+    survey, rest = lines[s0:e0], lines[:s0] + lines[e0:]
+    return dict(skill_md="\n".join(rest[:e1 - (e0 - s0)] + survey
+                                    + rest[e1 - (e0 - s0):]))
+
+
+def plant_extractor_unnamed():
+    """The survey stops naming the extractor, and keeps everything else.
+
+    The realistic regression: somebody trims the command out as noise, and the
+    document goes on describing subagents that read the material without
+    saying what they read it WITH -- so they read it into the main context,
+    which is the one thing the survey exists to prevent.
+    """
+    md = _front()
+    lines, start, end = _turn_bounds(md, 0)
+    body = [line for line in lines[start:end]
+            if check.EXTRACTOR.name not in line]
+    if len(body) == end - start:
+        raise Drifted(f"the first turn never names {check.EXTRACTOR.name}, so "
+                      f"the document is already red")
+    return dict(skill_md="\n".join(lines[:start] + body + lines[end:]))
+
+
+def plant_round_folded_into_the_survey():
+    """The heading between the survey and the round goes, and they become one.
+
+    One turn that both maps the material and decides the header asks its
+    questions in the same breath as it finds the answers, which is the order
+    #237 refuses: the round is supposed to ask about what the map could not
+    close.
+    """
+    md = _front()
+    at = _round_turn(md)
+    if at == 0:
+        raise Drifted("the round already shares the first turn")
+    lines, start, _e = _turn_bounds(md, at)
+    return dict(skill_md="\n".join(lines[:start] + lines[start + 1:]))
+
+
+# --------------------------------------------------------------------------
+# 8 - every mode of the builder in the turn that can act on what it makes
+# --------------------------------------------------------------------------
+def _mode(flag):
+    return lambda line: check.BUILDER in line and flag in line
+
+
+def plant_skeleton_dropped():
+    rest = _drop_lines(_front(), lambda line: not _mode(SKEL)(line))
+    if rest is None:
+        raise Drifted(f"no line runs {check.BUILDER} {SKEL}, so the document "
+                      f"is already red")
+    return dict(skill_md="\n".join(rest))
+
+
+def plant_article_dropped():
+    rest = _drop_lines(_front(), lambda line: not _mode(ART)(line))
+    if rest is None:
+        raise Drifted(f"no line runs {check.BUILDER} {ART}, so the document "
+                      f"is already red")
+    return dict(skill_md="\n".join(rest))
+
+
+def plant_skeleton_after_the_build():
+    """The rehearsal is offered once the deck exists -- the ordering branch."""
+    md = _front()
+    return dict(skill_md=_move_into(
+        md, _mode(SKEL), _deck_turn(md),
+        f"python3 compiler/{check.BUILDER} /tmp/a.storyboard.md "
+        f"/tmp/a.esqueleto.html {SKEL}"))
+
+
+def plant_article_before_the_build():
+    """The article is offered before a deck exists to write it from."""
+    md = _front()
+    at = _deck_turn(md)
+    if at == 0:
+        raise Drifted("the deck is built in the first turn, so there is no "
+                      "earlier turn to offer the article in")
+    return dict(skill_md=_move_into(
+        md, _mode(ART), at - 1,
+        f"python3 compiler/{check.BUILDER} /tmp/a.deck.html /tmp/a.md {ART}"))
+
+
 CASES = [
-    ("three-turns", "a fourth turn", plant_fourth_turn,
+    ("four-turns", "a fifth turn", plant_fifth_turn,
      "fold the extra ones back in"),
-    ("three-turns", "a turn under a second section", plant_second_section,
+    ("four-turns", "a turn under a second section", plant_second_section,
      "move them under one section"),
-    ("three-turns", "a turn that never says when it closes",
+    ("four-turns", "a turn that never says when it closes",
      plant_turn_never_closes, "add a **fecha quando** line"),
     ("calibration-first", "the round cut out of turn 1", plant_round_removed,
      "name each in the round"),
@@ -411,6 +594,22 @@ CASES = [
      plant_no_storyboard_at_all, "propose it in turn 1"),
     ("storyboard-first", "the storyboard proposed after the deck exists",
      plant_storyboard_after_the_build, "move the proposal into turn 1"),
+    ("survey-first", "one arc function with no row in the map",
+     plant_arc_row_dropped, "a row per function"),
+    ("survey-first", "the survey moved behind the round",
+     plant_survey_after_the_round, "put the survey first"),
+    ("survey-first", "the survey stops naming the extractor",
+     plant_extractor_unnamed, "name the extractor in the survey"),
+    ("survey-first", "the round folded into the survey's own turn",
+     plant_round_folded_into_the_survey, "split the round into a later turn"),
+    ("modes-in-their-turns", "the skeleton never offered",
+     plant_skeleton_dropped, "offer the skeleton in the turn before"),
+    ("modes-in-their-turns", "the skeleton offered once the deck exists",
+     plant_skeleton_after_the_build, "move --skeleton to the turn before"),
+    ("modes-in-their-turns", "the article never offered", plant_article_dropped,
+     "offer the article in the turn after"),
+    ("modes-in-their-turns", "the article offered before a deck exists",
+     plant_article_before_the_build, "move --article to the turn after"),
     ("paths-exist", "a command naming a path that does not exist",
      plant_dangling_path, "fix the spelling"),
     ("paths-exist", "a command reaching above the skill root",

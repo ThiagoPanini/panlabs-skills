@@ -1,8 +1,20 @@
 # A doutrina narrativa
 
-**Este documento é a metade da skill que nenhum comando reprova.** O compilador conta palavras, compara dois `pattern=` e lê um título contra uma lista fechada; ele não sabe dizer que a tensão chegou tarde demais, que o deck tem seis provas e nenhum plano, ou que a plateia saiu sem saber o que se espera dela. O que está aqui é o que decide isso, e é o que você aplica no **turno 1** — quando a história ainda é um parágrafo e corrigi-la custa uma linha.
+**Este documento é a metade da skill que nenhum comando reprova.** O compilador conta palavras, compara dois `pattern=` e lê um título contra uma lista fechada; ele não sabe dizer que a tensão chegou tarde demais, que o deck tem seis provas e nenhum plano, ou que a plateia saiu sem saber o que se espera dela. O que está aqui é o que decide isso, e é o que você aplica no **turno 0 e no turno 1** — quando a história ainda é um parágrafo e corrigi-la custa uma linha.
 
 Os números não estão aqui. O orçamento de cada padrão, os slots de cada um e a lista fechada de títulos que reprovam moram no [`CATALOG.md`](CATALOG.md), que é gerado do registro que o compilador de fato consulta. Uma segunda cópia deles aqui seria a cópia que envelhece.
+
+## O levantamento
+
+**Um deck falha no que ninguém foi procurar.** A tese sem prova, a plateia que ninguém nomeou, o pedido que não tem dono — nenhum dos três aparece na hora de escrever um slide, porque na hora de escrever um slide a pergunta é sempre «o que ponho aqui», e a resposta é sempre alguma coisa. O levantamento é a hora em que a pergunta ainda é **«o que eu não tenho»**, e é a única hora em que ela é barata.
+
+**O mapa é por função do arco, e não por assunto.** Uma linha para cada função da seção seguinte — a que põe a plateia no lugar, a que mostra o que está errado, a que afirma, a que prova, a que diz o que fazer, a que pede —, e em cada linha três coisas: **o que o material já dá**, com o id da fonte que dá; **o que falta**; e **o que a skill faz** com a falta — pesquisa, pergunta, ou nada. Mapear por assunto produz um mapa que confirma o que o material já é bom em dizer; mapear por função produz um mapa cujas **linhas vazias são o deck que ia sair torto**.
+
+**O que entra numa linha entra com procedência.** Cada coisa que o material dá chega ao mapa com o id da fonte de onde saiu, e é esse id que depois viaja para o `<sources>` do deck. **Número sem fonte não entra no mapa** — não porque a régua o proibiria depois, mas porque ele não é material: é uma lembrança de alguém. Os quatro portões de procedência reprovam um deck que cite o que o cabeçalho não declara, e o lugar de descobrir isso é aqui, com uma linha em branco, e não três turnos adiante com um laudo vermelho.
+
+**A entrevista é livre, e não há lista de perguntas.** O que a conversa precisa descobrir é sempre o mesmo — a **reação** que se quer provocar, a **tese**, a **plateia** e o que ela já sabe, a **prova** que falta, **quem decide**, e o que **não pode entrar** —, mas de onde sai cada pergunta é o mapa daquele pedido: o buraco de uma linha, a função sem insumo. Um roteiro fixo faz as duas coisas erradas ao mesmo tempo — pergunta o que o material já respondeu, e cala sobre o que só aquele mapa mostrou. **Nunca se pergunta o que se descobre lendo.** Com material rico, o mapa fecha sem uma pergunta de fato, e é assim que tem de ser: a entrevista é o que sobra depois de ler, não o começo.
+
+**Uma falta pode ser resposta.** O que ninguém mediu e ninguém sabe não vira pergunta nem pesquisa: vira a linha que o deck **não** promete. Um mapa honesto com duas linhas vazias dá um deck de doze slides que se sustenta; um mapa preenchido com o que se imagina dá vinte que caem na primeira pergunta da sala.
 
 ## Um argumento por slide, e nada se perde
 

@@ -8,8 +8,8 @@
  * aesthetic metric that's off by 5% produces a slightly-out-of-place warning; a
  * contrast that's off by 5% passes a text the norm fails, and the diagram goes
  * to the slide wearing an "accessible" label it hasn't earned. That's why the
- * three computations here are checked against a published value in
- * `workbench/panlabs-aws-diagrams/tests/check-primitives.cjs`.
+ * three computations here were checked against a published value by the
+ * primitives check, until #235 retired the bench.
  *
  * Two known traps, and why this module avoids them:
  *

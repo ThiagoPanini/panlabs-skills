@@ -20,14 +20,14 @@ command about the tree it lives in: `--out` landing inside the skill has to be
 refused, and nothing a run writes may land in it. A lone file in a temp
 directory would answer both questions about a directory that is not a skill.
 
-FOUR OF THE FIVE DEFECTS BELOW ARE REAL. The `.xlsx` whose relationship writes
+THREE OF THE SEVEN DEFECTS BELOW ARE REAL. The `.xlsx` whose relationship writes
 `Target=` before `Id=`, and the one whose target is spelled from the root of the
 zip, are the two the first real spreadsheet this reader was pointed at actually
 had -- both came back as an empty workbook, with an exit code of 0 and a
-fragment that looked filled in. The PDF with no text layer is the first real PDF
-it was pointed at. Only the silent SKIP is invented, and it is the one that
-would cost the most: a caller reading 0 carries on with a source whose words it
-never got.
+fragment that looked filled in. The PDF that hands back nothing is the first real
+PDF it was pointed at: sixteen pages, and not one character of text layer. The
+other four are invented, and the silent SKIP is the one that would cost the most
+-- a caller reading 0 carries on with a source whose words it never got.
 """
 
 import os
@@ -88,7 +88,7 @@ def _plant(payload):
 THE_PARAGRAPHS = "    for para in W_PARA.split(xml):"
 THE_ATTRIBUTES = '    return {k: html.unescape(v) for k, v in X_ATTR.findall(said or "")}'
 THE_ABSOLUTE = '    if target.startswith("/"):\n        return target.lstrip("/")'
-THE_TEXT_LAYER = '    said = _squeeze("\\n\\n".join(page.extract_text() or "" for page in reader.pages))'
+THE_TEXT_LAYER = '    said = _tidy("\\n\\n".join(page.extract_text() or "" for page in reader.pages))'
 THE_SKIP_CODE = '    print(f"── extract · SKIP — {why}")\n    return SKIP'
 THE_GUARD = "        if landing == ROOT or landing.startswith(ROOT + os.sep):"
 THE_STDOUT = "    if not args.out:\n        print(said)\n        return 0"

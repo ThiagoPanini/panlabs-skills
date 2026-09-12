@@ -1259,7 +1259,6 @@ class Sources:
     fields: tuple         # the Field(s) a source carries, in reading order
     required_fields: tuple
     minimum: int
-    maximum: int
     purpose: str          # Portuguese: the line the reference publishes about it
     separator: str        # what the stage prints between the two halves it shows
     elision: str          # how a quotation marks the words it left out
@@ -1288,14 +1287,14 @@ SOURCES_SPEC = Sources(
                                     "deck sai desta fonte"),
     ),
     required_fields=(SOURCE_WHAT, SOURCE_WHERE, SOURCE_WHEN),
+    # ONE, AND NO CEILING. Every other bounded thing in this register is bounded
+    # because the STAGE cannot hold more -- four metrics in a row, six rows of a
+    # table, eight bars across a chart. Nothing in this block reaches a stage
+    # except through a slide that cites it, so there is no width to run out of,
+    # and a ceiling here would be this file refusing a deck for having read
+    # widely. The floor is the half that earns its keep: an empty `<sources>` is
+    # a header that promised provenance and gave none.
     minimum=1,
-    # TWELVE, AND THE CEILING IS ABOUT THE DECK RATHER THAN ABOUT THE BLOCK. A
-    # deck reading from more than twelve places in twenty minutes is a literature
-    # review wearing a deck's clothes -- and the block has no page of its own to
-    # grow onto, since nothing in it reaches the stage except through a slide
-    # that cites it. The floor is the half that earns its keep every day: an
-    # empty `<sources>` is a header that promised provenance and gave none.
-    maximum=12,
     purpose="cada `<li>` é uma fonte, com um `id=` no item e um `<p>` por campo",
     separator=" · ",
     # HOW A QUOTATION SAYS IT LEFT WORDS OUT, and it is in the register because
@@ -1588,9 +1587,9 @@ def reference():
         "",
         f"Depois da direção de arte, e ainda antes do primeiro slide, vem um "
         f"`<{SOURCES_TAG}>`: **todo número que chega ao palco diz de onde veio e "
-        f"de quando é**, e é aqui que ele diz. De {SOURCES_SPEC.minimum} a "
-        f"{SOURCES_SPEC.maximum} `<{SOURCES_SPEC.item}>` dentro dele, cada um com "
-        f"um `{SOURCES_SPEC.key}=` que é o nome pelo qual os slides o citam — "
+        f"de quando é**, e é aqui que ele diz. Um `<{SOURCES_SPEC.item}>` por "
+        f"fonte, **pelo menos um e sem teto**, cada um com um "
+        f"`{SOURCES_SPEC.key}=` que é o nome pelo qual os slides o citam — "
         f"{SOURCES_SPEC.purpose}.",
         "",
         "| campo | papel | obrigatório | o que vai nele |",

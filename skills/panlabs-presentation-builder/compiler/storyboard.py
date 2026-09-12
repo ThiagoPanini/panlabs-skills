@@ -156,7 +156,7 @@ def render(deck, theme, moments):
     # where the other three fields are five -- and a fifth column holding one
     # would make every row of the table unreadable to publish a field that is
     # usually absent. It goes under the table, for the sources that have one.
-    said = sources_of(deck) or {}
+    said = sources_of(deck)
     if said:
         lines += [
             "",

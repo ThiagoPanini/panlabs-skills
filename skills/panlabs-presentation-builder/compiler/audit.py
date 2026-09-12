@@ -1149,18 +1149,17 @@ def _sources(node):
                 "declares the field once"
             )
 
-    low, high = SOURCES_SPEC.minimum, SOURCES_SPEC.maximum
+    # THE FLOOR, AND THERE IS NO CEILING (#238). A block with nothing in it is a
+    # header that promised provenance and gave none, which is worse than no block
+    # at all -- `sources-present` would have named the absence, and this one says
+    # nothing about a deck that reads widely.
+    low = SOURCES_SPEC.minimum
     if count < low:
         fixes.append(
             f"{at}: add {low - count} more <{SOURCES_SPEC.item}>, or drop the "
-            f"<{SOURCES_TAG}> — the block holds {low} to {high} sources, and "
-            f"this one holds {count}"
-        )
-    elif count > high:
-        fixes.append(
-            f"{at}: drop {count - high} <{SOURCES_SPEC.item}> — the block holds "
-            f"{low} to {high} sources, and this one holds {count}; a deck reading "
-            "from more places than that is a literature review"
+            f"<{SOURCES_TAG}> — a block with nothing in it is a header that "
+            "said it would show where the numbers came from and then showed "
+            "nothing"
         )
     return fixes
 
@@ -1203,10 +1202,16 @@ def _vocabulary(deck, theme):
                 continue
             header = True
             if index:
+                # AND THIS IS ALSO WHAT PUTS THE PROVENANCE AFTER THE DIRECTION
+                # (#238), with no second rule saying so. The direction is the
+                # deck's FIRST child and `<sources>` has to come before the first
+                # slide, so the only place left for the block is between the two
+                # -- which is exactly where `CATALOG.md` publishes it. A rule of
+                # its own would hand one mistake two reds.
                 fixes.append(
                     f"line {node.line}: move the <{DIRECTION_TAG}> to the top of "
-                    "the <deck> — it is the header's second half, and a header "
-                    "written after the slides is a header nobody read"
+                    f"the <deck> — the header opens on it, and the "
+                    f"<{SOURCES_TAG}> block and every slide come after"
                 )
             fixes.extend(_direction(node))
             continue
@@ -1243,7 +1248,7 @@ def _word_budget(deck, theme):
     # a budget must never err in -- so the line the block will print is what is
     # charged, and the id itself costs nothing.
     printed = {}
-    said = sources_of(deck) or {}
+    said = sources_of(deck)
     for n, _, slot, key in _citations(deck):
         fields = said.get(key)
         if fields is not None:
@@ -1653,7 +1658,7 @@ def _theme_repertoire(deck, theme):
     # ONE RED PER SOURCE AND FIELD, NOT PER SLIDE. Four charts citing one source
     # paint the same line four times, and a fix applied in the header once should
     # not be named four times.
-    said = sources_of(deck) or {}
+    said = sources_of(deck)
     for key in dict.fromkeys(c[3] for c in _citations(deck)):
         fields = said.get(key)
         if fields is None:
@@ -1954,20 +1959,34 @@ def _citations(deck):
 
 
 def _sources_present(deck, theme):
-    """One red, on the first citation, naming the header as the place to fix."""
-    if sources_of(deck) is not None:
+    """One red, on the first slide that owes a citation, naming the header.
+
+    IT COUNTS THE PATTERNS AND NOT THE CITATIONS, and the difference is one
+    round trip. #238 conditions the block on the pattern: "o bloco é obrigatório
+    sempre que um padrão que cita existe no deck". A deck with a chart, no
+    `source` slot and no block has two absences and they have two different
+    fixes -- one in the slide, one in the header -- so charging only the one
+    that happens to be typed would hand the author the second red after they
+    fixed the first.
+    """
+    if deck.provenance is not None:
         return []
-    cited = _citations(deck)
-    if not cited:
+    owed = [(n, node) for n, node in enumerate(deck.sections, start=1)
+            if cites_of(node.attrs.get("pattern", ""))]
+    if not owed:
         return []
-    n, node, slot, said = cited[0]
+    n, node = owed[0]
+    # THE ID THE SLIDE ALREADY WROTE, WHEN IT WROTE ONE. The fix is the same
+    # either way, and naming the author's own id makes it a line to paste rather
+    # than a shape to translate.
+    written = next((said for at, _, _, said in _citations(deck) if at == n), "F1")
     return [
-        f'{_at(n, node)}, slot "{slot}": add a <{SOURCES_TAG}> to the header, '
-        f'after the <{DIRECTION_TAG}>, with a <{SOURCES_SPEC.item} '
-        f'{SOURCES_SPEC.key}="{said}"> saying what it is, where it is and when '
-        f"it is from — {len(cited)} slide(s) cite a source and this deck "
-        "declares none, so every number on the stage is one the room has to "
-        "take on trust"
+        f"{_at(n, node)}: add a <{SOURCES_TAG}> to the header, after the "
+        f'<{DIRECTION_TAG}>, with a <{SOURCES_SPEC.item} '
+        f'{SOURCES_SPEC.key}="{written}"> saying what it is, where it is and '
+        f"when it is from — {len(owed)} slide(s) here put a number or a "
+        "quotation in front of a room, and this deck says nowhere what any of "
+        "it came from"
     ]
 
 
@@ -2010,9 +2029,14 @@ MONTHS = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out",
 # and the room asking how old a number is wants the month -- the difference
 # between "measured this quarter" and "measured in January" is the whole of
 # whether it still holds.
+#
+# THE NUMERIC MONTH IS ALLOWED UNPADDED, AND THE ISO ONE IS NOT. "9/2026" is how
+# a person writes a month by hand and refusing it would be this regex being
+# narrow rather than the rule being strict; "2026-9" is not ISO at all, and
+# accepting it would teach a shape no reader of dates expects.
 DATED_MONTH = re.compile(
     r"(?:(?:19|20)\d{2}-(?:0[1-9]|1[0-2]))"
-    r"|(?:\b(?:0[1-9]|1[0-2])\s*/\s*(?:19|20)\d{2})"
+    r"|(?:\b(?:0?[1-9]|1[0-2])\s*/\s*(?:19|20)\d{2})"
     r"|(?:\b(?:" + "|".join(MONTHS) + r")[a-zç]*\.?\s*(?:/|\s+de\s+|\s+)\s*"
     r"(?:19|20)\d{2})",
     re.I,

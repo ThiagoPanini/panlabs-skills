@@ -302,6 +302,28 @@ PROPOSAL_QUOTE = ('    <p class="quote">A gente sabe o que está gasto. '
                   'A gente nunca tem a terça de manhã.</p>')
 
 
+def the_block_and_the_slot():
+    """The provenance cut, and the first slide's citation cut with it.
+
+    THE CASE THAT SAYS WHICH SIDE `sources-present` COUNTS. A deck missing both
+    has two absences with two different fixes, one in the header and one in the
+    slide -- and a ruler that only charged the citations already TYPED would go
+    quiet here, hand the author the slot's red first, and only mention the header
+    on the build after they fixed it. The spec conditions the block on the
+    PATTERN ("o bloco é obrigatório sempre que um padrão que cita existe no
+    deck"), which is what this plants against.
+    """
+    if CANONICAL_SOURCE is None:
+        raise Drifted("the fixture is not readable")
+    if CANONICAL_SOURCES + "\n\n" not in CANONICAL_SOURCE:
+        raise Drifted("the canonical deck no longer carries the provenance block")
+    said = CANONICAL_SOURCE.replace("\n\n" + CANONICAL_SOURCES, "", 1)
+    cited = '\n    <p class="source">S1</p>'
+    if cited not in said:
+        raise Drifted("the canonical deck no longer cites S1 from a slide")
+    return said.replace(cited, "", 1)
+
+
 def the_provenance_last():
     """The block moved from the header to the bottom of the deck.
 
@@ -854,8 +876,10 @@ def the_cut_is_not_a_splice():
     on the budget instead. The plants above prove it knows how to be red; this
     proves the one thing it must never be red about.
     """
-    cut_quote = ('    <p class="quote">A gente sabe o que est\u00e1 gasto. '
-                 '[\u2026] a ter\u00e7a de manh\u00e3.</p>')
+    # DERIVED FROM THE NEEDLE, NEVER RESPELLED. Writing the sentence out a third
+    # time is how the day somebody rewords the deck becomes the day this case
+    # silently plants nothing and reports green about a build it never changed.
+    cut_quote = PROPOSAL_QUOTE.replace("A gente nunca tem", "[…]")
     planted = PROPOSAL_SOURCE.replace(PROPOSAL_QUOTE, cut_quote, 1)
     moved = planted != PROPOSAL_SOURCE
     ok, said = build(planted) if moved else (False, "the fixture drifted")
@@ -1678,6 +1702,12 @@ def main():
             # art direction included. The build then refuses for having no deck
             # in the file at all, which is a red about a different mistake.
             swap(CANONICAL_SOURCE, "\n\n" + CANONICAL_SOURCES, ""),
+            "add a <sources> to the header",
+        ),
+        (
+            "no block and no citation either",
+            "both absences at once, and the header is one of them",
+            the_block_and_the_slot,
             "add a <sources> to the header",
         ),
         (

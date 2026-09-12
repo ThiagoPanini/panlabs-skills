@@ -539,7 +539,7 @@ def main(argv=None):
         raise SystemExit(1)
 
     try:
-        cited = sources_of(deck) or {}
+        cited = sources_of(deck)
         slides = "\n".join(
             slide_markup(s, i, deck.base, cited) for i, s in enumerate(sections))
     except Refused as e:

@@ -311,7 +311,7 @@ As duas cores de conteúdo são as únicas que o tema empresta além do acento, 
 
 ### A procedência
 
-Depois da direção de arte, e ainda antes do primeiro slide, vem um `<sources>`: **todo número que chega ao palco diz de onde veio e de quando é**, e é aqui que ele diz. De 1 a 12 `<li>` dentro dele, cada um com um `id=` que é o nome pelo qual os slides o citam — cada `<li>` é uma fonte, com um `id=` no item e um `<p>` por campo.
+Depois da direção de arte, e ainda antes do primeiro slide, vem um `<sources>`: **todo número que chega ao palco diz de onde veio e de quando é**, e é aqui que ele diz. Um `<li>` por fonte, **pelo menos um e sem teto**, cada um com um `id=` que é o nome pelo qual os slides o citam — cada `<li>` é uma fonte, com um `id=` no item e um `<p>` por campo.
 
 | campo | papel | obrigatório | o que vai nele |
 | --- | --- | --- | --- |

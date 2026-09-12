@@ -71,8 +71,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "compiler"))
 
-from catalog import (SOURCE_EXCERPT, SOURCE_WHAT, SOURCE_WHEN,  # noqa: E402
-                     SOURCE_WHERE, SOURCES_SPEC, SOURCES_TAG, SLOT_TAG)
+from catalog import (SLOT_TAG, SOURCE_EXCERPT, SOURCE_WHAT,  # noqa: E402
+                     SOURCE_WHEN, SOURCE_WHERE, SOURCES_SPEC, SOURCES_TAG)
 
 # The one exit code this file invents; the other two are the shell's own.
 SKIP = 3
@@ -92,14 +92,26 @@ class Absent(Exception):
 
 
 # ── the readers ──────────────────────────────────────────────────────────────
-# EACH ONE ANSWERS THE SAME QUESTION -- what does this document SAY -- and
-# answers it in plain text with blank lines between blocks. Nothing here tries to
-# keep a document's structure: what the caller does with the text is pick a
-# sentence out of it for an `excerpt`, and structure it never asked for would be
-# structure to strip.
+# EACH ONE ANSWERS THE SAME PAIR -- `(text, title)` -- and answers it in plain
+# text with blank lines between blocks. Nothing here tries to keep a document's
+# structure: what the caller does with the text is pick a sentence out of it for
+# an `excerpt`, and structure it never asked for would be structure to strip.
+#
+# THE TITLE IS EMPTY FOR EVERY FORMAT BUT ONE, and the pair exists for that one.
+# HTML carries its own `<title>`, which beats any line guessed off the top of a
+# document; the others have nothing better to offer than the guess, and saying so
+# with an empty string is what keeps `READERS` from carrying a hole and every
+# caller from carrying an `if` about it.
 
-def _squeeze(text):
-    """Text with the runs of blank lines collapsed and the edges trimmed."""
+def _tidy(text):
+    """Text with the runs of blank lines collapsed and the edges trimmed.
+
+    IT IS NOT `source.squeeze`, WHICH IS WHY IT IS NOT CALLED THAT. That one
+    collapses every run of whitespace into one space, because a slot's prose is
+    a sentence; this one keeps the line breaks a document was written with and
+    only drops the empty runs between them, because what a reader is about to do
+    with this is find a paragraph in it.
+    """
     lines = [line.rstrip() for line in text.replace("\r\n", "\n").split("\n")]
     out = []
     for line in lines:
@@ -109,9 +121,19 @@ def _squeeze(text):
 
 
 def _read_text(path):
-    """A text file, read as UTF-8 and never refused for one bad byte."""
+    """A file's bytes as text, UTF-8, never refused for one bad byte.
+
+    THE ONE READER THAT IS NOT A READER. Everything in `READERS` answers
+    `(text, title)`; this answers raw text, and it is what the others are built
+    out of -- including the caption file, which is not a document at all.
+    """
     with open(path, "rb") as fh:
         return fh.read().decode("utf-8", "replace")
+
+
+def _txt(path):
+    """A plain text or Markdown file: its own words, and no title of its own."""
+    return _tidy(_read_text(path)), ""
 
 
 class _Stripper(HTMLParser):
@@ -161,7 +183,7 @@ class _Stripper(HTMLParser):
             self.out.append(data)
 
     def text(self):
-        return _squeeze("".join(self.out))
+        return _tidy("".join(self.out))
 
 
 def _html_text(markup):
@@ -170,6 +192,11 @@ def _html_text(markup):
     reader.feed(markup)
     reader.close()
     return reader.text(), " ".join(reader.title.split())
+
+
+def _html_file(path):
+    """The same, from disk. The one format that answers with a title of its own."""
+    return _html_text(_read_text(path))
 
 
 # A run of text in a Word document, and the paragraph that ends one.
@@ -206,7 +233,7 @@ def _docx(path):
     for para in W_PARA.split(xml):
         said = "".join(html.unescape(run) for run in W_TEXT.findall(para))
         lines.append(" ".join(said.split()))
-    return _squeeze("\n".join(lines))
+    return _tidy("\n".join(lines)), ""
 
 
 # A worksheet's rows and cells, and the shared string table they point into.
@@ -323,14 +350,14 @@ def _xlsx(path):
                     rows.append(" | ".join(cells))
             if rows:
                 out.append(f"## {title}\n\n" + "\n".join(rows))
-        return _squeeze("\n\n".join(out))
+        return _tidy("\n\n".join(out)), ""
 
 
-def _csv_text(path):
+def _csv_file(path):
     """A CSV, as rows of cells joined by a pipe -- the same shape a sheet gets."""
     with open(path, newline="", encoding="utf-8", errors="replace") as fh:
-        return _squeeze("\n".join(
-            " | ".join(cell.strip() for cell in row) for row in csv.reader(fh)))
+        return _tidy("\n".join(
+            " | ".join(cell.strip() for cell in row) for row in csv.reader(fh))), ""
 
 
 def _pdf(path):
@@ -345,7 +372,7 @@ def _pdf(path):
             f"<{SLOT_TAG} class=\"{SOURCE_EXCERPT}\"> yourself"
         )
     reader = PdfReader(path)
-    said = _squeeze("\n\n".join(page.extract_text() or "" for page in reader.pages))
+    said = _tidy("\n\n".join(page.extract_text() or "" for page in reader.pages))
     if not said:
         # A PDF OF PICTURES IS THE VIDEO WITH NO CAPTIONS, one format over. The
         # first real PDF this was pointed at came back empty from pypdf itself --
@@ -358,7 +385,7 @@ def _pdf(path):
             "OCR nobody on this machine has. Copy the passage you need by hand, "
             "or find the document in a format that carries its own text"
         )
-    return said
+    return said, ""
 
 
 # A caption file's furniture: the cue numbers, the timecodes, and the inline
@@ -449,22 +476,26 @@ def _youtube(url, into):
                 when = f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:]}"
         except (OSError, ValueError):
             pass
-    return _squeeze("\n".join(lines)), title, when
+    return _tidy("\n".join(lines)), title, when
 
 
 # ── what kind of thing this is ───────────────────────────────────────────────
 
+# EVERY READER ANSWERS `(text, title)`, INCLUDING THE FIVE WITH NO TITLE TO GIVE.
+# HTML is the one format that carries its own name -- a `<title>` beats any line
+# guessed off the top of a document -- and an entry shaped for it alone would put
+# a `None` in this table and an `if kind == "html"` beside every use of it.
 READERS = {
     ".docx": ("docx", _docx),
     ".xlsx": ("xlsx", _xlsx),
-    ".csv": ("csv", _csv_text),
-    ".md": ("md", _read_text),
-    ".markdown": ("md", _read_text),
-    ".txt": ("txt", _read_text),
-    ".text": ("txt", _read_text),
+    ".csv": ("csv", _csv_file),
+    ".md": ("md", _txt),
+    ".markdown": ("md", _txt),
+    ".txt": ("txt", _txt),
+    ".text": ("txt", _txt),
     ".pdf": ("pdf", _pdf),
-    ".html": ("html", None),      # read, then stripped
-    ".htm": ("html", None),
+    ".html": ("html", _html_file),
+    ".htm": ("html", _html_file),
 }
 
 KINDS = ", ".join(sorted(set(k for k, _ in READERS.values())))
@@ -482,9 +513,7 @@ def _title_of(text, kind, fallback):
     """
     for line in text.splitlines():
         said = line.strip()
-        if kind == "md":
-            said = said.lstrip("#").strip()
-        if kind == "xlsx":
+        if kind in ("md", "xlsx"):
             said = said.lstrip("#").strip()
         if said and len(said) <= TITLE_MAX:
             return said
@@ -544,41 +573,40 @@ def _fetch(url, into):
         said, title = _html_text(text)
         return "html", said, title, when
     if kind == "text/csv":
-        return "csv", _squeeze("\n".join(
+        return "csv", _tidy("\n".join(
             " | ".join(c.strip() for c in row)
             for row in csv.reader(io.StringIO(text)))), "", when
-    return "txt", _squeeze(text), "", when
-
-
-def _read_local(where, kind, reader):
-    if kind == "html":
-        said, title = _html_text(_read_text(where))
-        return said, title
-    return reader(where), ""
+    return "txt", _tidy(text), "", when
 
 
 # ── the document it writes ───────────────────────────────────────────────────
 
-def fragment(key, what, where, when):
+def fragment(key, fields):
     """The one `<li>` the provenance block wants, on one line.
 
     THE SHAPE IS THE REGISTER'S AND NOT THIS FILE'S. `SOURCES_SPEC` names the
-    item tag, the key and every field, so the day the block grows a field this
-    command emits it -- and the day one is renamed, a fragment this wrote does
-    not quietly stop parsing in the compiler next door.
+    item tag, the key and every field, so the fields are written in the order the
+    register declares them -- and the day one is renamed, a fragment this wrote
+    does not quietly stop parsing in the compiler next door.
+
+    IT WRITES WHAT IT WAS GIVEN AND NEVER AN EMPTY FIELD. A field this command
+    could not find is a field the author has to write, and a `<p class="when">`
+    with nothing in it would be a blank the compiler refuses with a message about
+    a slot rather than about a document nobody could read a date out of.
     """
     said = "".join(
-        f'<{SLOT_TAG} class="{name}">{html.escape(value, quote=False)}</{SLOT_TAG}>'
-        for name, value in ((SOURCE_WHAT, what), (SOURCE_WHERE, where),
-                            (SOURCE_WHEN, when))
+        f'<{SLOT_TAG} class="{f.name}">'
+        f"{html.escape(fields[f.name], quote=False)}</{SLOT_TAG}>"
+        for f in SOURCES_SPEC.fields if fields.get(f.name)
     )
     item, attr = SOURCES_SPEC.item, SOURCES_SPEC.key
     return f'<{item} {attr}="{html.escape(key, quote=True)}">{said}</{item}>'
 
 
-def document(key, kind, what, where, when, text, cut):
+def document(key, fields, kind, text):
     """The Markdown this command hands back, fragment first and text under it."""
     words = len(text.split())
+    where = fields[SOURCE_WHERE]
     lines = [
         f"# {key} · {where}",
         "",
@@ -587,7 +615,7 @@ def document(key, kind, what, where, when, text, cut):
         "usar alguma coisa daqui.",
         "",
         "```html",
-        fragment(key, what, where, when),
+        fragment(key, fields),
         "```",
         "",
         f"**Reescreva o `{SOURCE_WHAT}` antes de colar.** Ele é um palpite — a "
@@ -604,8 +632,7 @@ def document(key, kind, what, where, when, text, cut):
         "",
         "## O texto",
         "",
-        f"`{kind}` · {words} palavra(s) · {len(text)} caractere(s)"
-        + (f" · **cortado nos primeiros {cut}**" if cut else ""),
+        f"`{kind}` · {words} palavra(s) · {len(text)} caractere(s)",
         "",
         text if text else "_(o documento não tem texto nenhum dentro dele)_",
         "",
@@ -632,17 +659,17 @@ def main(argv=None):
         description="Read a file or a URL into one source of a deck's "
                     "provenance block.",
     )
+    # TWO OPTIONS, AND #238 ASKS FOR BOTH OF THEM. The id is what a slide cites
+    # the source by, and `--out` is "a saída vai para onde o chamador mandar".
+    # Nothing else: an earlier draft carried `--what`, `--when` and a ceiling on
+    # the text, and all three were conveniences for editing a fragment the
+    # document already tells its reader to edit. The command reads a document and
+    # writes what it found; deciding what any of it MEANS is the caller's.
     ap.add_argument("where", help="the file or the URL to read")
     ap.add_argument("--id", default="F1",
                     help="the id the slides will cite this source by")
-    ap.add_argument("--what", default=None,
-                    help="what this source is, in one line, instead of the guess")
-    ap.add_argument("--when", default=None,
-                    help="the date of the DATA, instead of the file's own")
     ap.add_argument("--out", default=None,
                     help="write the Markdown here instead of to stdout")
-    ap.add_argument("--max-chars", type=int, default=0,
-                    help="cut the text at this many characters (0: all of it)")
     args = ap.parse_args(argv)
 
     if args.out:
@@ -676,7 +703,7 @@ def main(argv=None):
                         "hand"
                     )
                 kind, reader = READERS[extension]
-                text, title = _read_local(where, kind, reader)
+                text, title = reader(where)
                 when = _when_of(where)
         except Refused as e:
             return refuse(str(e))
@@ -688,20 +715,18 @@ def main(argv=None):
                 f"{type(e).__name__}: {e}"
             )
 
-    # THE GUESS IS MADE BEFORE THE CUT, AND THE ORDER IS THE WHOLE POINT.
-    # `--max-chars` says how much of the document to PRINT; read the other way
-    # round it also decides what the `what` says, so `--max-chars 1` came back
-    # with the file's own name in a field that had been reading the document's
-    # first line. An option about the output must not change a field's value.
+    # THE THREE FIELDS, IN THE SHAPE EVERY OTHER READER OF A SOURCE USES.
+    # `compiler/source.py` hands a source around as {field name: words} and
+    # `source_line` reads exactly that; passing the same map here rather than
+    # four loose strings is what keeps the day a field is added from being a day
+    # this file grows a fifth positional argument.
     fallback = where if remote else os.path.basename(where)
-    what = args.what or title or _title_of(text, kind, fallback)
-
-    cut = 0
-    if args.max_chars and len(text) > args.max_chars:
-        text = text[:args.max_chars].rstrip()
-        cut = args.max_chars
-    said = document(args.id, kind, " ".join(what.split()), where,
-                    args.when or when, text, cut)
+    fields = {
+        SOURCE_WHAT: " ".join((title or _title_of(text, kind, fallback)).split()),
+        SOURCE_WHERE: where,
+        SOURCE_WHEN: when,
+    }
+    said = document(args.id, fields, kind, text)
 
     if not args.out:
         print(said)

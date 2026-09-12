@@ -240,7 +240,7 @@ def texts_of(node):
 
 
 def sources_of(deck):
-    """The deck's provenance, by id, in written order -- None when there is none.
+    """The deck's provenance, by id, in written order -- empty when there is none.
 
     THREE READERS, ONE WALK (#238). `compiler/audit.py` holds every citation to
     this map, `compiler/build.py` prints two of each source's fields onto the
@@ -248,10 +248,11 @@ def sources_of(deck):
     walk is three lines long, which is exactly how three copies of it end up
     disagreeing about the one case that matters: what an item with no `id=` is.
 
-    NONE IS NOT AN EMPTY DICT, and the difference is a red. "There is no block"
-    is one fix in the header; "the block is there and this id is not in it" is a
-    different fix in a slide, and a caller that could not tell them apart would
-    print both.
+    A MISSING BLOCK AND AN EMPTY ONE ARE BOTH `{}` HERE, and the one ruler that
+    has to tell them apart asks `Deck.provenance` instead. Every other caller
+    wants the same answer for both -- there is nothing to resolve a citation
+    against -- and a `None` they each had to spell `or {}` around would be an
+    interface shaped for the one reader that does not want it.
 
     A NAMELESS ITEM AND A REPEATED NAME ARE BOTH DROPPED HERE AND NAMED THERE.
     This file judges nothing (see the module docstring): the vocabulary ruler
@@ -261,7 +262,7 @@ def sources_of(deck):
     """
     node = deck.provenance
     if node is None:
-        return None
+        return {}
     found = {}
     for item in node.elements():
         if item.tag != SOURCES_SPEC.item:

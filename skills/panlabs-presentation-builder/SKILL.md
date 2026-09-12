@@ -332,6 +332,5 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | for propor um storyboard, escolher o arco, ou decidir o que fica de fora do deck | [`NARRATIVE.md`](NARRATIVE.md) |
 | quiser saber de que capa e de que assinatura o seu deck é obrigado a diferir | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
 | for extrair o texto de um arquivo ou de uma URL para virar fonte | [`tools/extract.py`](tools/extract.py) |
-| for escrever o bloco de fontes, ou conferir uma citação contra o trecho dela | [`examples/proposal.deck.html`](examples/proposal.deck.html) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

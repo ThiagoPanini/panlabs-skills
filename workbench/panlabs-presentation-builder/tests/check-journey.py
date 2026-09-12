@@ -541,6 +541,21 @@ def check_register_published(catalog_md=None, **_):
         if t not in text:
             missing.append(f"the title that refuses «{t}»")
 
+    # THE PROVENANCE BLOCK IS PART OF THE HEADER AND NOT PART OF A PATTERN
+    # (#238), so the walk over `PATTERNS` above cannot reach it -- and a model
+    # that never receives the field names cannot write a block the compiler
+    # accepts. The elision is here for the same reason: it is the one piece of
+    # punctuation in this dialect that CHANGES a verdict, and a model that has
+    # not been told the mark exists writes a quotation that gets refused.
+    if f"`<{catalog.SOURCES_TAG}>`" not in text:
+        missing.append(f"the provenance block `<{catalog.SOURCES_TAG}>`")
+    for f in catalog.SOURCES_SPEC.fields:
+        if f"`{f.name}`" not in text:
+            missing.append(f"the provenance field `{f.name}`")
+    if f"`{catalog.SOURCES_SPEC.elision}`" not in text:
+        missing.append(f"the elision mark `{catalog.SOURCES_SPEC.elision}`, "
+                       "which is how a quotation says it left words out")
+
     if not _has_number(text, catalog.ABSOLUTE_BUDGET):
         missing.append(f"the absolute ceiling of {catalog.ABSOLUTE_BUDGET} "
                        f"words, which no pattern may pass")
@@ -556,8 +571,9 @@ def check_register_published(catalog_md=None, **_):
     return True, (f"every fact the register declares reaches the model: "
                   f"{len(catalog.PATTERNS)} patterns with their budgets and "
                   f"{slots} slots, {len(catalog.ARC_FUNCTIONS)} arc functions, "
-                  f"{len(catalog.choice_names())} art-direction choices and "
-                  f"{len(catalog.MOMENT_SCALES)} scales of moments")
+                  f"{len(catalog.choice_names())} art-direction choices, "
+                  f"{len(catalog.MOMENT_SCALES)} scales of moments and the "
+                  f"{len(catalog.SOURCES_SPEC.fields)} fields of a source")
 
 
 FAMILIES = [

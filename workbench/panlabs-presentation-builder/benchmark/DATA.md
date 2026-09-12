@@ -1,6 +1,8 @@
 # Os dados do benchmark, com fonte e data
 
-**Todo número que aparece no deck aparece aqui primeiro, com de onde ele veio e de quando ele é.** A régua `chart-source` do compilador cobra a data em cada gráfico, mas ela cobra só que a linha exista; o que ela não sabe conferir é se o número atrás da linha foi medido ou inventado. Este arquivo é onde isso fica conferível — e é a diferença entre o benchmark e os dois exemplos da árvore, que são sintéticos e dizem isso na primeira linha de cada um.
+**Todo número que aparece no deck aparece aqui primeiro, com de onde ele veio e de quando ele é.** O que o compilador sabe conferir é a procedência; o que ele não sabe conferir é se o número atrás dela foi medido ou inventado. Este arquivo é onde isso fica conferível — e é a diferença entre o benchmark e os dois exemplos da árvore, que são sintéticos e dizem isso na primeira linha de cada um.
+
+**Desde o [#238](https://github.com/ThiagoPanini/panlabs-skills/issues/238) os três ids abaixo também existem dentro da fonte do deck**, num bloco `<sources>` no cabeçalho, e cada gráfico, a tabela, as métricas e a citação apontam para um deles pelo id. Os dois documentos não competem: **este é o que uma pessoa lê**, com a conta de cada número e o que ficou de fora; **o bloco é o que o compilador lê**, e é dele que sai a linha «o quê · quando» impressa sob cada slide. A régua que a v2 tinha (`chart-source`) pedia que a linha de fonte de um gráfico tivesse um ano em algum lugar dela; as quatro que vieram no lugar pedem que o bloco exista quando alguém cita, que todo id citado esteja declarado, que toda fonte tenha **mês e ano**, e que a citação esteja, palavra por palavra, no trecho da fonte que ela cita.
 
 **Nenhum número aqui é sobre produtividade.** Não existe medição de tempo de sessão, de antes e depois, nem de velocidade de quem usa o framework — o laudo de pesquisa registra explicitamente que ela não existe —, e o brief proíbe inventar uma.
 
@@ -83,3 +85,9 @@ O pipeline canônico, lido do `ask-matt/SKILL.md` e do `docs/agents/workflow.md`
 ## As frases citadas
 
 A citação do deck é literal, do `grilling/SKILL.md` instalado (F2, 2026-09-09): «Finding facts is your job, never the user's» e «The decisions are the user's». O deck cita as duas juntas, em inglês, porque é assim que elas estão escritas — a skill é inglesa, e traduzir a citação seria atribuir ao autor uma frase que ele não escreveu.
+
+**As duas frases não são vizinhas, e o slide diz isso.** No original elas abrem e fecham o mesmo parágrafo, com três frases entre elas; o slide escreve `[…]` no lugar do que foi cortado, que é a marca que a régua `quote-verbatim` entende — ela procura cada pedaço da citação dentro do `excerpt` da fonte citada, **na ordem em que está lá**, de modo que cortar é permitido e emendar não é. O parágrafo inteiro está no `excerpt` do `F2`, dentro da fonte do deck.
+
+**E o slide perdeu o ponto final da última frase, de propósito.** O original não termina ali: escreve «The decisions are the user's — put each to them and wait». O ponto que o deck tinha era pontuação nossa dentro de aspas alheias, e é exatamente o tipo de coisa que uma citação conferida não deixa passar.
+
+**O `excerpt` traz o parágrafo com a ênfase do original achatada.** O arquivo escreve `_facts_` e `_decisions_`, que é como o Markdown daquele arquivo grifa uma palavra; o slide grifa com `<strong>`, que é como este dialeto faz o mesmo. O que o `excerpt` guarda são as **palavras** — o grifo é do meio, não do autor.

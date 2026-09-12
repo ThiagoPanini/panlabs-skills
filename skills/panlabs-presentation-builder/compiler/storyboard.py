@@ -27,8 +27,9 @@ it carries their deck's own words back to them.
 import os
 
 from catalog import (ARC_ATTR, ARC_LABEL, CLAIM, DIRECTION_CHOICES,
-                     MOMENTS_CHOICE, NAME, scale_of, slot_specs)
-from source import texts_of
+                     MOMENTS_CHOICE, NAME, SOURCE_EXCERPT, SOURCE_WHAT,
+                     SOURCE_WHEN, SOURCE_WHERE, scale_of, slot_specs)
+from source import sources_of, texts_of
 
 SUFFIX = ".storyboard.md"
 
@@ -142,6 +143,42 @@ def render(deck, theme, moments):
         lines.append(
             f"| {n} | {ARC_LABEL[arc]} | {shape} | {cell(message(slide))} |"
         )
+
+    # THE PROVENANCE, LAST, AND ONLY WHEN THERE IS ONE (#238). The storyboard is
+    # what whoever is about to present reads before they stand up, and the one
+    # question a room asks that no slide can answer alone is "how old is that
+    # number" -- the stage prints two of a source's four fields, and this is the
+    # only page that publishes all four. It goes at the END because it is
+    # reference and not story: a reader following the arc should reach the closing
+    # before they reach a bibliography.
+    #
+    # THE EXCERPT IS NOT A COLUMN. It is a literal paragraph -- ninety words
+    # where the other three fields are five -- and a fifth column holding one
+    # would make every row of the table unreadable to publish a field that is
+    # usually absent. It goes under the table, for the sources that have one.
+    said = sources_of(deck)
+    if said:
+        lines += [
+            "",
+            "## Fontes",
+            "",
+            "| id | o que é | onde | quando |",
+            "| --- | --- | --- | --- |",
+        ]
+        for key, fields in said.items():
+            lines.append(
+                f"| `{key}` | {cell(fields.get(SOURCE_WHAT, ''))} "
+                f"| {cell(fields.get(SOURCE_WHERE, ''))} "
+                f"| {cell(fields.get(SOURCE_WHEN, ''))} |"
+            )
+        quoted = [(key, fields[SOURCE_EXCERPT]) for key, fields in said.items()
+                  if fields.get(SOURCE_EXCERPT)]
+        if quoted:
+            lines += ["", "E o trecho literal, onde alguma citação do deck sai "
+                          "de um:", ""]
+            for key, excerpt in quoted:
+                lines.append(f"- `{key}` — «{excerpt}»")
+
     lines.append("")
     return "\n".join(lines)
 

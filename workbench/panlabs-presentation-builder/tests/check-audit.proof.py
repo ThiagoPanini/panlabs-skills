@@ -273,6 +273,75 @@ def the_header_last():
             .replace("\n</deck>", "\n" + DIRECTION + "\n\n</deck>", 1))
 
 
+# ── #238's needles: the provenance, and the citations held to it ─────────────
+# THE TWO BLOCKS, EXACTLY AS THE TWO DECKS WRITE THEM. Spelled out here for the
+# same reason `DIRECTION` above is: every case that plants into a header plants
+# into one of these, and `swap`'s own drift check is what keeps this copy honest
+# the day an example is rewritten.
+#
+# WHICH DECK CARRIES WHICH HALF IS NOT A COIN TOSS. `canonical` puts nine numbers
+# on a stage and cites the same source from each of them, so it is the only
+# ground where "the block is missing", "this id is not in it" and "this source is
+# dated to a year" are the ONLY thing wrong. `proposal` renounces every pattern
+# that shows a number and carries the one quotation in the corpus, which makes it
+# the only ground where `quote-verbatim` is the ruler under test rather than a
+# ruler that never runs.
+CANONICAL_SOURCES = """  <sources>
+    <li id="S1"><p class="what">Nada aqui foi medido</p><p class="where">examples/canonical.deck.html — o Estaleiro é invenção deste exemplo, e todo número dele com ele</p><p class="when">2026-09</p></li>
+  </sources>"""
+
+PROPOSAL_SOURCES = """  <sources>
+    <li id="S1"><p class="what">Nada aqui foi medido</p><p class="where">examples/proposal.deck.html — a oficina é invenção deste exemplo, e a frase citada com ela</p><p class="when">2026-09</p><p class="excerpt">A gente sabe o que está gasto. A gente nunca tem a terça de manhã.</p></li>
+  </sources>"""
+
+# The proposal's quotation, whole, because every case below rewrites it and the
+# sentence it quotes also lives in the excerpt one block up -- a needle that was
+# only the sentence would plant in the excerpt instead, which is a different
+# defect wearing the same words.
+PROPOSAL_QUOTE = ('    <p class="quote">A gente sabe o que está gasto. '
+                  'A gente nunca tem a terça de manhã.</p>')
+
+
+def the_block_and_the_slot():
+    """The provenance cut, and the first slide's citation cut with it.
+
+    THE CASE THAT SAYS WHICH SIDE `sources-present` COUNTS. A deck missing both
+    has two absences with two different fixes, one in the header and one in the
+    slide -- and a ruler that only charged the citations already TYPED would go
+    quiet here, hand the author the slot's red first, and only mention the header
+    on the build after they fixed it. The spec conditions the block on the
+    PATTERN ("o bloco é obrigatório sempre que um padrão que cita existe no
+    deck"), which is what this plants against.
+    """
+    if CANONICAL_SOURCE is None:
+        raise Drifted("the fixture is not readable")
+    if CANONICAL_SOURCES + "\n\n" not in CANONICAL_SOURCE:
+        raise Drifted("the canonical deck no longer carries the provenance block")
+    said = CANONICAL_SOURCE.replace("\n\n" + CANONICAL_SOURCES, "", 1)
+    cited = '\n    <p class="source">S1</p>'
+    if cited not in said:
+        raise Drifted("the canonical deck no longer cites S1 from a slide")
+    return said.replace(cited, "", 1)
+
+
+def the_provenance_last():
+    """The block moved from the header to the bottom of the deck.
+
+    THE SAME PLANT `the_header_last` MAKES ONE BLOCK OVER, and it cannot be a
+    substitution for the same reason: what changes is only WHERE the block is.
+    A deck that declares its sources after the slides that cite them is a deck
+    whose header was written last, which is exactly when a source gets invented
+    to fit a number already on a stage.
+    """
+    if CANONICAL_SOURCE is None:
+        raise Drifted("the fixture is not readable")
+    if CANONICAL_SOURCES + "\n\n" not in CANONICAL_SOURCE:
+        raise Drifted("the canonical deck no longer carries the provenance block")
+    return (CANONICAL_SOURCE
+            .replace(CANONICAL_SOURCES + "\n\n", "", 1)
+            .replace("\n</deck>", "\n" + CANONICAL_SOURCES + "\n\n</deck>", 1))
+
+
 # The proposal deck's only moment, and the same thing said by a pattern that is
 # not one. #207 counts a moment as a drawn figure, a chart or a full-bleed
 # statement, so a thesis title saying what the drawing showed takes the deck to
@@ -431,7 +500,7 @@ SHARE_UL_MARKED = SHARE_UL.replace(
 BARS_SLIDE = """  <section pattern="chart" type="bars-h" arc="evidence">
     <p class="title">Cinco equipes cortaram a espera pela metade</p>
     <p class="unit">horas entre o merge e a produção, mediana</p>
-    <p class="source">painel do Estaleiro · dez/2026</p>
+    <p class="source">S1</p>
 """ + BARS_UL + """
     <notes>A Âncora está marcada porque é a que ainda não caiu: é dela que o plano do próximo ano trata.</notes>
   </section>"""
@@ -796,6 +865,33 @@ def the_photograph_is_not_a_moment():
     return 0 if good else 1
 
 
+def the_cut_is_not_a_splice():
+    """A quotation that marks what it left out is not a quotation that changed it.
+
+    THE RULER CAN BE WRONG BY FIRING, and this is the only shape where that is
+    expensive. A slide budgets thirty words and a real paragraph spends ninety,
+    so every checked quotation that is worth putting on a stage is a CUT one --
+    and a `quote-verbatim` that refused the cut would leave two ways out, both
+    bad: quote a sentence that says less, or paste the paragraph and be refused
+    on the budget instead. The plants above prove it knows how to be red; this
+    proves the one thing it must never be red about.
+    """
+    # DERIVED FROM THE NEEDLE, NEVER RESPELLED. Writing the sentence out a third
+    # time is how the day somebody rewords the deck becomes the day this case
+    # silently plants nothing and reports green about a build it never changed.
+    cut_quote = PROPOSAL_QUOTE.replace("A gente nunca tem", "[…]")
+    planted = PROPOSAL_SOURCE.replace(PROPOSAL_QUOTE, cut_quote, 1)
+    moved = planted != PROPOSAL_SOURCE
+    ok, said = build(planted) if moved else (False, "the fixture drifted")
+    good = moved and ok
+    marks = f"[{'+' if moved else '-'}{'+' if ok else '-'}]"
+    print(f"  {'ok  ' if good else 'FAIL'} {'a cut is not a splice':<23} {marks} "
+          f"a quotation that marks its own elision builds")
+    if not good:
+        print(f"       <- {said}")
+    return 0 if good else 1
+
+
 def main():
     missing = [
         os.path.relpath(path, SKILL)
@@ -1102,25 +1198,23 @@ def main():
     ], width=24, assets=GOOD_ASSETS)
 
     print()
-    failed += block("the dated legend (#213)", CANONICAL_SOURCE, [
-        (
-            "source with no date",
-            "where the number came from, and never when",
-            swap(CANONICAL_SOURCE, "painel do Estaleiro · dez/2026",
-                 "painel do Estaleiro"),
-            "add the year the data is from",
-        ),
+    # THE SLOT THAT STOPPED BEING PROSE (#213, then #238). Until the provenance
+    # block landed, a chart's `source` held the whole legend and the ruler could
+    # ask only that a year appear somewhere inside it. The slot now holds an id,
+    # so the two cases that survive here are the ones about the SLOT -- absent,
+    # and present but empty -- and the date moved to the block, three blocks down.
+    failed += block("the cited legend (#213, #238)", CANONICAL_SOURCE, [
         (
             "no source at all",
             "a chart citing nothing",
-            cut(CANONICAL_SOURCE, r'\s*<p class="source">painel do Estaleiro[^<]*</p>',
+            cut(CANONICAL_SOURCE, r'\s*<p class="source">S1</p>',
                 "the first chart's source"),
             'add the missing <p class="source">',
         ),
         (
             "source left empty",
-            "the legend written, named, and saying nothing",
-            swap(CANONICAL_SOURCE, '<p class="source">painel do Estaleiro · dez/2026</p>',
+            "the slot written, named, and citing nothing",
+            swap(CANONICAL_SOURCE, '<p class="source">S1</p>',
                  '<p class="source"></p>'),
             'write something in the <p class="source">',
         ),
@@ -1550,6 +1644,115 @@ def main():
     ], width=26)
 
     print()
+    failed += block("the provenance's own dialect (#238)", CANONICAL_SOURCE, [
+        (
+            "a source with no name",
+            "a source nothing can cite",
+            swap(CANONICAL_SOURCE, '<li id="S1">', "<li>"),
+            'give the <li> an id="…"',
+        ),
+        (
+            "one name, two sources",
+            "a citation that resolves to both",
+            # AGAINST THE WHOLE DECK, NOT AGAINST THE BLOCK. `swap` plants into
+            # whatever it is handed as the real text, and handing it the block
+            # alone produces a payload that IS the block -- a file with no
+            # <deck> in it, refused for a reason that has nothing to do with a
+            # name written twice.
+            swap(CANONICAL_SOURCE, "  </sources>",
+                 '    <li id="S1"><p class="what">E outra coisa</p>'
+                 '<p class="where">em outro lugar</p>'
+                 '<p class="when">2026-08</p></li>\n  </sources>'),
+            "rename this source",
+        ),
+        (
+            "a source with no date",
+            "where it came from, and never when",
+            cut(CANONICAL_SOURCE, r'<p class="when">2026-09</p>',
+                "the source's own date"),
+            'add the missing <p class="when">',
+        ),
+        (
+            "a block with nothing in it",
+            "a header that promised provenance and gave none",
+            swap(CANONICAL_SOURCE, CANONICAL_SOURCES,
+                 "  <sources>\n  </sources>"),
+            "<li>, or drop the <sources>",
+        ),
+        (
+            "the block written last",
+            "sources declared after the slides that cite them",
+            the_provenance_last,
+            "move the <sources> above the first <section>",
+        ),
+    ], width=26, assets=GOOD_ASSETS)
+
+    print()
+    # THE THREE THAT READ THE HEADER AND THE SLIDES AT ONCE. The fourth,
+    # `quote-verbatim`, is one block down: it needs a deck with a quotation in
+    # it, and this one renounced the pull quote.
+    failed += block("the provenance, read back (#238)", CANONICAL_SOURCE, [
+        (
+            "nine numbers and no block",
+            "a deck asserting what it cannot show",
+            # THE WHOLE BLOCK BY ITS OWN TEXT, AND NOT BY A PATTERN. A `cut` on
+            # `<sources>.*?</sources>` reads the deck's own opening comment --
+            # which explains the block and therefore names the tag -- and takes
+            # everything from there down to the real block's close, `<deck>` and
+            # art direction included. The build then refuses for having no deck
+            # in the file at all, which is a red about a different mistake.
+            swap(CANONICAL_SOURCE, "\n\n" + CANONICAL_SOURCES, ""),
+            "add a <sources> to the header",
+        ),
+        (
+            "no block and no citation either",
+            "both absences at once, and the header is one of them",
+            the_block_and_the_slot,
+            "add a <sources> to the header",
+        ),
+        (
+            "an id nobody declared",
+            "a citation pointing at nothing",
+            swap(CANONICAL_SOURCE, '<p class="source">S1</p>',
+                 '<p class="source">S9</p>'),
+            'replace "S9" with an id the <sources> declares',
+        ),
+        (
+            "a source dated to the year",
+            "a number the room cannot place inside that year",
+            swap(CANONICAL_SOURCE, '<p class="when">2026-09</p>',
+                 '<p class="when">2026</p>'),
+            'write the month into its <p class="when">',
+        ),
+    ], width=26, assets=GOOD_ASSETS)
+
+    print()
+    failed += block("the quotation held to its source (#238)", PROPOSAL_SOURCE, [
+        (
+            "a word nobody said",
+            "one tense changed inside the quotation marks",
+            swap(PROPOSAL_SOURCE, PROPOSAL_QUOTE,
+                 PROPOSAL_QUOTE.replace("nunca tem", "nunca teve")),
+            'the way the source "S1" writes it',
+        ),
+        (
+            "a quotation with no excerpt",
+            "a sentence attributed to somebody and checkable by nobody",
+            cut(PROPOSAL_SOURCE, r'<p class="excerpt">[^<]*</p>',
+                "the excerpt behind the quotation"),
+            'add a <p class="excerpt"> carrying the words slide 9 quotes',
+        ),
+        (
+            "two sentences spliced",
+            "both halves real, and the source saying them the other way round",
+            swap(PROPOSAL_SOURCE, PROPOSAL_QUOTE,
+                 '    <p class="quote">A gente nunca tem a terça de manhã. '
+                 '[…] A gente sabe o que está gasto.</p>'),
+            'the way the source "S1" writes it',
+        ),
+    ], width=26)
+
+    print()
     failed += the_theme_may_not_invent_a_token()
 
     print()
@@ -1562,6 +1765,7 @@ def main():
     failed += the_notes_never_reach_the_stage()
     failed += the_unfaced_theme_promises_nothing()
     failed += the_photograph_is_not_a_moment()
+    failed += the_cut_is_not_a_splice()
     return failed
 
 

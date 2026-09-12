@@ -24,7 +24,8 @@ import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
-from catalog import BREAK_TAG, DECK_FIELDS, DIRECTION_TAG, INLINE_TAGS
+from catalog import (BREAK_TAG, DECK_FIELDS, DIRECTION_TAG, INLINE_TAGS,
+                     SOURCE_WHAT, SOURCE_WHEN, SOURCES_SPEC, SOURCES_TAG)
 
 
 class Refused(Exception):
@@ -78,6 +79,22 @@ class Deck:
         instead of refusing it.
         """
         return next((e for e in self.children if e.tag == DIRECTION_TAG), None)
+
+    @property
+    def provenance(self):
+        """The `<sources>` block, or None when the source carries none (#238).
+
+        THE FIRST ONE, FOR THE SAME REASON `direction` TAKES THE FIRST. A source
+        with two blocks is a source with two lists of sources, and naming that is
+        the vocabulary ruler's job -- this file judges nothing.
+
+        AND IT IS NOT CALLED `sources`, BECAUSE `Deck.sections` IS ALREADY THE
+        PLURAL OF A SLIDE. A reader scanning `deck.sources` beside `deck.sections`
+        in the same function has to stop and count letters to know which is
+        which; the word for "where this deck says it read things" is the one that
+        does not look like anything else here.
+        """
+        return next((e for e in self.children if e.tag == SOURCES_TAG), None)
 
     @property
     def title(self):
@@ -220,6 +237,63 @@ def texts_of(node):
         for name, el in fields_of(node).items()
         if name
     }
+
+
+def sources_of(deck):
+    """The deck's provenance, by id, in written order -- empty when there is none.
+
+    THREE READERS, ONE WALK (#238). `compiler/audit.py` holds every citation to
+    this map, `compiler/build.py` prints two of each source's fields onto the
+    stage, and `compiler/storyboard.py` publishes all four beside the deck. The
+    walk is three lines long, which is exactly how three copies of it end up
+    disagreeing about the one case that matters: what an item with no `id=` is.
+
+    A MISSING BLOCK AND AN EMPTY ONE ARE BOTH `{}` HERE, and the one ruler that
+    has to tell them apart asks `Deck.provenance` instead. Every other caller
+    wants the same answer for both -- there is nothing to resolve a citation
+    against -- and a `None` they each had to spell `or {}` around would be an
+    interface shaped for the one reader that does not want it.
+
+    A NAMELESS ITEM AND A REPEATED NAME ARE BOTH DROPPED HERE AND NAMED THERE.
+    This file judges nothing (see the module docstring): the vocabulary ruler
+    refuses an `<li>` with no `id=` and a second `<li>` under a name already
+    taken, so what this returns is the map those reds describe -- first writing
+    wins, which is the same rule `fields_of` keeps one level down.
+    """
+    node = deck.provenance
+    if node is None:
+        return {}
+    found = {}
+    for item in node.elements():
+        if item.tag != SOURCES_SPEC.item:
+            continue
+        key = item.attrs.get(SOURCES_SPEC.key, "").strip()
+        if not key or key in found:
+            continue
+        found[key] = texts_of(item)
+    return found
+
+
+def source_line(fields):
+    """What the stage prints where a citation's id was: the what and the when.
+
+    ONE PLACE, BECAUSE TWO READERS NEED THE SAME ANSWER (#238).
+    `compiler/build.py` writes this line onto the page and `compiler/audit.py`
+    charges its words to the slide's budget -- and a budget counting a line a
+    build assembled differently is a budget that is wrong in the one direction a
+    budget must not be. The separator is the register's (`SOURCES_SPEC`), not
+    this function's.
+
+    A BLANK FIELD DROPS OUT RATHER THAN PRINTING A BARE SEPARATOR. Both fields
+    are required and `_sources` refuses a blank one, so this can only be reached
+    by a caller that skipped the audit -- and a dangling "· " on a stage is a
+    worse way to find that out than a line one field short.
+    """
+    return SOURCES_SPEC.separator.join(
+        said for said in (fields.get(SOURCE_WHAT, "").strip(),
+                          fields.get(SOURCE_WHEN, "").strip())
+        if said
+    )
 
 
 def inline_markup(node, _top=True):

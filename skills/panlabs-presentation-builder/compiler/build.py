@@ -49,7 +49,7 @@ from catalog import (ARC_ATTR, DECK_FIELDS, EVIDENCE_TAGS, ICON,  # noqa: E402
                      chart_of, figure_of, group_of, is_table,
                      role_of_element, slot_specs)
 from source import (Refused, fields_of, inline_markup,         # noqa: E402
-                    plain_text, read)
+                    plain_text, read, source_line, sources_of)
 
 THEMES = os.path.join(ROOT, "themes")
 # THE THEME EVERY OTHER THEME IS A SHEET OF OVERRIDES OVER. `base` is not one
@@ -270,7 +270,7 @@ def notes_markup(deck):
     return "\n".join(blocks)
 
 
-def slide_markup(slide, index, base):
+def slide_markup(slide, index, base, cited):
     """One section, with its slots in the order the CATALOG declares them.
 
     Source order is what the author happened to type; catalog order is what
@@ -300,6 +300,13 @@ def slide_markup(slide, index, base):
     for the sprite this same build already validated and embedded, never a
     sentence the audience reads -- so it renders as a `<use>` reference instead
     of the `<p>` every other slot gets.
+
+    A CITING SLOT PRINTS SOMEBODY ELSE'S TEXT (#238), and it is the same rule one
+    step over: what the author wrote is an id, and an id on a stage says nothing
+    to a room. What lands is the line `compiler/source.py` assembles out of the
+    cited source's own `what` and `when` -- so four charts reading one panel
+    print one legend, written once in the header, and the day it is corrected it
+    is corrected in one place.
 
     A FIGURE IS THE THIRD SHAPE OF EVIDENCE (#214), and the one whose bytes may
     live outside the source: a drawing is re-serialised against the register's
@@ -346,6 +353,25 @@ def slide_markup(slide, index, base):
             return (
                 f'<svg class="icon" data-role="icon"{step} aria-hidden="true" '
                 f'focusable="false"><use href="#icon-{name}"></use></svg>'
+            )
+        if slot.cites:
+            key = plain_text(el).strip()
+            fields = cited.get(key)
+            if fields is None:
+                # THE SECOND LOCK, the same one `inline_markup` and the figure's
+                # resolver keep. `source-known` already refused this source, so
+                # reaching here means a ruler stopped being enforced -- and a
+                # deck printing a raw "F2" where a legend belongs is a provenance
+                # that looks like a typo instead of looking like the broken check
+                # it is.
+                raise Refused(
+                    f'fix the source-known ruler — it passed a citation of "{key}", '
+                    "which the deck's own provenance block does not declare, and "
+                    "this compiler will not print an id where a source belongs"
+                )
+            return (
+                f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}"{step}>'
+                f"{html.escape(source_line(fields), quote=False)}</{SLOT_TAG}>"
             )
         return (
             f'<{SLOT_TAG} class="{slot.name}" data-role="{slot.role}"{step}>'
@@ -513,8 +539,9 @@ def main(argv=None):
         raise SystemExit(1)
 
     try:
+        cited = sources_of(deck)
         slides = "\n".join(
-            slide_markup(s, i, deck.base) for i, s in enumerate(sections))
+            slide_markup(s, i, deck.base, cited) for i, s in enumerate(sections))
     except Refused as e:
         refuse(str(e))
 

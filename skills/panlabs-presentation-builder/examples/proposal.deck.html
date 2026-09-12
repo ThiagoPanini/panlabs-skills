@@ -21,6 +21,14 @@
      retrospective: the deck is a proposal shaped the way a real one is shaped,
      and nothing in it reports anything that happened.
 
+     AND IT IS THE DECK WHERE A QUOTATION IS HELD TO ITS SOURCE (#238). It
+     renounces every pattern that puts a number on a stage, so the one thing
+     here that cites is the pull quote -- and `S1`'s own `excerpt` carries the
+     sentence it quotes, word for word. Change either one and `quote-verbatim`
+     refuses the build: it is the smallest complete demonstration of why the
+     excerpt exists, on the one deck whose «source» is its own invention and says
+     so on the stage.
+
      Build it with `python3 compiler/build.py examples/proposal.deck.html
      /tmp/proposal.html`, and add `--theme panlabs` to see the same patterns
      wearing the house identity. -->
@@ -43,6 +51,10 @@
     <p class="renounced-2">table</p>
     <p class="renounced-3">timeline</p>
   </direction>
+
+  <sources>
+    <li id="S1"><p class="what">Nada aqui foi medido</p><p class="where">examples/proposal.deck.html — a oficina é invenção deste exemplo, e a frase citada com ela</p><p class="when">2026-09</p><p class="excerpt">A gente sabe o que está gasto. A gente nunca tem a terça de manhã.</p></li>
+  </sources>
 
   <section pattern="cover-headline" arc="context">
     <p class="kicker">Proposta</p>
@@ -111,6 +123,7 @@
   <section pattern="pull-quote" arc="evidence">
     <p class="quote">A gente sabe o que está gasto. A gente nunca tem a terça de manhã.</p>
     <p class="attribution">— alguém da equipe, na retrospectiva de março</p>
+    <p class="source">S1</p>
   </section>
 
   <section pattern="icon-list" arc="plan">

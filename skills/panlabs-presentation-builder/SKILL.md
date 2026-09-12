@@ -111,7 +111,7 @@ Entregue três coisas, e as três:
 
 1. **três slides de texto seguidos sem um momento** entre eles — é onde a plateia para de acompanhar;
 2. **um capítulo inteiro sem um pico** — o divisor abriu uma seção que não tem nenhum slide que segure o palco;
-3. **a assinatura visível em todos** — o motivo que faz do deck uma peça, ou some num slide e o deck vira uma pilha de páginas;
+3. **a assinatura onde a direção prometeu que ela estaria** — um `signature` que promete um traço em todo slide e falta num slide faz o deck virar uma pilha de páginas; um que promete um motivo **por trecho** se cobra nos trechos, e cobrar dele os vinte slides é pedir o que ninguém prometeu;
 4. **algum slide que lê como pilha** — muita coisa, sem hierarquia, e nenhuma delas é o ponto.
 
 Responda as quatro dizendo **onde** e **o que fez** — ou que não achou nenhum. Achar e não consertar é a única resposta que não serve.

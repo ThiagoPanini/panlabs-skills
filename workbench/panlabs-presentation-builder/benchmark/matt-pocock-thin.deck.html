@@ -1,0 +1,220 @@
+<!-- O DECK DA ENTRADA RALA (#240). O pedido inteiro foi uma frase — "uma
+     apresentação sobre o framework de skills do Matt Pocock para engenheiros
+     que não o conhecem, vinte minutos" — e todo número aqui veio da pesquisa
+     que o turno 0 lançou em segundo plano, contra fonte primária, em
+     12/set/2026. O mapa, os blocos, os fragmentos e as divergências contra
+     DATA.md estão em SURVEY-THIN.md, ao lado deste arquivo.
+
+     ELE NÃO É UMA SEGUNDA VERSÃO DO BENCHMARK, e a diferença é o ponto: o
+     matt-pocock.deck.html nasceu de um brief de 3,3 KiB e de um registro de
+     dados de 9,2 KiB; este nasceu de uma frase. A tese é outra porque as três
+     perguntas do primeiro bloco a fixaram antes de a pesquisa voltar, e os
+     números são de três dias depois — o que diverge está anotado como
+     atualização, nunca como correção.
+
+     Construa com `python3 compiler/build.py
+     ../../workbench/panlabs-presentation-builder/benchmark/matt-pocock-thin.deck.html
+     <algum lugar fora da skill>/matt-pocock-thin.html`, da raiz da skill. -->
+<deck title="O framework do Matt Pocock, medido"
+      occasion="Encontro de engenharia, para quem nunca ouviu falar dele"
+      theme="panlabs"
+      lang="pt-BR"
+      minutes="20"
+      motion="editorial">
+
+  <direction>
+    <p class="cover">cover-headline</p>
+    <p class="signature">a linha de procedência sob todo slide que põe uma medida no palco — o mesmo par de fonte e data, no mesmo lugar, e nenhuma medida sem ela</p>
+    <p class="register">segunda pessoa, presente do indicativo, e todo comando escrito exatamente como se digita</p>
+    <p class="moments">standard</p>
+    <p class="difference">o exemplo canônico abre por um número e assina com a hairline deitada na base do palco; este abre pela manchete e assina com a linha de procedência impressa sob toda medida</p>
+    <p class="content-1">o que está publicado e se instala — as fatias das categorias que o plugin expõe, e a barra do comando mais curto</p>
+    <p class="content-2">o que existe e não se instala — o resto das fatias e o resto das barras</p>
+    <p class="renounced-1">cover-numbered</p>
+    <p class="renounced-2">comparison</p>
+    <p class="renounced-3">figure-caption</p>
+  </direction>
+
+  <sources>
+    <li id="F1"><p class="what">O repositório mattpocock/skills, medido pela API do GitHub</p><p class="where">github.com/mattpocock/skills, branch main, commit 3cca18b</p><p class="when">04/set/2026</p><p class="excerpt">The main flow, idea to ship. Grill, spec, tickets, implement, review</p></li>
+    <li id="F2"><p class="what">As skills instaladas nesta máquina</p><p class="where">a máquina de quem apresenta, ~/.claude/skills/, contada diretório a diretório com os symlinks de fora</p><p class="when">12/set/2026</p></li>
+    <li id="F3"><p class="what">A execução da spec #237 neste repositório</p><p class="where">ThiagoPanini/panlabs-skills, lido por gh issue list e gh pr view</p><p class="when">12/set/2026</p></li>
+  </sources>
+
+  <section pattern="cover-headline" arc="context">
+    <p class="kicker">Desenvolvimento com IA</p>
+    <p class="title">O método não mora no modelo, mora em arquivos que você instala</p>
+    <p class="subtitle">Vinte e cinco deles, medidos hoje</p>
+    <p class="meta">Encontro de engenharia · set/2026</p>
+    <notes>Diga de saída que ninguém precisa instalar nada agora, e que <strong>todo número deste deck foi medido em 12 de setembro</strong>, contra o repositório público e contra esta máquina.<br/>Nenhum número aqui é sobre produtividade: não existe medição de «antes e depois», e inventar uma seria a única forma de perder a sala.</notes>
+  </section>
+
+  <section pattern="pivot-question" arc="tension">
+    <p class="kicker">A pergunta</p>
+    <p class="question">Onde foi parar o que você decidiu ontem?</p>
+    <notes>Espere alguns segundos. A resposta honesta quase sempre é «na sessão que eu fechei», e é exatamente esse o buraco que o resto do deck preenche.</notes>
+  </section>
+
+  <section pattern="two-columns" arc="tension">
+    <p class="title">Toda sessão recomeça do zero, e é isso que custa caro</p>
+    <p class="column-a">O agente supõe tudo o que você não disse, escreve depressa e acerta a parte barata. A cara é a que ele supôs sozinho.</p>
+    <p class="column-b">E quando a janela fecha, some a única coisa que valia guardar: a razão pela qual aquilo foi decidido assim.</p>
+    <notes>A parte cara não é o código errado — é a <strong>decisão</strong> errada que o código correto executou muito bem.</notes>
+  </section>
+
+  <section pattern="thesis-title" arc="thesis">
+    <p class="title">Vinte e cinco arquivos de texto decidem o que o seu agente faz</p>
+    <p class="sentence" step>Nenhum é código. São instruções que você lê antes de instalar.</p>
+    <notes>Esta é a frase para levar embora. Ela é literal: uma skill é um <mark>SKILL.md</mark>, e o maior do fluxo principal tem 105 linhas.</notes>
+  </section>
+
+  <section pattern="section-divider" arc="context">
+    <p class="index">01</p>
+    <p class="title">O que se instala</p>
+  </section>
+
+  <section pattern="three-columns" arc="context">
+    <p class="title">Três regras sustentam o conjunto inteiro</p>
+    <p class="column-a">Uma skill por tarefa, chamada por barra e nome — e você lê o arquivo antes de confiar nele.</p>
+    <p class="column-b">Buscar o fato é trabalho do agente; a decisão é sempre sua, e ele tem de perguntar.</p>
+    <p class="column-c">A issue é a memória: o que a sessão decidiu fica onde a próxima sessão vai ler.</p>
+    <notes>A terceira é a que mais custa a entrar. A issue não é rastreamento: é <strong>o único lugar onde a decisão sobrevive à janela de contexto</strong> que a produziu.</notes>
+  </section>
+
+  <section pattern="chart" type="share" arc="evidence">
+    <p class="title">Metade do que o autor escreve não é publicada</p>
+    <p class="unit">as 37 skills da árvore, em proporção</p>
+    <p class="source">F1</p>
+    <ul>
+      <li><p class="label">engineering</p><p class="value">49</p></li>
+      <li><p class="label">productivity</p><p class="value">19</p></li>
+      <li><p class="label">não publicadas</p><p class="value">32</p></li>
+    </ul>
+    <notes>As duas primeiras fatias são exatamente o que o <mark>.claude-plugin/plugin.json</mark> publica, na versão 1.2.3: vinte e cinco caminhos explícitos — 18 em engineering e 7 em productivity. A terceira soma as três categorias que ficam de fora: <mark>in-progress</mark> com 8, <mark>misc</mark> com 4 e <mark>deprecated</mark> com nenhuma.<br/>A categoria <mark>deprecated/</mark> ficou vazia, só com um README — e o commit mais recente do repositório é «stop linking misc/ into local skill directories», o que confirma que <strong>misc é deliberadamente de fora</strong>, e não esquecimento.<br/>Um registro anterior desta casa, de 30 de julho, media 41 skills em seis categorias. São seis semanas de diferença: <strong>é atualização, não correção</strong>.</notes>
+  </section>
+
+  <section pattern="inline-metrics" arc="evidence">
+    <p class="claim">O que existe, o que é publicado e o que chega à sua máquina são três números diferentes</p>
+    <p class="source">F1</p>
+    <ul>
+      <li><p class="value">37</p><p class="label">na árvore do autor</p></li>
+      <li><p class="value">25</p><p class="label">publicadas pelo plugin</p></li>
+      <li><p class="value">74</p><p class="label">arquivos instalados aqui</p></li>
+    </ul>
+    <notes>Os vinte e cinco publicados e os vinte e cinco instalados coincidem hoje, e isso é coincidência de versão — não é garantia de nada.<br/>A FAQ do próprio repositório diz «Thirteen of the plugin's twenty-two skills carry the flag», e o <mark>plugin.json</mark> do mesmo commit publica vinte e cinco. A doc se declara «hand-maintained and lags the repo»: <strong>quando as duas discordam, vale o arquivo que é executado</strong>.</notes>
+  </section>
+
+  <section pattern="full-bleed-statement" arc="tension">
+    <p class="statement">Metade do repositório permanece deliberadamente invisível para quem instala o plugin.</p>
+    <notes>É o respiro do primeiro trecho, e é também a única coisa que a plateia precisa guardar dele: o que você instala é uma <strong>curadoria</strong>, e não o repositório.</notes>
+  </section>
+
+  <section pattern="section-divider" arc="context">
+    <p class="index">02</p>
+    <p class="title">O fluxo</p>
+  </section>
+
+  <section pattern="pull-quote" arc="context">
+    <p class="quote">The <strong>main flow</strong>, idea to ship. Grill, spec, tickets, implement, review</p>
+    <p class="attribution">mattpocock/skills, em docs/engineering/ask-plugin/ask-matt.md</p>
+    <p class="source">F1</p>
+    <notes>A citação está em inglês porque as skills são inglesas, e traduzi-la atribuiria ao autor uma frase que ele não escreveu.<br/>São cinco passos e cinco comandos: <mark>/grill-with-docs</mark>, <mark>/to-spec</mark>, <mark>/to-tickets</mark>, <mark>/implement</mark>, <mark>/code-review</mark>.</notes>
+  </section>
+
+  <section pattern="chart" type="bars-h" arc="evidence">
+    <p class="title">O fluxo principal cabe em 327 linhas de instrução</p>
+    <p class="unit">linhas do SKILL.md de cada comando</p>
+    <p class="source">F2</p>
+    <ul>
+      <li mark><p class="label">/grill-with-docs</p><p class="value">7</p></li>
+      <li><p class="label">/implement</p><p class="value">15</p></li>
+      <li><p class="label">/tdd</p><p class="value">38</p></li>
+      <li><p class="label">/to-spec</p><p class="value">75</p></li>
+      <li><p class="label">/code-review</p><p class="value">87</p></li>
+      <li><p class="label">/to-tickets</p><p class="value">105</p></li>
+    </ul>
+    <notes>Sete linhas é o comando que abre o fluxo. Ele é curto porque não faz nada sozinho: ele chama outra skill e acrescenta o modelo de domínio por cima.<br/>Você consegue ler os seis inteiros em vinte minutos, que é a duração desta apresentação.</notes>
+  </section>
+
+  <section pattern="table" arc="evidence">
+    <p class="claim">Cada comando deixa um artefato que o próximo lê</p>
+    <p class="source">F1</p>
+    <table>
+      <thead><tr><th>Comando</th><th>O artefato que ele deixa</th></tr></thead>
+      <tbody>
+        <tr><td>/grill-with-docs</td><td>rodadas de perguntas, e um handoff</td></tr>
+        <tr><td>/to-spec</td><td>uma spec, numa issue</td></tr>
+        <tr><td>/to-tickets</td><td>tickets em fila, um por vez</td></tr>
+        <tr><td>/implement</td><td>um PR por ticket</td></tr>
+        <tr><td>/code-review</td><td>dois eixos sobre o PR</td></tr>
+      </tbody>
+    </table>
+    <notes>O <mark>/implement</mark> é o único que chama outros por dentro: ele dirige o <mark>/tdd</mark> nas costuras combinadas e fecha no <mark>/code-review</mark> antes de commitar — está escrito assim no README do repositório.</notes>
+  </section>
+
+  <section pattern="big-number" arc="evidence">
+    <p class="number">14</p>
+    <p class="caption">das 25 skills instaladas só disparam quando uma pessoa as chama</p>
+    <p class="source">F2</p>
+    <notes>É o campo <mark>disable-model-invocation: true</mark> no frontmatter. Metade do conjunto foi deliberadamente tirada do alcance do modelo.<br/>Essa é a regra que separa este framework de um assistente: a máquina apura, e quem puxa o gatilho é você.</notes>
+  </section>
+
+  <section pattern="section-divider" arc="evidence">
+    <p class="index">03</p>
+    <p class="title">A prova</p>
+  </section>
+
+  <section pattern="timeline" arc="evidence">
+    <p class="claim">Esta apresentação saiu de uma spec que está rodando agora</p>
+    <ol>
+      <li><p class="label">A spec #237 abre 8 tickets</p><p class="date">11/set</p></li>
+      <li><p class="label">#238 fecha pelo PR #246</p><p class="date">12/set</p></li>
+      <li><p class="label">#239 fecha pelo PR #249</p><p class="date">12/set</p></li>
+      <li now><p class="label">Seis na fila, um em voo</p><p class="date">hoje</p></li>
+    </ol>
+    <notes>O PR que fechou o #239 não trazia o link automático do GitHub nos dois sentidos. O que amarrou os dois foi comparar o commit do evento de fechamento com o merge do PR — <strong>e é isso que dá para fazer quando a decisão mora na issue</strong>.</notes>
+  </section>
+
+  <section pattern="inline-metrics" arc="evidence">
+    <p class="claim">Oito tickets, dois fechados, e cada um com o seu PR</p>
+    <p class="source">F3</p>
+    <ul>
+      <li><p class="value">8</p><p class="label">tickets da spec</p></li>
+      <li><p class="value">2</p><p class="label">fechados até hoje</p></li>
+      <li><p class="value">1</p><p class="label">por vez, em fila serial</p></li>
+    </ul>
+    <notes>A fila é serial de propósito: cada ticket toca os mesmos documentos, e dois ao mesmo tempo mergeariam verdes por cima um do outro.</notes>
+  </section>
+
+  <section pattern="two-columns" arc="plan">
+    <p class="title">O setup roda uma vez, por repositório</p>
+    <p class="column-a">Um comando escreve no repositório os rótulos de triagem, o vocabulário do domínio e o bloco que aponta tudo isso no CLAUDE.md.</p>
+    <p class="column-b">Depois disso a máquina não muda mais: o que muda é a issue de cada trabalho, e ela é lida pela sessão seguinte.</p>
+    <notes>Rodar duas vezes não quebra nada, mas também não acrescenta: o comando é escrito para ser idempotente no que importa.</notes>
+  </section>
+
+  <section pattern="icon-list" arc="plan">
+    <p class="title">Quatro coisas para fazer na segunda-feira</p>
+    <p class="item-1-icon">book-open</p>
+    <p class="item-1-text">Leia os seis SKILL.md do fluxo principal — são 327 linhas ao todo</p>
+    <p class="item-2-icon">square-terminal</p>
+    <p class="item-2-text">Rode o setup num repositório só, e o menos importante que você tiver</p>
+    <p class="item-3-icon">git-merge</p>
+    <p class="item-3-text">Leve uma ideia da conversa até o merge, inteira, sem pular etapa</p>
+    <p class="item-4-icon">check</p>
+    <p class="item-4-text">Só então decida se vale para o repositório que importa</p>
+    <notes>A ordem é deliberada. Quem começa pelo repositório que importa descobre o método e o risco ao mesmo tempo, e atribui ao método o que era risco.</notes>
+  </section>
+
+  <section pattern="full-bleed-statement" arc="plan">
+    <p class="statement">Leia as 327 linhas de instrução antes de instalar. Elas decidem tudo.</p>
+    <notes>É o pedido mais barato deste deck, e o único que não depende de ninguém dar permissão.</notes>
+  </section>
+
+  <section pattern="closing-call" arc="call">
+    <p class="thesis">O método não mora no modelo, mora em arquivos que você instala.</p>
+    <p class="call">Escolham aqui um repositório, e eu rodo o setup nele agora.</p>
+    <p class="meta">Continuamos no canal de engenharia</p>
+    <notes>Peça a decisão na sala. Se ninguém escolher, o deck não fez o trabalho dele — e a próxima versão precisa de uma tensão mais cara, não de mais provas.</notes>
+  </section>
+</deck>

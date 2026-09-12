@@ -1,14 +1,25 @@
 # Protocolo de economia de contexto — implementação
 
-> Injetado pelo hook `UserPromptSubmit` (`~/.claude/hooks/context-economy-injector.py`) quando uma implementação começa — `/implement`, «implementa as issues». Este arquivo é também o **marker** de opt-in: enquanto ele existir, os dois hooks de economia de contexto ficam ativos neste repositório; sem ele, saem calados em `exit 0`. Foi assim que este repositório atravessou 116 sessões com a proteção instalada e inerte.
+> Injetado pelo hook `UserPromptSubmit` (`~/.claude/hooks/context-economy-injector.py`) quando uma implementação começa — `/implement`, «implementa as issues». Este arquivo é também o **marker** de opt-in: enquanto ele existir, os dois hooks de economia de contexto ficam ativos neste repositório; sem ele, saem calados em `exit 0`. Foi assim que este repositório atravessou 133 sessões com a proteção instalada e inerte.
 
 Você está começando a implementar. A meta é chegar ao primeiro `Edit` com a janela perto do baseline — ~48k —, não em 150k.
 
-**Medido neste repositório em 2026-09-12, 116 sessões que escreveram código:** o primeiro `Edit` acontece com **145.584 tokens** de mediana, e 82% das sessões passam de 100k antes da primeira linha. A repartição não é a intuitiva: só ~43k são bytes de arquivo e de comando; **~65k é o seu próprio raciocínio**, gerado nos ~67 turnos gastos orquestrando a exploração; ~47k é o baseline. Ler menos ataca só o quarto que é byte. Tirar o reconhecimento da janela ataca também os turnos e o raciocínio — eles acontecem na janela do subagente, e só o digest atravessa. No repositório irmão que mediu o A/B, o protocolo injetado levou a mediana de 145k para 104k, com os turnos caindo de 69 para 34.
+**Medido neste repositório em 2026-09-12, 133 sessões que escreveram código antes deste protocolo existir:** a primeira escrita acontece com **124.849 tokens** de mediana, e 68% das sessões passam de 100k antes da primeira linha. A repartição não é a intuitiva: só ~35k são bytes de arquivo e de comando; **~47k é o seu próprio raciocínio**, gerado nos ~54 turnos gastos orquestrando a exploração; ~46k é o baseline. Ler menos ataca só o quarto que é byte. Tirar o reconhecimento da janela ataca também os turnos e o raciocínio — eles acontecem na janela do subagente, e só o digest atravessa. **A primeira sessão sob este protocolo, a do #240, chegou à primeira escrita com 105k em 48 turnos; a sessão irmã do #239, aberta sem ele, com 233k em 80.** No repositório irmão que mediu o A/B, o protocolo levou a mediana de 145k para 104k, com os turnos de 69 para 34.
 
 ## A ordem
 
 1. **A primeira ferramenta é `Agent`**, do tipo `Explore`. Até o digest chegar, o reconhecimento inteiro é dele: a árvore, os vizinhos, a doutrina, o ticket. Vale seguir direto quando o ticket nomeia o arquivo **e** a mudança cabe numa função — diga que é o caso e siga.
+
+   **Enquanto ele roda (uns dois minutos), faça só o ritual de território, e em dois comandos.** A sessão do #240 gastou 15 turnos nele, um comando por turno, e cada turno carrega o raciocínio que o decide. Um comando lê quem já está de pé; o outro assina, declara e abre o worktree:
+
+   ```bash
+   gh issue list --state open --label ready-for-agent --json number,assignees --jq '.[] | select(.assignees|length>0) | .number'; git ls-remote --heads origin 'issue-*'
+   gh issue edit N --add-assignee @me && gh issue comment N --body 'Território
+   posse: <caminhos>
+   acréscimo: <caminhos>' && git worktree add .claude/worktrees/issue-N -b issue-N-<slug> origin/main
+   ```
+
+   Depois disso, **pare e espere a notificação com o digest**. Não leia código enquanto ele roda: tudo o que você ler agora ele vai trazer de novo, e você paga duas vezes.
 
 2. **Peça um digest de schema fixo, com teto de ~2.500 tokens, e diga o teto ao subagente.** Medido aqui: as 12 sessões que chamaram um `Agent` antes do primeiro `Edit` chegaram lá com **217k** de mediana, contra 142k das que não chamaram — subagente sem teto de digest devolve um relatório que custa mais do que a exploração que ele substituiu.
    - **arquivos relevantes** — path, e por que cada um importa;
@@ -18,7 +29,7 @@ Você está começando a implementar. A meta é chegar ao primeiro `Edit` com a 
 
    O `CLAUDE.md` tem a tabela de qual **seção** de `docs/agents/*` responde o quê. **O `Explore` não lê o `CLAUDE.md`** — a doc do Claude Code diz que ele pula o arquivo de memória —, então copie na instrução dele as linhas da tabela que o ticket precisa: `workflow.md` tem 24 kB, e a seção certa custa um décimo do arquivo. **No código, o índice é o cabeçalho**: 168 dos 169 arquivos de código deste repositório abrem com um comentário que declara a responsabilidade do arquivo e o ticket que o moldou — `head -30` neles localiza mais barato do que ler.
 
-3. **Aja sobre o digest.** O vizinho que veio verbatim você clona. Dos demais, leia só o que o digest nomeia, e só o que faltou, em fatia estreita (`offset`/`limit`, `sed -n`). O digest é o **orçamento de leitura**.
+3. **Aja sobre o digest.** O vizinho que veio verbatim você clona, e não relê. Dos demais, leia só o que o digest nomeia, e só o que faltou, em fatia estreita (`offset`/`limit`, `sed -n`). O digest é o **orçamento de leitura**. **E leia junto:** todas as fatias de um arquivo num comando só, e os arquivos que você vai editar numa passada — a sessão do #240 gastou 25 turnos em 76 kB, um turno por fatia, e o volume era legítimo; os turnos não.
 
 4. **Issue enxuta.** Só o ticket-alvo, campos nomeados: `gh issue view N --json title,body,labels`. **A spec não é leitura de implementação**: cada ticket da fila é autocontido, e a spec — #207 tem 28 kB, #237 tem 41 kB — entra só pela seção que o ticket cita, e só se ele citar. Irmãs e `--comments` entram com necessidade real declarada.
 
@@ -41,4 +52,4 @@ O detalhe mora em `docs/agents/workflow.md` § A aterrissagem, e aqui fica o que
 
 ## Para medir de novo
 
-`python3 ~/.claude/ctx-audit.py .` — instrumento local da máquina do mantenedor, fora deste repositório. Ele lê os transcripts do repositório e de cada worktree, corta cada sessão no primeiro `Edit`/`Write`, e devolve a mediana, a repartição por componente e os arquivos abertos antes da primeira edição. Os números acima são os dele, e envelhecem: quem mudar este protocolo ou o `CLAUDE.md` re-mede antes de afirmar efeito, e separa o que foi medido do que é esperado.
+`python3 ~/.claude/ctx-audit.py .` — instrumento local da máquina do mantenedor, fora deste repositório. Ele lê os transcripts do repositório e de cada worktree, corta cada sessão na primeira escrita — `Edit`/`Write`, ou pelo shell: `cat >`, `sed -i`, `python3 - <<` —, e devolve a mediana, a repartição por componente e os arquivos abertos antes dela. `--since=` e `--until=` recortam por data de início da sessão, para um A/B antes e depois de uma mudança; `--per-session` imprime uma linha por sessão. Os números acima são os dele, e envelhecem: quem mudar este protocolo ou o `CLAUDE.md` re-mede antes de afirmar efeito, e separa o que foi medido do que é esperado.

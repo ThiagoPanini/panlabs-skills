@@ -181,20 +181,36 @@ python3 compiler/build.py /tmp/proposta.deck.html /tmp/proposta.html --theme bas
 
 **Tudo o que o comando tem a dizer sai na saída padrão**, e o código de saída é o veredito: `0` o arquivo foi escrito, `1` não foi. A saída é determinística — não há relógio dentro dela, então duas construções da mesma fonte não diferem em um byte.
 
+**O mesmo comando faz outras duas coisas, com a mesma forma: entrada, saída, laudo.** Não são comandos novos, e não é uma escolha de estilo — o esqueleto e o artigo passam pelo mesmo leitor, pelo mesmo cabeçalho, pelo mesmo tema e pelo mesmo laudo que o deck.
+
+```bash
+python3 compiler/build.py /tmp/proposta.storyboard.md /tmp/esqueleto.html --skeleton
+python3 compiler/build.py /tmp/proposta.deck.html /tmp/proposta.md --article
+```
+
+**`--skeleton` lê um storyboard e pinta o deck que ele planeja.** A entrada é a tabela — a direção de arte e uma linha por slide —, e o que sai é uma página em que **a mensagem de cada linha ocupa o slot em que aquele padrão faz a sua afirmação** e todo o resto é marcador: cada corpo, cada rótulo, cada série e cada figura entram dizendo `amostra` e nomeando o slot em que estão. É para julgar **forma e ritmo antes de existir conteúdo** — qual slide segura o palco sozinho, onde cai o respiro, se nove slides em vinte minutos leem como uma história ou como uma pilha. Ele nasce no temporário, com a folha de contato ao lado, e **nunca é entregue**: não é um deck, é um ensaio. Só a régua do dialeto é cobrada nele, porque um marcador é obrigado a estourar orçamento, a nomear pasta onde vai afirmação e a repetir forma — toda régua de doutrina mede conteúdo, e é justamente antes de existir conteúdo que um esqueleto serve. A coluna de tom é lida e ignorada enquanto o palco não souber pintar tom. Um storyboard com um padrão que o catálogo não conhece, ou sem uma das colunas, é recusado nomeando o conserto — e o conserto é na tabela, não no deck.
+
+**`--article` lê a fonte de um deck e escreve a história dele em Markdown.** O título e a ocasião abrem; os divisores viram capítulos; cada slide vira um trecho, com a mensagem no título e **as notas do apresentador como a prosa** — que é a metade do deck que nunca chegou ao palco. A tabela sai como tabela, a lista com ícones como lista, e **cada gráfico e cada figura viajam ao lado como um `.svg` próprio**, com as cores do tema resolvidas em literais e o fundo dentro do arquivo, porque Markdown não carrega folha de estilo. As fontes fecham o documento como referências, e a citação no corpo é o id. **O gerador nunca escreve uma frase que não esteja nas notas ou nos slots** — ele decide ordem e mobília, nunca palavra; retocar a prosa depois é edição de gente. Os slots de um slide chegam ao artigo **na ordem em que foram escritos na fonte**, então reordená-los ali reordena o artigo e não muda o deck em nada.
+
+**Os dois são determinísticos byte a byte**, como o deck e o storyboard.
+
 ## O storyboard
 
-Toda construção bem-sucedida escreve **um segundo arquivo ao lado do deck**, com o mesmo nome e o sufixo `.storyboard.md`: `/tmp/exemplo.html` traz `/tmp/exemplo.storyboard.md` junto. Ele é a história do deck em uma página — a direção de arte inteira numa tabela, e depois **uma linha por slide, com a função no arco, o padrão e a mensagem**, com os momentos marcados.
+Toda construção bem-sucedida escreve **um segundo arquivo ao lado do deck**, com o mesmo nome e o sufixo `.storyboard.md`: `/tmp/exemplo.html` traz `/tmp/exemplo.storyboard.md` junto. Ele é a história do deck em uma página — a direção de arte inteira numa tabela, e depois **uma linha por slide, com a função no arco, o padrão, o tom, a forma do gráfico e a mensagem**, com os momentos marcados.
 
 Ele existe porque **estrutura é mais barata de corrigir em texto do que em slide**. Com o storyboard ao lado, o próximo pedido pode ser «o slide 4 está fazendo a tensão de novo» em vez de «encurte o slide sete» — e ele é gerado da fonte, nunca escrito à mão, então não há uma segunda cópia da história para divergir da primeira. Como o deck, é reproduzível byte a byte.
 
 ```markdown
 ## Storyboard
 
-| # | função | padrão | mensagem |
-| --- | --- | --- | --- |
-| 1 | tensão | `full-bleed-statement` · momento | Nenhuma suíte verde substitui a primeira fileira lendo o slide projetado. |
-| 2 | chamada | `closing-call` | Abra o próximo deck no projetor antes de mandá-lo. |
+| # | função | padrão | tom | forma | mensagem |
+| --- | --- | --- | --- | --- | --- |
+| 1 | tensão | `full-bleed-statement` · momento | — | — | Nenhuma suíte verde substitui a primeira fileira lendo o slide projetado. |
+| 2 | provas | `chart` · momento | — | `chart.bars-h` | O portão pegou onze defeitos que a revisão humana passou. |
+| 3 | chamada | `closing-call` | — | — | Abra o próximo deck no projetor antes de mandá-lo. |
 ```
+
+**E ele é entrada também**: é essa tabela que `--skeleton` lê para pintar o deck que ela planeja. Por isso as colunas são seis e não quatro — o tom de cada slide e a forma do gráfico ficam escritos onde a história fica, e um esqueleto reconstrói o deck inteiro a partir dela. A coluna `forma` traz o padrão e a forma juntos (`chart.bars-h`) para dizer de que vocabulário aquela forma saiu; um em-dash é «nada aqui». **O tom ainda é lido e ignorado**: o palco não sabe pintar tom, e a coluna existe para o dia em que souber.
 
 ## Apresentar
 
@@ -332,5 +348,8 @@ Instalar é **apontar, não copiar**: a skill instalada é sempre a que está no
 | for propor um storyboard, escolher o arco, ou decidir o que fica de fora do deck | [`NARRATIVE.md`](NARRATIVE.md) |
 | quiser saber de que capa e de que assinatura o seu deck é obrigado a diferir | [`examples/canonical.deck.html`](examples/canonical.deck.html) |
 | for extrair o texto de um arquivo ou de uma URL para virar fonte | [`tools/extract.py`](tools/extract.py) |
+| quiser saber o que um esqueleto põe em cada slot, ou como ele marca a amostra | [`compiler/skeleton.py`](compiler/skeleton.py) |
+| quiser saber como um storyboard é lido de volta, ou por que ele foi recusado | [`compiler/storyboard.py`](compiler/storyboard.py) |
+| quiser saber o que entra no artigo, ou como um gráfico ganha cor literal ao lado dele | [`compiler/article.py`](compiler/article.py) |
 
 A suíte que mede este compilador **mora fora desta árvore** e não é lida nem rodada por quem executa a skill: ela é do workspace irmão, e o que a skill publica não carrega o peso dela.

@@ -149,6 +149,30 @@
 #                                       compiler: a front door describing a
 #                                       journey nothing underneath it can run
 #                                       is a green about prose.
+#   7  THE EXTRACTOR                    `tools/extract.py` is the one seam that
+#                                       is not the compiler: what a session runs
+#                                       BEFORE there is a deck, to turn the
+#                                       .docx somebody mailed into the `<li>`
+#                                       the provenance block wants. It is last
+#                                       among the layers that measure a command
+#                                       because nothing above depends on it -- a
+#                                       deck compiles whether or not it exists.
+#                                       (It landed with #238 and this index did
+#                                       not follow; #239 paid that line.)
+#   8  THE OTHER TWO MODES              the skeleton and the article, which are
+#                                       the two things `compiler/build.py`
+#                                       writes that no ruler ever reads back:
+#                                       the first is audited by the DIALECT
+#                                       alone because a placeholder is supposed
+#                                       to break every doctrine ruler there is,
+#                                       and the second is not audited at all
+#                                       because Markdown is not a source. It is
+#                                       last because both eat what the layers
+#                                       above already prove -- a skeleton is
+#                                       painted from the storyboard layer 5
+#                                       measures, and an article is written from
+#                                       a deck layers 0 and 1 already held to
+#                                       nineteen rulers.
 #
 # ⚠️ SPEC #207 PUTS THE REGISTER/REFERENCE EQUALITY AT THE FRONT DOOR ("a porta
 # de entrada cobra igualdade entre registro e referência publicada"), which is
@@ -642,9 +666,45 @@ step "the extractor reads what it says it reads, and names what it cannot" \
   python3 "$HERE/check-extract.py"
 
 echo
+echo "════ layer 8 · the other two modes ════"
+# THE TWO THINGS THE BUILD COMMAND WRITES THAT NO RULER READS BACK (#239).
+# `--skeleton` paints the storyboard of a deck that does not exist yet and is
+# audited by the DIALECT alone, on purpose: a placeholder is supposed to be over
+# budget, to name a folder where a claim goes and to repeat a shape, because
+# every doctrine ruler measures CONTENT and a skeleton exists precisely before
+# there is any. `--article` is not audited at all -- it is Markdown, and the
+# audit's subject is a source. So a skeleton that painted the wrong pattern, or
+# an article that quietly stopped writing the speaker notes, would leave every
+# layer above green and the thing somebody publishes wrong.
+#
+# IT COMES LAST BECAUSE BOTH MODES EAT WHAT THE LAYERS ABOVE ALREADY PROVE. A
+# skeleton is painted from a storyboard, which is layer 5's subject; an article
+# is written from a source that layer 1 has already built and layer 0 has
+# already held to nineteen rulers. Measuring either before there is a deck and a
+# storyboard beside it would be measuring the same thing twice, one floor lower.
+#
+# ⚠️ IT BUILDS WITHOUT A BROWSER, AND SAVES THIRTY-FIVE SECONDS PER LAUNCH, the
+# same way layer 5 does: the check runs `build.py` with no `node` on the PATH, so
+# `gate/render.cjs` degrades to the named SKIP #209 built it to degrade to. Layer
+# 2 is where a render verdict is asserted for this same corpus; the SKELETON's
+# own contact sheet is what a session hands the owner in the first turn, and a
+# thirty-file corpus of them is not what this suite is for.
+#
+# ⚠️ THE CORPUS IS THE SAME THREE, by discovery and not by name -- the two under
+# `examples/` and the benchmark beside this file. #239 asks for both modes over
+# all three, and the determinism family runs each mode TWICE per deck, which is
+# twelve builds it would be easy to shorten and pointless to: byte-for-byte is
+# the property, and a property measured on one deck is a property about one deck.
+step "the modes check proves it measures" \
+  python3 "$HERE/check-modes.proof.py"
+
+step "the skeleton is the plan and the article is the deck, and both are the same twice" \
+  python3 "$HERE/check-modes.py"
+
+echo
 if [ "$failed" -ne 0 ]; then
   echo "SUITE RED — ${#REDS[@]} step(s):"
   for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, every storyboard still describes the deck beside it, the front door still conducts the three turns and installs where the house looks, and the extractor reads what it says it reads and names what it cannot."
+echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, every storyboard still describes the deck beside it, the front door still conducts the three turns and installs where the house looks, the extractor reads what it says it reads and names what it cannot, and the skeleton and the article each describe the deck they were asked about, twice."

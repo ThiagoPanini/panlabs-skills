@@ -477,7 +477,16 @@ body {
  * to the second content colour. A browser without `:has()` paints every mark
  * bright and the accent one on top of them, which is a weaker slide and never
  * a wrong one.
+ *
+ * THE TWO MARKERS BELOW ARE READ BY compiler/article.py (#239). A chart that
+ * travels beside an article is an `.svg` file of its own, and a Markdown page
+ * carries no stylesheet -- so that generator reads THESE rules, strips the
+ * `.slide[data-pattern="chart"] ` prefix and replaces every `var()` with the
+ * active theme's literal. Keep every rule inside them prefixed that way, and
+ * keep geometry out: what belongs here is paint, and a `width` in stage units
+ * would mean nothing in a file with no stage around it.
  */
+/* article:plot-paint:begin */
 .slide[data-pattern="chart"] .plot text { font-family: var(--font-mono); }
 .slide[data-pattern="chart"] .plot .label { fill: var(--ink-muted); }
 .slide[data-pattern="chart"] .plot .value { fill: var(--ink); }
@@ -527,6 +536,7 @@ body {
 .slide[data-pattern="chart"] .plot .slice-1 { fill: var(--content-1); }
 .slide[data-pattern="chart"] .plot .slice-2 { fill: var(--accent); }
 .slide[data-pattern="chart"] .plot .slice-3 { fill: var(--content-2); }
+/* article:plot-paint:end */
 
 /* ── pattern · figure-caption (#214) ─────────────────────────────────────────
  * The one pattern whose CONTENT the catalog does not compose, so the stage
@@ -555,6 +565,19 @@ body {
   border-top: calc(var(--stage-height) * 0.0015) solid var(--hairline);
 }
 
+.slide[data-pattern="figure-caption"] .figure {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  margin: calc(var(--stage-height) * 0.035) 0;
+  /* An imported picture is letterboxed inside its box exactly the way a
+   * drawing with a viewBox already is. Neither is ever stretched to fill the
+   * stage: a figure distorted to fit is a figure lying about a shape. */
+  object-fit: contain;
+}
+
 /* THE PAINT IS SET ON THE ROOT AND INHERITED, NOT SELECTED PER ELEMENT, and
  * that is the difference between a default and an override. `fill` inherits,
  * and a presentation attribute on a child beats a value inherited from its
@@ -566,21 +589,20 @@ body {
  * The face is the body's, and it is NOT the author's to set (no `font-family`
  * in the register's attributes): a figure is a diagram, and one deck's
  * diagrams reading in three faces is the "pilha" #207 refuses.
+ *
+ * IT IS ITS OWN RULE, APART FROM THE GEOMETRY ABOVE, SO THE ARTICLE CAN READ IT
+ * (#239). The two declarations below are the whole of what a figure INHERITS
+ * from the page it is inlined in, and a figure beside an article has no page --
+ * so `compiler/article.py` reads what is between the markers, strips the
+ * slide's own prefix and puts it inside the `.svg` it writes. The cascade is
+ * unchanged: same selector, same specificity, one rule split in two.
  */
+/* article:figure-paint:begin */
 .slide[data-pattern="figure-caption"] .figure {
-  display: block;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  height: auto;
-  margin: calc(var(--stage-height) * 0.035) 0;
   fill: var(--ink);
   font-family: var(--font-body);
-  /* An imported picture is letterboxed inside its box exactly the way a
-   * drawing with a viewBox already is. Neither is ever stretched to fill the
-   * stage: a figure distorted to fit is a figure lying about a shape. */
-  object-fit: contain;
 }
+/* article:figure-paint:end */
 
 /* ── pattern · pull-quote ───────────────────────────────────────────────────
  * The quote in the air with the accent running down its side -- the one mark

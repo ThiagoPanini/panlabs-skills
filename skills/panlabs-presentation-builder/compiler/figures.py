@@ -242,6 +242,21 @@ def _node(node, figure):
     return f"<{node.tag}{attrs}>{inner}</{node.tag}>"
 
 
+def body(node, figure):
+    """Everything a drawing is made of, without the `<svg>` around it.
+
+    IT IS PUBLIC BECAUSE THE ARTICLE NEEDS THE INSIDE (#239). A drawing on the
+    stage is an `<svg class="figure">` inheriting the theme from the page it is
+    inlined in; the same drawing beside an article is a file of its own, with
+    its own namespace, its own surface and the theme's colours resolved into
+    literals -- so `compiler/article.py` builds the wrapper and asks this for
+    what goes in it. Returning the whole element and having that file cut the
+    opening tag back off with a regex is the shape where one of the two ends up
+    describing markup the other stopped writing.
+    """
+    return "".join(_node(child, figure) for child in node.elements())
+
+
 def drawing(node, figure, described):
     """One hand-drawn figure, as it reaches the page.
 
@@ -251,9 +266,9 @@ def drawing(node, figure, described):
     second attribute, would be asking them to write the same sentence twice and
     keep the two in step forever.
     """
-    body = "".join(_node(child, figure) for child in node.elements())
     return (f'<{figure.drawn} class="figure"{_attributes(node, figure)} role="img" '
-            f'aria-label="{html.escape(described, quote=True)}">{body}</{figure.drawn}>')
+            f'aria-label="{html.escape(described, quote=True)}">'
+            f"{body(node, figure)}</{figure.drawn}>")
 
 
 def image(figure, resolved, described):

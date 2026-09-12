@@ -48,6 +48,11 @@ BUILD = os.path.join(SKILL, "compiler", "build.py")
 EXAMPLES = os.path.join(SKILL, "examples")
 SUFFIX = ".storyboard.md"
 
+# The heading the slide table sits under, which is where `rows_of` starts
+# reading. It is the page's own word, spelled here rather than imported for the
+# same reason the readers below are hand-written.
+SLIDES_HEADING = "## Storyboard"
+
 # THE SECOND READER OF THE DIALECT. Deliberately blunt: a `<section …>` opening
 # tag with its two attributes in either order, and a `<p class="…">…</p>` inside
 # the direction block. It knows nothing about slots, patterns or the catalog --
@@ -69,7 +74,19 @@ SOURCE_ITEM = re.compile(r'<li\s+id="([^"]+)"\s*>(.*?)</li\s*>', re.S)
 # above it needs no pattern of its own: what this holds it to is that every
 # choice the source wrote appears SOMEWHERE in the half of the page before the
 # storyboard, which a substring answers and a row pattern would only complicate.
-ROW = re.compile(r"^\|\s*(\d+)\s*\|(.*)\|\s*$")
+ROW = re.compile(r"^\|(.*)\|\s*$")
+
+# THE COLUMNS ARE READ BY THEIR OWN HEADING AND NEVER BY POSITION (#239). This
+# reader used to take the third cell as the message, which was true of a table of
+# four columns -- and #239 gave the page two more (`tom` and `forma`), so the
+# third cell became the tone and every message assertion was made about the wrong
+# string. Asking the heading row for the column is what turns the next column
+# added into a red here instead of a green about another cell.
+NUMBER_COLUMN = "#"
+ARC_COLUMN = "função"
+PATTERN_COLUMN = "padrão"
+MESSAGE_COLUMN = "mensagem"
+NEEDED = (NUMBER_COLUMN, ARC_COLUMN, PATTERN_COLUMN, MESSAGE_COLUMN)
 
 # The arc functions, as the storyboard prints them. It is the register's own
 # ARC_LABEL, written out rather than imported for the same reason the readers
@@ -133,21 +150,42 @@ def provenance_of(source):
 
 
 def rows_of(board):
-    """The storyboard's slide rows: (number, function, pattern) per row."""
+    """The storyboard's slide rows: (number, function, pattern, message) each.
+
+    THE TABLE UNDER THE SLIDE HEADING, and only that one. The art direction is
+    a two-column table above it, and the provenance a four-column one below --
+    so the reader walks from the heading the slides are under, takes the first
+    row it finds as the headings, and asks that row where each column it needs
+    sits.
+    """
     out = []
-    for line in board.splitlines():
+    at = None
+    for line in board.split(SLIDES_HEADING)[-1].splitlines():
         found = ROW.match(line.strip())
         if not found:
+            if at is not None:
+                break        # the table ended; whatever follows is not it
             continue
         # A CELL IS SPLIT ON THE PIPES THAT ARE NOT ESCAPED. The storyboard
         # writes a slide's own `|` as `\|` so a sentence cannot end the column
         # early, and a reader that split on every pipe would find a phantom
-        # fourth column in exactly the deck that needed the escape.
+        # column in exactly the deck that needed the escape.
         cells = [c.strip().replace("\\|", "|")
-                 for c in re.split(r"(?<!\\)\|", found.group(2))]
-        if len(cells) < 3:
+                 for c in re.split(r"(?<!\\)\|", found.group(1))]
+        if all(not c or set(c) <= set("-: ") for c in cells):
             continue
-        out.append((int(found.group(1)), cells[0], cells[1], cells[2]))
+        if at is None:
+            if not all(name in cells for name in NEEDED):
+                continue
+            at = {name: cells.index(name) for name in NEEDED}
+            continue
+        if len(cells) <= max(at.values()):
+            continue
+        said = {name: cells[i] for name, i in at.items()}
+        if not said[NUMBER_COLUMN].isdigit():
+            continue
+        out.append((int(said[NUMBER_COLUMN]), said[ARC_COLUMN],
+                    said[PATTERN_COLUMN], said[MESSAGE_COLUMN]))
     return out
 
 

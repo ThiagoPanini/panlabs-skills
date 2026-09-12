@@ -2,6 +2,8 @@
 """THE DOCUMENTED COMMAND: a source and a theme in, one HTML file out.
 
     python3 compiler/build.py <source.deck.html> <output.html> [--theme base]
+    python3 compiler/build.py <deck.storyboard.md> <output.html> --skeleton
+    python3 compiler/build.py <source.deck.html> <output.md> --article
 
 WHAT COMES OUT IS ONE FILE AND NOTHING ELSE. The theme is inlined, the script
 is inline, and there is no external reference on the page -- which is the
@@ -17,6 +19,20 @@ file was written, 1 it was not.
 
 A RED AUDIT WRITES NOTHING. Half a deck on disk is worse than no deck,
 because it looks built.
+
+THREE MODES, ONE SHAPE (#239), AND THAT IS WHY THEY ARE NOT THREE COMMANDS.
+Input, output, verdict: the skeleton paints the storyboard of a deck that does
+not exist yet, and the article writes the deck that does as prose -- and both
+go through the reader, the header check, the theme and the audit this file
+already has. A command of their own would have been a second copy of all four,
+and #237 says so in as many words: "o esqueleto e o artigo são modos do mesmo
+comando, com a mesma forma (entrada, saída, laudo), e não comandos novos".
+
+THE ONE THING A MODE CHANGES IS WHICH RULERS ARE CHARGED. A skeleton is
+audited by the DIALECT alone (`audit.DIALECT`): a placeholder is supposed to be
+over budget and to repeat a shape, because every doctrine ruler measures
+content and a skeleton exists precisely before there is any. A deck and an
+article are both real content and are charged in full.
 """
 
 import argparse
@@ -38,12 +54,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
+import article                                                  # noqa: E402
 import charts                                                   # noqa: E402
 import figures                                                  # noqa: E402
 import fonts                                                    # noqa: E402
 import icons                                                    # noqa: E402
+import skeleton                                                 # noqa: E402
 import storyboard                                               # noqa: E402
-from audit import audit, moments_of, report                    # noqa: E402
+from audit import (DIALECT, RULERS, audit, moments_of,         # noqa: E402
+                   report)
 from catalog import (ARC_ATTR, DECK_FIELDS, EVIDENCE_TAGS, ICON,  # noqa: E402
                      MOTION_PROFILES, NOTES_TAG, SLOT_TAG, STEP_ATTR,
                      chart_of, figure_of, group_of, is_table,
@@ -57,7 +76,10 @@ THEMES = os.path.join(ROOT, "themes")
 # motion -- plus a complete unbranded set of values, and it is loaded under
 # every build whatever `--theme` says.
 BASE_THEME = "base"
-SKELETON = os.path.join(HERE, "stage.html")
+# THE PAGE BEFORE ANYTHING IS IN IT. It is called the stage and not the
+# skeleton: `compiler/skeleton.py` is a MODE of this command (#239), and a
+# template sharing its name would be one word meaning two things in one file.
+STAGE = os.path.join(HERE, "stage.html")
 MARKER = re.compile(r"\{\{[A-Z_]+\}\}")
 
 
@@ -83,8 +105,11 @@ def check_header(deck):
     ]
     for key in DECK_FIELDS:
         if not deck.header.get(key, "").strip():
-            article = "an" if key[0] in "aeiou" else "a"
-            fixes.append(f"give the <deck> {article} {key}= — the header says {said}")
+            # NOT `article`: that name is the module this command imports for
+            # its third mode (#239), and a local shadowing it here would be one
+            # word meaning two things inside one file.
+            indefinite = "an" if key[0] in "aeiou" else "a"
+            fixes.append(f"give the <deck> {indefinite} {key}= — the header says {said}")
 
     minutes = deck.header.get("minutes", "").strip()
     if minutes and (not minutes.isdigit() or int(minutes) < 1):
@@ -139,6 +164,32 @@ def tokens_declared(css):
     return set(DECLARED.findall(COMMENT.sub("", css)))
 
 
+def theme_sheets(name):
+    """Everything the theme DECLARES: `base` plus its own overrides, no faces.
+
+    IT IS `theme_css` WITHOUT THE EMBEDDED BYTES, and it exists because #239's
+    article mode needs the token VALUES rather than a sheet to inline: Markdown
+    carries no stylesheet, so a chart that travels beside an article has to
+    carry the colours resolved into literals. Splitting the two is what keeps
+    that reader from parsing two hundred kilobytes of base64 to find a
+    hexadecimal, and keeps the stranger-token refusal below in one place for
+    both of them.
+    """
+    base = sheets_of(BASE_THEME)
+    if name == BASE_THEME:
+        return base
+    sheet = sheets_of(name)
+    strangers = sorted(tokens_declared(sheet) - tokens_declared(base))
+    if strangers:
+        refuse(*[
+            f'declare {token} in themes/{BASE_THEME}/tokens.css or drop it from '
+            f"themes/{name}/ — a theme overrides the token vocabulary, it does "
+            "not extend it, and no pattern paints with a name only one theme sets"
+            for token in strangers
+        ])
+    return base + "\n" + sheet
+
+
 def theme_css(name):
     """The whole sheet a deck is painted with: `base`, the theme, its faces.
 
@@ -157,28 +208,16 @@ def theme_css(name):
     stranger, because the fix is either to spell an existing token or to add
     the new one to `base` -- where every theme can see it.
 
-    The faces come last and are not a sheet on disk: `fonts.py` builds them
+    The faces come FIRST and are not a sheet on disk: `fonts.py` builds them
     out of the theme's own manifest, so the bytes live beside their licence
     rather than inside a stylesheet nobody can read.
     """
-    base = sheets_of(BASE_THEME)
-    if name == BASE_THEME:
-        sheet = ""
-    else:
-        sheet = sheets_of(name)
-        strangers = sorted(tokens_declared(sheet) - tokens_declared(base))
-        if strangers:
-            refuse(*[
-                f'declare {token} in themes/{BASE_THEME}/tokens.css or drop it from '
-                f"themes/{name}/ — a theme overrides the token vocabulary, it does "
-                "not extend it, and no pattern paints with a name only one theme sets"
-                for token in strangers
-            ])
     try:
         faces = fonts.faces(name)
     except fonts.Missing as e:
         refuse(str(e))
-    return "\n".join(part for part in (faces, base, sheet) if part)
+    sheets = theme_sheets(name)
+    return "\n".join(part for part in (faces, sheets) if part)
 
 
 # ── the slides ───────────────────────────────────────────────────────────────
@@ -432,9 +471,9 @@ def slide_markup(slide, index, base, cited):
     )
 
 
-# ── the skeleton ─────────────────────────────────────────────────────────────
+# ── the stage ────────────────────────────────────────────────────────────────
 
-def fill(skeleton, holes):
+def fill(stage, holes):
     """Fill every hole exactly once, and refuse anything else.
 
     A marker that appears zero times means the content vanished with no error
@@ -444,7 +483,7 @@ def fill(skeleton, holes):
     """
     for name in holes:
         token = "{{" + name + "}}"
-        found = skeleton.count(token)
+        found = stage.count(token)
         if found != 1:
             refuse(
                 f"put {token} in compiler/stage.html exactly once — it is "
@@ -463,7 +502,7 @@ def fill(skeleton, holes):
     # ONE PASS, not one pass per hole. Substituting hole by hole re-reads what
     # the previous substitution just wrote, so a theme or a deck's own text
     # containing `{{SLIDES}}` would be filled a second time by a later round.
-    return MARKER.sub(pick, skeleton)
+    return MARKER.sub(pick, stage)
 
 
 # ── the render gate ─────────────────────────────────────────────────────────
@@ -493,55 +532,45 @@ def render_gate(output_path):
         print(f"── render · SKIP — could not run the render gate ({e})")
 
 
-# ── the command ──────────────────────────────────────────────────────────────
+# ── what every mode does the same way ────────────────────────────────────────
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(
-        prog="build.py",
-        description="Compile a deck source into one self-contained HTML file.",
-    )
-    ap.add_argument("source", help="the deck source, in the dialect")
-    ap.add_argument("output", help="the .html file to write")
-    ap.add_argument(
-        "--theme",
-        default=None,
-        help="override the theme the source's header declares",
-    )
-    args = ap.parse_args(argv)
-
-    if os.path.abspath(args.source) == os.path.abspath(args.output):
-        refuse("write the deck somewhere other than over its own source")
-
+def text_of(path, what):
+    """One file's text, or a refusal naming what could not be read."""
     try:
-        text = open(args.source, encoding="utf-8").read()
+        return open(path, encoding="utf-8").read()
     except OSError as e:
-        refuse(f"point at a source this command can read — {e.strerror}: {args.source}")
+        refuse(f"point at {what} this command can read — {e.strerror}: {path}")
 
+
+def deck_of(text, base):
+    """One source's tree, or a refusal from the reader."""
     try:
-        deck = read(text, base=os.path.dirname(os.path.abspath(args.source)))
+        return read(text, base=base)
     except Refused as e:
         refuse(str(e))
 
-    check_header(deck)
-    sections = deck.sections
-    if not sections:
-        refuse(
-            "add a <section pattern=…> — a deck with no slide compiles to a "
-            "page with nothing on it"
-        )
 
-    theme = args.theme or deck.theme
-    css = theme_css(theme)
-
-    verdicts = audit(deck, theme)
+def judged(deck, theme, rulers):
+    """Print the verdict and stop on a red. Nothing is written after one."""
+    verdicts = audit(deck, theme, rulers=rulers)
     print(report(deck, theme, verdicts))
     if any(not v.ok for v in verdicts):
         raise SystemExit(1)
 
+
+def page_of(deck, theme, css):
+    """The whole built page for one deck in one theme.
+
+    IT IS THE SAME PAGE FOR A DECK AND FOR A SKELETON (#239). A skeleton's
+    source is a source -- the placeholders are in its slots, not in the engine
+    -- so everything from the sprite to the notes panel is the deck's own path,
+    and the rehearsal cannot drift from the thing it is rehearsing for.
+    """
     try:
         cited = sources_of(deck)
         slides = "\n".join(
-            slide_markup(s, i, deck.base, cited) for i, s in enumerate(sections))
+            slide_markup(s, i, deck.base, cited)
+            for i, s in enumerate(deck.sections))
     except Refused as e:
         refuse(str(e))
 
@@ -553,8 +582,8 @@ def main(argv=None):
     attrs = " ".join(
         f'data-{k}="{html.escape(header[k], quote=True)}"' for k in DECK_FIELDS
     )
-    page = fill(
-        open(SKELETON, encoding="utf-8").read(),
+    return fill(
+        open(STAGE, encoding="utf-8").read(),
         {
             "LANG": html.escape(deck.lang, quote=True),
             "TITLE": html.escape(deck.title),
@@ -563,16 +592,54 @@ def main(argv=None):
             "ICONS": icons.sprite(icons_used(deck)),
             "SLIDES": slides,
             "NOTES": notes_markup(deck),
-            "PAGE_TOTAL": str(len(sections)),
+            "PAGE_TOTAL": str(len(deck.sections)),
         },
     )
 
-    parent = os.path.dirname(os.path.abspath(args.output))
-    os.makedirs(parent, exist_ok=True)
-    with open(args.output, "w", encoding="utf-8") as fh:
-        fh.write(page)
 
-    print(f"   wrote {args.output}")
+def put(path, text):
+    """Write one file, making the directory above it, and say where it went."""
+    parent = os.path.dirname(os.path.abspath(path))
+    os.makedirs(parent, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    print(f"   wrote {path}")
+
+
+def with_slides(deck):
+    """Refuse a source whose `<deck>` holds no slide at all."""
+    if not deck.sections:
+        refuse(
+            "add a <section pattern=…> — a deck with no slide compiles to a "
+            "page with nothing on it"
+        )
+    return deck
+
+
+# ── the three modes ──────────────────────────────────────────────────────────
+
+def read_deck(args):
+    """The source on disk, read, header-checked, and holding at least one slide.
+
+    THE TWO MODES THAT TAKE A SOURCE OPEN THE SAME WAY, and they opened with the
+    same four lines each until this function existed. What they do afterwards is
+    all that differs: one paints a page, the other writes prose.
+    """
+    deck = with_slides(deck_of(
+        text_of(args.source, "a source"),
+        os.path.dirname(os.path.abspath(args.source)),
+    ))
+    check_header(deck)
+    return deck
+
+
+def deck_mode(args):
+    """A source in, one self-contained page out, the storyboard beside it."""
+    deck = read_deck(args)
+    theme = args.theme or deck.theme
+    css = theme_css(theme)
+    judged(deck, theme, RULERS)
+    put(args.output, page_of(deck, theme, css))
 
     # THE STORYBOARD GOES BESIDE THE DECK, AND ONLY AFTER IT (#217). #207 asks
     # for the story to stay "gravado ao lado do deck" so the next ask can be
@@ -584,6 +651,98 @@ def main(argv=None):
 
     render_gate(args.output)
     return 0
+
+
+def skeleton_mode(args):
+    """A storyboard in, a placeholder deck out, the contact sheet beside it.
+
+    NO STORYBOARD IS WRITTEN BESIDE THIS ONE, and that is the point rather than
+    an omission: the storyboard is the INPUT. Writing a derived copy of it next
+    to the output would be the second copy of the story `compiler/storyboard.py`
+    exists to not have -- and the one a reader would then have to guess which of
+    the two to correct.
+    """
+    try:
+        plan = storyboard.read(args.source)
+        painted = skeleton.source(plan)
+    except Refused as e:
+        refuse(str(e))
+
+    rows = len(plan.rows)
+    print(f'── skeleton · "{plan.header[storyboard.TITLE_FIELD]}" · '
+          f'{rows} row(s) read from {args.source}')
+    deck = with_slides(deck_of(painted, os.path.dirname(os.path.abspath(args.source))))
+    check_header(deck)
+    theme = args.theme or deck.theme
+    css = theme_css(theme)
+    judged(deck, theme, DIALECT)
+    put(args.output, page_of(deck, theme, css))
+    render_gate(args.output)
+    return 0
+
+
+def article_mode(args):
+    """A source in, the deck as an article out, its drawings beside it."""
+    deck = read_deck(args)
+    theme = args.theme or deck.theme
+    sheets = theme_sheets(theme)
+    judged(deck, theme, RULERS)
+    try:
+        written = article.write(args.output, deck, theme, sheets)
+    except Refused as e:
+        refuse(str(e))
+    for where in written:
+        print(f"   wrote {where}")
+    return 0
+
+
+# ── the command ──────────────────────────────────────────────────────────────
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        prog="build.py",
+        description="Compile a deck source into one self-contained HTML file, "
+                    "paint the skeleton of a storyboard, or write a deck as an "
+                    "article.",
+    )
+    ap.add_argument("source",
+                    help="the deck source, in the dialect — or the storyboard, "
+                         "under --skeleton")
+    ap.add_argument("output",
+                    help="the .html file to write — or the .md file, under "
+                         "--article")
+    ap.add_argument(
+        "--theme",
+        default=None,
+        help="override the theme the source's header declares",
+    )
+    ap.add_argument(
+        "--skeleton",
+        action="store_true",
+        help="read a storyboard and paint the deck it plans, with sample "
+             "content in every slot but the message",
+    )
+    ap.add_argument(
+        "--article",
+        action="store_true",
+        help="write the deck as Markdown, with its drawings beside it",
+    )
+    args = ap.parse_args(argv)
+
+    if args.skeleton and args.article:
+        refuse(
+            "pick one of --skeleton and --article — the first reads a "
+            "storyboard and writes a page, the second reads a source and "
+            "writes an article, and there is no input that is both"
+        )
+    if os.path.abspath(args.source) == os.path.abspath(args.output):
+        refuse("write the deck somewhere other than over its own source")
+
+    if args.skeleton:
+        return skeleton_mode(args)
+    if args.article:
+        return article_mode(args)
+    return deck_mode(args)
 
 
 if __name__ == "__main__":

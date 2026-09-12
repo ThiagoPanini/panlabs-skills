@@ -599,6 +599,24 @@ def overlong(form, points):
     return over
 
 
+def marks(form, points):
+    """Everything one chart is drawn out of, without the `<svg>` around it.
+
+    IT IS PUBLIC BECAUSE THE ARTICLE NEEDS THE INSIDE (#239). A chart on the
+    stage is an `<svg class="plot">` whose every class the page's own
+    stylesheet paints; the same chart beside an article is a file of its own,
+    carrying those rules with the theme's colours resolved into literals -- so
+    `compiler/article.py` builds the wrapper and asks these two functions for
+    what goes in it, rather than cutting the opening tag back off with a regex.
+    """
+    return "".join(FORMS[form].paint(points))
+
+
+def described(points):
+    """What a reader who cannot see the drawing is handed: the series itself."""
+    return ", ".join(f"{p.label} {p.said}" for p in points)
+
+
 def draw(form, points):
     """One chart, as inline SVG. Only ever called on a series the rulers passed.
 
@@ -606,7 +624,6 @@ def draw(form, points):
     gets the numbers the drawing is of, in the order they were written -- and
     it costs nothing on the stage, where the same numbers are already painted.
     """
-    said = ", ".join(f"{p.label} {p.said}" for p in points)
-    body = "".join(FORMS[form].paint(points))
     return (f'<svg class="plot" viewBox="0 0 {PLOT_W} {PLOT_H}" role="img" '
-            f'aria-label="{html.escape(said, quote=True)}">{body}</svg>')
+            f'aria-label="{html.escape(described(points), quote=True)}">'
+            f"{marks(form, points)}</svg>")

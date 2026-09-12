@@ -2154,9 +2154,32 @@ RULERS = (
 )
 
 
-def audit(deck, theme):
-    """Every ruler over one deck in one theme, in a stable order."""
-    return [Verdict(ruler, measure(deck, theme)) for ruler, measure in RULERS]
+
+# THE FIRST LINE OF THIS FILE'S OWN DOCSTRING, AS A TUPLE A CALLER CAN CHARGE
+# ALONE (#239). "One ruler reads the dialect and the rest read the doctrine" was
+# a sentence here and a fact in nobody's code, and the skeleton is what needs it
+# to be both: a placeholder deck is SUPPOSED to be over budget, to name a folder
+# where a claim goes and to take the same shape twice -- every doctrine ruler
+# measures CONTENT, and a skeleton exists precisely because there is none yet.
+# What it must still be is buildable, and that is what the dialect answers.
+#
+# IT IS DERIVED FROM `RULERS` RATHER THAN LISTED, so the day a second dialect
+# ruler lands it joins by being named once above -- and the doctrine stays what
+# is left rather than a second list beside this one, which would be two places
+# to edit the day a ruler changes sides.
+DIALECT = tuple(pair for pair in RULERS if pair[0] is VOCABULARY)
+
+
+def audit(deck, theme, rulers=RULERS):
+    """Every ruler over one deck in one theme, in a stable order.
+
+    `rulers` IS THE WHOLE OF HOW A SKELETON IS AUDITED DIFFERENTLY, and it
+    defaults to all of them because every other caller wants all of them. A
+    second entry point (`dialect_only(deck, theme)`) would have been a second
+    place the report's order is decided, which is where an append-only list
+    stops being one.
+    """
+    return [Verdict(ruler, measure(deck, theme)) for ruler, measure in rulers]
 
 
 def report(deck, theme, verdicts):

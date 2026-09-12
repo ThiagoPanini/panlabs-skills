@@ -1,6 +1,6 @@
 ---
 name: panlabs-presentation-builder
-description: Gera uma apresentação HTML de arquivo único, offline, em slides 16:9 paginados, numa jornada de três turnos — uma rodada de calibragem com o storyboard proposto antes de existir um slide, o deck construído com a folha de contato, e o ajuste. O modelo escreve a fonte num dialeto restrito de HTML, e o compilador desenha o palco, embute o tema e recusa o que está fora do vocabulário. Use ao pedir uma apresentação, um deck ou slides; ao transformar um texto, uma proposta, uma ata ou um relatório em apresentação; ao encurtar, revisar ou corrigir uma apresentação já gerada; e ao retomar uma fonte escrita numa sessão anterior.
+description: Gera uma apresentação HTML de arquivo único, offline, em slides 16:9 paginados, numa jornada de quatro turnos — o levantamento do material antes de existir uma pergunta, uma rodada de calibragem com o storyboard proposto e o esqueleto desenhado antes de existir um slide, o deck construído com a folha de contato, e o ajuste. O modelo escreve a fonte num dialeto restrito de HTML, e o compilador desenha o palco, embute o tema e recusa o que está fora do vocabulário. Use ao pedir uma apresentação, um deck ou slides; ao transformar um texto, uma proposta, uma ata ou um relatório em apresentação; ao encurtar, revisar ou corrigir uma apresentação já gerada; e ao retomar uma fonte escrita numa sessão anterior.
 ---
 
 # panlabs-presentation-builder
@@ -13,26 +13,41 @@ O que sai é **um `.html` de arquivo único que abre offline**: o tema viaja inl
 
 Python 3 da casa e nada além dele: sem `pip install`, sem rede, sem CDN. Os comandos abaixo rodam a partir da **raiz da skill — o diretório onde este próprio `SKILL.md` está**. **Nada é gravado dentro desta árvore**: a fonte e a apresentação nascem no projeto de quem chamou ou no temporário do sistema.
 
-> ⚠️ **Esta é a v2, e a fila que a construiu fechou.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Os **dois temas** existem: `base`, sem marca, e `panlabs`, com as fontes e as cores da documentação da casa. A **direção de arte** mora no cabeçalho, cada slide declara a **função dele no arco**, o **storyboard** sai ao lado do deck a cada construção, e a **jornada de três turnos** abaixo é o caminho inteiro. Os **dois exemplos** existem, um por tema, e entre eles cobrem o catálogo inteiro. E o **benchmark** que a spec pediu como prova de aceite foi construído por esta skill, de ponta a ponta, e apresentado — ele mora fora desta árvore, como tudo o que serve a quem mantém e não a quem usa. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
+> ⚠️ **Esta é a v2, e a fila que a construiu fechou.** O catálogo está **completo, nos dezoito padrões** que a spec pediu — os de poucas palavras, a afirmação de tela cheia, os quatro que carregam uma série (número gigante, métricas em linha, linha do tempo e tabela), duas colunas, três colunas, comparação, lista com ícones, o gráfico com título-tese em seis formas, e a figura sob medida, que fecha a lista. O palco de apresentar também está inteiro — visão geral, notas, atalhos, progresso, fragmentos e os três perfis de movimento. Os **dois temas** existem: `base`, sem marca, e `panlabs`, com as fontes e as cores da documentação da casa. A **direção de arte** mora no cabeçalho, cada slide declara a **função dele no arco**, o **storyboard** sai ao lado do deck a cada construção, e a **jornada de quatro turnos** abaixo é o caminho inteiro — ela abre no **levantamento**, que lê o material por subagentes e o mapeia contra o arco antes de existir uma pergunta. Os **dois exemplos** existem, um por tema, e entre eles cobrem o catálogo inteiro. E o **benchmark** que a spec pediu como prova de aceite foi construído por esta skill, de ponta a ponta, e apresentado — ele mora fora desta árvore, como tudo o que serve a quem mantém e não a quem usa. O que este documento descreve é o que existe e roda; ele não promete o que ainda não.
 
-## A jornada, em três turnos
+## A jornada, em quatro turnos
 
-**Um pedido de apresentação não vira deck na mesma mensagem.** O que sai errado num deck quase nunca é um slide — é a tese, é o público, é a duração —, e nenhum dos três é barato de consertar depois que existem vinte slides. Por isso a **calibragem vem antes de gerar**, e o que ela produz é texto: uma rodada de perguntas, uma frase de tese, um storyboard e uma direção de arte. Corrigir qualquer um deles custa uma linha; corrigir o mesmo erro no deck custa o deck.
+**Um pedido de apresentação não vira deck na mesma mensagem.** O que sai errado num deck quase nunca é um slide — é a tese, é o público, é a duração —, e nenhum dos três é barato de consertar depois que existem vinte slides. Por isso a **calibragem vem antes de gerar**, e o que ela produz é texto: uma rodada de perguntas, uma frase de tese, um storyboard e uma direção de arte. Corrigir qualquer um deles custa uma linha; corrigir o mesmo erro no deck custa o deck. **E a rodada só pergunta bem o que o levantamento já foi procurar** — uma rodada escrita sem ler o material pergunta o que está na segunda página dele e cala sobre o que não está em lugar nenhum, e é por isso que o **turno 0 vem antes dela**: é o buraco do mapa que vira pergunta.
 
-**A doutrina que estes três turnos aplicam está em [`NARRATIVE.md`](NARRATIVE.md)** — o arco padrão e as quatro variantes por gênero, o título-tese, o respiro, a régua de que nada se perde, e como a duração vira número de slides. Leia antes de propor o storyboard do primeiro turno; ela é a metade da skill que nenhum comando reprova.
+**A doutrina que estes quatro turnos aplicam está em [`NARRATIVE.md`](NARRATIVE.md)** — o levantamento, o arco padrão e as quatro variantes por gênero, o título-tese, o respiro, a régua de que nada se perde, e como a duração vira número de slides. Leia antes de montar o mapa do turno 0; ela é a metade da skill que nenhum comando reprova.
+
+### Turno 0 · O levantamento
+
+**Primeiro reconheça a entrada**, porque uma delas não é deste turno: um pedido em prosa, um texto, uma proposta, uma ata, um relatório, um link, um repositório ou um vídeo começam aqui; um **`.deck.html` de uma sessão anterior vai direto ao turno 3** — a fonte já carrega o cabeçalho, a direção de arte e o storyboard inteiros, e perguntar de novo o que está escrito nela é o pior jeito de retomar um deck.
+
+**O material você não lê.** Para cada **classe de insumo** que chegou — arquivos, páginas na web, repositórios, vídeo — lance **um subagente**, todos na mesma mensagem, e dê a cada um três tarefas: rodar o extrator sobre o que lhe coube, escrever o **fragmento do bloco de fontes** daquele material, e devolver **um resumo de até vinte linhas**. O que volta para o contexto principal são os resumos e os fragmentos; **a fonte crua nunca entra**, e essa é a regra inteira — um relatório de cem páginas lido aqui é um deck escrito com a janela cheia e o julgamento vazio.
+
+```bash
+python3 tools/extract.py <caminho/do/relatorio.pdf> --id F1 --out /tmp/f1.md
+```
+
+**O mapa de insumos.** Com os resumos na mão, monte a tabela — o único artefato do turno 0 que sempre existe. **Uma linha por função do arco**, seis, na ordem: `context`, `tension`, `thesis`, `evidence`, `plan`, `call`. E **três colunas**: o que o material já dá, **com o id da fonte que dá**; o que falta; e o que a skill faz com a falta — pesquisa, pergunta, ou nada. **Um número sem id não entra no mapa**, porque ele não vai poder entrar no deck: o `<sources>` é quem autoriza um número a subir ao palco, e um número que chega aqui sem procedência é uma falta disfarçada de material. O porquê de o mapa ser por função, e não por assunto, está em [`NARRATIVE.md`](NARRATIVE.md).
+
+**A pesquisa vai em segundo plano, e vai agora.** Para cada falta que a pesquisa pode fechar — e só essas —, lance um agente **na mesma mensagem do primeiro bloco**, sem esperar resposta. Cada um procura **fonte primária** — o repositório, a documentação de quem fez, a medição, o registro oficial —, e traz **cada afirmação com a fonte dela e a data**, no formato que o `<sources>` vai querer. É a forma da skill de pesquisa da casa, escrita aqui como prompt próprio: não a invoque, e não presuma que ela exista nesta máquina.
+
+**A entrevista é livre.** O que a conversa precisa descobrir é isto — a **reação** que o deck quer provocar, a **tese**, a **plateia** e o que ela já sabe, a **prova** que falta, **quem decide**, e o que **não pode entrar** —, e cada pergunta sai de um buraco do mapa ou de uma função do arco sem insumo: **não há lista a percorrer**, e **nunca se pergunta o que se descobre lendo**. Material rico fecha o mapa sem uma pergunta de fato, e aí o turno 0 é uma mensagem só, com a calibragem do turno 1 vindo junto.
+
+**No máximo dois blocos, e nunca três.** O primeiro traz o mapa, a entrevista e o aviso do que está sendo pesquisado; o segundo só existe se a pesquisa **mudar a tese**, e uma pesquisa que só confirma o mapa entra no deck sem virar mensagem.
+
+**«Sem rede» é do compilador e do deck, nunca da sessão.** O que não usa rede é o que roda na máquina de quem apresenta: o `build.py`, o tema, a página que sai. Este turno pesquisa, abre link e lê repositório à vontade — confundir as duas coisas é entregar um deck sem uma única prova porque a skill se proibiu de ir buscar uma.
+
+**Fecha quando** o mapa não tem mais buraco que a pesquisa ou a entrevista consigam fechar.
 
 ### Turno 1 · A calibragem, o storyboard e a direção de arte, numa mensagem só
 
-**Primeiro reconheça a entrada**, porque uma delas não é deste turno:
+Com o mapa na mão, devolva **uma mensagem só**, com as cinco partes abaixo nesta ordem — e **nenhum deck**: o único arquivo que nasce neste turno é um ensaio, e ele não é entregue como apresentação.
 
-| o que chegou | o que fazer |
-|---|---|
-| um pedido em prosa, um texto, uma proposta, uma ata, um relatório | este turno |
-| um `.deck.html` de uma sessão anterior | **vá direto ao turno 3** — a fonte já carrega o cabeçalho, a direção de arte e o storyboard inteiros, e perguntar de novo o que está escrito nela é o pior jeito de retomar um deck |
-
-Leia o pedido e todo o material que veio junto. Depois devolva **uma mensagem só**, com as quatro partes abaixo nesta ordem — e **nenhum arquivo**: neste turno nada é construído, e essa é a regra inteira.
-
-**A rodada.** Perguntas numeradas, uma linha cada, **cada uma já com a sua recomendação**, e diga que **«vai» aceita todas de uma vez** — porque a maior parte delas não importa a quem pediu. A rodada é **adaptativa**: pergunte só o que o pedido e o material não determinam, de modo que material rico produza rodada **curta**, não longa. E **um fato que você consegue descobrir lendo o que já está na sua frente nunca vira pergunta**: perguntar o que já foi dito é o jeito mais rápido de uma calibragem virar formulário.
+**A rodada.** Perguntas numeradas, uma linha cada, **cada uma já com a sua recomendação**, e diga que **«vai» aceita todas de uma vez** — porque a maior parte delas não importa a quem pediu. A rodada é **adaptativa**: pergunte só o que o mapa do turno 0 não fechou, de modo que material rico produza rodada **curta**, não longa. E **um fato que você consegue descobrir lendo o que já está na sua frente nunca vira pergunta**: perguntar o que já foi dito é o jeito mais rápido de uma calibragem virar formulário.
 
 **Uma rodada, e só uma.** O que você não perguntou agora vira uma suposição que você **declara** junto do storyboard — nunca uma segunda rodada. Duas rodadas antes do primeiro slide é exatamente a espera que faz alguém desistir da skill e abrir o PowerPoint.
 
@@ -62,6 +77,14 @@ E mais duas perguntas que não moram no cabeçalho e mudam tudo o que vem depois
 
 **A direção de arte proposta.** As escolhas estéticas da tabela acima, escritas como você as gravará no `<direction>`. Um veto aqui custa uma linha; o mesmo veto depois do turno 2 custa um deck inteiro.
 
+**O esqueleto, e a folha de contato dele.** Grave o storyboard proposto num `.storyboard.md` no temporário e pinte-o:
+
+```bash
+python3 compiler/build.py /tmp/<nome>.storyboard.md /tmp/<nome>.esqueleto.html --skeleton
+```
+
+O que sai dele está descrito em [Construir](#construir); **o que este turno entrega é a folha de contato**, não a página. Ela é o storyboard virado imagem, e é o que faz uma tabela de quinze linhas virar um julgamento de dez segundos — qual slide segura o palco sozinho, onde cai o respiro, se a coisa lê como uma história ou como uma pilha. **O esqueleto nunca é entregue como deck**: ele não tem uma frase de conteúdo, nasce no temporário e morre ali.
+
 **Fecha quando** quem pediu responde a rodada, ou diz «vai».
 
 ### Turno 2 · A fonte, o deck, a folha de contato e o que ficou fora
@@ -84,13 +107,32 @@ Entregue três coisas, e as três:
 
 **Sem Chromium na máquina não há folha de contato**, e o portão de render diz isso por um `SKIP` nomeado. Entregue as outras duas e **avise que ninguém olhou o deck** — a folha existe porque laudo verde não é a mesma coisa que página certa, e entregar sem ela em silêncio é entregar dizendo que alguém conferiu.
 
-**Fecha quando** o laudo está verde e o que existe está na mão de quem pediu.
+**Antes de entregar, olhe a folha e responda estas quatro**, por escrito, na mesma mensagem. Nenhuma delas é uma régua de máquina — são exatamente os quatro defeitos que um laudo verde deixa passar e que uma pessoa vê na folha em cinco segundos:
+
+1. **três slides de texto seguidos sem um momento** entre eles — é onde a plateia para de acompanhar;
+2. **um capítulo inteiro sem um pico** — o divisor abriu uma seção que não tem nenhum slide que segure o palco;
+3. **a assinatura onde a direção prometeu que ela estaria** — um `signature` que promete um traço em todo slide e falta num slide faz o deck virar uma pilha de páginas; um que promete um motivo **por trecho** se cobra nos trechos, e cobrar dele os vinte slides é pedir o que ninguém prometeu;
+4. **algum slide que lê como pilha** — muita coisa, sem hierarquia, e nenhuma delas é o ponto.
+
+Responda as quatro dizendo **onde** e **o que fez** — ou que não achou nenhum. Achar e não consertar é a única resposta que não serve.
+
+**E ofereça o artigo**, numa linha: o deck diz menos do que sabe, porque a metade que não coube está nas notas, e o turno 3 devolve essa metade como um Markdown publicável. Ofereça; não gere sem pedirem.
+
+**Fecha quando** o laudo está verde, as quatro estão respondidas, e o que existe está na mão de quem pediu.
 
 ### Turno 3 · O ajuste
 
 Ajuste no nível em que o pedido veio. **«O slide 7 está denso» é um ajuste de slide**: abra a fonte gravada, mexa naquela `<section>`, reconstrua. **«Falta tensão antes da tese» é um ajuste de arco**: mexa primeiro no storyboard — a ordem dos `arc=`, um slide a mais, um a menos — e só depois nos slides.
 
 A fonte gravada é o que faz este turno existir depois que a sessão acabou: recebendo o `.deck.html`, uma sessão nova retoma o deck de onde ele parou, sem recomeçar do zero por causa de uma vírgula.
+
+**E é aqui que sai o artigo, se pedirem:**
+
+```bash
+python3 compiler/build.py <projeto>/<nome>.deck.html <projeto>/<nome>.md --article
+```
+
+Sai a apresentação escrita como história, com os desenhos ao lado — o que exatamente entra nela está em [Construir](#construir). É a metade do deck que nunca chegou ao palco, e é o que se publica depois de apresentar sem reescrever nada. **Gere-o do deck que foi ajustado, nunca antes**: um artigo escrito do primeiro corte conta uma história que ninguém aprovou.
 
 **Fecha quando** quem pediu para de pedir.
 

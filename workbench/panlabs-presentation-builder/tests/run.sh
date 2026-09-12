@@ -620,7 +620,7 @@ echo "════ layer 6 · the front door ════"
 step "the journey check proves it measures" \
   python3 "$HERE/check-journey.proof.py"
 
-step "the front door still conducts the three turns" \
+step "the front door still conducts the four turns, the survey first" \
   python3 "$HERE/check-journey.py"
 
 # THE INSTALLER IS THE OTHER HALF OF THE FRONT DOOR, and the only part of this
@@ -707,4 +707,4 @@ if [ "$failed" -ne 0 ]; then
   for v in "${REDS[@]}"; do echo "  · $v"; done
   exit 1
 fi
-echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, every storyboard still describes the deck beside it, the front door still conducts the three turns and installs where the house looks, the extractor reads what it says it reads and names what it cannot, and the skeleton and the article each describe the deck they were asked about, twice."
+echo "suite green — the audit knows how to be red, the corpus builds, the render gate holds, the reference is the register, the second theme still wears the identity it snapshotted, every storyboard still describes the deck beside it, the front door still conducts the four turns with the survey in front and installs where the house looks, the extractor reads what it says it reads and names what it cannot, and the skeleton and the article each describe the deck they were asked about, twice."
